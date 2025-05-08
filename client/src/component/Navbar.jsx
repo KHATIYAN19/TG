@@ -4,7 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../Redux/authSlice';
 
-import logo from '../utils/Target_trek.png';
+import logo from '../utils/target_trek_logo_2.jpg';
 
 const adminLinks = [
   { label: 'Manage Bookings', path: '/admin/booking' },
@@ -72,7 +72,7 @@ const Navbar = () => {
       <nav className="bg-white shadow-md w-full fixed top-0 left-0 z-50 py-2">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <NavLink to="/" className="text-2xl font-bold text-blue-600 transition duration-300 hover:text-blue-700 ">
-            {/* <img src={logo} alt="Company Logo" className=" w-[1px] h-auto" /> */}
+            <img src={logo} alt="Company Logo" className=" w-[30px] h-auto" />
           </NavLink>
           <ul className="hidden md:flex space-x-8 text-gray-700 font-medium flex-grow justify-center">
             {navItems.map(({ label, path }) => (

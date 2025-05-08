@@ -4,13 +4,13 @@ import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import BASE_URL from "../utils/Url.js";
 import { MapPin, Phone, Mail, Send, Loader2, AlertTriangle, CheckCircle, Briefcase, Users, MessageSquare, ChevronDown } from 'lucide-react';
+import Helmet from "react-helmet"
 
 const servicesList = [
   'PPC Advertising',
   'Affiliate Marketing',
   'Email Marketing',
   'Web Development',
-  'SEO Optimization',
   'Other Inquiry'
 ];
 
@@ -18,19 +18,16 @@ const contactSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
   email: z.string().email({ message: 'Please enter a valid email address' }),
   contactNumber: z.string()
-                  .min(10, { message: 'Contact number must be at least 10 digits' })
-                  .regex(/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/, { message: 'Please enter a valid phone number format' }),
+    .regex(/^\+91[0-9]{10}$/, { message: 'Number must start with +91 and be followed by 10 digits (e.g., +91XXXXXXXXXX)' }),
   service: z.string().min(1, { message: 'Please select a service' }),
-  subject: z.string().min(5, { message: 'Subject must be at least 5 characters' }),
-  message: z.string().min(10, { message: 'Message must be at least 10 characters' }),
+  message: z.string().optional(),
 });
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    contactNumber: '',
-    subject: '',
+    contactNumber: '+91', // Pre-fill with +91
     service: '',
     message: ''
   });
@@ -40,11 +37,24 @@ const ContactPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === "contactNumber") {
+        // Allow only numbers after +91 or allow backspace to remove digits but not +91 initially
+        if (value.startsWith("+91") || value === "+9" || value === "+" || value === "") {
+             setFormData(prev => ({ ...prev, [name]: value }));
+        } else if (value === "" || /^\+91\d*$/.test(value)) { // Allow clearing or typing digits after +91
+            setFormData(prev => ({ ...prev, [name]: value }));
+        } else if (!value.startsWith("+91") && /^\d*$/.test(value.replace("+91", ""))) { // If +91 is removed, re-add if numbers are typed
+            setFormData(prev => ({ ...prev, [name]: "+91" + value.replace(/\D/g, '') }));
+        }
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
+
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,20 +74,17 @@ const ContactPage = () => {
     const loadingToastId = toast.loading('Sending your message...');
 
     try {
-      // --- API Endpoint Updated ---
       const apiUrl = `${BASE_URL}/messages/us`;
-      // --- End API Endpoint Update ---
-
       const response = await axios.post(apiUrl, validationResult.data);
 
       toast.dismiss(loadingToastId);
 
       if (response.status === 200 || response.status === 201) {
-         toast.success("Message sent successfully! Our team will contact you soon.");
-         setFormData({ name: '', email: '', contactNumber: '', subject: '', service: '', message: '' });
+        toast.success("Message sent successfully! Our team will contact you soon.");
+        setFormData({ name: '', email: '', contactNumber: '+91', service: '', message: '' });
       } else {
-         console.warn("Unexpected success status:", response.status);
-         toast.error('Received an unexpected response from the server.');
+        console.warn("Unexpected success status:", response.status);
+        toast.error('Received an unexpected response from the server.');
       }
 
     } catch (error) {
@@ -86,12 +93,15 @@ const ContactPage = () => {
       const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again later.';
       toast.error(errorMessage);
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="pt-16 md:pt-20 bg-gradient-to-b from-gray-50 to-blue-50 min-h-screen">
+      <Helmet>
+        <title>Contact - Target Trek</title>
+      </Helmet>
       <Toaster position="top-center" reverseOrder={false} />
 
       <section className="py-12 md:py-16 bg-blue-600 text-white text-center shadow-md">
@@ -129,17 +139,17 @@ const ContactPage = () => {
                 </div>
               </div>
               <div>
-                 <h3 className="text-xl font-semibold text-gray-800 mb-3">Driving Digital Growth</h3>
-                 <div className="bg-gray-200 rounded-lg shadow-md overflow-hidden">
-                   <img
-                      src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80"
-                      alt="Team collaborating on a digital project"
-                      className="w-full h-64 object-cover"
-                      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/600x300/e2e8f0/94a3b8?text=Collaboration"; }}
-                    />
-                 </div>
-                 <p className="text-sm text-gray-500 mt-2 italic">Let's build something great together.</p>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">Driving Digital Growth</h3>
+                <div className="bg-gray-200 rounded-lg shadow-md overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80"
+                    alt="Team collaborating on a digital project"
+                    className="w-full h-64 object-cover"
+                    onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/600x300/e2e8f0/94a3b8?text=Collaboration"; }}
+                  />
                 </div>
+                <p className="text-sm text-gray-500 mt-2 italic">Let's build something great together.</p>
+              </div>
             </div>
 
             <div className="bg-white p-6 md:p-8 rounded-lg shadow-xl">
@@ -175,7 +185,8 @@ const ContactPage = () => {
                     onChange={handleInputChange}
                     disabled={isSubmitting}
                     className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${formErrors.contactNumber ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}
-                    placeholder="e.g., +91 12345 67890 or 123-456-7890"
+                    placeholder="+91XXXXXXXXXX"
+                    maxLength={13} // +91 and 10 digits
                   />
                   {formErrors.contactNumber && <p className="mt-1 text-xs text-red-500">{formErrors.contactNumber[0]}</p>}
                 </div>
@@ -191,24 +202,14 @@ const ContactPage = () => {
                       <option key={service} value={service}>{service}</option>
                     ))}
                   </select>
-                   <div className="pointer-events-none absolute inset-y-0 right-0 top-6 flex items-center px-2 text-gray-700">
-                      <ChevronDown size={20} />
-                   </div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 top-6 flex items-center px-2 text-gray-700">
+                    <ChevronDown size={20} />
+                  </div>
                   {formErrors.service && <p className="mt-1 text-xs text-red-500">{formErrors.service[0]}</p>}
                 </div>
 
                 <div>
-                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                  <input
-                    type="text" id="subject" name="subject" value={formData.subject} onChange={handleInputChange} disabled={isSubmitting}
-                    className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${formErrors.subject ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}
-                    placeholder="e.g., Project Inquiry"
-                  />
-                  {formErrors.subject && <p className="mt-1 text-xs text-red-500">{formErrors.subject[0]}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">Message (Optional)</label>
                   <textarea
                     id="message" name="message" rows="5" value={formData.message} onChange={handleInputChange} disabled={isSubmitting}
                     className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${formErrors.message ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}

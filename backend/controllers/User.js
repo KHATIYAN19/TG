@@ -2,7 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
 import User from '../models/User.js';
-
+import fs from "fs";
+import  path from 'path';
+import sendMail from '../utils/MailSender.js';
 export const signup = async (req, res) => {
   try {
     const { name, email, mobile, password, role } = req.body;
@@ -49,37 +51,40 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
-
     if (!identifier || !password) {
       return res.status(400).json({ success: false, message: 'Identifier and password are required' });
     }
-
     const user = await User.findOne({
       $or: [{ email: identifier }, { mobile: identifier }]
     });
-
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
-
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
-    user.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.otpExpiry = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    console.log(`OTP sent to user: ${otp}`);
+    const htmlPath = path.join(__dirname, '../templates/otp-email-template.html');
+    let htmlTemplate = fs.readFileSync(htmlPath, 'utf-8');
+    htmlTemplate = htmlTemplate.replace('{{OTP_CODE}}', otp);
+
+    const subject = 'Your TargetTrek OTP';
+    const plainText = `Your OTP is ${otp}. It will expire in 10 minutes.`;
+
+    await sendMail(user.email, subject, plainText, htmlTemplate);
 
     res.status(200).json({ success: true, message: 'OTP sent successfully' });
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
-};
+}
 
 
 export const verifyOtp = async (req, res) => {

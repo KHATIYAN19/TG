@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Megaphone, Users, Mail, Edit3, TrendingUp, CheckCircle, Link, Code, MonitorSmartphone, DollarSign } from 'lucide-react';
-
+import { Helmet } from 'react-helmet';
 const ServicesPage = () => {
   const services = [
     {
@@ -98,6 +98,9 @@ const ServicesPage = () => {
 
   return (
     <div className="pt-20 bg-gray-50">
+       <Helmet>
+        <title>Services - Target Trek</title>
+      </Helmet>
       <section className="py-16 bg-gradient-to-r from-blue-500 to-blue-700 text-white text-center">
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">Our Digital Marketing & Web Services</h1>
