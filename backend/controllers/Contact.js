@@ -2,7 +2,7 @@ import Contact from '../models/Contact.js';
 import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
 export const createContactMessage = asyncHandler(async (req, res) => {
-  const { name, email, contactNumber, service, subject, message } = req.body;
+  const { name, email, contactNumber, service, message } = req.body;
   if (!name || name.trim().length < 2) {
     return res.status(400).json({ message: 'Name is required and must be at least 2 characters.' });
   }
@@ -19,19 +19,12 @@ export const createContactMessage = asyncHandler(async (req, res) => {
   if (!service || !allowedServices.includes(service.trim())) {
     return res.status(400).json({ message: 'A valid service selection is required.' });
   }
-  if (!subject || subject.trim().length < 5) {
-    return res.status(400).json({ message: 'Subject is required and must be at least 5 characters.' });
-  }
-  if (!message || message.trim().length < 10) {
-    return res.status(400).json({ message: 'Message is required and must be at least 10 characters.' });
-  }
 
   const newContact = new Contact({
     name: name.trim(),
     email: email.trim().toLowerCase(),
     contactNumber: contactNumber.trim(),
     service: service.trim(),
-    subject: subject.trim(),
     message: message.trim(),
   });
   const savedContact = await newContact.save();

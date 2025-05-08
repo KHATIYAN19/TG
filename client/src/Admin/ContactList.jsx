@@ -246,15 +246,13 @@ const ContactList = () => {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-800 mb-2 truncate" title={msg.subject}>
-                    <strong>Subject:</strong> {msg.subject}
-                </p>
+              
 
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                   <span className="flex items-center"><Mail size={14} className="mr-1"/> {msg.email}</span>
-                   <span className="flex items-center"><Phone size={14} className="mr-1"/> {msg.contactNumber}</span>
-                   <span className="flex items-center"><Briefcase size={14} className="mr-1"/> {msg.service}</span>
-                   <span className="flex items-center"><Clock size={14} className="mr-1"/> {formatDate(msg.createdAt)}</span>
+                   <span className="flex items-center"><Mail size={14} className="mr-1"/> {msg?.email}</span>
+                   <span className="flex items-center"><Phone size={14} className="mr-1"/> {msg?.contactNumber}</span>
+                   <span className="flex items-center"><Briefcase size={14} className="mr-1"/> {msg?.service}</span>
+                   <span className="flex items-center"><Clock size={14} className="mr-1"/> {formatDate(msg?.createdAt)}</span>
                 </div>
               </div>
             ))
@@ -262,7 +260,6 @@ const ContactList = () => {
         </div>
       )}
 
-      {/* Render the Inline Confirmation Modal */}
       <ConfirmationModal
         isOpen={isModalOpen}
         onClose={closeDeleteModal}

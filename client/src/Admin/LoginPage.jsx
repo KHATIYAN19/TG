@@ -2,14 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios'; // Import axios
-import { useNavigate } from 'react-router-dom'; // Import for navigation
-import { useDispatch } from "react-redux"; // Import for dispatching actions
-import { login } from "../Redux/authSlice"; // Import your login action
-import BASE_URL from '../utils/Url'; // Import your BASE_URL
+import { useNavigate } from 'react-router-dom'; 
+import { useDispatch } from "react-redux"; 
+import { login } from "../Redux/authSlice"; 
+import BASE_URL from '../utils/Url'; 
 import { Eye, EyeOff, ArrowLeft, Lock, Mail, Loader2, User as UserIcon, Phone, RefreshCw } from 'lucide-react'; // Added RefreshCw
 
-// --- Zod Schema ---
-// Schema to validate identifier as either email or a basic phone number pattern
+
 const identifierSchema = z.union([
     z.string().email({ message: 'Invalid email address' }),
     z.string().regex(/^[6-9]\d{9}$/, { message: 'Invalid 10-digit Indian mobile number' })
@@ -23,28 +22,25 @@ const loginSchema = z.object({
 
 // --- Component ---
 const LoginPage = () => {
-  const [stage, setStage] = useState('login'); // 'login' or 'otp'
+  const [stage, setStage] = useState('login'); 
   const [loginFormData, setLoginFormData] = useState({ identifier: '', password: '' });
   const [otp, setOtp] = useState(new Array(6).fill(''));
-  const [loginFormErrors, setLoginFormErrors] = useState({}); // Only for client-side Zod errors
+  const [loginFormErrors, setLoginFormErrors] = useState({}); 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [userIdentifier, setUserIdentifier] = useState('');
 
-  // Resend Timer State
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResendDisabled, setIsResendDisabled] = useState(false);
-  const timerIntervalRef = useRef(null); // Ref to store interval ID
+  const timerIntervalRef = useRef(null); 
 
   const otpInputRefs = useRef([]);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // --- Cleanup Timer on Unmount ---
   useEffect(() => {
-    // Clear interval when component unmounts
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -52,13 +48,13 @@ const LoginPage = () => {
     };
   }, []);
 
-  // --- Start Resend Cooldown Timer ---
+  
   const startResendCooldown = () => {
     setIsResendDisabled(true);
-    setResendCooldown(60); // Start countdown from 60 seconds
+    setResendCooldown(60); 
 
     if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current); // Clear existing interval if any
+        clearInterval(timerIntervalRef.current); 
     }
 
     timerIntervalRef.current = setInterval(() => {
@@ -70,11 +66,10 @@ const LoginPage = () => {
         }
         return prevCooldown - 1;
       });
-    }, 1000); // Update every second
+    }, 1000); 
   };
 
 
-  // --- Login Form Handlers ---
   const handleLoginInputChange = (e) => {
     const { name, value } = e.target;
     setLoginFormData(prev => ({ ...prev, [name]: value }));
@@ -89,21 +84,18 @@ const LoginPage = () => {
     setIsSubmittingLogin(true);
     const toastId = toast.loading('Signing in...');
 
-    // Validate identifier first separately to give specific feedback
     const identifierValidation = identifierSchema.safeParse(loginFormData.identifier);
     if (!identifierValidation.success) {
          toast.error('Please enter a valid Email or 10-digit Mobile Number.', { id: toastId });
-         setLoginFormErrors({ identifier: ['Invalid Email or Mobile Number'] }); // Set local error for input highlight
+         setLoginFormErrors({ identifier: ['Invalid Email or Mobile Number'] });
          setIsSubmittingLogin(false);
          return;
     }
 
-    // Validate the whole form
     const validationResult = loginSchema.safeParse(loginFormData);
     if (!validationResult.success) {
       const errors = validationResult.error.flatten().fieldErrors;
       setLoginFormErrors(errors); // Set local errors for input highlights
-      // Show only the first error in toast for brevity
       const firstError = Object.values(errors).flat()[0];
       toast.error(firstError || 'Please check your input.', { id: toastId });
       setIsSubmittingLogin(false);
@@ -119,21 +111,19 @@ const LoginPage = () => {
       toast.success(response.data.message || 'Login successful! Please enter OTP.', { id: toastId });
       setUserIdentifier(validationResult.data.identifier);
       setStage('otp');
-      setLoginFormData({ identifier: '', password: '' }); // Clear form only on success
+      setLoginFormData({ identifier: '', password: '' }); 
       setTimeout(() => otpInputRefs.current[0]?.focus(), 0);
-      startResendCooldown(); // Start cooldown timer immediately after successful login step
+      startResendCooldown(); 
 
     } catch (error) {
       console.error('Login error:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Login failed. Please check credentials.';
       toast.error(errorMsg, { id: toastId });
-      // Do not set formErrors.api here, rely on toast
     } finally {
       setIsSubmittingLogin(false);
     }
   };
 
-  // --- OTP Form Handlers ---
   const handleOtpChange = (element, index) => {
     if (isNaN(element.value) || element.value.length > 1) return false;
 
@@ -201,8 +191,6 @@ const LoginPage = () => {
           console.error('OTP Verification error:', error);
           const errorMsg = error.response?.data?.message || error.message || 'Invalid OTP. Please try again.';
           toast.error(errorMsg, { id: toastId });
-          // --- Don't clear OTP on error ---
-          // setOtp(new Array(6).fill(''));
           otpInputRefs.current[0]?.focus();
       } finally {
           setIsSubmittingOtp(false);
@@ -210,7 +198,7 @@ const LoginPage = () => {
   };
 
   const handleResendOtp = async () => {
-      if (isResendDisabled) return; // Prevent clicking during cooldown
+      if (isResendDisabled) return; 
 
       setIsResendingOtp(true);
       const toastId = toast.loading('Resending OTP...');
@@ -219,9 +207,9 @@ const LoginPage = () => {
               identifier: userIdentifier,
           });
           toast.success('New OTP sent successfully.', { id: toastId });
-          setOtp(new Array(6).fill('')); // Clear current OTP input
+          setOtp(new Array(6).fill('')); 
           otpInputRefs.current[0]?.focus();
-          startResendCooldown(); // Restart cooldown timer
+          startResendCooldown(); 
 
       } catch (error) {
           console.error('Resend OTP error:', error);
@@ -238,7 +226,6 @@ const LoginPage = () => {
     setOtp(new Array(6).fill(''));
     setLoginFormErrors({});
     setUserIdentifier('');
-    // Clear timer if user goes back
      if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
      }
@@ -267,7 +254,7 @@ const LoginPage = () => {
                 <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-1">Email or Mobile Number</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                     {/* Simple check for icon */}
+                    
                     {loginFormData.identifier.includes('@') ? <Mail size={18} /> : <Phone size={18} />}
                   </span>
                   <input
@@ -275,7 +262,7 @@ const LoginPage = () => {
                     value={loginFormData.identifier} onChange={handleLoginInputChange}
                     disabled={isSubmittingLogin}
                     className={`w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${loginFormErrors.identifier ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}
-                    placeholder="Enter email or mobile" required
+                    placeholder="Enter email or mobile" 
                   />
                 </div>
                 {/* Only show Zod validation error below field */}
@@ -292,7 +279,7 @@ const LoginPage = () => {
                     value={loginFormData.password} onChange={handleLoginInputChange}
                     disabled={isSubmittingLogin}
                     className={`w-full pl-10 pr-10 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${loginFormErrors.password ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}
-                    placeholder="Enter your password" required
+                    placeholder="Enter your password" 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-blue-600 cursor-pointer" title={showPassword ? 'Hide password' : 'Show password'}>
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -320,7 +307,7 @@ const LoginPage = () => {
           </div>
         )}
 
-        {/* OTP Stage */}
+      
         {stage === 'otp' && (
           <div className="animate-fade-in">
             <h2 className="text-2xl font-bold text-center text-gray-800 mb-3">Enter OTP</h2>

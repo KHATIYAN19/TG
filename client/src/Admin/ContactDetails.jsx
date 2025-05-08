@@ -220,7 +220,7 @@ const ContactDetail = () => {
                 >
                     {message.isRead ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
-                {/* Updated delete button to open the modal */}
+              
                 <button
                     onClick={openDeleteModal}
                     title="Delete Message"
@@ -232,17 +232,16 @@ const ContactDetail = () => {
        </div>
 
       <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-        <h1 className="text-2xl font-semibold mb-4 text-gray-800 border-b pb-2">{message.subject}</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm text-gray-700 mb-4">
-            <p className="flex items-center"><User size={16} className="mr-2 text-blue-600"/><strong>From:</strong><span className="ml-2">{message.name}</span></p>
-            <p className="flex items-center"><Mail size={16} className="mr-2 text-blue-600"/><strong>Email:</strong><span className="ml-2">{message.email}</span></p>
-            <p className="flex items-center"><Phone size={16} className="mr-2 text-blue-600"/><strong>Phone:</strong><span className="ml-2">{message.contactNumber}</span></p>
-            <p className="flex items-center"><Briefcase size={16} className="mr-2 text-blue-600"/><strong>Service:</strong><span className="ml-2">{message.service}</span></p>
+            <p className="flex items-center"><User size={16} className="mr-2 text-blue-600"/><strong>From:</strong><span className="ml-2">{message?.name}</span></p>
+            <p className="flex items-center"><Mail size={16} className="mr-2 text-blue-600"/><strong>Email:</strong><span className="ml-2">{message?.email}</span></p>
+            <p className="flex items-center"><Phone size={16} className="mr-2 text-blue-600"/><strong>Phone:</strong><span className="ml-2">{message?.contactNumber}</span></p>
+            <p className="flex items-center"><Briefcase size={16} className="mr-2 text-blue-600"/><strong>Service:</strong><span className="ml-2">{message?.service}</span></p>
             <p className="flex items-center col-span-1 md:col-span-2"><Clock size={16} className="mr-2 text-blue-600"/><strong>Received:</strong><span className="ml-2">{formatDate(message.createdAt)}</span></p>
         </div>
         <div className="mt-4 pt-4 border-t">
             <h3 className="text-md font-semibold mb-2 text-gray-800 flex items-center"><MessageSquare size={16} className="mr-2 text-blue-600"/> Message Content:</h3>
-            <p className="text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded border border-gray-200">{message.message}</p>
+            <p className="text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded border border-gray-200">{message?.message||""}</p>
         </div>
       </div>
 
@@ -293,7 +292,7 @@ const ContactDetail = () => {
         </form>
       </div>
 
-      {/* Render the Inline Confirmation Modal */}
+     
       <ConfirmationModal
         isOpen={isModalOpen}
         onClose={closeDeleteModal}

@@ -5,6 +5,9 @@ import User from '../models/User.js';
 import fs from "fs";
 import  path from 'path';
 import sendMail from '../utils/MailSender.js';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export const signup = async (req, res) => {
   try {
     const { name, email, mobile, password, role } = req.body;
@@ -37,17 +40,13 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       role: role || 'admin'
     });
-
     await user.save();
-
     res.status(201).json({ success: true, message: 'User created successfully' });
-
   } catch (error) {
     console.log(error)
     res.status(500).json({ success: false, message: 'Server error',error });
   }
 };
-
 export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -81,11 +80,10 @@ export const login = async (req, res) => {
     res.status(200).json({ success: true, message: 'OTP sent successfully' });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("error",error);
+    res.status(500).json({ success: false, message: 'Server error' ,error});
   }
 }
-
 
 export const verifyOtp = async (req, res) => {
   try {
