@@ -3,7 +3,7 @@ import { Menu, X, User, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../Redux/authSlice';
-import logo from '../utils/target_trek_logo_2.jpg';
+import logo from '../utils/target_Trek_logo_2.jpg';
 
 const adminLinks = [
   { label: 'Dashboard', path: '/dashboard' },
