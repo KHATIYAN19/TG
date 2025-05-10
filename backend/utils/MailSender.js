@@ -6,7 +6,7 @@ const createTransporter = () => {
     service: 'gmail',
     auth: {
       user: process.env.USER,
-      pass: process.env.pass
+      pass: process.env.PASS
     }
   });
 };
@@ -29,5 +29,4 @@ const sendMail = (toEmail, subject, text, htmlContent) => {
     }
   });
 };
-
 export default sendMail;

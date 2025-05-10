@@ -4,10 +4,10 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Calendar, User, Loader2, AlertTriangle, Trash2, Eye, EyeOff, AlertTriangle as ModalAlertIcon, X, Frown } from 'lucide-react';
-import BASE_URL from "../utils/Url.js"; // Adjust path as needed
+import BASE_URL from "../utils/Url.js";
 import toast, { Toaster } from 'react-hot-toast';
+import { Helmet } from 'react-helmet';
 
-// Inline Confirmation Modal (same as before)
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
   return (
@@ -39,7 +39,7 @@ const BlogPostDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [token,setToken]=useState(useSelector((state)=>state?.auth?.token));
   useEffect(() => {
     const fetchPost = async () => {
       setLoading(true);
@@ -49,19 +49,17 @@ const BlogPostDetail = () => {
         if (response.data.success) {
           setPost(response.data.data);
         } else {
-          // Treat backend 'success: false' as an error
           setError(response.data.error?.message || 'Blog post not found.');
           toast.error(response.data.error?.message || 'Could not load post.');
         }
       } catch (err) {
         console.error("Error fetching blog post:", err);
         const errorMsg = err.response?.status === 404
-            ? 'Blog post not found.'
-            : (err.response?.data?.error?.message || err.message || 'An error occurred.');
+          ? 'Blog post not found.'
+          : (err.response?.data?.error?.message || err.message || 'An error occurred.');
         setError(errorMsg);
-        // Only show toast if it's not a simple 404
         if (err.response?.status !== 404) {
-            toast.error(errorMsg);
+          toast.error(errorMsg);
         }
       } finally {
         setLoading(false);
@@ -71,9 +69,12 @@ const BlogPostDetail = () => {
     if (slug) {
       fetchPost();
     } else {
-        setError('No blog slug provided.');
-        toast.error('No blog slug provided.');
-        setLoading(false);
+      setError('No blog slug provided.');
+      toast.error('No blog slug provided.');
+      setLoading(false);
+    }
+    if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
   }, [slug]);
@@ -86,13 +87,17 @@ const BlogPostDetail = () => {
     if (!post?._id) return;
     const toastId = toast.loading('Deleting post...');
     try {
-      const response = await axios.delete(`${BASE_URL}/blogs/${post._id}`);
+    const response = await axios.delete(`${BASE_URL}/blogs/${post._id}`, {
+        headers: {
+              Authorization: `Bearer ${token}`  
+        }
+    });
       if (response.data.success) {
         toast.success('Blog post deleted successfully.', { id: toastId });
         setIsModalOpen(false);
-        navigate('/blogs'); // Navigate back to list
+        navigate('/blogs');
       } else {
-         throw new Error(response.data.error?.message || 'Failed to delete post');
+        throw new Error(response.data.error?.message || 'Failed to delete post');
       }
     } catch (err) {
       console.error("Error deleting post:", err);
@@ -102,21 +107,26 @@ const BlogPostDetail = () => {
   };
 
   const handleTogglePublish = async () => {
-     if (!post?._id) return;
+    if (!post?._id) return;
     const currentStatus = post.isPublished;
     const action = currentStatus ? 'Unpublishing' : 'Publishing';
     const toastId = toast.loading(`${action} post...`);
     try {
-        const response = await axios.patch(`${BASE_URL}/blogs/${post._id}/toggle-publish`);
-        if (response.data.success) {
-            setPost(response.data.data); // Update local state with the response
-            toast.success(response.data.message || `Post ${action.toLowerCase()} successful.`, { id: toastId });
-        } else {
-            throw new Error(response.data.error?.message || `Failed to ${action.toLowerCase()} post.`);
+    const response = await axios.patch(`${BASE_URL}/blogs/${post._id}/toggle-publish`, null, {
+        headers: {
+           Authorization: `Bearer ${token}` 
         }
+    });
+
+      if (response.data.success) {
+        setPost(response.data.data);
+        toast.success(response.data.message || `Post ${action.toLowerCase()} successful.`, { id: toastId });
+      } else {
+        throw new Error(response.data.error?.message || `Failed to ${action.toLowerCase()} post.`);
+      }
     } catch (err) {
-        console.error(`Error ${action.toLowerCase()} post:`, err);
-        toast.error(err.message || `Failed to ${action.toLowerCase()} post.`, { id: toastId });
+      console.error(`Error ${action.toLowerCase()} post:`, err);
+      toast.error(err.message || `Failed to ${action.toLowerCase()} post.`, { id: toastId });
     }
   };
 
@@ -138,7 +148,6 @@ const BlogPostDetail = () => {
     );
   }
 
-  // --- Updated Error/Not Found Handling ---
   if (error || !post) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gray-100 p-8 text-center">
@@ -149,94 +158,106 @@ const BlogPostDetail = () => {
           {error || "We couldn't find the blog post you were looking for."}
         </p>
         <button
-            onClick={() => navigate('/blogs')}
-            className="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          onClick={() => navigate('/blogs')}
+          className="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-            <ArrowLeft size={18} className="mr-2" /> Go Back to Blogs
+          <ArrowLeft size={18} className="mr-2" /> Go Back to Blogs
         </button>
       </div>
     );
   }
-  // --- End Updated Error/Not Found Handling ---
 
   return (
-    <div className="bg-gray-100 min-h-screen pb-16 pt-20">
-      <Toaster position="top-center" reverseOrder={false} />
+    <>
+      <Helmet>
+        <title>{post.metaTitle || post.title} | Techistha</title>
+        <meta name="description" content={post.metaDescription || post.excerpt} />
+        <meta property="og:title" content={post.title} />
+        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:image" content={post.imageUrl} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title} />
+        <meta name="twitter:description" content={post.excerpt} />
+        <meta name="twitter:image" content={post.imageUrl} />
+      </Helmet>
+      <div className="bg-gray-100 min-h-screen pb-16 pt-20">
+        <Toaster position="top-center" reverseOrder={false} />
 
-      {post.imageUrl && (
-           <div className="w-full h-64 md:h-96 bg-gray-300">
-               <img
-                src={post.imageUrl}
-                alt={post.altText || post.title}
-                className="w-full h-full object-cover"
-                onError={(e) => { e.target.style.display='none'; }}
-                />
-           </div>
-      )}
-
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg -mt-16 md:-mt-24 relative z-10">
-        <div className="p-6 md:p-10">
-           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <button onClick={() => navigate('/blogs')} className="inline-flex items-center text-sm text-blue-600 hover:underline">
-                    <ArrowLeft size={16} className="mr-1" /> Back to Blogs
-                </button>
-                {isAdmin && (
-                    <div className="flex items-center space-x-3 border border-gray-200 p-2 rounded-md">
-                        <button
-                            onClick={handleTogglePublish}
-                            title={post.isPublished ? 'Unpublish Post' : 'Publish Post'}
-                            className={`p-1.5 rounded focus:outline-none focus:ring-2 focus:ring-offset-1 ${post.isPublished ? 'text-yellow-600 hover:bg-yellow-100 focus:ring-yellow-500' : 'text-green-600 hover:bg-green-100 focus:ring-green-500'}`}
-                        >
-                            {post.isPublished ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                         <div className="border-l h-5 border-gray-300"></div>
-                        <button
-                            onClick={handleDeleteClick}
-                            title="Delete Post"
-                            className="p-1.5 text-red-500 hover:bg-red-100 rounded focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500"
-                        >
-                            <Trash2 size={18} />
-                        </button>
-                    </div>
-                )}
-           </div>
-
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{post.title}</h1>
-          <div className="flex flex-wrap items-center text-sm text-gray-500 mb-4 gap-x-4 gap-y-1">
-            <div className="flex items-center">
-              <User size={14} className="mr-1.5"/> {post.author}
-            </div>
-            <div className="flex items-center">
-              <Calendar size={14} className="mr-1.5"/> Published on {formatDate(post.createdAt)}
-            </div>
-             {!post.isPublished && <span className="text-xs font-semibold px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full">Draft</span>}
+        {post.imageUrl && (
+          <div className="w-full h-64 md:h-96 bg-gray-300">
+            <img
+              src={post.imageUrl}
+              alt={post.altText || post.title}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           </div>
-           {post.tags && (
-             <div className="mb-6">
-               {post.tags.map(tag => (
-                 <span key={tag} className="inline-block bg-gray-100 text-gray-700 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full capitalize">
-                   #{tag}
-                 </span>
-               ))}
-             </div>
-           )}
+        )}
 
-          <div className="prose prose-lg max-w-none text-gray-800">
-            <p>{post.excerpt}</p>
-            {/* Add full content rendering here if available */}
-            {/* <div dangerouslySetInnerHTML={{ __html: post.content }} /> */}
+        <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg -mt-16 md:-mt-24 relative z-10">
+          <div className="p-6 md:p-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <button onClick={() => navigate('/blogs')} className="inline-flex items-center text-sm text-blue-600 hover:underline">
+                <ArrowLeft size={16} className="mr-1" /> Back to Blogs
+              </button>
+              {isAdmin && (
+                <div className="flex items-center space-x-3 border border-gray-200 p-2 rounded-md">
+                  <button
+                    onClick={handleTogglePublish}
+                    title={post.isPublished ? 'Unpublish Post' : 'Publish Post'}
+                    className={`p-1.5 rounded focus:outline-none focus:ring-2 focus:ring-offset-1 ${post.isPublished ? 'text-yellow-600 hover:bg-yellow-100 focus:ring-yellow-500' : 'text-green-600 hover:bg-green-100 focus:ring-green-500'}`}
+                  >
+                    {post.isPublished ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                  <div className="border-l h-5 border-gray-300"></div>
+                  <button
+                    onClick={handleDeleteClick}
+                    title="Delete Post"
+                    className="p-1.5 text-red-500 hover:bg-red-100 rounded focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{post.title}</h1>
+            <div className="flex flex-wrap items-center text-sm text-gray-500 mb-4 gap-x-4 gap-y-1">
+              <div className="flex items-center">
+                <User size={14} className="mr-1.5" /> {post.author}
+              </div>
+              <div className="flex items-center">
+                <Calendar size={14} className="mr-1.5" /> Published on {formatDate(post.createdAt)}
+              </div>
+              {!post.isPublished && <span className="text-xs font-semibold px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full">Draft</span>}
+            </div>
+            {post.tags && (
+              <div className="mb-6">
+                {post.tags.map(tag => (
+                  <span key={tag} className="inline-block bg-gray-100 text-gray-700 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full capitalize">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="prose prose-lg max-w-none text-gray-800">
+              <p>{post.excerpt}</p>
+              {/* Add full content rendering here if available */}
+              {/* <div dangerouslySetInnerHTML={{ __html: post.content }} /> */}
+            </div>
           </div>
         </div>
-      </div>
 
-      <ConfirmationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={confirmDelete}
-        title="Confirm Deletion"
-        message={`Are you sure you want to delete the post "${post?.title || ''}"? This action cannot be undone.`}
-      />
-    </div>
+        <ConfirmationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={confirmDelete}
+          title="Confirm Deletion"
+          message={`Are you sure you want to delete the post "${post?.title || ''}"? This action cannot be undone.`}
+        />
+      </div>
+    </>
   );
 };
 

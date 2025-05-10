@@ -28,6 +28,13 @@ import ContactList from './Admin/ContactList'
 import ContactDetail from './Admin/ContactDetails'
 import AddPortfolioPage from './Admin/AddPortfolioPage'
 import ManagePortfolio from './Admin/ManagePortFolio'
+import AffiliateList from './Admin/AffiliateList.jsx'
+
+import AdminDashboard from './Admin/AdminDashBoard.jsx'
+import FloatingContact from './component/FloatingContact.jsx'
+import Footer from './component/Footer.jsx'
+import PrivacyPolicy from './component/PrivacyPolicy.jsx'
+import TermsOfService from './component/TermsOfService.jsx'
 import { useSelector } from 'react-redux'
 import { useState } from 'react'
 
@@ -52,10 +59,14 @@ function App() {
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/affiliate-marketing" element={<AffiliateMarketing/>}/>
         <Route path="/portfolio/:slug" element={<PortfolioDetailPage/>}/>
+        <Route path="/privacy-policy" element={<PrivacyPolicy/>}/>
+        <Route path="/terms-of-service" element={<TermsOfService/>}/>
 
 
 
 
+        <Route path="/admin/affiliate-manage" element={isAdmin ? <AffiliateList /> : <NotFoundPage />} />
+       
         <Route path="/admin/booking" element={isAdmin ? <AdminBookingsPage /> : <NotFoundPage />} />
       <Route path="/admin/slots" element={isAdmin ? <AdminSlotsPage /> : <NotFoundPage />} />
       <Route path="/admin/add-blog" element={isAdmin ? <AddBlogPage /> : <NotFoundPage />} />
@@ -67,16 +78,12 @@ function App() {
       <Route path="/admin/add-portfolio" element={isAdmin ? <AddPortfolioPage /> : <NotFoundPage />} />
       <Route path="/portfolio-manage" element={isAdmin ? <ManagePortfolio /> : <NotFoundPage />} />
 
-
-
+      <Route path="/dashboard" element={isAdmin ? <AdminDashboard /> : <NotFoundPage />} />
 
         <Route path="*" element={<NotFoundPage/>}/>
-
-
-
       </Routes>
-    
-
+      <FloatingContact/>
+    <Footer/>
     </div>
   )
 }

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import BASE_URL from "../utils/Url.js";
-import { MapPin, Phone, Mail, Send, Loader2, AlertTriangle, CheckCircle, Briefcase, Users, MessageSquare, ChevronDown } from 'lucide-react';
-import Helmet from "react-helmet"
+import { MapPin, Phone, Mail, Send, Loader2, ChevronDown } from 'lucide-react';
+import { Helmet } from "react-helmet"
 
 const servicesList = [
   'PPC Advertising',
@@ -18,7 +18,8 @@ const contactSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
   email: z.string().email({ message: 'Please enter a valid email address' }),
   contactNumber: z.string()
-    .regex(/^\+91[0-9]{10}$/, { message: 'Number must start with +91 and be followed by 10 digits (e.g., +91XXXXXXXXXX)' }),
+    .regex(/^([0-9]{10})$/, { message: 'Number must be 10 digits' })
+    .transform(val => val),
   service: z.string().min(1, { message: 'Please select a service' }),
   message: z.string().optional(),
 });
@@ -27,7 +28,7 @@ const ContactPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    contactNumber: '+91', // Pre-fill with +91
+    contactNumber: '',
     service: '',
     message: ''
   });
@@ -35,26 +36,42 @@ const ContactPage = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+    useEffect(() => {
+        // Scroll to the top of the page on component mount
+        window.scrollTo(0, 0);
+
+        // Attempt to manage scroll restoration, though not always reliably supported
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+
+        // Apply smooth scrolling to the documentElement
+        document.documentElement.style.scrollBehavior = 'smooth';
+
+        // Cleanup: Remove smooth scrolling when the component unmounts
+        return () => {
+            document.documentElement.style.scrollBehavior = 'auto';
+        };
+    }, []); // Empty dependency array ensures this runs only once on mount
+
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "contactNumber") {
-        // Allow only numbers after +91 or allow backspace to remove digits but not +91 initially
-        if (value.startsWith("+91") || value === "+9" || value === "+" || value === "") {
-             setFormData(prev => ({ ...prev, [name]: value }));
-        } else if (value === "" || /^\+91\d*$/.test(value)) { // Allow clearing or typing digits after +91
-            setFormData(prev => ({ ...prev, [name]: value }));
-        } else if (!value.startsWith("+91") && /^\d*$/.test(value.replace("+91", ""))) { // If +91 is removed, re-add if numbers are typed
-            setFormData(prev => ({ ...prev, [name]: "+91" + value.replace(/\D/g, '') }));
+      const numericValue = value.replace(/\D/g, '');
+        if (numericValue.length <= 10) {
+          setFormData(prev => ({ ...prev, [name]: numericValue }));
         }
-    } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
+    }
+     else {
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
 
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,18 +87,22 @@ const ContactPage = () => {
       setIsSubmitting(false);
       return;
     }
+      const dataToSend = {
+      ...validationResult.data,
+      contactNumber: '+91' + validationResult.data.contactNumber
+    }
 
     const loadingToastId = toast.loading('Sending your message...');
 
     try {
       const apiUrl = `${BASE_URL}/messages/us`;
-      const response = await axios.post(apiUrl, validationResult.data);
+      const response = await axios.post(apiUrl, dataToSend);
 
       toast.dismiss(loadingToastId);
 
       if (response.status === 200 || response.status === 201) {
         toast.success("Message sent successfully! Our team will contact you soon.");
-        setFormData({ name: '', email: '', contactNumber: '+91', service: '', message: '' });
+        setFormData({ name: '', email: '', contactNumber: '', service: '', message: '' });
       } else {
         console.warn("Unexpected success status:", response.status);
         toast.error('Received an unexpected response from the server.');
@@ -101,6 +122,10 @@ const ContactPage = () => {
     <div className="pt-16 md:pt-20 bg-gradient-to-b from-gray-50 to-blue-50 min-h-screen">
       <Helmet>
         <title>Contact - Target Trek</title>
+        <meta
+          name="description"
+          content="Contact Target Trek for your digital marketing and web service needs.  Reach out to our team with your questions or project inquiries."
+        />
       </Helmet>
       <Toaster position="top-center" reverseOrder={false} />
 
@@ -125,7 +150,7 @@ const ContactPage = () => {
                     <MapPin size={20} className="text-blue-600 mr-3 mt-1 flex-shrink-0" />
                     <span>
                       [Your Street Address],<br />
-                      [Your City], [State] [Zip Code]<br/>
+                      [Your City], [State] [Zip Code]<br />
                     </span>
                   </div>
                   <div className="flex items-center">
@@ -145,7 +170,7 @@ const ContactPage = () => {
                     src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80"
                     alt="Team collaborating on a digital project"
                     className="w-full h-64 object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/600x300/e2e8f0/94a3b8?text=Collaboration"; }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x300/e2e8f0/94a3b8?text=Collaboration"; }}
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-2 italic">Let's build something great together.</p>
@@ -153,7 +178,7 @@ const ContactPage = () => {
             </div>
 
             <div className="bg-white p-6 md:p-8 rounded-lg shadow-xl">
-              <h2 className="text-2xl lg:text-3xl font-semibold text-gray-800 mb-6">Send Us a Message</h2>
+              <h2 className="text-2xl lg:text-3xl font-semibold text-gray-800 mb-6" id="contact-us">Send Us a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -177,17 +202,22 @@ const ContactPage = () => {
 
                 <div>
                   <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-                  <input
-                    type="tel"
-                    id="contactNumber"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    onChange={handleInputChange}
-                    disabled={isSubmitting}
-                    className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${formErrors.contactNumber ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}
-                    placeholder="+91XXXXXXXXXX"
-                    maxLength={13} // +91 and 10 digits
-                  />
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 border-t border-l border-b border-gray-300 text-gray-900 sm:text-sm">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      id="contactNumber"
+                      name="contactNumber"
+                      value={formData.contactNumber}
+                      onChange={handleInputChange}
+                      disabled={isSubmitting}
+                      className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${formErrors.contactNumber ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'}`}
+                      placeholder="XXXXXXXXXX"
+                      maxLength={10}
+                    />
+                  </div>
                   {formErrors.contactNumber && <p className="mt-1 text-xs text-red-500">{formErrors.contactNumber[0]}</p>}
                 </div>
 
@@ -196,7 +226,7 @@ const ContactPage = () => {
                   <select
                     id="service" name="service" value={formData.service} onChange={handleInputChange} disabled={isSubmitting}
                     className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 appearance-none ${formErrors.service ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:border-blue-500'} ${formData.service ? 'text-gray-900' : 'text-gray-500'}`}
-                  >
+                    >
                     <option value="" disabled>Select a Service</option>
                     {servicesList.map(service => (
                       <option key={service} value={service}>{service}</option>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useSelector } from 'react-redux';
 import toast, { Toaster } from 'react-hot-toast';
-import { Trash2, Eye, EyeOff, CalendarDays, Loader2, AlertTriangle, FileQuestion, Pencil, ArrowLeft } from 'lucide-react'; // Added ArrowLeft
+import { Trash2, Eye, EyeOff, CalendarDays, Loader2, AlertTriangle, FileQuestion, ArrowLeft } from 'lucide-react';
 import BASE_URL from '../utils/Url';
+import { Helmet } from "react-helmet";
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
@@ -46,54 +47,57 @@ function PortfolioDetailPage() {
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state update on unmounted component
+    window.scrollTo(0, 0);
+  }, [navigate]);
+
+  useEffect(() => {
+    let isMounted = true;
     const fetchPortfolioItem = async () => {
       if (!slug) {
         setError("No portfolio slug provided.");
         setIsLoading(false);
         return;
       }
-      // Reset states on new fetch attempt
       setIsLoading(true);
       setError(null);
       setItem(null);
 
       try {
         const response = await axios.get(`${BASE_URL}/portfolio/${slug}`);
-        if (!isMounted) return; // Don't update state if component unmounted
+        if (!isMounted) return;
 
         if (response.data && response.data.success) {
           setItem(response.data.data);
         } else {
-          // Use 404 status specifically for "Not Found"
           if (response.status === 404) {
-             setError('Portfolio item not found.');
+            setError('Portfolio item not found.');
           } else {
-             throw new Error(response.data?.message || 'Failed to load portfolio item.');
+            throw new Error(response.data?.message || 'Failed to load portfolio item.');
           }
         }
       } catch (err) {
-        if (!isMounted) return; // Don't update state if component unmounted
+        if (!isMounted) return;
         console.error("Failed to fetch portfolio item:", err);
         const message = err.response?.status === 404
-           ? 'Portfolio item not found.'
-           : (err.response?.data?.message || err.message || 'Failed to load portfolio item.');
+          ? 'Portfolio item not found.'
+          : (err.response?.data?.message || err.message || 'Failed to load portfolio item.');
         setError(message);
-        toast.error(message); // Show toast on error
+        toast.error(message);
       } finally {
-         if (isMounted) {
-           setIsLoading(false);
-         }
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchPortfolioItem();
 
-    // Cleanup function to set isMounted to false when component unmounts
     return () => {
       isMounted = false;
     };
-  }, [slug]); // Dependency array only includes slug
+  }, [slug]);
+
+
 
   const handleDelete = async () => {
     if (!item?._id) return;
@@ -101,12 +105,12 @@ function PortfolioDetailPage() {
     const toastId = toast.loading('Deleting item...');
     try {
       const response = await axios.delete(`${BASE_URL}/portfolio/${item._id}`);
-       if (response.data && response.data.success) {
-           toast.success('Portfolio item deleted successfully!', { id: toastId });
-           navigate('/portfolio');
-       } else {
-           throw new Error(response.data?.message || 'Failed to delete item.');
-       }
+      if (response.data && response.data.success) {
+        toast.success('Portfolio item deleted successfully!', { id: toastId });
+        navigate('/portfolio');
+      } else {
+        throw new Error(response.data?.message || 'Failed to delete item.');
+      }
     } catch (err) {
       console.error("Failed to delete portfolio item:", err);
       const message = err.response?.data?.message || err.message || 'Failed to delete item.';
@@ -124,13 +128,13 @@ function PortfolioDetailPage() {
 
     try {
       const response = await axios.patch(`${BASE_URL}/portfolio/${item._id}/toggle`);
-       if (response.data && response.data.success) {
-           toast.success(`Item ${originalStatus ? 'unpublished' : 'published'} successfully!`, { id: toastId });
-           setItem(response.data.data);
-       } else {
-           setItem(prev => ({ ...prev, isPublished: originalStatus }));
-           throw new Error(response.data?.message || `Failed to ${actionVerb.toLowerCase()} item.`);
-       }
+      if (response.data && response.data.success) {
+        toast.success(`Item ${originalStatus ? 'unpublished' : 'published'} successfully!`, { id: toastId });
+        setItem(response.data.data);
+      } else {
+        setItem(prev => ({ ...prev, isPublished: originalStatus }));
+        throw new Error(response.data?.message || `Failed to ${actionVerb.toLowerCase()} item.`);
+      }
     } catch (err) {
       setItem(prev => ({ ...prev, isPublished: originalStatus }));
       console.error("Failed to toggle publish status:", err);
@@ -160,7 +164,6 @@ function PortfolioDetailPage() {
     );
   }
 
-  // Improved Error and Not Found States
   if (error || !item) {
     const isNotFoundError = error === 'Portfolio item not found.';
     const bgColor = isNotFoundError
@@ -172,22 +175,22 @@ function PortfolioDetailPage() {
     const IconComponent = isNotFoundError ? FileQuestion : AlertTriangle;
     const errorTitle = isNotFoundError ? "Portfolio Item Not Found" : "Error Loading Project";
     const errorMessage = isNotFoundError
-       ? "We couldn't find the specific project you were looking for. It might have been moved or deleted."
-       : error;
+      ? "We couldn't find the specific project you were looking for. It might have been moved or deleted."
+      : error;
 
     return (
       <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${bgColor} p-4`}>
         <div className="text-center p-10 bg-white rounded-xl shadow-xl max-w-lg border border-gray-200">
-           <IconComponent className={`h-20 w-20 ${iconColor} mx-auto mb-5`} strokeWidth={1.5}/>
-           <h2 className={`text-3xl font-bold ${titleColor} mb-3`}>{errorTitle}</h2>
-           <p className={`${textColor} text-lg mb-6`}>{errorMessage}</p>
-           <Link
-             to="/portfolio"
-             className="inline-flex items-center px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out shadow-md hover:shadow-lg"
-           >
-              <ArrowLeft size={16} className="mr-2" />
-              Return to Portfolio
-           </Link>
+          <IconComponent className={`h-20 w-20 ${iconColor} mx-auto mb-5`} strokeWidth={1.5} />
+          <h2 className={`text-3xl font-bold ${titleColor} mb-3`}>{errorTitle}</h2>
+          <p className={`${textColor} text-lg mb-6`}>{errorMessage}</p>
+          <Link
+            to="/portfolio"
+            className="inline-flex items-center px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out shadow-md hover:shadow-lg"
+          >
+            <ArrowLeft size={16} className="mr-2" />
+            Return to Portfolio
+          </Link>
         </div>
       </div>
     );
@@ -196,6 +199,14 @@ function PortfolioDetailPage() {
 
   return (
     <>
+      <Helmet>
+        <title>{item?.title || 'Portfolio Details'} - Target Trek</title>
+        <meta name="description" content={item?.description?.substring(0, 160) || 'Explore the details of our featured portfolio project.'} />
+        <meta property="og:title" content={`${item?.title || 'Portfolio Details'} - Target Trek`} />
+        <meta property="og:description" content={item?.description?.substring(0, 160) || 'Explore the details of our featured portfolio project.'} />
+        <meta property="og:type" content="article" />
+        {item?.imageUrl && <meta property="og:image" content={item.imageUrl} />}
+      </Helmet>
       <Toaster position="top-center" reverseOrder={false} />
       <ConfirmationModal
         isOpen={showDeleteModal}
@@ -204,35 +215,34 @@ function PortfolioDetailPage() {
         title="Confirm Deletion"
         message={`Are you sure you want to permanently delete the portfolio item "${item.title}"? This action cannot be undone.`}
       />
-      {/* Added pt-20 here */}
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 pt-20 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 font-sans">
         <div className="max-w-5xl mx-auto relative">
 
           {isAdmin && (
             <div className="absolute top-0 right-0 -mt-4 sm:-mt-6 lg:-mt-8 flex items-center space-x-3 z-10 bg-white p-2 rounded-bl-lg rounded-tr-lg shadow-md border border-gray-200/70 " >
-               <span
-                 title={`Status: ${item.isPublished ? 'Published' : 'Draft'}`}
-                 className={`flex items-center px-3 py-1 text-xs font-bold rounded-md ${item.isPublished ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}
-               >
-                 {item.isPublished ? <Eye size={14} className="mr-1.5"/> : <EyeOff size={14} className="mr-1.5"/>}
-                 {item.isPublished ? 'Published' : 'Draft'}
-               </span>
-               <div className="flex space-x-1 border-l border-gray-200 pl-2">
-                  <button
-                    onClick={handleTogglePublish}
-                    title={item.isPublished ? 'Unpublish Item' : 'Publish Item'}
-                    className={`p-2 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 ${item.isPublished ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:ring-yellow-500' : 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'}`}
-                  >
-                    {item.isPublished ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    title="Delete Item"
-                    className="p-2 rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition duration-150 ease-in-out"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-               </div>
+              <span
+                title={`Status: ${item.isPublished ? 'Published' : 'Draft'}`}
+                className={`flex items-center px-3 py-1 text-xs font-bold rounded-md ${item.isPublished ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}
+              >
+                {item.isPublished ? <Eye size={14} className="mr-1.5" /> : <EyeOff size={14} className="mr-1.5" />}
+                {item.isPublished ? 'Published' : 'Draft'}
+              </span>
+              <div className="flex space-x-1 border-l border-gray-200 pl-2">
+                <button
+                  onClick={handleTogglePublish}
+                  title={item.isPublished ? 'Unpublish Item' : 'Publish Item'}
+                  className={`p-2 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 ${item.isPublished ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:ring-yellow-500' : 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'}`}
+                >
+                  {item.isPublished ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  title="Delete Item"
+                  className="p-2 rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition duration-150 ease-in-out"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
           )}
 
@@ -245,36 +255,36 @@ function PortfolioDetailPage() {
 
           <article className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200/50">
             <div className="w-full h-72 sm:h-96 lg:h-[500px] bg-gray-100">
-               {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.altText || item.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                       e.target.onerror = null;
-                       e.target.src=`https://placehold.co/1200x600/EBF4FF/4299E1?text=Image+Unavailable`;
-                       e.target.alt = 'Image not available';
-                    }}
-                  />
-               ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 text-blue-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-               )}
+              {item.imageUrl ? (
+                <img
+                  src={item.imageUrl}
+                  alt={item.altText || item.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `https://placehold.co/1200x600/EBF4FF/4299E1?text=Image+Unavailable`;
+                    e.target.alt = 'Image not available';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 text-blue-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
             </div>
 
             <div className="p-8 sm:p-10 lg:p-12">
-               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-y-2">
-                  <p className="text-sm font-bold text-blue-600 uppercase tracking-widest">
-                    {item.category || 'Uncategorized'}
-                  </p>
-                  <div className="flex items-center text-xs sm:text-sm text-gray-500 whitespace-nowrap">
-                     <CalendarDays size={16} className="mr-1.5 text-gray-400 flex-shrink-0"/>
-                     <span>Created: {formatDate(item.createdAt)}</span>
-                  </div>
-               </div>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-y-2">
+                <p className="text-sm font-bold text-blue-600 uppercase tracking-widest">
+                  {item.category || 'Uncategorized'}
+                </p>
+                <div className="flex items-center text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+                  <CalendarDays size={16} className="mr-1.5 text-gray-400 flex-shrink-0" />
+                  <span>Created: {formatDate(item.createdAt)}</span>
+                </div>
+              </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-8 leading-tight">
                 {item.title}

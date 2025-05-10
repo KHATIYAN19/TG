@@ -5,7 +5,8 @@ import {
     getAllPublishedReviews,
     generateReviewLink,
     getAllReviews,
-    togglePublishStatus
+    togglePublishStatus,
+    deleteReview
 } from '../controllers/Review.js'; 
 
 import {auth,isAdmin} from  "../Middleware/auth.js"
@@ -15,4 +16,5 @@ router.get('/all',auth,isAdmin, getAllReviews);
 router.patch('/:id/toggle-publish', auth,isAdmin,togglePublishStatus);
 router.post('/:token', createReview);
 router.get('/published', getAllPublishedReviews);
+router.delete("/:id",auth,isAdmin,deleteReview);
 export default router;

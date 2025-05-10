@@ -9,6 +9,7 @@ import reviewRoute from "./routes/Review.js"
 import contactRoute from "./routes/Contact.js"
 import blogRoute from "./routes/Blog.js"
 import portfolioRoute from "./routes/Portfolio.js"
+import  AffiliateRoute  from './routes/Affiliate.js';
 dotenv.config();
 
 const app = express();
@@ -24,13 +25,10 @@ app.use('/admin',userRoute);
 
 app.use("/admin/reviews",reviewRoute);
 
-
 app.use("/messages",contactRoute);
-
 app.use("/blogs",blogRoute);
-
 app.use("/portfolio",portfolioRoute);
-
+app.use("/affiliate",AffiliateRoute);
 app.get('/', (req, res) => res.send('Booking API Running Successfully!'));
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Resource not found on this server.' });

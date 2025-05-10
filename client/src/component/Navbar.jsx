@@ -3,10 +3,10 @@ import { Menu, X, User, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../Redux/authSlice';
-
 import logo from '../utils/target_trek_logo_2.jpg';
 
 const adminLinks = [
+  { label: 'Dashboard', path: '/dashboard' },
   { label: 'Manage Bookings', path: '/admin/booking' },
   { label: 'Manage Slots', path: '/admin/slots' },
   { label: 'Add Blog Post', path: '/admin/add-blog' },
@@ -26,10 +26,10 @@ const Navbar = () => {
   const avatarRef = useRef(null);
   const mobileAvatarRef = useRef(null);
 
-  const { user, isAuthenticated } = useSelector(state => state.auth);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const isAdmin = isAuthenticated && user?.role === 'admin';
 
-  const navItems = [
+  const [navItems, setNavItems] = useState([ // Moved navItems to useState
     { label: 'Home', path: '/' },
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
@@ -37,7 +37,22 @@ const Navbar = () => {
     { label: 'Blog', path: '/blogs' },
     { label: 'Portfolio', path: '/portfolio' },
     { label: 'Contact', path: '/contact' },
-  ];
+  ]);
+
+
+  // Add Dashboard to navItems if user is admin and is authenticated
+  useEffect(() => {
+    if (isAdmin) {
+      const dashboardLink = { label: 'Dashboard', path: '/dashboard' };
+      // Check if Dashboard is already in navItems to avoid duplicates
+      if (!navItems.find(item => item.label === 'Dashboard')) {
+        setNavItems(prevNavItems => [dashboardLink, ...prevNavItems]); // Add to the beginning
+      }
+    } else {
+       // Remove Dashboard from navItems if user is not admin
+        setNavItems(prevNavItems => prevNavItems.filter(item => item.label !== 'Dashboard'));
+    }
+  }, [isAdmin]);
 
   const handleLogout = () => {
     dispatch(logout());

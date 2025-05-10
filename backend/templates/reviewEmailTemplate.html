@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>We Value Your Feedback!</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f7;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      background-color: white;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #007BFF;
+    }
+    .button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 25px;
+      background-color: #007BFF;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .footer {
+      font-size: 12px;
+      color: #777;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>We’d Love Your Feedback!</h1>
+    <p>Hi there,</p>
+    <p>Thank you for working with us. We’re always striving to improve and would really appreciate a few minutes of your time to provide your feedback on our services.</p>
+    <p>Please click the button below to submit your review:</p>
+    <a href="{{REVIEW_LINK}}" class="button">Submit Your Review</a>
+    <p>If the button doesn’t work, you can also click the link below:</p>
+    <p><a href="{{REVIEW_LINK}}">{{REVIEW_LINK}}</a></p>
+    <p class="footer">This message was sent by [Your Company Name]. If you received it by mistake, please ignore it.</p>
+  </div>
+</body>
+</html>

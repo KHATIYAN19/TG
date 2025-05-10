@@ -1,10 +1,10 @@
-// src/components/ContactList.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
+import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import BASE_URL from "../utils/Url.js";
-import { Search, Trash2, Eye, EyeOff, Mail, Phone, Briefcase, Clock, ChevronRight, Loader2, AlertTriangle, AlertTriangle as ModalAlertIcon, X } from 'lucide-react'; // Renamed AlertTriangle for modal clarity
+import { Search, Trash2, Eye, EyeOff, Mail, Phone, Briefcase, Clock, ChevronRight, Loader2, AlertTriangle, AlertTriangle as ModalAlertIcon, X } from 'lucide-react';
 import { useSelector } from 'react-redux';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
@@ -59,7 +59,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
 
 
 const ContactList = () => {
-  const [token,setToken]=useSelector((state)=>state.auth.token);
+  const [token, setToken] = useSelector((state) => state.auth.token);
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -78,11 +78,11 @@ const ContactList = () => {
           Authorization: `Bearer ${token}`
         }
       });
-       response.data.messages.sort((a, b) => {
-          if (a.isRead !== b.isRead) {
-              return a.isRead ? 1 : -1;
-          }
-          return new Date(a.createdAt) - new Date(b.createdAt);
+      response.data.messages.sort((a, b) => {
+        if (a.isRead !== b.isRead) {
+          return a.isRead ? 1 : -1;
+        }
+        return new Date(a.createdAt) - new Date(b.createdAt);
       });
       setMessages(response.data.messages || []);
     } catch (err) {
@@ -96,6 +96,7 @@ const ContactList = () => {
 
   useEffect(() => {
     fetchMessages();
+    window.scrollTo(0, 0);
   }, []);
 
   const openDeleteModal = (id, event) => {
@@ -130,7 +131,7 @@ const ContactList = () => {
   };
 
   const handleToggleRead = async (id, event) => {
-     event.stopPropagation();
+    event.stopPropagation();
     const toastId = toast.loading('Updating status...');
     try {
       const response = await axios.patch(`${BASE_URL}/messages/${id}/read`, null, {
@@ -142,10 +143,10 @@ const ContactList = () => {
         prevMessages.map(msg =>
           msg._id === id ? { ...msg, isRead: response.data.contact.isRead } : msg
         ).sort((a, b) => {
-            if (a.isRead !== b.isRead) {
-                return a.isRead ? 1 : -1;
-            }
-            return new Date(a.createdAt) - new Date(b.createdAt);
+          if (a.isRead !== b.isRead) {
+            return a.isRead ? 1 : -1;
+          }
+          return new Date(a.createdAt) - new Date(b.createdAt);
         })
       );
       toast.success(response.data.message || 'Status updated.', { id: toastId });
@@ -169,105 +170,110 @@ const ContactList = () => {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true
     });
   };
 
   const handleRowClick = (id) => {
-      navigate(`/contact-details/${id}`);
+    navigate(`/contact-details/${id}`);
   };
 
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen mt-12">
-      <Toaster position="top-center" reverseOrder={false} />
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Contact Messages</h1>
+    <>
+      <Helmet>
+        <title>Contact Messages</title>
+      </Helmet>
+      <div className="p-4 md:p-8 bg-gray-50 min-h-screen mt-12">
+        <Toaster position="top-center" reverseOrder={false} />
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">Contact Messages</h1>
 
-      <div className="mb-6 relative">
-        <input
-          type="text"
-          placeholder="Search by name, email, or phone..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-      </div>
-
-      {loading && (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-          <span className="ml-2 text-gray-600">Loading messages...</span>
+        <div className="mb-6 relative">
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
         </div>
-      )}
-      {error && !loading && (
-         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative flex items-center" role="alert">
-            <AlertTriangle className="mr-2" size={20}/>
+
+        {loading && (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading messages...</span>
+          </div>
+        )}
+        {error && !loading && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative flex items-center" role="alert">
+            <AlertTriangle className="mr-2" size={20} />
             <span className="block sm:inline">{error}</span>
-        </div>
-      )}
+          </div>
+        )}
 
-      {!loading && !error && (
-        <div className="space-y-4">
-          {filteredMessages.length === 0 ? (
-             <p className="text-center text-gray-500 py-10">No messages found.</p>
-          ) : (
-            filteredMessages.map((msg) => (
-              <div
-                key={msg._id}
-                onClick={() => handleRowClick(msg._id)}
-                className={`bg-white p-4 rounded-lg shadow-md border-l-4 ${msg.isRead ? 'border-gray-300' : 'border-blue-500'} hover:shadow-lg transition-shadow duration-200 cursor-pointer`}
-              >
-                <div className="flex flex-col md:flex-row justify-between md:items-center mb-2">
-                  <div className="flex items-center mb-2 md:mb-0">
-                     {!msg.isRead && <span className="mr-2 inline-block w-2 h-2 bg-blue-500 rounded-full"></span>}
-                     <h2 className={`text-lg font-semibold ${msg.isRead ? 'text-gray-700' : 'text-gray-900'}`}>{msg.name}</h2>
-                     <span className={`ml-3 text-xs font-medium px-2 py-0.5 rounded-full ${msg.isRead ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-700'}`}>
+        {!loading && !error && (
+          <div className="space-y-4">
+            {filteredMessages.length === 0 ? (
+              <p className="text-center text-gray-500 py-10">No messages found.</p>
+            ) : (
+              filteredMessages.map((msg) => (
+                <div
+                  key={msg._id}
+                  onClick={() => handleRowClick(msg._id)}
+                  className={`bg-white p-4 rounded-lg shadow-md border-l-4 ${msg.isRead ? 'border-gray-300' : 'border-blue-500'} hover:shadow-lg transition-shadow duration-200 cursor-pointer`}
+                >
+                  <div className="flex flex-col md:flex-row justify-between md:items-center mb-2">
+                    <div className="flex items-center mb-2 md:mb-0">
+                      {!msg.isRead && <span className="mr-2 inline-block w-2 h-2 bg-blue-500 rounded-full"></span>}
+                      <h2 className={`text-lg font-semibold ${msg.isRead ? 'text-gray-700' : 'text-gray-900'}`}>{msg.name}</h2>
+                      <span className={`ml-3 text-xs font-medium px-2 py-0.5 rounded-full ${msg.isRead ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-700'}`}>
                         {msg.isRead ? 'Read' : 'Unread'}
-                     </span>
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-gray-500">
+                      <button
+                        onClick={(e) => handleToggleRead(msg._id, e)}
+                        title={msg.isRead ? 'Mark as Unread' : 'Mark as Read'}
+                        className="p-1 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      >
+                        {msg.isRead ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                      <button
+                        onClick={(e) => openDeleteModal(msg._id, e)}
+                        title="Delete Message"
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full focus:outline-none focus:ring-1 focus:ring-red-400"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      <ChevronRight size={20} className="hidden md:inline-block text-gray-400" />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3 text-gray-500">
-                    <button
-                      onClick={(e) => handleToggleRead(msg._id, e)}
-                      title={msg.isRead ? 'Mark as Unread' : 'Mark as Read'}
-                      className="p-1 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-1 focus:ring-gray-400"
-                    >
-                      {msg.isRead ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                    <button
-                      onClick={(e) => openDeleteModal(msg._id, e)}
-                      title="Delete Message"
-                      className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full focus:outline-none focus:ring-1 focus:ring-red-400"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                     <ChevronRight size={20} className="hidden md:inline-block text-gray-400"/>
+
+
+
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                    <span className="flex items-center"><Mail size={14} className="mr-1" /> {msg?.email}</span>
+                    <span className="flex items-center"><Phone size={14} className="mr-1" /> {msg?.contactNumber}</span>
+                    <span className="flex items-center"><Briefcase size={14} className="mr-1" /> {msg?.service}</span>
+                    <span className="flex items-center"><Clock size={14} className="mr-1" /> {formatDate(msg?.createdAt)}</span>
                   </div>
                 </div>
+              ))
+            )}
+          </div>
+        )}
 
-              
-
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                   <span className="flex items-center"><Mail size={14} className="mr-1"/> {msg?.email}</span>
-                   <span className="flex items-center"><Phone size={14} className="mr-1"/> {msg?.contactNumber}</span>
-                   <span className="flex items-center"><Briefcase size={14} className="mr-1"/> {msg?.service}</span>
-                   <span className="flex items-center"><Clock size={14} className="mr-1"/> {formatDate(msg?.createdAt)}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      <ConfirmationModal
-        isOpen={isModalOpen}
-        onClose={closeDeleteModal}
-        onConfirm={confirmDelete}
-        title="Confirm Deletion"
-        message="Are you sure you want to delete this contact message? This action cannot be undone."
-      />
-    </div>
+        <ConfirmationModal
+          isOpen={isModalOpen}
+          onClose={closeDeleteModal}
+          onConfirm={confirmDelete}
+          title="Confirm Deletion"
+          message="Are you sure you want to delete this contact message? This action cannot be undone."
+        />
+      </div>
+    </>
   );
 };
 

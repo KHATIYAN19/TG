@@ -1,11 +1,10 @@
-
 import { Helmet } from "react-helmet";
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { format, parseISO } from 'date-fns';
 import { ArrowRight, Calendar, User, Loader2, AlertTriangle, BookOpen } from 'lucide-react';
-import BASE_URL from "../utils/Url.js"; // Adjust path as needed
+import BASE_URL from "../utils/Url.js";
 import toast, { Toaster } from 'react-hot-toast';
 
 const BlogPage = () => {
@@ -15,6 +14,7 @@ const BlogPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    window.scrollTo(0, 0); // Scroll to top on component mount (initial load)
     const fetchPosts = async () => {
       setLoading(true);
       setError(null);
@@ -37,6 +37,11 @@ const BlogPage = () => {
     fetchPosts();
   }, []);
 
+  useEffect(() => {
+    // Scroll to top on route change
+    window.scrollTo(0, 0);
+  }, [navigate]);
+
   const formatDate = (dateString) => {
     try {
       const parsed = parseISO(dateString);
@@ -51,7 +56,6 @@ const BlogPage = () => {
     navigate(`/blog/${slug}`);
   };
 
-  // Function to truncate text
   const truncateText = (text, maxLength) => {
     if (!text) return '';
     if (text.length <= maxLength) {
@@ -61,10 +65,14 @@ const BlogPage = () => {
   };
 
   return (
-
     <div className="bg-gray-50 min-h-screen pt-20">
-       <Helmet>
+      <Helmet>
         <title>Blog - Target Trek</title>
+        <meta name="description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
+        <meta property="og:title" content="Blog - Target Trek" />
+        <meta property="og:description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
+        <meta property="og:type" content="website" />
+        {/* You can add more SEO-related meta tags here */}
       </Helmet>
       <Toaster position="top-center" reverseOrder={false} />
 
@@ -88,17 +96,17 @@ const BlogPage = () => {
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-md flex items-center justify-center" role="alert">
               <AlertTriangle className="mr-3" size={24}/>
               <div>
-                  <p className="font-bold">Error Loading Posts</p>
-                  <p>{error}</p>
+                <p className="font-bold">Error Loading Posts</p>
+                <p>{error}</p>
               </div>
             </div>
           ) : blogPosts.length === 0 ? (
-             <div className="text-center py-20 px-6 bg-white rounded-lg shadow-md">
-                 <BookOpen className="mx-auto h-16 w-16 text-blue-400 mb-4" />
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">No Blog Posts Yet!</h2>
-                <p className="text-gray-500">
-                    We're working on creating insightful content. Please check back soon!
-                </p>
+              <div className="text-center py-20 px-6 bg-white rounded-lg shadow-md">
+                <BookOpen className="mx-auto h-16 w-16 text-blue-400 mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-700 mb-2">No Blog Posts Yet!</h2>
+              <p className="text-gray-500">
+                We're working on creating insightful content. Please check back soon!
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
@@ -130,11 +138,9 @@ const BlogPage = () => {
                     <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition duration-150 ease-in-out min-h-[56px]">
                       {post.title}
                     </h3>
-                    {/* --- Updated Excerpt Display --- */}
                     <p className="text-gray-600 text-sm mb-4 flex-grow">
                       {truncateText(post.excerpt, 100)}
                     </p>
-                    {/* --- End Updated Excerpt Display --- */}
 
                     <div className="mt-auto border-t border-gray-100 pt-4">
                       <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
