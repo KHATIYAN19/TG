@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { Target, Eye, Rocket, Users, Zap, Lightbulb, CheckSquare, Settings, BarChart3, TrendingUp, Handshake, Briefcase } from 'lucide-react';
 import { HashLink } from 'react-router-hash-link';
 import { FaInstagram, FaFacebookF, FaWhatsapp, FaLinkedinIn } from 'react-icons/fa';
-
+import Helmet from 'react-helmet';
 const AboutPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -37,6 +37,14 @@ const AboutPage = () => {
 
   return (
     <div className="pt-16 md:pt-20 bg-white min-h-screen">
+       <Helmet>
+        <title>About  - Target Trek</title>
+        <meta name="description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
+        <meta property="og:title" content="Blog - Target Trek" />
+        <meta property="og:description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
+        <meta property="og:type" content="website" />
+        {/* You can add more SEO-related meta tags here */}
+      </Helmet>
       <section className="py-16 lg:py-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white text-center">
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-3"  itemProp="headline">About Target Trek</h1>

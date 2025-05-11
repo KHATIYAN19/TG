@@ -146,20 +146,20 @@ const ContactPage = () => {
               <div>
                 <h2 className="text-2xl lg:text-3xl font-semibold text-gray-800 mb-4">Contact Information</h2>
                 <div className="space-y-4 text-gray-700">
-                  <div className="flex items-start">
+                  {/* <div className="flex items-start">
                     <MapPin size={20} className="text-blue-600 mr-3 mt-1 flex-shrink-0" />
                     <span>
                       [Your Street Address],<br />
                       [Your City], [State] [Zip Code]<br />
                     </span>
-                  </div>
+                  </div> */}
                   <div className="flex items-center">
                     <Phone size={20} className="text-blue-600 mr-3 flex-shrink-0" />
-                    <span>[Your Phone Number]</span>
+                    <span>+91 95366 81633</span>
                   </div>
                   <div className="flex items-center">
                     <Mail size={20} className="text-blue-600 mr-3 flex-shrink-0" />
-                    <span>[Your Email Address]</span>
+                    <span>enquiry@targettrek.in</span>
                   </div>
                 </div>
               </div>

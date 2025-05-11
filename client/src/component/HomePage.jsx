@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { Rocket, BarChart, PenTool, Smartphone, Users, Star, ChevronRight } from 'lucide-react';
 import BASE_URL from "../utils/Url.js";
+import { Helmet } from 'react-helmet';
 
 const HomePage = () => {
   const services = [
@@ -41,6 +42,14 @@ const HomePage = () => {
 
   return (
     <div className="bg-white">
+       <Helmet>
+              <title>Home - Target Trek</title>
+              <meta name="description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
+              <meta property="og:title" content="Blog - Target Trek" />
+              <meta property="og:description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
+              <meta property="og:type" content="website" />
+              {/* You can add more SEO-related meta tags here */}
+            </Helmet>
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-50 to-white">
         <div className="max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col md:flex-row items-center gap-16">

@@ -14,7 +14,7 @@ const PrivacyPolicy = () => {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="container mx-auto py-10 px-4 sm:px-6 lg:px-8"
+      className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 mt-20"
     >
       <h1 className="text-3xl font-semibold text-gray-900 mb-6">
         Privacy Policy for Target Trek
