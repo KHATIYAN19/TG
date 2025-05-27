@@ -1,6 +1,13 @@
 import Contact from '../models/Contact.js';
 import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
+import User from "../models/User.js"
+import fs from 'fs/promises';
+import  path from 'path';
+import sendMail from '../utils/MailSender.js';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export const createContactMessage = asyncHandler(async (req, res) => {
   const { name, email, contactNumber, service, message } = req.body;
   if (!name || name.trim().length < 2) {
@@ -10,7 +17,7 @@ export const createContactMessage = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'A valid email address is required.' });
   }
   if (!contactNumber || contactNumber.trim().length < 10) {
-     return res.status(400).json({ message: 'Contact number is required and must be at least 10 digits.' });
+      return res.status(400).json({ message: 'Contact number is required and must be at least 10 digits.' });
   }
   const allowedServices = [
     'PPC Advertising', 'Social Media Marketing', 'Email Marketing',
@@ -28,6 +35,37 @@ export const createContactMessage = asyncHandler(async (req, res) => {
     message: message.trim(),
   });
   const savedContact = await newContact.save();
+  const subject = 'New Contact Inquiry Received';
+  const templatePath = path.resolve(__dirname, '../templates/contactNotification.html');
+  let htmlTemplate;
+  try {
+    htmlTemplate = await fs.readFile(templatePath, 'utf8'); // Correct usage with promises
+    htmlTemplate = htmlTemplate
+      .replace('{{fullname}}', name)
+      .replace('{{email}}', email)
+      .replace('{{mobile}}', contactNumber)
+      .replace('{{service}}', service)
+      .replace('{{message}}', message || '');
+  } catch (error) {
+    console.error('Error reading email template:', error);
+  }
+
+  const plainText = `New contact inquiry received:\nFull Name: ${name}\nEmail: ${email}\nMobile Number: ${contactNumber}\nService: ${service}${message ? `\nMessage: ${message}` : ''}`;
+
+  try {
+    const admins = await User.find({});
+    if (admins && admins.length > 0) {
+      for (const admin of admins) {
+        await sendMail(admin.email, subject, plainText, htmlTemplate);
+      }
+      console.log(`Notification sent to ${admins.length} admin(s).`);
+    } else {
+      console.log('No admins found to notify.');
+    }
+  } catch (error) {
+    console.error('Error fetching or sending email to admins:', error);
+  }
+
   res.status(201).json({
     message: 'Your message has been received successfully! We will get back to you soon.',
     contact: savedContact,

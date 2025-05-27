@@ -9,11 +9,11 @@ import {
     deleteReview
 } from '../controllers/Review.js'; 
 
-import {auth,isAdmin} from  "../Middleware/auth.js"
+import {auth,isAdmin,isEmployee,isUser} from  "../Middleware/auth.js"
 const router = express.Router();
-router.post('/generate-link',auth,isAdmin, generateReviewLink);
-router.get('/all',auth,isAdmin, getAllReviews);
-router.patch('/:id/toggle-publish', auth,isAdmin,togglePublishStatus);
+router.post('/generate-link',auth,isUser, generateReviewLink);
+router.get('/all',auth,isUser, getAllReviews);
+router.patch('/:id/toggle-publish', auth,isUser,togglePublishStatus);
 router.post('/:token', createReview);
 router.get('/published', getAllPublishedReviews);
 router.delete("/:id",auth,isAdmin,deleteReview);

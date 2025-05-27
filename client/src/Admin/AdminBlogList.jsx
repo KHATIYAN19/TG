@@ -30,11 +30,9 @@ const AdminBlogManagementPage = () => {
                 setBlogs(sortedBlogs);
             } else {
                 setBlogs([]);
-                console.warn("Unexpected API response structure:", response.data);
-                setError('Received unexpected data format from server.');
+                setError(response.data?.message || 'Received unexpected data format from server.');
             }
         } catch (err) {
-            console.error("Error fetching blogs:", err);
             const message = err.response?.data?.message || 'Failed to fetch blog posts. Please try again.';
             setError(message);
             toast.error(message);
@@ -45,6 +43,7 @@ const AdminBlogManagementPage = () => {
     }, [token]);
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
         fetchBlogs();
     }, [fetchBlogs]);
 
@@ -56,27 +55,29 @@ const AdminBlogManagementPage = () => {
         );
         setBlogs(optimisticBlogs);
 
-        const apiCall = axios.patch(`${BASE_URL}/blogs/${id}/toggle-publish`, null, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-        toast.promise(
-            apiCall,
-            {
-                loading: currentStatus ? 'Unpublishing...' : 'Publishing...',
-                success: 'Status updated successfully!',
-                error: 'Failed to update status.'
-            },
-            {
-                style: { minWidth: '200px' },
-                success: { duration: 3000 },
-                error: {
-                    duration: 4000,
-                    fn: () => setBlogs(originalBlogs)
+        try {
+            const apiCall = axios.patch(`${BASE_URL}/blogs/${id}/toggle-publish`, null, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
                 },
-            }
-        ).catch(() => setBlogs(originalBlogs));
+            });
+
+            await toast.promise(
+                apiCall,
+                {
+                    loading: currentStatus ? 'Unpublishing...' : 'Publishing...',
+                    success: 'Status updated successfully!',
+                    error: (err) => err.response?.data?.message || 'Failed to update status.'
+                },
+                {
+                    style: { minWidth: '200px' },
+                    success: { duration: 3000 },
+                    error: { duration: 4000 },
+                }
+            );
+        } catch (err) {
+            setBlogs(originalBlogs);
+        }
     };
 
     const openDeleteModal = (id, title, event) => {
@@ -100,39 +101,34 @@ const AdminBlogManagementPage = () => {
         const optimisticBlogs = blogs.filter(blog => blog._id !== id);
         setBlogs(optimisticBlogs);
 
-        const apiCall = axios.delete(`${BASE_URL}/blogs/${id}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-
-        toast.promise(
-            apiCall,
-            {
-                loading: 'Deleting blog post...',
-                success: 'Blog post deleted successfully!',
-                error: 'Failed to delete blog post.'
-            },
-            {
-                style: { minWidth: '200px' },
-                success: { duration: 3000 },
-                error: {
-                    duration: 4000,
-                    fn: () => setBlogs(originalBlogs)
+        try {
+            const apiCall = axios.delete(`${BASE_URL}/blogs/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
                 },
-            }
-        ).catch(() => setBlogs(originalBlogs));
+            });
+
+            await toast.promise(
+                apiCall,
+                {
+                    loading: 'Deleting blog post...',
+                    success: 'Blog post deleted successfully!',
+                    error: (err) => err.response?.data?.message || 'Failed to delete blog post.'
+                },
+                {
+                    style: { minWidth: '200px' },
+                    success: { duration: 3000 },
+                    error: { duration: 4000 },
+                }
+            );
+        } catch (err) {
+            setBlogs(originalBlogs);
+        }
     };
 
     const handleRowClick = (slug) => {
         navigate(`/blog/${slug}`);
     };
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }, []);
 
     return (
         <>
@@ -140,7 +136,7 @@ const AdminBlogManagementPage = () => {
                 <title>Manage Blog Posts | Target Trek</title>
                 <meta name="description" content="Manage blog posts, including publishing, editing, and deleting, on Techistha." />
             </Helmet>
-            <div className="pt-20 md:pt-24 pb-16 min-h-screen bg-gradient-to-b from-gray-50 to-blue-50 ">
+            <div className="pt-20 md:pt-24 pb-16 min-h-screen bg-gradient-to-b from-gray-50 to-blue-50">
                 <Toaster position="top-center" reverseOrder={false} toastOptions={{ className: 'text-sm' }} />
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
@@ -313,9 +309,7 @@ const AdminBlogManagementPage = () => {
                 )}
             </div>
         </>
-
     );
 };
 
 export default AdminBlogManagementPage;
-

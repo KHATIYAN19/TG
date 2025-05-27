@@ -1,7 +1,5 @@
 import './App.css'
 import { Route, Routes } from 'react-router-dom'
-
-
 import Navbar from './component/Navbar'
 import HomePage from './component/HomePage'
 import BookCallPage from './component/BookCallPage'
@@ -30,21 +28,43 @@ import AddPortfolioPage from './Admin/AddPortfolioPage'
 import ManagePortfolio from './Admin/ManagePortFolio'
 import AffiliateList from './Admin/AffiliateList.jsx'
 
+
+import AdminSignup from './Admin/AdminSignup.jsx'
+
 import AdminDashboard from './Admin/AdminDashBoard.jsx'
 import FloatingContact from './component/FloatingContact.jsx'
 import Footer from './component/Footer.jsx'
 import PrivacyPolicy from './component/PrivacyPolicy.jsx'
 import TermsOfService from './component/TermsOfService.jsx'
 import { useSelector } from 'react-redux'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+import UserManagement  from "./Admin/UserManagement.jsx"
+import { Home } from 'lucide-react'
 
 function App() {
   const user=useSelector((state)=>state.auth.user);
-  const [isAdmin,setisAdmin]=useState(user?.role==="admin");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isEmployee, setIsEmployee] = useState(false);
+  const [isUser, setIsUser] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const adminStatus = user.role === "admin";
+      const employeeStatus = user.role === "Employee";
+      setIsAdmin(adminStatus);
+      setIsEmployee(employeeStatus);
+      setIsUser(adminStatus || employeeStatus);
+    } else {
+      setIsAdmin(false);
+      setIsEmployee(false);
+      setIsUser(false);
+    }
+  }, [user]); 
   return (
     <div className='w-[90%] mx-auto max-h-max font-inter'>
       <div className=''>
-      <Navbar />
+          <Navbar />
       </div>
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -55,35 +75,49 @@ function App() {
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/submit-review/:token" element={<SubmitReviewPage />} />
-        <Route path="/contact-query" element={<ContactList />} />
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/affiliate-marketing" element={<AffiliateMarketing/>}/>
         <Route path="/portfolio/:slug" element={<PortfolioDetailPage/>}/>
         <Route path="/privacy-policy" element={<PrivacyPolicy/>}/>
         <Route path="/terms-of-service" element={<TermsOfService/>}/>
 
+   
+
+        <Route path="/admin/login" element={!isUser ? <LoginPage /> : <HomePage />} />
+        
+        <Route path="/admin/add-blog" element={isUser ? <AddBlogPage /> : <NotFoundPage />} />
+
+        <Route path="/dashboard" element={isUser ? <AdminDashboard /> : <NotFoundPage />} />
+        <Route path="/contact-query" element={isUser?<ContactList />:<NotFoundPage/>} />
+        <Route path="/admin/affiliate-manage" element={isUser ? <AffiliateList /> : <NotFoundPage />} />
+         <Route path="/admin/generate-review-link" element={isUser ? <GenerateReviewLinkPage /> : <NotFoundPage />} />
+        <Route path="/admin/manage-reviews" element={isUser ? <ManageReviewsPage /> : <NotFoundPage />} />
+        <Route path="/contact-details/:id" element={isUser ? <ContactDetail /> : <NotFoundPage />} />
+        <Route path="/blog-manage" element={isUser ? <AdminBlogManagementPage /> : <NotFoundPage />} />
+        <Route path="/admin/add-portfolio" element={isUser ? <AddPortfolioPage /> : <NotFoundPage />} />
+        <Route path="/portfolio-manage" element={isUser ? <ManagePortfolio /> : <NotFoundPage />} />
+       
+       
+        <Route path="/admin/users" element={isAdmin?<UserManagement/>:<NotFoundPage/>}/>
+        <Route path="/admin/signup" element={isAdmin?<AdminSignup/>:<HomePage/>}/>
+    
 
 
 
-        <Route path="/admin/affiliate-manage" element={isAdmin ? <AffiliateList /> : <NotFoundPage />} />
+
+
        
         <Route path="/admin/booking" element={isAdmin ? <AdminBookingsPage /> : <NotFoundPage />} />
-      <Route path="/admin/slots" element={isAdmin ? <AdminSlotsPage /> : <NotFoundPage />} />
-      <Route path="/admin/add-blog" element={isAdmin ? <AddBlogPage /> : <NotFoundPage />} />
-      <Route path="/admin/login" element={!isAdmin ? <LoginPage /> : <NotFoundPage />} />
-      <Route path="/admin/generate-review-link" element={isAdmin ? <GenerateReviewLinkPage /> : <NotFoundPage />} />
-      <Route path="/admin/manage-reviews" element={isAdmin ? <ManageReviewsPage /> : <NotFoundPage />} />
-      <Route path="/contact-details/:id" element={isAdmin ? <ContactDetail /> : <NotFoundPage />} />
-      <Route path="/blog-manage" element={isAdmin ? <AdminBlogManagementPage /> : <NotFoundPage />} />
-      <Route path="/admin/add-portfolio" element={isAdmin ? <AddPortfolioPage /> : <NotFoundPage />} />
-      <Route path="/portfolio-manage" element={isAdmin ? <ManagePortfolio /> : <NotFoundPage />} />
+        <Route path="/admin/slots" element={isAdmin ? <AdminSlotsPage /> : <NotFoundPage />} />
+        
 
-      <Route path="/dashboard" element={isAdmin ? <AdminDashboard /> : <NotFoundPage />} />
 
+        
+        
         <Route path="*" element={<NotFoundPage/>}/>
-      </Routes>
-      <FloatingContact/>
-    <Footer/>
+        </Routes>
+       <FloatingContact/>
+       <Footer/>
     </div>
   )
 }

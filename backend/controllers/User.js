@@ -11,11 +11,9 @@ const __dirname = path.dirname(__filename);
 export const signup = async (req, res) => {
   try {
     const { name, email, mobile, password, role } = req.body;
-
-    if (!name || !email || !mobile || !password) {
+    if (!name || !email || !mobile || !password||!role) {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
-
     if (!validator.isEmail(email)) {
       return res.status(400).json({ success: false, message: 'Invalid email format' });
     }
@@ -38,7 +36,7 @@ export const signup = async (req, res) => {
       email,
       mobile,
       password: hashedPassword,
-      role: role || 'admin'
+      role: role 
     });
     await user.save();
     res.status(201).json({ success: true, message: 'User created successfully' });
@@ -63,11 +61,17 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+    if(user.block){
+      return res.status(400).json({
+         success:false,
+         message:"You are block by admin"
+      })
+    }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpiry = Date.now() + 10 * 60 * 1000;
     await user.save();
-
+   console.log("otp is", otp);
     const htmlPath = path.join(__dirname, '../templates/otp-email-template.html');
     let htmlTemplate = fs.readFileSync(htmlPath, 'utf-8');
     htmlTemplate = htmlTemplate.replace('{{OTP_CODE}}', otp);
@@ -106,7 +110,7 @@ export const verifyOtp = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '30d' }
     );
     user.otp = null;
     user.otpExpiry = null;
@@ -160,3 +164,85 @@ export const resendOtp = async (req, res) => {
     }
   };
   
+
+
+
+
+  export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, 'name email mobile role block _id');
+    res.status(200).json({
+      success: true,
+      message: 'Users fetched successfully',
+      users,
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+      error: error.message,
+    });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
+      error: error.message,
+    });
+  }
+};
+
+export const toggleBlockStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    user.block = !user.block;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User block status updated to ${user.block ? 'blocked' : 'unblocked'}`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        block: user.block,
+      },
+    });
+  } catch (error) {
+    console.error('Error toggling block status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update block status',
+      error: error.message,
+    });
+  }
+};

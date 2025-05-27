@@ -43,7 +43,6 @@ const AboutPage = () => {
         <meta property="og:title" content="Blog - Target Trek" />
         <meta property="og:description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
         <meta property="og:type" content="website" />
-        {/* You can add more SEO-related meta tags here */}
       </Helmet>
       <section className="py-16 lg:py-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white text-center">
         <div className="max-w-4xl mx-auto px-4">

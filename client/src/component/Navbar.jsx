@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X, User, LogOut } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../Redux/authSlice';
 import logo from '../utils/target_Trek_logo_2.jpg';
@@ -19,6 +19,8 @@ const adminLinks = [
 ];
 
 const Navbar = () => {
+  const navigate=useNavigate();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
   const dispatch = useDispatch();
@@ -27,9 +29,9 @@ const Navbar = () => {
   const mobileAvatarRef = useRef(null);
 
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const isAdmin = isAuthenticated && user?.role === 'admin';
+  const isAdmin = isAuthenticated && (user?.role === 'admin'||user?.role=="Employee");
 
-  const [navItems, setNavItems] = useState([ // Moved navItems to useState
+  const [navItems, setNavItems] = useState([ 
     { label: 'Home', path: '/' },
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
@@ -40,22 +42,20 @@ const Navbar = () => {
   ]);
 
 
-  // Add Dashboard to navItems if user is admin and is authenticated
   useEffect(() => {
     if (isAdmin) {
       const dashboardLink = { label: 'Dashboard', path: '/dashboard' };
-      // Check if Dashboard is already in navItems to avoid duplicates
       if (!navItems.find(item => item.label === 'Dashboard')) {
-        setNavItems(prevNavItems => [dashboardLink, ...prevNavItems]); // Add to the beginning
+        setNavItems(prevNavItems => [dashboardLink, ...prevNavItems]); 
       }
     } else {
-       // Remove Dashboard from navItems if user is not admin
         setNavItems(prevNavItems => prevNavItems.filter(item => item.label !== 'Dashboard'));
     }
   }, [isAdmin]);
 
   const handleLogout = () => {
     dispatch(logout());
+    navigate("/")
     setIsAdminDropdownOpen(false);
   };
 

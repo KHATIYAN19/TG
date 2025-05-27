@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Contact Inquiry - TargetTrek</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #e9ecef;
+            color: #343a40;
+            margin: 0;
+            padding: 30px;
+            line-height: 1.7;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            width: 85%; /* Increased content width */
+            max-width: 800px; /* Increased maximum width */
+            margin: 30px auto;
+            /* border-left: 8px solid #007bff; Removed left blue border */
+        }
+        h2 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+        }
+        p {
+            margin-bottom: 25px;
+            color: #495057;
+        }
+        .info-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .label {
+            font-weight: bold;
+            color: #343a40;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .value {
+            color: #212529;
+            word-break: break-word;
+        }
+        .email-link, .phone-link {
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.3s ease-in-out;
+        }
+        .email-link:hover, .phone-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        .optional-message {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background-color: #fff3cd;
+            color: #85640a;
+        }
+        .optional-message .label {
+            color: #85640a;
+        }
+        .website-button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-top: 30px;
+            font-weight: 500;
+            transition: background-color 0.3s ease-in-out;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .website-button:hover {
+            background-color: #1e7e34;
+        }
+        .about-us {
+            margin-top: 40px;
+            padding: 25px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 0.95em;
+        }
+        .about-us h3 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.9em;
+            color: #6c757d;
+            text-align: center;
+        }
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 10px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .footer i {
+            margin-right: 5px;
+            vertical-align: middle;
+            font-size: 1.2em; /* Adjust icon size */
+        }
+        /* Conditional styling for when message is NOT present */
+        .no-optional-message {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>New Contact Inquiry</h2>
+        <p>A new contact inquiry has been received through your website. Here are the details:</p>
+        <div class="info-item">
+            <span class="label">Full Name:</span>
+            <p class="value">{{fullname}}</p>
+        </div>
+        <div class="info-item">
+            <span class="label">Email Address:</span>
+            <!-- <p class="value"><a href="mailto:{{email}}" class="email-link">{{email}}</a></p> -->
+              <p class="value">{{email}}</p>
+        </div>
+        <div class="info-item">
+            <span class="label">Mobile Number:</span>
+            <!-- <p class="value"><a href="tel:{{mobile}}" class="phone-link">{{mobile}}</a></p> -->
+               <p class="value">{{mobile}}</p>
+        </div>
+        <div class="info-item">
+            <span class="label">Service:</span>
+            <p class="value">{{service}}</p>
+        </div>
+       
+        <div class="optional-message">
+            <span class="label">Optional Message:</span>
+            <p class="value">{{message}}</p>
+        </div>
+
+        <a href="https://targettrek.in" class="website-button" target="_blank">Visit TargetTrek.in</a>
+
+        <div class="about-us">
+            <h3>About TargetTrek</h3>
+            <p>TargetTrek is your partner in achieving online success. We offer a range of digital marketing services, including PPC Advertising, Social Media Marketing, Email Marketing, Web Development, and Affiliate Marketing. Our goal is to help businesses like yours grow and thrive in the digital landscape. Visit our website to learn more about how we can help you reach your targets.</p>
+        </div>
+
+        <div class="footer">
+            <p>Connect with us:</p>
+            <a href="https://wa.me/919536681633" target="_blank">
+                <i class="fab fa-whatsapp"></i> WhatsApp
+            </a>
+            <a href="https://www.linkedin.com/company/target-trek/" target="_blank">
+                <i class="fab fa-linkedin"></i> LinkedIn
+            </a>
+            <p style="margin-top: 10px;">For any inquiries, please contact us at <a href="mailto:enquiry@targettrek.in">enquiry@targettrek.in</a></p>
+            <p>This is an automatically generated email from TargetTrek.</p>
+        </div>
+    </div>
+</body>
+</html>

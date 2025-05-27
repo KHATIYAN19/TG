@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'normal'],
+    enum: ['admin', 'normal','Employee'],
     default: 'normal'
   },
   otp: {
@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema({
   otpExpiry: {
     type: Date,
     default: null
+  },
+  block:{
+    type:Boolean,
+    default:false
   }
 }, {
   timestamps: true
