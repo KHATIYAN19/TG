@@ -23,7 +23,7 @@ const FloatingContact = () => {
             <FaLinkedin />
           </a>
           <a
-            href="tel:+919536681633"
+            href="tel:+9873208210"
             className="bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-full shadow-lg"
           >
             <FaPhone />
