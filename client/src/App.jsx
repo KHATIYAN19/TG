@@ -1,5 +1,9 @@
 import './App.css'
 import { Route, Routes } from 'react-router-dom'
+import { logout } from './Redux/authSlice';
+  import { getTokenExpiryFromLocalStorage } from './Redux/authSlice.js';
+import toast, { Toaster } from 'react-hot-toast'; 
+  import { useDispatch } from 'react-redux';
 import Navbar from './component/Navbar'
 import HomePage from './component/HomePage'
 import BookCallPage from './component/BookCallPage'
@@ -47,6 +51,21 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEmployee, setIsEmployee] = useState(false);
   const [isUser, setIsUser] = useState(false);
+  const dispatch = useDispatch();
+
+ useEffect(() => {
+  const intervalId = setInterval(() => {
+    const expiry = getTokenExpiryFromLocalStorage();
+    if (expiry && Date.now() > expiry) {
+      dispatch(logout());
+      toast.error("Session expired. You have been logged out.");
+      clearInterval(intervalId); 
+    }
+  }, 5000); 
+
+  return () => clearInterval(intervalId);
+}, []); 
+
 
   useEffect(() => {
     if (user) {
@@ -63,6 +82,7 @@ function App() {
   }, [user]); 
   return (
     <div className='w-[90%] mx-auto max-h-max font-inter'>
+       <Toaster /> 
       <div className=''>
           <Navbar />
       </div>
@@ -78,7 +98,7 @@ function App() {
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/affiliate-marketing" element={<AffiliateMarketing/>}/>
         <Route path="/portfolio/:slug" element={<PortfolioDetailPage/>}/>
-        <Route path="/privacy-policy" element={<PrivacyPolicy/>}/>
+     <Route path="/privacy-policy" element={<PrivacyPolicy/>}/>
         <Route path="/terms-of-service" element={<TermsOfService/>}/>
 
    

@@ -155,7 +155,7 @@ const ContactPage = () => {
                   </div> */}
                   <div className="flex items-center">
                     <Phone size={20} className="text-blue-600 mr-3 flex-shrink-0" />
-                    <span>+91 95366 81633</span>
+                    <span>+91 9873208210</span>
                   </div>
                   <div className="flex items-center">
                     <Mail size={20} className="text-blue-600 mr-3 flex-shrink-0" />

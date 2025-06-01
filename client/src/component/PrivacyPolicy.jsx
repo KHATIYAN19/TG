@@ -233,7 +233,7 @@ const PrivacyPolicy = () => {
           Email: <a href="mailto:enquiry@targettrek.in">enquiry@targettrek.in</a>
         </p>
         <p className="text-gray-700 leading-relaxed">
-          Phone: <a href="tel:+919536681633">+91 95366 81633</a>
+          Phone: <a href="tel:+919536681633">+91 98732 08210</a>
         </p>
       </section>
     </motion.div>

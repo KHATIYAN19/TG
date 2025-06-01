@@ -93,7 +93,7 @@ const Footer = () => {
                 <FaLinkedin className="w-6 h-6" />
               </motion.a>
               <motion.a
-                href="https://wa.me/919536681633"
+                href="https://wa.me/9873208210"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-purple-300 transition-colors"
@@ -138,7 +138,7 @@ const Footer = () => {
                 variants={linkHover}
                 whileHover="hover"
               >
-                +91 95366 81633
+                +91  9873208210
               </a>
             </motion.div>
           </div>

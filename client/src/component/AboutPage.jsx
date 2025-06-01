@@ -1,3 +1,5 @@
+
+
 import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Target, Eye, Rocket, Users, Zap, Lightbulb, CheckSquare, Settings, BarChart3, TrendingUp, Handshake, Briefcase } from 'lucide-react';
@@ -29,9 +31,9 @@ const AboutPage = () => {
     { icon: <Lightbulb size={32} className="text-white" />, label: 'Innovative Solutions' },
   ];
 
-  // WhatsApp link generation
-    const phoneNumber = "9368264477"; // Replace with the desired phone number, include country code.
-    const whatsappMessage = "Hello, I'm interested in learning more about Target Trek's services."; //Optional
+  
+    const phoneNumber = "9873208210";
+    const whatsappMessage = "Hello, I'm interested in learning more about Target Trek's services.";
     const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
 
@@ -190,7 +192,7 @@ const AboutPage = () => {
             <a href="https://www.facebook.com/targettreks/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="Facebook" style={{ scrollBehavior: 'smooth' }}>
               <FaFacebookF className="text-2xl" />
             </a>
-            <a href={"https://wa.me/9536681633"}  rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="WhatsApp" style={{  }} >
+            <a href={"https://wa.me/9873208210"}  rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="WhatsApp" style={{  }} >
               <FaWhatsapp className="text-2xl" />
             </a>
             <a href="https://www.linkedin.com/company/target-trek/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="LinkedIn" style={{  }} >

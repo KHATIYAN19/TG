@@ -223,10 +223,8 @@ export const toggleBlockStatus = async (req, res) => {
         message: 'User not found',
       });
     }
-
     user.block = !user.block;
     await user.save();
-
     res.status(200).json({
       success: true,
       message: `User block status updated to ${user.block ? 'blocked' : 'unblocked'}`,
@@ -246,3 +244,37 @@ export const toggleBlockStatus = async (req, res) => {
     });
   }
 };
+
+export const resetPasswordbyadmin=async(req,res)=>{
+    try{
+        const {email}=req.body;
+        const user=await User.find({email});
+        if (!user) {
+           return res.status(404).json({ success: false, message: 'User not found' });
+        }
+         if (!validator.isEmail(email)) {
+        return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+       const hashedPassword = await bcrypt.hash(user.email, 10);
+       user.password=hashedPassword;
+       await user.save();
+       res.status(201).json({ success: true, message: 'Password reset successfully' });
+    }catch(err){
+      return res.status(400).json({
+        success:false,
+        message:"Something went wrong"
+      })
+    }
+}
+
+
+export const changepassword=async(req,res)=>{
+   try{
+      const {email,password}=req.body;
+   }catch(e){
+      return res.status(400).json({
+        success:false,
+        message:"Something went wrong"
+      })
+   }
+}
