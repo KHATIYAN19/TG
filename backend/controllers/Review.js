@@ -11,7 +11,7 @@ import  sendMail  from '../utils/MailSender.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'https://www.targettrek.in/';
 
 
 const emailSchema = z.string().email({ message: 'Invalid email address provided.' });
