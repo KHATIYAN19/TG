@@ -4,51 +4,187 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>We Value Your Feedback!</title>
-  <style>
+  <style type="text/css">
+    /* Reset styles */
+    body, table, td, div, p, a {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      font-size: 100%;
+      font-family: Arial, sans-serif;
+      vertical-align: baseline;
+      box-sizing: border-box;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+    }
+    table {
+      border-collapse: collapse !important;
+    }
+    /* Main body styles */
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f7;
-      color: #333;
-      padding: 20px;
+      background-color: #f7f9fc;
+      color: #333333;
+      line-height: 1.6;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
     }
-    .container {
-      background-color: white;
+    /* Container for email content */
+    .email-container {
       max-width: 600px;
-      margin: 0 auto;
+      margin: auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+    /* Header styles */
+    .header {
+      background-color: #007bff;
       padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      text-align: center;
+      color: #ffffff;
     }
-    h1 {
-      color: #007BFF;
+    .header h1 {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
     }
+    /* Content area styles */
+    .content-area {
+      padding: 30px;
+    }
+    .content-area p {
+      margin-bottom: 15px;
+      font-size: 16px;
+      color: #555555;
+    }
+    /* Button styles */
     .button {
       display: inline-block;
-      margin-top: 20px;
-      padding: 12px 25px;
-      background-color: #007BFF;
-      color: white;
+      margin-top: 25px;
+      padding: 15px 30px;
+      background-color: #007bff;
+      color: white !important; /* !important for email client override */
       text-decoration: none;
-      border-radius: 6px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+    }
+    .button:hover {
+      background-color: #0056b3; /* Darker blue on hover */
+    }
+    /* Footer styles */
+    .footer {
+      background-color: #2c3e50; /* Darker background for footer */
+      padding: 30px;
+      color: #ecf0f1; /* Light text for contrast */
+      font-size: 14px;
+      text-align: center;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+    }
+    .footer p {
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .footer a {
+      color: #007bff !important; /* Blue for links in footer */
+      text-decoration: none;
       font-weight: bold;
     }
-    .footer {
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .social-links {
+      margin-top: 20px;
+      margin-bottom: 15px;
+    }
+    .social-links a {
+      display: inline-block;
+      margin: 0 10px;
+      color: #ecf0f1 !important; /* White for social icons */
+      text-decoration: none;
+      font-size: 24px;
+    }
+    .social-links a:hover {
+      color: #007bff !important; /* Blue on hover for social icons */
+    }
+    .copyright {
       font-size: 12px;
-      color: #777;
-      margin-top: 30px;
+      opacity: 0.8;
+      margin-top: 20px;
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1>We’d Love Your Feedback!</h1>
-    <p>Hi there,</p>
-    <p>Thank you for working with us. We’re always striving to improve and would really appreciate a few minutes of your time to provide your feedback on our services.</p>
-    <p>Please click the button below to submit your review:</p>
-    <a href="{{REVIEW_LINK}}" class="button">Submit Your Review</a>
-    <p>If the button doesn’t work, you can also click the link below:</p>
-    <p><a href="{{REVIEW_LINK}}">{{REVIEW_LINK}}</a></p>
-    <p class="footer">This message was sent by [Your Company Name]. If you received it by mistake, please ignore it.</p>
-  </div>
+<body style="margin: 0; padding: 0; background-color: #f7f9fc;">
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f7f9fc;">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <table role="presentation" class="email-container" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); overflow: hidden;">
+          <!-- Header Section -->
+          <tr>
+            <td class="header" style="background-color: #007bff; padding: 30px; border-top-left-radius: 12px; border-top-right-radius: 12px; text-align: center; color: #ffffff;">
+              <h1 style="font-size: 28px; font-weight: bold; margin: 0 0 10px 0;">We’d Love Your Feedback!</h1>
+              <p style="font-size: 18px; margin: 0; opacity: 0.9;">Your opinion matters to us</p>
+            </td>
+          </tr>
+          <!-- Content Section -->
+          <tr>
+            <td class="content-area" style="padding: 30px;">
+              <p style="margin-bottom: 15px; font-size: 16px; color: #555555;">Hi there,</p>
+              <p style="margin-bottom: 15px; font-size: 16px; color: #555555;">Thank you for working with us. We’re always striving to improve and would really appreciate a few minutes of your time to provide your feedback on our services.</p>
+              <p style="margin-bottom: 15px; font-size: 16px; color: #555555;">Please click the button below to submit your review:</p>
+              <p align="center">
+                <a href="{{REVIEW_LINK}}" class="button" style="display: inline-block; margin-top: 25px; padding: 15px 30px; background-color: #007bff; color: white !important; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);">Submit Your Review</a>
+              </p>
+              <p style="margin-top: 30px; margin-bottom: 15px; font-size: 14px; color: #777777;">If the button doesn’t work, you can also copy and paste the link below into your browser:</p>
+              <p style="font-size: 14px; color: #777777;"><a href="{{REVIEW_LINK}}" style="color: #007bff; text-decoration: underline;">{{REVIEW_LINK}}</a></p>
+            </td>
+          </tr>
+          <!-- Footer Section -->
+          <tr>
+            <td class="footer" style="background-color: #2c3e50; padding: 30px; color: #ecf0f1; font-size: 14px; text-align: center; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+              <p style="margin-bottom: 10px; line-height: 1.5; color: #ecf0f1;">
+                <strong>Target Trek</strong> is dedicated to providing top-notch services. We believe in building strong, lasting relationships with our clients by always delivering excellence.
+              </p>
+              <p style="margin-bottom: 10px; line-height: 1.5; color: #ecf0f1;">
+                Email: <a href="mailto:info@targettrek.com" style="color: #007bff !important; text-decoration: none;">enquiry@targettrek.in</a><br/>
+                WhatsApp: <a href="https://wa.me/9873208210" style="color: #007bff !important; text-decoration: none;">+91 98732 08210</a>
+              </p>
+
+              <div class="social-links" style="margin-top: 20px; margin-bottom: 15px;">
+                <!-- LinkedIn Icon -->
+                <a href="https://targettrek.in" style="display: inline-block; margin: 0 10px; color: #ecf0f1 !important; text-decoration: none; font-size: 24px;" title="LinkedIn">
+                  &#128279; <!-- Unicode for link icon (or replace with actual LinkedIn SVG/image if hosted) -->
+                </a>
+                <!-- WhatsApp Icon -->
+                <a href="https://wa.me/9873208210" style="display: inline-block; margin: 0 10px; color: #ecf0f1 !important; text-decoration: none; font-size: 24px;" title="WhatsApp">
+                  &#128222; <!-- Unicode for phone icon (or replace with actual WhatsApp SVG/image) -->
+                </a>
+                <!-- Email Icon -->
+                <a href="mailto:enquiry@targettrek.com" style="display: inline-block; margin: 0 10px; color: #ecf0f1 !important; text-decoration: none; font-size: 24px;" title="Email">
+                  &#9993;&#65039; <!-- Unicode for envelope icon -->
+                </a>
+              </div>
+
+              <p class="copyright" style="font-size: 12px; opacity: 0.8; margin-top: 20px; color: #ecf0f1;">
+                &copy; 2025 Target Trek. All rights reserved.
+              </p>
+              <p class="copyright" style="font-size: 12px; opacity: 0.8; margin-top: 5px; color: #ecf0f1;">
+                This message was sent by Target Trek. If you received it by mistake, please ignore it.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>

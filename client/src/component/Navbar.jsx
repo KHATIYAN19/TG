@@ -19,7 +19,7 @@ const adminLinks = [
 ];
 
 const Navbar = () => {
-  const navigate=useNavigate();
+  const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
@@ -29,33 +29,32 @@ const Navbar = () => {
   const mobileAvatarRef = useRef(null);
 
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const isAdmin = isAuthenticated && (user?.role === 'admin'||user?.role=="Employee");
+  const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'Employee');
 
-  const [navItems, setNavItems] = useState([ 
+  const [navItems, setNavItems] = useState([
     { label: 'Home', path: '/' },
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
     { label: 'Affiliate', path: '/affiliate-marketing' },
     { label: 'Blog', path: '/blogs' },
-    { label: 'Portfolio', path: '/portfolio' },
-    { label: 'Contact', path: '/contact' },
+    //{ label: 'Portfolio', path: '/portfolio' },
+   
   ]);
-
 
   useEffect(() => {
     if (isAdmin) {
       const dashboardLink = { label: 'Dashboard', path: '/dashboard' };
       if (!navItems.find(item => item.label === 'Dashboard')) {
-        setNavItems(prevNavItems => [dashboardLink, ...prevNavItems]); 
+        setNavItems(prevNavItems => [dashboardLink, ...prevNavItems]);
       }
     } else {
-        setNavItems(prevNavItems => prevNavItems.filter(item => item.label !== 'Dashboard'));
+      setNavItems(prevNavItems => prevNavItems.filter(item => item.label !== 'Dashboard'));
     }
   }, [isAdmin]);
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate("/")
+    navigate("/");
     setIsAdminDropdownOpen(false);
   };
 
@@ -164,10 +163,10 @@ const Navbar = () => {
               </div>
             ) : (
               <NavLink
-                to="/book"
+                to="/contact"
                 className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition duration-300 ease-in-out"
               >
-                Book a Free Call
+                Contact Us
               </NavLink>
             )}
           </div>
@@ -266,11 +265,11 @@ const Navbar = () => {
                   </div>
                 ) : (
                   <NavLink
-                    to="/book"
+                    to="/contact"
                     className="block py-2 transition duration-300 ease-in-out transform hover:scale-105 text-blue-600 font-semibold"
                     onClick={closeMobileMenu}
                   >
-                    Book a Free Call
+                    Contact Us
                   </NavLink>
                 )}
               </li>

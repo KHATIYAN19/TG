@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Rocket, BarChart, PenTool, Smartphone, Users, Star, ChevronRight } from 'lucide-react';
 import BASE_URL from "../utils/Url.js";
 import { Helmet } from 'react-helmet';
+import { PiBuildingOffice } from "react-icons/pi";
 
 const HomePage = () => {
   const services = [
@@ -143,18 +144,20 @@ const HomePage = () => {
                     </div>
                     <div>
                       <h4 className="font-semibold text-blue-900">{review.name}</h4>
-                      <p className="text-sm text-blue-600">{review.companyName}</p>
+                      <div className='flex flex-row items-center gap-2'>
+                        <PiBuildingOffice />  <p className="text-sm text-blue-600"> {review.companyName} ({review.position})</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-1 mb-4">
+                  <div className="flex gap-1 mb-4 px-20">
                     {renderStars(review.rating)}
                   </div>
                   <p className="text-blue-700 italic mb-6">
                     &ldquo;{review.clientFeedback}&rdquo;
                   </p>
-                  <div className="text-sm text-blue-500">
-                    {new Date(review.date).toLocaleDateString()}
-                  </div>
+                  {/* <div className="text-sm text-blue-500">
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </div> */}
                 </div>
               ))}
             </div>

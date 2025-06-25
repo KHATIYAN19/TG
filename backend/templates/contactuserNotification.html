@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target Trek: Thank You for Your Inquiry!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f2f4f8;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            width: 100% !important;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #34495e;
+            padding: 25px 0;
+            text-align: center;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 28px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .content-body {
+            padding: 30px;
+        }
+
+        h2 {
+            color: #2e7d32; /* A nice green for confirmation */
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        p {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+
+        .highlight-box {
+            background: #e8f5e9; /* Light green */
+            border: 1px solid #4CAF50;
+            color: #1b5e20;
+            font-size: 16px;
+            text-align: center;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+
+        .btn {
+            display: block;
+            width: max-content;
+            margin: 35px auto 0;
+            padding: 14px 28px;
+            background-color: #4CAF50;
+            color: white !important;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #388e3c;
+        }
+
+        /* Footer styles from the user's provided footer */
+        .footer {
+            background-color: #2c3e50;
+            padding: 30px;
+            color: #ecf0f1;
+            font-size: 14px;
+            text-align: center;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        .footer p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            color: #ecf0f1;
+        }
+        .footer a {
+            color: #007bff !important;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .social-links {
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #ecf0f1 !important;
+            text-decoration: none;
+            font-size: 28px;
+            transition: color 0.3s ease;
+        }
+        .social-links a:hover {
+            color: #007bff !important;
+        }
+        .copyright {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 20px;
+            color: #ecf0f1;
+        }
+
+        /* Responsive Styles */
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 20px auto;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .header, .footer {
+                border-radius: 0;
+            }
+            .content-body {
+                padding: 20px;
+            }
+            h2 {
+                font-size: 22px;
+            }
+            p {
+                font-size: 15px;
+            }
+            .btn {
+                padding: 12px 24px;
+                font-size: 15px;
+            }
+            .social-links a {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Target Trek</h1>
+        </div>
+        <div class="content-body">
+            <h2>Thank You for Your Inquiry!</h2>
+
+            <p>Hi {{name}},</p>
+
+            <p>Thanks for contacting us! We've successfully received your message regarding **{{service}}**. Our team is reviewing your request and will get back to you as soon as possible, typically within 24-48 business hours.</p>
+
+            <div class="highlight-box">
+                We appreciate your patience and look forward to connecting with you!
+            </div>
+
+            <p>In the meantime, feel free to explore more about our services on our website:</p>
+
+            <a href="https://www.targettrek.in" class="btn">Visit Target Trek Website</a>
+        </div>
+
+        <!-- Footer Start -->
+        <div class="footer">
+            <p style="margin-bottom: 10px; line-height: 1.5; color: #ecf0f1;">
+                <strong>Target Trek</strong> is dedicated to providing top-notch services. We believe in building strong, lasting relationships with our clients by always delivering excellence.
+            </p>
+            <p style="margin-bottom: 10px; line-height: 1.5; color: #ecf0f1;">
+                Email: <a href="mailto:enquiry@targettrek.in" style="color: #007bff !important; text-decoration: none;">enquiry@targettrek.in</a><br/>
+                WhatsApp: <a href="https://wa.me/9873208210" style="color: #007bff !important; text-decoration: none;">+91 98732 08210</a>
+            </p>
+
+            <div class="social-links" style="margin-top: 20px; margin-bottom: 15px;">
+                <!-- Website Icon -->
+                <a href="https://targettrek.in" style="display: inline-block; margin: 0 10px; color: #ecf0f1 !important; text-decoration: none; font-size: 24px;" title="Target Trek Website">
+                    &#128279;
+                </a>
+                <!-- WhatsApp Icon -->
+                <a href="https://wa.me/9873208210" style="display: inline-block; margin: 0 10px; color: #ecf0f1 !important; text-decoration: none; font-size: 24px;" title="WhatsApp">
+                    &#128222;
+                </a>
+                <!-- Email Icon -->
+                <a href="mailto:enquiry@targettrek.in" style="display: inline-block; margin: 0 10px; color: #ecf0f1 !important; text-decoration: none; font-size: 24px;" title="Email">
+                    &#9993;&#65039;
+                </a>
+            </div>
+
+            <p class="copyright" style="font-size: 12px; opacity: 0.8; margin-top: 20px; color: #ecf0f1;">
+                &copy; 2025 Target Trek. All rights reserved.
+            </p>
+            <p class="copyright" style="font-size: 12px; opacity: 0.8; margin-top: 5px; color: #ecf0f1;">
+                This message was sent by Target Trek. If you received it by mistake, please ignore it.
+            </p>
+        </div>
+        <!-- Footer End -->
+    </div>
+</body>
+</html>
