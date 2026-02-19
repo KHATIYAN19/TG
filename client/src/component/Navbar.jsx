@@ -6,6 +6,7 @@ import { logout } from '../Redux/authSlice';
 import logo from '../utils/target_Trek_logo_2.jpg';
 
 const adminLinks = [
+  {label:'Profile' ,path :'/profile'},
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'Manage Bookings', path: '/admin/booking' },
   { label: 'Manage Slots', path: '/admin/slots' },

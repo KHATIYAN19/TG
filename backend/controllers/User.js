@@ -71,7 +71,7 @@ export const login = async (req, res) => {
     user.otp = otp;
     user.otpExpiry = Date.now() + 10 * 60 * 1000;
     await user.save();
-   console.log("otp is", otp);
+  
     const htmlPath = path.join(__dirname, '../templates/otp-email-template.html');
     let htmlTemplate = fs.readFileSync(htmlPath, 'utf-8');
     htmlTemplate = htmlTemplate.replace('{{OTP_CODE}}', otp);
@@ -170,7 +170,8 @@ export const resendOtp = async (req, res) => {
 
   export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, 'name email mobile role block _id');
+ 
+const users = await User.find({}, 'name email mobile role block _id');
     res.status(200).json({
       success: true,
       message: 'Users fetched successfully',
@@ -245,36 +246,94 @@ export const toggleBlockStatus = async (req, res) => {
   }
 };
 
-export const resetPasswordbyadmin=async(req,res)=>{
-    try{
-        const {email}=req.body;
-        const user=await User.find({email});
+
+
+
+
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findById(id);
         if (!user) {
-           return res.status(404).json({ success: false, message: 'User not found' });
+            return res.status(404).json({ message: 'User not found' ,success:false});
         }
-         if (!validator.isEmail(email)) {
-        return res.status(400).json({ success: false, message: 'Invalid email format' });
-        }
-       const hashedPassword = await bcrypt.hash(user.email, 10);
-       user.password=hashedPassword;
-       await user.save();
-       res.status(201).json({ success: true, message: 'Password reset successfully' });
-    }catch(err){
-      return res.status(400).json({
-        success:false,
-        message:"Something went wrong"
-      })
+        const newPassword = Math.random().toString(36).slice(-6);
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { password: hashedPassword },
+            { new: true, runValidators: true }
+        );
+         const htmlPath = path.join(__dirname, '../templates/resetPasswordtemplate.html');
+
+      
+        
+      let htmlTemplate = fs.readFileSync(htmlPath, 'utf-8');
+
+       htmlTemplate = htmlTemplate.replace('{{USER_NAME}}', user.name); 
+        htmlTemplate = htmlTemplate.replace('{{NEW_PASSWORD}}', newPassword);
+
+
+     const subject = 'Your TargetTrek Password Reset Confirmation'; 
+
+    const plainText="";
+    await sendMail(user.email, subject, plainText, htmlTemplate);
+    console.log(user.email)
+        res.status(200).json({
+            message: 'Password reset successfully. New password generated.',
+            userId: updatedUser._id,
+            success:true
+        });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ message: 'Server error', error: error.message,success:false });
     }
-}
+};
 
 
-export const changepassword=async(req,res)=>{
-   try{
-      const {email,password}=req.body;
-   }catch(e){
-      return res.status(400).json({
-        success:false,
-        message:"Something went wrong"
-      })
-   }
-}
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword, confirmNewPassword } = req.body;
+        const userId = req.user.userId; 
+        
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
+            return res.status(400).json({ message: 'Please provide current password, new password, and confirm new password.' });
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({ message: 'New password and confirm new password do not match.' });
+        }
+
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Current password is incorrect.' });
+        }
+
+        if (newPassword === currentPassword) {
+            return res.status(400).json({ message: 'New password cannot be the same as the current password.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        user.password = hashedPassword;
+        await user.save(); // Save the updated user document
+
+        res.status(200).json({ success: true, message: 'Password changed successfully.' });
+
+    } catch (error) {
+        console.error('Error changing password:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};

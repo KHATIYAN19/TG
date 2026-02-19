@@ -18,6 +18,7 @@ import AffiliateMarketing from './component/AffiliateMarketing'
 import NotFoundPage from './component/NotFoundPage'
 import PortfolioDetailPage from './component/PortfolioDetailPage'
 
+import UserProfile from './component/UserProfile.jsx';
 
 import AdminBlogManagementPage from './Admin/AdminBlogList'
 import AdminBookingsPage from './Admin/AdminBookingsPage'
@@ -117,6 +118,7 @@ function App() {
         <Route path="/admin/add-portfolio" element={isUser ? <AddPortfolioPage /> : <NotFoundPage />} />
         <Route path="/portfolio-manage" element={isUser ? <ManagePortfolio /> : <NotFoundPage />} />
        
+       <Route path="/profile" element={UserProfile ? <UserProfile /> : <NotFoundPage />} />
        
         <Route path="/admin/users" element={isAdmin?<UserManagement/>:<NotFoundPage/>}/>
         <Route path="/admin/signup" element={isAdmin?<AdminSignup/>:<HomePage/>}/>
@@ -129,11 +131,7 @@ function App() {
        
         <Route path="/admin/booking" element={isAdmin ? <AdminBookingsPage /> : <NotFoundPage />} />
         <Route path="/admin/slots" element={isAdmin ? <AdminSlotsPage /> : <NotFoundPage />} />
-        
-
-
-        
-        
+      
         <Route path="*" element={<NotFoundPage/>}/>
         </Routes>
        <FloatingContact/>

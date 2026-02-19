@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { User, Trash2, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
-import Base_url from "../utils/Url"
 import { useSelector } from 'react-redux';
+import { User, Trash2, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
+import Base_url from "../utils/Url";
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -10,7 +10,13 @@ function UserManagement() {
   const [error, setError] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
-  const token=useSelector((state)=>state.auth.token);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [userToResetPassword, setUserToResetPassword] = useState(null);
+  const [processingUserId, setProcessingUserId] = useState(null);
+  const [processingModalConfirm, setProcessingModalConfirm] = useState(false);
+
+  const token = useSelector((state) => state.auth.token);
+
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
@@ -43,6 +49,7 @@ function UserManagement() {
   }, []);
 
   const handleToggleBlock = async (userId, currentBlockStatus) => {
+    setProcessingUserId(userId);
     try {
       const response = await fetch(`${Base_url}/admin/${userId}/toggle-block`, {
         method: 'PUT',
@@ -58,6 +65,7 @@ function UserManagement() {
 
       const data = await response.json();
       if (data.success) {
+        toast.dismiss();
         toast.success(data.message);
         setUsers((prevUsers) =>
           prevUsers.map((user) =>
@@ -65,10 +73,14 @@ function UserManagement() {
           )
         );
       } else {
+        toast.dismiss();
         toast.error(data.message || 'Failed to toggle block status');
       }
     } catch (err) {
+      toast.dismiss();
       toast.error(`Error toggling block status: ${err.message}`);
+    } finally {
+      setProcessingUserId(null);
     }
   };
 
@@ -80,6 +92,8 @@ function UserManagement() {
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
 
+    setProcessingModalConfirm(true);
+    setProcessingUserId(userToDelete._id);
     try {
       const response = await fetch(`${Base_url}/admin/${userToDelete._id}`, {
         method: 'DELETE',
@@ -94,22 +108,74 @@ function UserManagement() {
 
       const data = await response.json();
       if (data.success) {
+        toast.dismiss();
         toast.success(data.message);
         setUsers((prevUsers) => prevUsers.filter((user) => user._id !== userToDelete._id));
       } else {
+        toast.dismiss();
         toast.error(data.message || 'Failed to delete user');
       }
     } catch (err) {
+      toast.dismiss();
       toast.error(`Error deleting user: ${err.message}`);
     } finally {
       setShowDeleteModal(false);
       setUserToDelete(null);
+      setProcessingModalConfirm(false);
+      setProcessingUserId(null);
     }
   };
 
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
     setUserToDelete(null);
+  };
+
+  const handleResetPasswordClick = (user) => {
+    setUserToResetPassword(user);
+    setShowResetPasswordModal(true);
+  };
+
+  const handleConfirmResetPassword = async () => {
+    if (!userToResetPassword) return;
+
+    setProcessingModalConfirm(true);
+    setProcessingUserId(userToResetPassword._id);
+    try {
+      const response = await fetch(`${Base_url}/admin/reset-password/${userToResetPassword._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.message) {
+        toast.dismiss();
+        toast.success(data.message);
+      } else {
+        toast.dismiss();
+        toast.error(data.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      toast.dismiss();
+      toast.error(`Error resetting password: ${err.message}`);
+    } finally {
+      setShowResetPasswordModal(false);
+      setUserToResetPassword(null);
+      setProcessingModalConfirm(false);
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleCancelResetPassword = () => {
+    setShowResetPasswordModal(false);
+    setUserToResetPassword(null);
   };
 
   return (
@@ -202,14 +268,20 @@ function UserManagement() {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleToggleBlock(user._id, user.block)}
+                        disabled={processingUserId === user._id}
                         className={`p-2 rounded-full transition-colors duration-200 ${
                           user.block
                             ? 'bg-blue-700 text-white hover:bg-blue-800'
                             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
+                        } ${processingUserId === user._id ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label={user.block ? 'Unblock user' : 'Block user'}
                       >
-                        {user.block ? (
+                        {processingUserId === user._id ? (
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : user.block ? (
                           <ToggleRight className="w-5 h-5" />
                         ) : (
                           <ToggleLeft className="w-5 h-5" />
@@ -217,10 +289,36 @@ function UserManagement() {
                       </button>
                       <button
                         onClick={() => handleDeleteClick(user)}
-                        className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200"
+                        disabled={processingUserId === user._id}
+                        className={`p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200 ${
+                          processingUserId === user._id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                         aria-label="Delete user"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        {processingUserId === user._id ? (
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <Trash2 className="w-5 h-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleResetPasswordClick(user)}
+                        disabled={processingUserId === user._id}
+                        className={`px-4 py-2 text-blue-700 hover:text-blue-900 transition-colors duration-200 text-sm ${
+                          processingUserId === user._id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        aria-label="Reset password"
+                      >
+                        {processingUserId === user._id ? (
+                          <svg className="animate-spin h-5 w-5 text-blue-700 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : null}
+                        <span className={processingUserId === user._id ? '' : 'underline'}>Reset Password</span>
                       </button>
                     </div>
                   </td>
@@ -242,15 +340,56 @@ function UserManagement() {
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleCancelDelete}
-                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center"
+                disabled={processingModalConfirm}
+                className={`px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center ${processingModalConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <X className="w-4 h-4 mr-2" /> Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center"
+                disabled={processingModalConfirm}
+                className={`px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center ${processingModalConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <Check className="w-4 h-4 mr-2" /> Delete
+                {processingModalConfirm ? (
+                  <svg className="animate-spin h-5 w-5 text-white inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : <Check className="w-4 h-4 mr-2" />} Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetPasswordModal && userToResetPassword && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Password Reset</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to reset the password for user{' '}
+              <span className="font-semibold text-blue-700">{userToResetPassword.name}</span>?
+              A new temporary password will be generated and sent to their email.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={handleCancelResetPassword}
+                disabled={processingModalConfirm}
+                className={`px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center ${processingModalConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <X className="w-4 h-4 mr-2" /> Cancel
+              </button>
+              <button
+                onClick={handleConfirmResetPassword}
+                disabled={processingModalConfirm}
+                className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center ${processingModalConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {processingModalConfirm ? (
+                  <svg className="animate-spin h-5 w-5 text-white inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : <Check className="w-4 h-4 mr-2" />} Reset Password
               </button>
             </div>
           </div>
