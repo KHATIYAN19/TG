@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { z } from 'zod';
 import toast, { Toaster } from 'react-hot-toast';
 import Base_url from '../utils/Url';
+import { useSelector } from 'react-redux';
 
 const signupSchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters long' }),
@@ -19,8 +20,8 @@ const signupSchema = z.object({
     .regex(/^\d+$/, { message: 'Mobile number must contain only digits' }),
   role: z.enum(['admin', 'Employee'], { message: 'Please select a role' }),
 });
-
 function AdminSignup() {
+  const token = useSelector((state) => state.auth.token);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -65,6 +66,8 @@ function AdminSignup() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+
         },
         body: JSON.stringify(formData),
       });
