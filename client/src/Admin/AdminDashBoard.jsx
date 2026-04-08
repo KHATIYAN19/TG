@@ -29,6 +29,7 @@ const adminRoutes = [
     { path: '/admin/add-portfolio', name: 'Add Portfolio', icon: PlusCircle, description: 'Add new portfolio items.' },
     { path: '/portfolio-manage', name: 'Manage Portfolio', icon: Image, description: 'Edit and delete portfolio items.' },
     { path: '/admin/affiliate-manage', name: 'Affiliate Management', icon: Users, description: 'Manage Affiliates.' },
+    { path: '/interest', name: 'Interested Users', icon: Users, description: 'Interested Users' },
 ];
 
 const employeeRoutes = [
@@ -41,6 +42,8 @@ const employeeRoutes = [
     { path: '/admin/add-portfolio', name: 'Add Portfolio', icon: PlusCircle, description: 'Add new portfolio items.' },
     { path: '/portfolio-manage', name: 'Manage Portfolio', icon: Image, description: 'Edit and delete portfolio items.' },
     { path: '/admin/affiliate-manage', name: 'Affiliate Management', icon: Users, description: 'Manage Affiliates.' },
+    { path: '/interest', name: 'Interested Users', icon: Users, description: 'Interested Users' },
+
 ];
 
 

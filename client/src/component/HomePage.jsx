@@ -10,7 +10,7 @@ import BASE_URL from "../utils/Url.js";
 import { Helmet } from 'react-helmet';
 import { PiBuildingOffice } from "react-icons/pi";
 
-import LeadPopup from './LeadPopUp.jsx';
+import LeadPopup from './LeadPopup.jsx';
 const HomePage = () => {
   const services = [
   { 
