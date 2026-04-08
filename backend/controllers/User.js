@@ -8,43 +8,163 @@ import sendMail from '../utils/MailSender.js';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// export const signup = async (req, res) => {
+//   try {
+//     const { name, email, mobile, password, role } = req.body;
+//     if (!name || !email || !mobile || !password||!role) {
+//       return res.status(400).json({ success: false, message: 'All fields are required' });
+//     }
+//     if (!validator.isEmail(email)) {
+//       return res.status(400).json({ success: false, message: 'Invalid email format' });
+//     }
+
+//     if (!/^\d{10}$/.test(mobile)) {
+//       return res.status(400).json({ success: false, message: 'Invalid mobile number' });
+//     }
+
+//     const existingUser = await User.findOne({
+//       $or: [{ email }, { mobile }]
+//     });
+
+//     if (existingUser) {
+//       return res.status(400).json({ success: false, message: 'User already exists with email or mobile' });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const user = new User({
+//       name,
+//       email,
+//       mobile,
+//       password: hashedPassword,
+//       role: role 
+//     });
+//     await user.save();
+//     res.status(201).json({ success: true, message: 'User created successfully' });
+//   } catch (error) {
+//     console.log(error)
+//     res.status(500).json({ success: false, message: 'Server error',error });
+//   }
+// };
+
+
+
+
+
+const generateEmployeeId = async () => {
+  let employeeId;
+  let exists = true;
+
+  while (exists) {
+    const randomNumber = Math.floor(100000 + Math.random() * 900000);
+    employeeId = `TT-${randomNumber}`;
+
+    const existing = await User.findOne({ employeeId });
+    if (!existing) exists = false;
+  }
+
+  return employeeId;
+};
+
 export const signup = async (req, res) => {
   try {
-    const { name, email, mobile, password, role } = req.body;
-    if (!name || !email || !mobile || !password||!role) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    const {
+      name,
+      email,
+      mobile,
+      password,
+      role,
+      department,
+      designation,
+      employmentType,
+      salary,
+      commissionRate,
+      joiningDate,
+    } = req.body;
+
+    /* ===== BASIC VALIDATION ===== */
+    if (!name || !email || !mobile || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Required fields missing",
+      });
     }
+
     if (!validator.isEmail(email)) {
-      return res.status(400).json({ success: false, message: 'Invalid email format' });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
     }
 
     if (!/^\d{10}$/.test(mobile)) {
-      return res.status(400).json({ success: false, message: 'Invalid mobile number' });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid mobile number",
+      });
     }
 
+    /* ===== CHECK EXISTING USER ===== */
     const existingUser = await User.findOne({
-      $or: [{ email }, { mobile }]
+      $or: [{ email }, { mobile }],
     });
 
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists with email or mobile' });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists with email or mobile",
+      });
     }
 
+    /* ===== HASH PASSWORD ===== */
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
+
+    /* ===== CREATE BASE USER OBJECT ===== */
+    const newUserData = {
       name,
       email,
       mobile,
       password: hashedPassword,
-      role: role 
-    });
+      role,
+    };
+
+    /* ===== IF ROLE IS EMPLOYEE ===== */
+    if (role) {
+      const employeeId = await generateEmployeeId();
+
+      newUserData.employeeId = employeeId;
+      newUserData.department = department || "General";
+      newUserData.designation = designation || "Employee";
+      newUserData.joiningDate = joiningDate || new Date();
+      newUserData.employmentType = employmentType || "Permanent";
+      newUserData.status = "Active";
+     
+      if (newUserData.employmentType === "Permanent") {
+        newUserData.salary = salary || 0;
+      } else if (newUserData.employmentType === "Commission Based") {
+        newUserData.commissionRate =
+          commissionRate || "10% Commission on Sales";
+      }
+    }
+
+     const user = new User(newUserData);
     await user.save();
-    res.status(201).json({ success: true, message: 'User created successfully' });
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      employeeId: newUserData.employeeId || null,
+    });
+
   } catch (error) {
-    console.log(error)
-    res.status(500).json({ success: false, message: 'Server error',error });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
+
+
 export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -173,12 +293,9 @@ export const resendOtp = async (req, res) => {
   };
   
 
-
-
-
   export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, 'name email mobile role block _id');
+    const users = await User.find({}, 'name email mobile role block _id employeeId');
     res.status(200).json({
       success: true,
       message: 'Users fetched successfully',
@@ -254,10 +371,6 @@ export const toggleBlockStatus = async (req, res) => {
 };
 
 
-
-
-
-
 export const resetPassword = async (req, res) => {
     try {
         const { id } = req.params;
@@ -301,7 +414,6 @@ export const resetPassword = async (req, res) => {
     }
 };
 
-
 export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword, confirmNewPassword } = req.body;
@@ -343,4 +455,41 @@ export const changePassword = async (req, res) => {
         console.error('Error changing password:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
+};
+
+
+
+export const getUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email parameter is required",
+      });
+    }
+
+    // Find user by email (case-insensitive)
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .lean({ virtuals: true }); 
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User fetched successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
 };

@@ -30,7 +30,9 @@ const contactSchema = new mongoose.Schema(
           'Email Marketing',
           'Web Development',
           'Affiliate Marketing',
-          'Other Inquiry'
+          'Other Inquiry',
+          'Google/Meta Ads',
+          'Gen AI'
         ],
         message: 'Invalid service selected.'
       }

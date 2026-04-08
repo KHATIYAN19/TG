@@ -11,8 +11,7 @@ import  sendMail  from '../utils/MailSender.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-
+const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'https://targettrek.in';
 
 const emailSchema = z.string().email({ message: 'Invalid email address provided.' });
 
@@ -76,7 +75,6 @@ export const createReview = async (req, res) => {
     session.startTransaction();
     try {
         const reviewToken = await ReviewToken.findOne({ token: token }).session(session);
-
         if (!reviewToken) {
             await session.abortTransaction(); session.endSession();
             return res.status(404).json({ message: 'Invalid or expired review link.' });
@@ -88,7 +86,7 @@ export const createReview = async (req, res) => {
             return res.status(400).json({ message: message });
         }
 
-        const newReview = new Review({ name, companyName, position, clientFeedback, rating, isPublished: false });
+        const newReview = new Review({ name, email: reviewToken.email,companyName, position, clientFeedback, rating, isPublished: false });
         const validationError = newReview.validateSync();
         if (validationError) {
             await session.abortTransaction(); session.endSession();
@@ -115,11 +113,16 @@ export const createReview = async (req, res) => {
 
 export const getAllPublishedReviews = async (req, res) => {
     try {
-        const reviews = await Review.find({ isPublished: true }).sort({ createdAt: -1 }).lean();
-        res.status(200).json({reviews,success:true});
+        const reviews = await Review
+            .find({ isPublished: true })
+            .select('-email -createdAt -updatedAt -isPublished -__v')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.status(200).json({ reviews, success: true });
     } catch (error) {
         console.error('Error fetching published reviews:', error);
-        res.status(500).json({ message: 'Server error fetching reviews.',success:false });
+        res.status(500).json({ message: 'Server error fetching reviews.', success: false });
     }
 };
 

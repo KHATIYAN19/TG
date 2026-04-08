@@ -6,6 +6,10 @@ const reviewSchema = new mongoose.Schema({
     required: [true, 'Name is required.'],
     trim: true,
   },
+  email: {
+  type: String,
+  required: true,
+  },
   companyName: {
     type: String,
     required: [true, 'Company name is required.'],

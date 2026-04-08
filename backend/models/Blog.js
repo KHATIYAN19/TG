@@ -53,6 +53,6 @@ const blogPostSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-blogPostSchema.index({ slug: 1 });
+// blogPostSchema.index({ slug: 1 });
 const BlogPost = mongoose.model('BlogPost', blogPostSchema);
 export default BlogPost;

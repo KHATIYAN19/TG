@@ -22,7 +22,8 @@ export const createContactMessage = asyncHandler(async (req, res) => {
     }
     const allowedServices = [
         'PPC Advertising', 'Social Media Marketing', 'Email Marketing',
-        'Web Development', 'Affiliate Marketing', 'Other Inquiry'
+        'Web Development', 'Affiliate Marketing', 'Other Inquiry',
+        'Google/Meta Ads','Social Media Marketing','Gen AI'
     ];
     if (!service || !allowedServices.includes(service.trim())) {
         return res.status(400).json({ message: 'A valid service selection is required.' });
