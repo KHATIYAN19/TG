@@ -1,4 +1,4 @@
-import Interest from "../models/interest.js";
+import Interest from "../models/Interest.js";
 
 const isValidPhone = (phone) => {
   const regex = /^[6-9]\d{9}$/;

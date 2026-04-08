@@ -10,15 +10,46 @@ import BASE_URL from "../utils/Url.js";
 import { Helmet } from 'react-helmet';
 import { PiBuildingOffice } from "react-icons/pi";
 
+import LeadPopup from './LeadPopUp.jsx';
 const HomePage = () => {
   const services = [
-    { icon: <BarChart size={32} className="text-blue-600" />, title: 'Digital Marketing', description: 'Targeted campaigns that deliver real results and drive measurable growth.', link: '/services#marketing' },
-    { icon: <Users size={32} className="text-blue-600" />, title: 'Social Media Management', description: 'Build authentic audience engagement and amplify your brand presence across all platforms.', link: '/services#social' },
-    { icon: <PenTool size={32} className="text-blue-600" />, title: 'Content Strategy & Creation', description: 'Craft compelling stories and valuable content that resonates with your target audience.', link: '/services#content' },
-    { icon: <Smartphone size={32} className="text-blue-600" />, title: 'Web Development & Design', description: 'Develop modern, responsive, and high-performing websites that captivate your visitors.', link: '/services#web' },
-    { icon: <Megaphone size={32} className="text-blue-600" />, title: 'Paid Advertising (PPC)', description: 'Maximize your ROI with precisely targeted pay-per-click campaigns on leading platforms.', link: '/services#ppc' },
-    { icon: <Code size={32} className="text-blue-600" />, title: 'E-commerce Solutions', description: 'Build robust and scalable online stores designed for conversions and seamless shopping.', link: '/services#ecommerce' },
-  ];
+  { 
+    icon: <BarChart size={32} className="text-blue-600" />, 
+    title: 'Digital Marketing', 
+    description: 'Targeted campaigns that deliver real results and drive measurable growth.', 
+    link: '/services/affiliate-marketing' 
+  },
+  { 
+    icon: <Users size={32} className="text-blue-600" />, 
+    title: 'Social Media Management', 
+    description: 'Build authentic audience engagement and amplify your brand presence across all platforms.', 
+    link: '/services/social-media-marketing' 
+  },
+  { 
+    icon: <PenTool size={32} className="text-blue-600" />, 
+    title: 'Content Strategy & Creation', 
+    description: 'Craft compelling stories and valuable content that resonates with your target audience.', 
+    link: '/services/content-marketing' 
+  },
+  { 
+    icon: <Smartphone size={32} className="text-blue-600" />, 
+    title: 'Web Development & Design', 
+    description: 'Develop modern, responsive, and high-performing websites that captivate your visitors.', 
+    link: '/services/web-development' 
+  },
+  { 
+    icon: <Megaphone size={32} className="text-blue-600" />, 
+    title: 'Paid Advertising (PPC)', 
+    description: 'Maximize your ROI with precisely targeted pay-per-click campaigns on leading platforms.', 
+    link: '/services/ppc-advertising' 
+  },
+  { 
+    icon: <Code size={32} className="text-blue-600" />, 
+    title: 'GenAI Solutions', 
+    description: 'Leverage cutting-edge generative AI to automate workflows, enhance creativity, and drive innovation.', 
+    link: '/services/genai-solutions' 
+  },
+];
 
   const whyChooseUs = [
     { icon: <Lightbulb size={32} className="text-green-600" />, title: 'Innovative Strategies', description: 'We stay ahead of the curve, employing the latest trends and technologies to give you an edge.' },
@@ -37,7 +68,10 @@ const HomePage = () => {
   const [reviews, setReviews] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [apiError, setApiError] = useState(false);
-
+  const[AutoSlide,setAutoSlide]=useState(true);
+  useEffect(() => {
+  window.scrollTo(0, 0);
+  }, []);
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -46,73 +80,16 @@ const HomePage = () => {
           setReviews(response.data.reviews.filter(review => review.clientFeedback && review.name && review.rating));
         } else {
           setApiError(true);
-          setReviews(fallbackReviews);
         }
       } catch (error) {
         console.error("Error fetching reviews:", error);
         setApiError(true);
-        setReviews(fallbackReviews);
       }
     };
     fetchReviews();
   }, []);
 
-  const fallbackReviews = [
-    {
-      _id: '1',
-      name: 'Priya Sharma',
-      companyName: 'Innovate Tech',
-      position: 'CEO',
-      rating: 5,
-      clientFeedback: 'Target Trek revolutionized our online presence! Their digital marketing strategies led to a significant increase in leads and brand visibility. Truly exceptional service and results!',
-      createdAt: '2024-03-15T10:00:00Z'
-    },
-    {
-      _id: '2',
-      name: 'Rahul Singh',
-      companyName: 'Growth Builders',
-      position: 'Marketing Director',
-      rating: 4,
-      clientFeedback: 'We saw incredible growth in our social media engagement after partnering with Target Trek. Their team is highly professional and deeply understands our audience.',
-      createdAt: '2024-02-20T11:30:00Z'
-    },
-    {
-      _id: '3',
-      name: 'Anjali Gupta',
-      companyName: 'Artisan Crafts',
-      position: 'Founder',
-      rating: 5,
-      clientFeedback: 'Their web development team built us a beautiful, high-converting e-commerce site. It’s user-friendly and perfectly reflects our brand. Highly recommend!',
-      createdAt: '2024-01-10T09:00:00Z'
-    },
-    {
-        _id: '4',
-        name: 'Suresh Kumar',
-        companyName: 'Future Solutions',
-        position: 'CTO',
-        rating: 4,
-        clientFeedback: 'The strategic guidance from Target Trek drastically improved our digital ad spend efficiency, leading to a much better ROI. We are very pleased with the results!',
-        createdAt: '2023-11-25T14:45:00Z'
-    },
-    {
-        _id: '5',
-        name: 'Neha Verma',
-        companyName: 'Health & Wellness Co.',
-        position: 'Brand Manager',
-        rating: 5,
-        clientFeedback: 'Target Trek’s content strategy helped us connect with our customers on a deeper level. The quality of their content is top-notch and truly engaging.',
-        createdAt: '2023-10-01T16:00:00Z'
-    },
-  ];
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev === reviews.length - 1 ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? reviews.length - 1 : prev - 1));
-  };
-
+  
   const renderStars = (rating) => {
     return [...Array(5)].map((_, i) => (
       <Star
@@ -124,6 +101,7 @@ const HomePage = () => {
   };
 
   return (
+    
     <div className="bg-white">
       <Helmet>
         <title>Home - Target Trek | Digital Marketing & Web Solutions</title>
@@ -135,7 +113,7 @@ const HomePage = () => {
         <meta property="og:image" content="https://images.unsplash.com/photo-1517245381832-ce26706f5263?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
         <link rel="canonical" href="https://www.yourwebsitename.com/" />
       </Helmet>
-
+      <LeadPopup />
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-50 to-white">
         <div className="max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col md:flex-row items-center gap-16">
@@ -191,7 +169,7 @@ const HomePage = () => {
               Who We Are: Your Partner in Digital Growth
             </h2>
             <p className="text-lg text-blue-700">
-              At **Target Trek**, we're passionate about helping businesses thrive in the digital landscape.
+              At <b className='text-black'>Target Trek</b>, we're passionate about helping businesses thrive in the digital landscape.
               We combine cutting-edge strategies with a deep understanding of your unique challenges
               to deliver measurable results. Our team of experts is dedicated to transforming your online presence
               into a powerful engine for success.
@@ -319,93 +297,71 @@ const HomePage = () => {
 
       ---
 
-      {/* Testimonials Section - Greatly Improved */}
+      {/* Testimonials Section - NEW REDESIGN */}
       {reviews.length > 0 && (
-        <section className="py-24 bg-gradient-to-br from-blue-100 to-blue-50 relative overflow-hidden">
+        <section className="py-20 bg-slate-50 relative overflow-hidden">
+          <div className="absolute top-0 left-1/4 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+          <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+
           <div className="max-w-6xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-blue-900 mb-4">
-                What Our Valued Clients Say
-              </h2>
-              <p className="text-blue-700 text-lg max-w-2xl mx-auto">
-                Discover the impact of our work through authentic feedback from businesses we've empowered.
-              </p>
+            <div className="text-center mb-12">
+              <span className="text-blue-600 font-bold tracking-widest uppercase text-xs">Testimonials</span>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Success Stories</h2>
             </div>
 
-            <div className="relative isolate">
-              <div className="absolute inset-0 -z-10 bg-white opacity-40 blur-3xl" aria-hidden="true" />
+            <div 
+              className="overflow-hidden"
+              onMouseEnter={() => setAutoSlide(false)}
+              onMouseLeave={() => setAutoSlide(true)}
+            >
               <div
                 className="flex transition-transform duration-700 ease-in-out"
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}
               >
-                {reviews.map((review) => (
-                  <div
-                    key={review._id}
-                    className="flex-none w-full p-4 box-border md:w-1/2 lg:w-1/3"
-                  >
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-blue-100 flex flex-col h-full transform transition-transform duration-300 hover:scale-[1.02]">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-3xl font-semibold border-2 border-blue-200 shadow-sm">
-                          {review.name ? review.name.charAt(0).toUpperCase() : <Users size={32} />}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-blue-900 text-xl">{review.name}</h4>
-                          <p className='text-sm text-blue-600 flex items-center gap-1 mt-1'>
-                            <PiBuildingOffice size={16} />
-                            <span>{review.companyName} ({review.position})</span>
+                {/* We chunk the reviews into groups of 3 for desktop grid sliding */}
+                {Array.from({ length: Math.ceil(reviews.length / 3) }).map((_, groupIdx) => (
+                  <div key={groupIdx} className="flex-none w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {reviews.slice(groupIdx * 3, groupIdx * 3 + 3).map((review) => (
+                      <div key={review._id} className="h-full">
+                        <div className="group bg-white/70 backdrop-blur-sm p-6 rounded-2xl border border-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white text-lg font-bold">
+                              {review.name?.charAt(0)}
+                            </div>
+                            <div className="overflow-hidden">
+                              <h4 className="font-bold text-slate-800 text-sm truncate">{review.name}</h4>
+                              <p className="text-[11px] text-slate-500 truncate">{review.position} @ {review.companyName}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-0.5 mb-3">{renderStars(review.rating, 14)}</div>
+                          <p className="text-slate-600 text-sm leading-relaxed italic flex-grow">
+                            "{review.clientFeedback}"
                           </p>
+                          <div className="mt-4 pt-3 border-t border-slate-50 flex justify-between items-center">
+                            <PiBuildingOffice className="text-slate-300" size={16} />
+                            <Quote size={16} className="text-blue-100 group-hover:text-blue-200 transition-colors" />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-1 mb-4">
-                        {renderStars(review.rating)}
-                      </div>
-                      <Quote size={28} className="text-blue-300 mb-4 self-start" />
-                      <p className="text-blue-800 text-lg flex-grow italic leading-relaxed mb-6">
-                        &ldquo;{review.clientFeedback}&rdquo;
-                      </p>
-                      <div className="text-sm text-gray-500 mt-auto pt-4 border-t border-gray-100">
-                        Reviewed on {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 ))}
               </div>
             </div>
 
-            {reviews.length > 1 && (
-              <>
-                <button
-                  onClick={prevSlide}
-                  className="absolute top-1/2 -left-4 transform -translate-y-1/2 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 z-20 transition-all hidden md:block"
-                  aria-label="Previous review"
-                >
-                  <ChevronRight size={24} className="rotate-180" />
-                </button>
-                <button
-                  onClick={nextSlide}
-                  className="absolute top-1/2 -right-4 transform -translate-y-1/2 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 z-20 transition-all hidden md:block"
-                  aria-label="Next review"
-                >
-                  <ChevronRight size={24} />
-                </button>
-              </>
-            )}
-
-            <div className="flex justify-center mt-12 space-x-3">
-              {reviews.map((_, idx) => (
+            {/* Pagination */}
+            <div className="flex justify-center gap-2 mt-10">
+              {Array.from({ length: Math.ceil(reviews.length / 3) }).map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`w-3 h-3 rounded-full ${currentSlide === idx ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'} transition-colors duration-300 ease-in-out`}
-                  aria-label={`Go to slide ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === idx ? 'w-8 bg-blue-600' : 'w-2 bg-slate-300'}`}
                 />
               ))}
             </div>
           </div>
         </section>
       )}
-
-      ---
 
       {/* Stats/Achievements Section */}
       <section className="py-24 bg-white">

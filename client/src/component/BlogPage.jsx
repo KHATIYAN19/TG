@@ -51,6 +51,11 @@ const BlogPage = () => {
       return 'Invalid Date';
     }
   };
+  
+  const stripHtml = (html) => {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent || "";
+ };
 
   const handleCardClick = (slug) => {
     navigate(`/blog/${slug}`);
@@ -139,7 +144,8 @@ const BlogPage = () => {
                       {post.title}
                     </h3>
                     <p className="text-gray-600 text-sm mb-4 flex-grow">
-                      {truncateText(post.excerpt, 100)}
+                      {truncateText(stripHtml(post.excerpt), 100)}
+
                     </p>
 
                     <div className="mt-auto border-t border-gray-100 pt-4">

@@ -31,15 +31,15 @@ const AboutPage = () => {
     { icon: <Lightbulb size={32} className="text-white" />, label: 'Innovative Solutions' },
   ];
 
-  
-    const phoneNumber = "9873208210";
-    const whatsappMessage = "Hello, I'm interested in learning more about Target Trek's services.";
-    const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
+
+  const phoneNumber = "9873208210";
+  const whatsappMessage = "Hello, I'm interested in learning more about Target Trek's services.";
+  const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
 
   return (
     <div className="pt-16 md:pt-20 bg-white min-h-screen">
-       <Helmet>
+      <Helmet>
         <title>About  - Target Trek</title>
         <meta name="description" content="Explore the latest digital marketing insights, trends, and strategies on the Target Trek blog." />
         <meta property="og:title" content="Blog - Target Trek" />
@@ -48,8 +48,8 @@ const AboutPage = () => {
       </Helmet>
       <section className="py-16 lg:py-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white text-center">
         <div className="max-w-4xl mx-auto px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3"  itemProp="headline">About Target Trek</h1>
-          <p className="text-lg md:text-xl text-indigo-100"  itemProp="description">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3" itemProp="headline">About Target Trek</h1>
+          <p className="text-lg md:text-xl text-indigo-100" itemProp="description">
             Your New Partner in Digital Growth and Innovation.
           </p>
         </div>
@@ -123,7 +123,7 @@ const AboutPage = () => {
                 <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4 w-14 h-14">
                   {value.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2"  itemProp="coreValueTitle">{value.title}</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2" itemProp="coreValueTitle">{value.title}</h3>
                 <p className="text-gray-600 text-sm" itemProp="coreValueDescription">{value.description}</p>
               </div>
             ))}
@@ -131,7 +131,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <section className="py-16 lg:py-24 bg-gray-50"  itemProp="industryFocus">
+      <section className="py-16 lg:py-24 bg-gray-50" itemProp="industryFocus">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Briefcase size={32} className="mx-auto text-indigo-600 mb-4" />
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-3">Industries We're Excited About</h2>
@@ -139,7 +139,7 @@ const AboutPage = () => {
             We're eager to apply our digital skills across various sectors. We're particularly interested in partnering with businesses in:
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <span className="bg-indigo-100 text-indigo-800 text-sm font-medium px-4 py-2 rounded-full"  itemProp="industry">Startups & Tech</span>
+            <span className="bg-indigo-100 text-indigo-800 text-sm font-medium px-4 py-2 rounded-full" itemProp="industry">Startups & Tech</span>
             <span className="bg-indigo-100 text-indigo-800 text-sm font-medium px-4 py-2 rounded-full" itemProp="industry">E-commerce Brands</span>
             <span className="bg-indigo-100 text-indigo-800 text-sm font-medium px-4 py-2 rounded-full" itemProp="industry">Local Businesses</span>
             <span className="bg-indigo-100 text-indigo-800 text-sm font-medium px-4 py-2 rounded-full" itemProp="industry">Creative Industries</span>
@@ -151,54 +151,116 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <section className="py-16 lg:py-20 bg-indigo-600 text-white" itemProp="commitment">
+      <section className="py-16 lg:py-24 bg-gradient-to-r from-gray-50 via-blue-50 to-indigo-50" itemProp="commitment">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Heading */}
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold">Our Commitment to You</h2>
-            <p className="text-lg text-indigo-100 mt-2">What you can expect when partnering with us.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
+              Our Commitment to You
+            </h2>
+            <p className="text-lg text-gray-600 mt-2">
+              What you can expect when partnering with us.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+
+          {/* Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
             {commitmentPoints.map((point) => (
-              <div key={point.label} itemProp="commitmentPoint">
-                <div className="inline-flex items-center justify-center p-3 bg-indigo-500 rounded-full mb-3 w-16 h-16">
+              <div
+                key={point.label}
+                className="bg-white rounded-xl shadow-md hover:shadow-lg transition duration-300 p-8 text-center border border-gray-100"
+                itemProp="commitmentPoint"
+              >
+                <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-indigo-100 text-indigo-600">
                   {point.icon}
                 </div>
-                <div className="text-xl font-semibold mt-1" itemProp="commitmentPointLabel">{point.label}</div>
+
+                <h3 className="text-xl font-semibold text-gray-800 mb-2" itemProp="commitmentPointLabel">
+                  {point.label}
+                </h3>
+
+                <p className="text-gray-600 text-sm">
+                  {point.label === "Dedicated Support" && "We’re always here to assist you with quick responses and ongoing guidance."}
+                  {point.label === "Focus on Growth" && "Every strategy we create is designed to deliver measurable results and long-term success."}
+                  {point.label === "Innovative Solutions" && "We bring fresh ideas and modern techniques to keep you ahead of the competition."}
+                </p>
               </div>
             ))}
+
           </div>
         </div>
       </section>
 
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-indigo-700 text-white"  itemProp="callToAction">
+      <section
+        className="py-16 bg-gradient-to-r from-indigo-200 via-blue-200 to-indigo-300 text-gray-900"
+        itemProp="callToAction"
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+
+          {/* Heading */}
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">
             Ready to Grow With Us?
           </h2>
-          <p className="text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
-            Be one of our first partners! Contact us today to discuss how our fresh approach can benefit your business.
+
+          {/* Subtext */}
+          <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
+            Be one of our first partners! Let’s discuss how our fresh, data-driven approach
+            can help your business grow faster and smarter.
           </p>
+
+          {/* CTA Button */}
           <HashLink
             to="/contact#contact-us"
-            className="inline-block bg-white text-blue-700 px-10 py-3 rounded-full text-lg font-medium hover:bg-gray-100 transition duration-300 ease-in-out shadow-lg transform hover:scale-105"
-            style={{ scrollBehavior: 'smooth' }}
+            className="inline-block bg-indigo-600 text-white px-10 py-3 rounded-full text-lg font-medium hover:bg-indigo-700 transition duration-300 shadow-md hover:scale-105"
           >
             Get In Touch
           </HashLink>
-          <div className="mt-6 flex justify-center gap-6">
-            <a href="https://www.facebook.com/targettreks/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="Instagram"  style={{ scrollBehavior: 'smooth' }}>
-              <FaInstagram className="text-2xl" />
+
+          {/* Social Icons */}
+          <div className="mt-8 flex justify-center gap-5">
+
+            <a
+              href="https://www.facebook.com/targettreks/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 bg-white rounded-full shadow hover:bg-indigo-100 transition"
+              aria-label="Instagram"
+            >
+              <FaInstagram className="text-xl text-gray-700" />
             </a>
-            <a href="https://www.facebook.com/targettreks/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="Facebook" style={{ scrollBehavior: 'smooth' }}>
-              <FaFacebookF className="text-2xl" />
+
+            <a
+              href="https://www.facebook.com/targettreks/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 bg-white rounded-full shadow hover:bg-indigo-100 transition"
+              aria-label="Facebook"
+            >
+              <FaFacebookF className="text-xl text-gray-700" />
             </a>
-            <a href={"https://wa.me/9873208210"}  rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="WhatsApp" style={{  }} >
-              <FaWhatsapp className="text-2xl" />
+
+            <a
+              href="https://wa.me/9873208210"
+              className="p-3 bg-white rounded-full shadow hover:bg-indigo-100 transition"
+              aria-label="WhatsApp"
+            >
+              <FaWhatsapp className="text-xl text-gray-700" />
             </a>
-            <a href="https://www.linkedin.com/company/target-trek/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-indigo-200 transition-colors duration-300" aria-label="LinkedIn" style={{  }} >
-              <FaLinkedinIn className="text-2xl" />
+
+            <a
+              href="https://www.linkedin.com/company/target-trek/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 bg-white rounded-full shadow hover:bg-indigo-100 transition"
+              aria-label="LinkedIn"
+            >
+              <FaLinkedinIn className="text-xl text-gray-700" />
             </a>
+
           </div>
+
         </div>
       </section>
       <style jsx global>{`

@@ -21,8 +21,6 @@ const adminRoutes = [
      { path: '/profile', name: 'Profile', icon: UserCog, description: 'View and manage Profile' },
     { path: '/admin/users', name: 'User Management', icon: UserCog, description: 'View, edit, and manage all user accounts.' },
     { path: '/admin/signup', name: 'Add a User', icon: UserPlus, description: 'Create new user accounts for the system.' },
-    { path: '/admin/booking', name: 'Bookings', icon: ListChecks, description: 'Manage user bookings and appointments.' },
-    { path: '/admin/slots', name: 'Slots', icon: CheckCircle2, description: 'Manage available time slots for bookings.' },
     { path: '/admin/add-blog', name: 'Add Blog', icon: PlusCircle, description: 'Create new blog posts.' },
     { path: '/blog-manage', name: 'Manage Blogs', icon: BookOpen, description: 'Edit and delete existing blog posts.' },
     { path: '/admin/generate-review-link', name: 'Generate Review Link', icon: FileText, description: 'Create links for users to submit reviews.' },
@@ -35,8 +33,6 @@ const adminRoutes = [
 
 const employeeRoutes = [
      { path: '/profile', name: 'Profile', icon: UserCog, description: 'View and manage Profile' },
-   { path: '/admin/booking', name: 'Bookings', icon: ListChecks, description: 'Manage user bookings and appointments.' },
-    { path: '/admin/slots', name: 'Slots', icon: CheckCircle2, description: 'Manage available time slots for bookings.' },
     { path: '/admin/add-blog', name: 'Add Blog', icon: PlusCircle, description: 'Create new blog posts.' },
     { path: '/blog-manage', name: 'Manage Blogs', icon: BookOpen, description: 'Edit and delete existing blog posts.' },
     { path: '/admin/generate-review-link', name: 'Generate Review Link', icon: FileText, description: 'Create links for users to submit reviews.' },
@@ -54,7 +50,9 @@ const AdminDashboard = () => {
     const [role, setRole] = useState('');
     const [dashboardTitle, setDashboardTitle] = useState('Dashboard');
     const [currentRoutes, setCurrentRoutes] = useState([]);
-
+    useEffect(() => {
+      window.scrollTo(0, 0);
+    }, []);
     useEffect(() => {
         if (user) {
             setRole(user.role);

@@ -9,8 +9,11 @@ import { Helmet } from "react-helmet"
 const servicesList = [
   'PPC Advertising',
   'Affiliate Marketing',
+  'Social Media Marketing',
+  'Google/Meta Ads',
   'Email Marketing',
   'Web Development',
+  'Gen AI',
   'Other Inquiry'
 ];
 

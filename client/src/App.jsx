@@ -20,6 +20,17 @@ import PortfolioDetailPage from './component/PortfolioDetailPage'
 
 import UserProfile from './component/UserProfile.jsx';
 
+
+import GenAIServicesPage from './Services/GenAIServicesPage.jsx'
+import WebDevelopmentPage from './Services/WebDevelopmentPage.jsx'
+import PPCAdvertisingPage from './Services/PPCAdvertisingPage.jsx'
+import SocialMediaMarketingPage from './Services/SocialMediaMarketingPage.jsx'
+import ContentMarketingPage from './Services/ContentMarketingPage.jsx'
+import AffiliateMarketingPage from './Services/AffiliateMarketingPage.jsx'
+
+
+import CareerPage from './component/CareerPage.jsx'
+
 import AdminBlogManagementPage from './Admin/AdminBlogList'
 import AdminBookingsPage from './Admin/AdminBookingsPage'
 import AdminSlotsPage from './Admin/AdminSlotsPage'
@@ -32,7 +43,7 @@ import ContactDetail from './Admin/ContactDetails'
 import AddPortfolioPage from './Admin/AddPortfolioPage'
 import ManagePortfolio from './Admin/ManagePortFolio'
 import AffiliateList from './Admin/AffiliateList.jsx'
-
+import InterestDashboard from './Admin/InterestDashboard.jsx';
 
 import AdminSignup from './Admin/AdminSignup.jsx'
 
@@ -46,6 +57,7 @@ import { useEffect, useState } from 'react'
 
 import UserManagement  from "./Admin/UserManagement.jsx"
 import { Home } from 'lucide-react'
+import EmployeeDetails from './Admin/EmployeeDetails.jsx';
 
 function App() {
   const user=useSelector((state)=>state.auth.user);
@@ -99,10 +111,19 @@ function App() {
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/affiliate-marketing" element={<AffiliateMarketing/>}/>
         <Route path="/portfolio/:slug" element={<PortfolioDetailPage/>}/>
-     <Route path="/privacy-policy" element={<PrivacyPolicy/>}/>
+        <Route path="/privacy-policy" element={<PrivacyPolicy/>}/>
         <Route path="/terms-of-service" element={<TermsOfService/>}/>
+ 
+        <Route path='/services/genai-solutions' element={<GenAIServicesPage />}/>
+        <Route path='/services/web-development' element={<WebDevelopmentPage />}/>
 
-   
+        
+        <Route path='/services/ppc-advertising' element={<PPCAdvertisingPage/>}/>
+        <Route path='/services/social-media-marketing' element={<SocialMediaMarketingPage/>}/>
+        <Route path='/services/content-marketing'  element={<ContentMarketingPage/>}/>
+        <Route path='/services/affiliate-marketing' element={<AffiliateMarketingPage/>}/>
+
+        <Route path='/carrers' element={<CareerPage/>}/>
 
         <Route path="/admin/login" element={!isUser ? <LoginPage /> : <HomePage />} />
         
@@ -122,7 +143,9 @@ function App() {
        
         <Route path="/admin/users" element={isAdmin?<UserManagement/>:<NotFoundPage/>}/>
         <Route path="/admin/signup" element={isAdmin?<AdminSignup/>:<HomePage/>}/>
-    
+        <Route path="/employee/:email" element={isAdmin?<EmployeeDetails/>:<EmployeeDetails/>}/>
+        <Route path="/interest" element={isAdmin?<InterestDashboard/>:<InterestDashboard/>}/>
+        
 
 
 

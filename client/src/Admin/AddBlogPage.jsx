@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import BASE_URL from "../utils/Url.js";
 import { Upload, Link as LinkIcon, Send, Loader2, Info, Type, FileText, User as UserIcon, Tag as TagIcon, Eye, EyeOff } from 'lucide-react';
 import { useSelector } from 'react-redux';
-
+import RichTextEditor from '../component/RichTextEditor.jsx';
 const blogPostSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters' }),
   slug: z.string()
@@ -209,17 +209,18 @@ const AddBlogPage = () => {
             <div>
               <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-1">Excerpt</label>
               <div className="relative">
-                <span className="absolute top-3 left-0 flex items-start pl-3 text-gray-400"> <FileText size={16} /> </span>
-                <textarea
-                  id="excerpt"
-                  name="excerpt"
-                  rows="4"
-                  value={formData.excerpt}
-                  onChange={handleInputChange}
-                  disabled={isSubmitting}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${formErrors.excerpt ? 'border-red-500 ring-red-300' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-300'}`}
-                  placeholder="Enter a short summary of the blog post..."
-                />
+                <div className="bg-white rounded-md border">
+                  <RichTextEditor
+                    value={formData.excerpt}
+                    onChange={(value) => {
+                      setFormData(prev => ({ ...prev, excerpt: value }));
+
+                      if (formErrors.excerpt) {
+                        setFormErrors(prev => ({ ...prev, excerpt: undefined }));
+                      }
+                    }}
+                  />
+                </div>
               </div>
               {formErrors.excerpt && <p className="mt-1 text-xs text-red-500">{formErrors.excerpt[0]}</p>}
             </div>

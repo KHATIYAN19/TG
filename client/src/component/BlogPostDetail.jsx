@@ -242,9 +242,7 @@ const BlogPostDetail = () => {
             )}
 
             <div className="prose prose-lg max-w-none text-gray-800">
-              <p>{post.excerpt}</p>
-              {/* Add full content rendering here if available */}
-              {/* <div dangerouslySetInnerHTML={{ __html: post.content }} /> */}
+              <div dangerouslySetInnerHTML={{ __html: post.excerpt }} />
             </div>
           </div>
         </div>

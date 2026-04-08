@@ -1,284 +1,532 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, LogOut } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../Redux/authSlice';
-import logo from '../utils/target_Trek_logo_2.jpg';
+// import React, { useState, useEffect, useRef } from "react";
+// import {
+//   Menu,
+//   X,
+//   User,
+//   LogOut,
+//   ChevronDown,
+//   Megaphone,
+//   Users,
+//   Edit3,
+//   DollarSign,
+//   Code,
+//   Sparkles,
+// } from "lucide-react";
+// import { NavLink, useNavigate, useLocation } from "react-router-dom";
+// import { useSelector, useDispatch } from "react-redux";
+// import { logout } from "../Redux/authSlice";
+// import logo from "../utils/target_Trek_logo_2.jpg";
 
-const adminLinks = [
-  {label:'Profile' ,path :'/profile'},
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Manage Bookings', path: '/admin/booking' },
-  { label: 'Manage Slots', path: '/admin/slots' },
-  { label: 'Add Blog Post', path: '/admin/add-blog' },
-  { label: 'Manage Blogs', path: '/blog-manage' },
-  { label: 'Add Portfolio', path: '/admin/add-portfolio' },
-  { label: 'Manage Portfolio', path: '/portfolio-manage' },
-  { label: 'Generate Review Link', path: '/admin/generate-review-link' },
-  { label: 'Manage Reviews', path: '/admin/manage-reviews' },
-  { label: 'Contact Query', path: '/contact-query' },
+// const services = [
+//   { slug: "ppc-advertising", title: "PPC Advertising", icon: <Megaphone size={18} /> },
+//   { slug: "social-media-marketing", title: "Social Media Marketing", icon: <Users size={18} /> },
+//   { slug: "content-marketing", title: "Content Marketing", icon: <Edit3 size={18} /> },
+//   { slug: "affiliate-marketing", title: "Affiliate Marketing", icon: <DollarSign size={18} /> },
+//   { slug: "web-development", title: "Web Development", icon: <Code size={18} /> },
+//   { slug: "genai-solutions", title: "GenAI Solutions", icon: <Sparkles size={18} /> },
+// ];
+
+// const Navbar = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+//   const dispatch = useDispatch();
+//   const { user, isAuthenticated } = useSelector((state) => state.auth);
+
+//   const [menuOpen, setMenuOpen] = useState(false);
+//   const [servicesOpen, setServicesOpen] = useState(false);
+//   const [profileOpen, setProfileOpen] = useState(false);
+
+//   const profileRef = useRef(null);
+
+//   const isAdmin =
+//     isAuthenticated && (user?.role === "admin" || user?.role === "Employee");
+
+//   const handleLogout = () => {
+//     dispatch(logout());
+//     navigate("/");
+//     setProfileOpen(false);
+//   };
+
+//   /* ✅ CLOSE PROFILE WHEN CLICKING OUTSIDE */
+//   useEffect(() => {
+//     const handleClickOutside = (event) => {
+//       if (profileRef.current && !profileRef.current.contains(event.target)) {
+//         setProfileOpen(false);
+//       }
+//     };
+
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () =>
+//       document.removeEventListener("mousedown", handleClickOutside);
+//   }, []);
+
+//   /* ✅ CLOSE DROPDOWNS ON ROUTE CHANGE */
+//   useEffect(() => {
+//     setProfileOpen(false);
+//     setServicesOpen(false);
+//     setMenuOpen(false);
+//   }, [location.pathname]);
+
+//   return (
+//     <nav className="bg-white shadow-md fixed top-0 left-0 w-full z-50">
+//       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+
+//         {/* LOGO */}
+//         <NavLink to="/">
+//           <img src={logo} alt="Logo" className="w-10" />
+//         </NavLink>
+
+//         {/* DESKTOP NAV */}
+//         <ul className="hidden md:flex items-center gap-8 font-medium text-gray-700">
+
+//           <NavLink to="/" className="hover:text-blue-600">
+//             Home
+//           </NavLink>
+
+//           <NavLink to="/about" className="hover:text-blue-600">
+//             About
+//           </NavLink>
+
+//           {/* SERVICES */}
+//           <li
+//             className="relative"
+//             onMouseEnter={() => setServicesOpen(true)}
+//             onMouseLeave={() => setServicesOpen(false)}
+//           >
+//             <NavLink
+//               to="/services"
+//               className="flex items-center gap-1 hover:text-blue-600"
+//             >
+//               Services
+//               <ChevronDown
+//                 size={16}
+//                 className={`transition-transform ${
+//                   servicesOpen ? "rotate-180" : ""
+//                 }`}
+//               />
+//             </NavLink>
+
+//             {servicesOpen && (
+//               <div className="absolute top-12 left-0 w-72 bg-white shadow-xl rounded-xl border p-4">
+//                 {services.map((service) => (
+//                   <NavLink
+//                     key={service.slug}
+//                     to={`/services/${service.slug}`}
+//                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 hover:text-blue-600"
+//                   >
+//                     {service.icon}
+//                     {service.title}
+//                   </NavLink>
+//                 ))}
+//               </div>
+//             )}
+//           </li>
+
+//           <NavLink to="/blogs" className="hover:text-blue-600">
+//             Blogs
+//           </NavLink>
+//         </ul>
+
+//         {/* RIGHT SIDE */}
+//         <div className="flex items-center gap-3">
+
+//           {/* PROFILE ICON (ALL DEVICES) */}
+//           {isAuthenticated ? (
+//             <div className="relative" ref={profileRef}>
+//               <button
+//                 onClick={() => setProfileOpen(!profileOpen)}
+//                 className="p-2 rounded-full border hover:bg-gray-100"
+//               >
+//                 <User size={20} />
+//               </button>
+
+//               {profileOpen && (
+//                 <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-xl border p-4">
+//                   <div className="border-b pb-3 mb-3">
+//                     <p className="font-semibold">{user?.name}</p>
+//                     <p className="text-sm text-gray-500">
+//                       {user?.email}
+//                     </p>
+//                   </div>
+
+//                   <NavLink
+//                     to="/profile"
+//                     className="block px-3 py-2 rounded hover:bg-gray-100"
+//                   >
+//                     Profile
+//                   </NavLink>
+
+//                   {isAdmin && (
+//                     <NavLink
+//                       to="/dashboard"
+//                       className="block px-3 py-2 rounded hover:bg-gray-100"
+//                     >
+//                       Dashboard
+//                     </NavLink>
+//                   )}
+
+//                   <button
+//                     onClick={handleLogout}
+//                     className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded mt-2"
+//                   >
+//                     <LogOut size={16} className="inline mr-2" />
+//                     Logout
+//                   </button>
+//                 </div>
+//               )}
+//             </div>
+//           ) : (
+//             <NavLink
+//               to="/contact"
+//               className="hidden md:block bg-blue-600 text-white px-5 py-2 rounded-full"
+//             >
+//               Contact
+//             </NavLink>
+//           )}
+
+//           {/* MOBILE MENU BUTTON */}
+//           <button
+//             onClick={() => setMenuOpen(!menuOpen)}
+//             className="md:hidden"
+//           >
+//             {menuOpen ? <X /> : <Menu />}
+//           </button>
+//         </div>
+//       </div>
+
+//       {/* MOBILE MENU */}
+//       {menuOpen && (
+//         <div className="md:hidden bg-white border-t px-4 py-4 space-y-4">
+
+//           <NavLink to="/" className="block">
+//             Home
+//           </NavLink>
+
+//           <NavLink to="/about" className="block">
+//             About
+//           </NavLink>
+
+//           <NavLink to="/blogs" className="block">
+//             Blog
+//           </NavLink>
+
+//           {/* SERVICES MOBILE */}
+//           <div>
+//             <button
+//               onClick={() => setServicesOpen(!servicesOpen)}
+//               className="flex justify-between w-full"
+//             >
+//               Services
+//               <ChevronDown
+//                 size={16}
+//                 className={`transition-transform ${
+//                   servicesOpen ? "rotate-180" : ""
+//                 }`}
+//               />
+//             </button>
+
+//             {servicesOpen && (
+//               <div className="pl-4 mt-2 space-y-2">
+//                 {services.map((service) => (
+//                   <NavLink
+//                     key={service.slug}
+//                     to={`/services/${service.slug}`}
+//                     className="block text-gray-600"
+//                   >
+//                     {service.title}
+//                   </NavLink>
+//                 ))}
+//               </div>
+//             )}
+//           </div>
+
+//           {!isAuthenticated && (
+//             <NavLink
+//               to="/contact"
+//               className="block bg-blue-600 text-white px-4 py-2 rounded-full text-center"
+//             >
+//               Contact
+//             </NavLink>
+//           )}
+//         </div>
+//       )}
+//     </nav>
+//   );
+// };
+
+// export default Navbar;
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Menu,
+  X,
+  User,
+  LogOut,
+  ChevronDown,
+  Megaphone,
+  Users,
+  Edit3,
+  DollarSign,
+  Code,
+  Sparkles,
+} from "lucide-react";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../Redux/authSlice";
+import logo from "../utils/target_Trek_logo_2.jpg";
+
+const services = [
+  { slug: "ppc-advertising", title: "PPC Advertising", icon: <Megaphone size={18} /> },
+  { slug: "social-media-marketing", title: "Social Media Marketing", icon: <Users size={18} /> },
+  { slug: "content-marketing", title: "Content Marketing", icon: <Edit3 size={18} /> },
+  { slug: "affiliate-marketing", title: "Affiliate Marketing", icon: <DollarSign size={18} /> },
+  { slug: "web-development", title: "Web Development", icon: <Code size={18} /> },
+  { slug: "genai-solutions", title: "GenAI Solutions", icon: <Sparkles size={18} /> },
 ];
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
-  const dispatch = useDispatch();
-  const dropdownRef = useRef(null);
-  const avatarRef = useRef(null);
-  const mobileAvatarRef = useRef(null);
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'Employee');
+  const profileRef = useRef(null);
+  const timeoutRef = useRef(null);
 
-  const [navItems, setNavItems] = useState([
-    { label: 'Home', path: '/' },
-    { label: 'About', path: '/about' },
-    { label: 'Services', path: '/services' },
-    { label: 'Affiliate', path: '/affiliate-marketing' },
-    { label: 'Blog', path: '/blogs' },
-    //{ label: 'Portfolio', path: '/portfolio' },
-   
-  ]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      const dashboardLink = { label: 'Dashboard', path: '/dashboard' };
-      if (!navItems.find(item => item.label === 'Dashboard')) {
-        setNavItems(prevNavItems => [dashboardLink, ...prevNavItems]);
-      }
-    } else {
-      setNavItems(prevNavItems => prevNavItems.filter(item => item.label !== 'Dashboard'));
-    }
-  }, [isAdmin]);
+  const isAdmin =
+    isAuthenticated && (user?.role === "admin" || user?.role === "Employee");
 
   const handleLogout = () => {
     dispatch(logout());
     navigate("/");
-    setIsAdminDropdownOpen(false);
+    setProfileOpen(false);
   };
 
-  const closeMobileMenu = () => setMenuOpen(false);
-  const toggleAdminDropdown = () => setIsAdminDropdownOpen(!isAdminDropdownOpen);
-  const closeAdminDropdown = () => setIsAdminDropdownOpen(false);
-
+  /* CLOSE PROFILE ON OUTSIDE CLICK */
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!isAdminDropdownOpen) return;
-
-      const isClickInsideDropdown = dropdownRef.current?.contains(event.target);
-      const isClickInsideDesktopAvatar = avatarRef.current?.contains(event.target);
-      const isClickInsideMobileAvatar = mobileAvatarRef.current?.contains(event.target);
-
-      if (!isClickInsideDropdown && !isClickInsideDesktopAvatar && !isClickInsideMobileAvatar) {
-        closeAdminDropdown();
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isAdminDropdownOpen]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /* CLOSE DROPDOWNS ON ROUTE CHANGE */
+  useEffect(() => {
+    setProfileOpen(false);
+    setServicesOpen(false);
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  /* HOVER HANDLERS (NO FLICKER) */
+  const handleMouseEnter = () => {
+    clearTimeout(timeoutRef.current);
+    setServicesOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setServicesOpen(false);
+    }, 150);
+  };
 
   return (
-    <>
-      <nav className="bg-white shadow-md w-full fixed top-0 left-0 z-50 py-2">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <NavLink to="/" className="text-2xl font-bold text-blue-600 transition duration-300 hover:text-blue-700 ">
-            <img src={logo} alt="Company Logo" className=" w-[30px] h-auto" />
-          </NavLink>
-          <ul className="hidden md:flex space-x-8 text-gray-700 font-medium flex-grow justify-center">
-            {navItems.map(({ label, path }) => (
-              <li key={label}>
-                <NavLink
-                  to={path}
-                  className={({ isActive }) =>
-                    `transition duration-300 ease-in-out transform hover:scale-105 ${
-                      isActive ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+    <nav className="bg-white shadow-md fixed top-0 left-0 w-full z-50">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
 
-          <div className="hidden md:flex items-center space-x-4 relative">
-            {isAdmin ? (
-              <div ref={avatarRef}>
-                <button
-                  onClick={toggleAdminDropdown}
-                  className="p-1.5 rounded-full border-2 border-green-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-300"
-                  aria-label="Admin Menu"
-                  aria-haspopup="true"
-                  aria-expanded={isAdminDropdownOpen}
-                >
-                  <User className="text-blue-600" size={22} />
-                </button>
-                {isAdminDropdownOpen && (
-                  <div
-                    ref={dropdownRef}
-                    className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none py-1 z-60"
-                    role="menu"
-                    aria-orientation="vertical"
-                    aria-labelledby="user-menu-button"
+        {/* LOGO */}
+        <NavLink to="/">
+          <img src={logo} alt="Logo" className="w-10" />
+        </NavLink>
+
+        {/* DESKTOP NAV */}
+        <ul className="hidden md:flex items-center gap-8 font-medium text-gray-700">
+
+          <NavLink to="/" className="hover:text-blue-600">
+            Home
+          </NavLink>
+
+          <NavLink to="/about" className="hover:text-blue-600">
+            About
+          </NavLink>
+
+          {/* SERVICES */}
+          <li
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <NavLink
+              to="/services"
+              className="flex items-center gap-1 hover:text-blue-600"
+            >
+              Services
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  servicesOpen ? "rotate-180" : ""
+                }`}
+              />
+            </NavLink>
+
+            {servicesOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white shadow-xl rounded-xl border p-4">
+                {services.map((service) => (
+                  <NavLink
+                    key={service.slug}
+                    to={`/services/${service.slug}`}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 hover:text-blue-600"
                   >
-                    <div className="px-4 py-2 border-b mb-1">
-                      <p className="text-sm text-gray-700 font-medium truncate">
-                        Signed in as
-                      </p>
-                      <p className="text-sm text-gray-900 font-semibold truncate">
-                        {user?.name || 'Admin'}
-                      </p>
-                    </div>
-                    {adminLinks.map(({ label, path }) => (
-                      <NavLink
-                        key={path}
-                        to={path}
-                        onClick={closeAdminDropdown}
-                        className={({ isActive }) =>
-                          `block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left ${
-                            isActive ? 'bg-gray-100 text-gray-900' : ''
-                          }`
-                        }
-                        role="menuitem"
-                      >
-                        {label}
-                      </NavLink>
-                    ))}
-                    <div className="border-t mt-1 pt-1">
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-                        role="menuitem"
-                      >
-                        <LogOut size={16} className="inline mr-2" />
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                )}
+                    {service.icon}
+                    {service.title}
+                  </NavLink>
+                ))}
               </div>
-            ) : (
-              <NavLink
-                to="/contact"
-                className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition duration-300 ease-in-out"
+            )}
+          </li>
+
+          <NavLink to="/blogs" className="hover:text-blue-600">
+            Blogs
+          </NavLink>
+
+          {/* ✅ DASHBOARD LINK */}
+          {isAdmin && (
+            <NavLink to="/dashboard" className="hover:text-blue-600">
+              Dashboard
+            </NavLink>
+          )}
+        </ul>
+
+        {/* RIGHT SIDE */}
+        <div className="flex items-center gap-3">
+
+          {/* PROFILE */}
+          {isAuthenticated ? (
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="p-2 rounded-full border hover:bg-gray-100"
               >
-                Contact Us
-              </NavLink>
+                <User size={20} />
+              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-xl border p-4">
+                  <div className="border-b pb-3 mb-3">
+                    <p className="font-semibold">{user?.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {user?.email}
+                    </p>
+                  </div>
+
+                  <NavLink
+                    to="/profile"
+                    className="block px-3 py-2 rounded hover:bg-gray-100"
+                  >
+                    Profile
+                  </NavLink>
+
+                  {isAdmin && (
+                    <NavLink
+                      to="/dashboard"
+                      className="block px-3 py-2 rounded hover:bg-gray-100"
+                    >
+                      Dashboard
+                    </NavLink>
+                  )}
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded mt-2"
+                  >
+                    <LogOut size={16} className="inline mr-2" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <NavLink
+              to="/contact"
+              className="hidden md:block bg-blue-600 text-white px-5 py-2 rounded-full"
+            >
+              Contact
+            </NavLink>
+          )}
+
+          {/* MOBILE MENU BUTTON */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden"
+          >
+            {menuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE MENU */}
+      {menuOpen && (
+        <div className="md:hidden bg-white border-t px-4 py-4 space-y-4">
+
+          <NavLink to="/" className="block">Home</NavLink>
+          <NavLink to="/about" className="block">About</NavLink>
+          <NavLink to="/blogs" className="block">Blog</NavLink>
+
+          {/* DASHBOARD MOBILE */}
+          {isAdmin && (
+            <NavLink to="/dashboard" className="block">
+              Dashboard
+            </NavLink>
+          )}
+
+          {/* SERVICES MOBILE */}
+          <div>
+            <button
+              onClick={() => setServicesOpen(!servicesOpen)}
+              className="flex justify-between w-full"
+            >
+              Services
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  servicesOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {servicesOpen && (
+              <div className="pl-4 mt-2 space-y-2">
+                {services.map((service) => (
+                  <NavLink
+                    key={service.slug}
+                    to={`/services/${service.slug}`}
+                    className="block text-gray-600"
+                  >
+                    {service.title}
+                  </NavLink>
+                ))}
+              </div>
             )}
           </div>
 
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden focus:outline-none text-gray-700 hover:text-blue-600"
-            aria-label="Toggle Menu"
-          >
-            {menuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {!isAuthenticated && (
+            <NavLink
+              to="/contact"
+              className="block bg-blue-600 text-white px-4 py-2 rounded-full text-center"
+            >
+              Contact
+            </NavLink>
+          )}
         </div>
-
-        {menuOpen && (
-          <div className="md:hidden px-4 pb-4 border-t border-gray-200">
-            <ul className="flex flex-col space-y-3 text-gray-700 font-medium pt-3">
-              {navItems.map(({ label, path }) => (
-                <li key={label}>
-                  <NavLink
-                    to={path}
-                    className={({ isActive }) =>
-                      `block py-2 transition duration-300 ease-in-out transform hover:scale-105 hover:text-blue-600 ${
-                        isActive ? 'text-blue-600 font-semibold' : 'text-gray-700'
-                      }`
-                    }
-                    onClick={closeMobileMenu}
-                  >
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
-              <li className="relative pt-2 border-t mt-2">
-                {isAdmin ? (
-                  <div ref={mobileAvatarRef}>
-                    <button
-                      onClick={toggleAdminDropdown}
-                      className="w-full flex items-center space-x-2 cursor-pointer py-2 text-left text-blue-600 font-semibold transition duration-300"
-                      aria-label="Admin Menu"
-                      aria-haspopup="true"
-                      aria-expanded={isAdminDropdownOpen}
-                    >
-                      <div className="p-1 rounded-full border-2 border-green-500 inline-block">
-                        <User size={18} />
-                      </div>
-                      <span>{user?.name || 'Admin Panel'}</span>
-                    </button>
-                    {isAdminDropdownOpen && (
-                      <div
-                        ref={dropdownRef}
-                        className="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none py-1 z-60"
-                        role="menu"
-                        aria-orientation="vertical"
-                        aria-labelledby="user-menu-button-mobile"
-                      >
-                        <div className="px-4 py-2 border-b mb-1">
-                          <p className="text-sm text-gray-700 font-medium truncate">
-                            Signed in as
-                          </p>
-                          <p className="text-sm text-gray-900 font-semibold truncate">
-                            {user?.name || 'Admin'}
-                          </p>
-                        </div>
-                        {adminLinks.map(({ label, path }) => (
-                          <NavLink
-                            key={path}
-                            to={path}
-                            onClick={() => {
-                              closeAdminDropdown();
-                              closeMobileMenu();
-                            }}
-                            className={({ isActive }) =>
-                              `block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left ${
-                                isActive ? 'bg-gray-100 text-gray-900' : ''
-                              }`
-                            }
-                            role="menuitem"
-                          >
-                            {label}
-                          </NavLink>
-                        ))}
-                        <div className="border-t mt-1 pt-1">
-                          <button
-                            onClick={() => {
-                              handleLogout();
-                              closeMobileMenu();
-                            }}
-                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-                            role="menuitem"
-                          >
-                            <LogOut size={16} className="inline mr-2" />
-                            Logout
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <NavLink
-                    to="/contact"
-                    className="block py-2 transition duration-300 ease-in-out transform hover:scale-105 text-blue-600 font-semibold"
-                    onClick={closeMobileMenu}
-                  >
-                    Contact Us
-                  </NavLink>
-                )}
-              </li>
-            </ul>
-          </div>
-        )}
-      </nav>
-    </>
+      )}
+    </nav>
   );
 };
 
