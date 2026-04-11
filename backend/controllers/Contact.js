@@ -38,52 +38,6 @@ export const createContactMessage = asyncHandler(async (req, res) => {
     });
 
     const savedContact = await newContact.save();
-
-    // --- Send Email to Admins ---
-    const adminSubject = 'New Contact Inquiry Received - Target Trek';
-    const adminTemplatePath = path.resolve(__dirname, '../templates/contactNotification.html');
-    let adminHtmlTemplate;
-
-    try {
-        adminHtmlTemplate = await fs.readFile(adminTemplatePath, 'utf8');
-        adminHtmlTemplate = adminHtmlTemplate
-            .replace('{{fullname}}', name)
-            .replace('{{email}}', email)
-            .replace('{{mobile}}', contactNumber)
-            .replace('{{service}}', service);
-
-        // Conditionally include the message section for admins
-        if (message) {
-            adminHtmlTemplate = adminHtmlTemplate.replace('{{#if message}}', '').replace('{{/if}}', '').replace('{{message}}', message);
-        } else {
-            // Remove the optional-message block if no message is provided
-            adminHtmlTemplate = adminHtmlTemplate.replace(/\{\{#if message\}\}[\s\S]*?\{\{\/if\}\}/, '');
-        }
-
-    } catch (error) {
-        console.error('Error reading admin email template or replacing placeholders:', error);
-        // Continue execution, do not block response due to email error
-    }
-
-    const adminPlainText = `New contact inquiry received:\nFull Name: ${name}\nEmail: ${email}\nMobile Number: ${contactNumber}\nService: ${service}${message ? `\nMessage: ${message}` : ''}`;
-
-    try {
-        const admins = await User.find({}); // Fetch all users, filter if you have an 'isAdmin' field
-        if (admins && admins.length > 0) {
-            for (const admin of admins) {
-                if (admin.email) { // Ensure admin has an email
-                    await sendMail(admin.email, adminSubject, adminPlainText, adminHtmlTemplate);
-                }
-            }
-            console.log(`Notification sent to ${admins.length} admin(s).`);
-        } else {
-            console.log('No admins found to notify.');
-        }
-    } catch (error) {
-        console.error('Error fetching or sending email to admins:', error);
-        // Continue execution, do not block response due to email error
-    }
-
     // --- Send Confirmation Email to User ---
     const userSubject = 'Target Trek: Thank You for Your Inquiry!';
     const userTemplatePath = path.resolve(__dirname, '../templates/contactuserNotification.html');

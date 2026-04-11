@@ -1,32 +1,32 @@
-import nodemailer from 'nodemailer';
+import Nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { MailtrapTransport } from "mailtrap";
 dotenv.config();
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.USER,
-      pass: process.env.PASS
-    }
-  });
+
+const sender = {
+  address: "no-reply@targettrek.in",
+  name: "Target Trek",
 };
+
+
+const transport = Nodemailer.createTransport(
+  MailtrapTransport({
+    token: process.env.MAILTRAP_TOKEN,
+  })
+);
 
 const sendMail = (toEmail, subject, text, htmlContent) => {
-  const transporter = createTransporter();
-  const mailOptions = {
-    from: 'placementconnect9@gmail.com',
-    to: toEmail,
+  const recipients = [
+    toEmail
+  ];
+   transport.sendMail({
+    from: sender,
+    to: recipients,
     subject: subject,
     text: text,
-    html: htmlContent
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log('Error sending email: ', error);
-    } else {
-      console.log('Email sent successfully: ', info.response);
-    }
-  });
+    html:htmlContent,
+  })
+  .then(console.log, console.error);
 };
+
 export default sendMail;

@@ -281,9 +281,15 @@ export const resendOtp = async (req, res) => {
       user.otp = otp;
       user.otpExpiry = Date.now() + 10 * 60 * 1000;
       await user.save();
-  
-      console.log(`Resent OTP to user: ${otp}`);
-  
+      const htmlPath = path.join(__dirname, '../templates/otp-email-template.html');
+      let htmlTemplate = fs.readFileSync(htmlPath, 'utf-8');
+      htmlTemplate = htmlTemplate.replace('{{OTP_CODE}}', otp);
+
+      const subject = 'Your TargetTrek OTP';
+      const plainText = `Your OTP is ${otp}. It will expire in 10 minutes.`;
+      await sendMail(user.email, subject, plainText, htmlTemplate);
+
+
       res.status(200).json({ success: true, message: 'OTP resent successfully' });
   
     } catch (error) {
