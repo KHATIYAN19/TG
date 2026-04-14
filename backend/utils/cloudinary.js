@@ -8,7 +8,9 @@ cloudinary.config({
 
 const uploadFile = async (filePath) => {
   try {
-    const result = await cloudinary.uploader.upload(filePath);
+    const result = await cloudinary.uploader.upload(filePath,{
+      resource_type: "auto",
+    });
     console.log(result);
     return result;
   } catch (e) {

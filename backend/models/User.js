@@ -127,11 +127,12 @@ const userSchema = new mongoose.Schema(
     },
 
     salary: {
-      type: Number, // For permanent employees
+      type: Number, 
+      default:0,
     },
 
     commissionRate: {
-      type: String, // Example: "20% Commission on Sales"
+      type: String, 
     },
 
     status: {
@@ -154,7 +155,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    /* ===== Security ===== */
+
     otp: {
       type: String,
       default: null,
