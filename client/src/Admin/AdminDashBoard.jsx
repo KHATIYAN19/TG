@@ -30,6 +30,7 @@ const adminRoutes = [
     { path: '/portfolio-manage', name: 'Manage Portfolio', icon: Image, description: 'Edit and delete portfolio items.' },
     { path: '/admin/affiliate-manage', name: 'Affiliate Management', icon: Users, description: 'Manage Affiliates.' },
     { path: '/interest', name: 'Interested Users', icon: Users, description: 'Interested Users' },
+    { path: '/clients', name: 'Clients', icon: Users, description: 'All onboarded Clients' },
 ];
 
 const employeeRoutes = [

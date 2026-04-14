@@ -46,7 +46,10 @@ import AffiliateList from './Admin/AffiliateList.jsx'
 import InterestDashboard from './Admin/InterestDashboard.jsx';
 
 import AdminSignup from './Admin/AdminSignup.jsx'
+import ClientServices from './Admin/ClientServices.jsx';
+import ServiceDetails from './Admin/ServiceDetails.jsx'; 
 
+import Clients from './Admin/Clients.jsx'
 import AdminDashboard from './Admin/AdminDashBoard.jsx'
 import FloatingContact from './component/FloatingContact.jsx'
 import Footer from './component/Footer.jsx'
@@ -146,7 +149,9 @@ function App() {
         <Route path="/employee/:email" element={isAdmin?<EmployeeDetails/>:<EmployeeDetails/>}/>
         <Route path="/interest" element={isAdmin?<InterestDashboard/>:<InterestDashboard/>}/>
         
-
+         <Route path="/clients" element={isAdmin?<Clients/>:<Clients/>}/>
+        <Route path="/clients/:clientId/services" element={isAdmin?<ClientServices/>:<ClientServices/>}/>
+        <Route path="/clients/:clientId/services/:serviceId" element={isAdmin?<ServiceDetails/>:<ServiceDetails/>}/>
 
 
 
