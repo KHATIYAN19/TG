@@ -9,6 +9,7 @@ import {
   getAllClients,
   getClientServices,
   getServiceDetails,
+  getFullDashboard
 } from "../controllers/Client.js";
 
 const router = express.Router();
@@ -19,6 +20,7 @@ router.post("/:clientId/services",auth,isAdmin, addServiceToClient);
 router.get("/:clientId/services",auth,isAdmin, getClientServices);
 router.get("/:clientId/services/:serviceId",auth,isAdmin, getServiceDetails);
 router.post("/:clientId/services/:serviceId/payments", auth,isAdmin,addPaymentToService);
+router.get("/dashboard",auth,isAdmin,getFullDashboard);
 router.post(
   "/:clientId/services/:serviceId/documents",
   upload.single("file"),
