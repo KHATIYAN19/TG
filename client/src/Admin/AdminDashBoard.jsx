@@ -10,14 +10,15 @@ import {
     Image,
     PlusCircle,
     CheckCircle2,
-    ListChecks,
+    MessageSquareHeart,
     FileText,
     UserPlus, // For Add a user
     UserCog // For User Management
 } from 'lucide-react';
-import { useSelector } from 'react-redux'; // Assuming you are using React-Redux
+import { useSelector } from 'react-redux'; 
 
 const adminRoutes = [
+    { path: '/admin/dashboard', name: 'Sales Dashboard', icon: LayoutDashboard , description: 'Sales Dashboard' },
      { path: '/profile', name: 'Profile', icon: UserCog, description: 'View and manage Profile' },
     { path: '/admin/users', name: 'User Management', icon: UserCog, description: 'View, edit, and manage all user accounts.' },
     { path: '/admin/signup', name: 'Add a User', icon: UserPlus, description: 'Create new user accounts for the system.' },
@@ -29,7 +30,7 @@ const adminRoutes = [
     { path: '/admin/add-portfolio', name: 'Add Portfolio', icon: PlusCircle, description: 'Add new portfolio items.' },
     { path: '/portfolio-manage', name: 'Manage Portfolio', icon: Image, description: 'Edit and delete portfolio items.' },
     { path: '/admin/affiliate-manage', name: 'Affiliate Management', icon: Users, description: 'Manage Affiliates.' },
-    { path: '/interest', name: 'Interested Users', icon: Users, description: 'Interested Users' },
+    { path: '/interest', name: 'Interested Users', icon: MessageSquareHeart, description: 'Interested Users' },
     { path: '/clients', name: 'Clients', icon: Users, description: 'All onboarded Clients' },
 ];
 
@@ -43,7 +44,7 @@ const employeeRoutes = [
     { path: '/admin/add-portfolio', name: 'Add Portfolio', icon: PlusCircle, description: 'Add new portfolio items.' },
     { path: '/portfolio-manage', name: 'Manage Portfolio', icon: Image, description: 'Edit and delete portfolio items.' },
     { path: '/admin/affiliate-manage', name: 'Affiliate Management', icon: Users, description: 'Manage Affiliates.' },
-    { path: '/interest', name: 'Interested Users', icon: Users, description: 'Interested Users' },
+    { path: '/interest', name: 'Interested Users', icon: MessageSquareHeart, description: 'Interested Users' },
 
 ];
 

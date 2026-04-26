@@ -61,6 +61,7 @@ import { useEffect, useState } from 'react'
 import UserManagement  from "./Admin/UserManagement.jsx"
 import { Home } from 'lucide-react'
 import EmployeeDetails from './Admin/EmployeeDetails.jsx';
+import SalesDashboard from './Admin/SalesDashboard.jsx';
 
 function App() {
   const user=useSelector((state)=>state.auth.user);
@@ -153,7 +154,7 @@ function App() {
         <Route path="/clients/:clientId/services" element={isAdmin?<ClientServices/>:<ClientServices/>}/>
         <Route path="/clients/:clientId/services/:serviceId" element={isAdmin?<ServiceDetails/>:<ServiceDetails/>}/>
 
-
+        <Route path="/admin/dashboard" element={isAdmin?<SalesDashboard/>:<SalesDashboard/>}/>
 
 
        
