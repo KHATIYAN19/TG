@@ -5,7 +5,7 @@ const router = express.Router();
 const FRONTEND_URL =
   process.env.FRONTEND_URL || "https://www.targettrek.in";
 
-const EBOOK_PRICE = 1;
+const EBOOK_PRICE = 149;
 
 const EBOOK_PDF_URL =process.env.EBOOK_PDF_URL
 

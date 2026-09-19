@@ -1,2 +1,2 @@
-const ADK_PAYMENT_URL="https://u.payu.in/Er92WjaNxBYF";
+const ADK_PAYMENT_URL="https://u.payu.in/RIWbVTqGTxk3";
 export default ADK_PAYMENT_URL;
