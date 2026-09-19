@@ -11,6 +11,7 @@ import {
   DollarSign,
   Code,
   Sparkles,
+  Rocket
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -85,10 +86,18 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
 
         {/* LOGO */}
-        <NavLink to="/">
-          <img src={logo} alt="Logo" className="w-10" />
-        </NavLink>
 
+
+        <NavLink to="/" className="flex items-center gap-2">
+         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+            <Rocket size={19} />
+        </div>
+
+        <span className="text-xl font-extrabold tracking-tight text-slate-900">
+          Target<span className="text-blue-600">Trek</span>
+        </span>
+        </NavLink>
+  
         {/* DESKTOP NAV */}
         <ul className="hidden md:flex items-center gap-8 font-medium text-gray-700">
 

@@ -28,6 +28,9 @@ import SocialMediaMarketingPage from './Services/SocialMediaMarketingPage.jsx'
 import ContentMarketingPage from './Services/ContentMarketingPage.jsx'
 import AffiliateMarketingPage from './Services/AffiliateMarketingPage.jsx'
 
+import EbookLandingPage from './component/EbookLandingPage.jsx';
+import PaymentSuccess  from './component/PaymentSucesss.jsx';
+import PaymentFailed  from './component/PaymentFailed.jsx';
 
 import CareerPage from './component/CareerPage.jsx'
 
@@ -126,8 +129,11 @@ function App() {
         <Route path='/services/social-media-marketing' element={<SocialMediaMarketingPage/>}/>
         <Route path='/services/content-marketing'  element={<ContentMarketingPage/>}/>
         <Route path='/services/affiliate-marketing' element={<AffiliateMarketingPage/>}/>
-
+        <Route path='ebook/googleADK' element={<EbookLandingPage/>}/>
         <Route path='/carrers' element={<CareerPage/>}/>
+        <Route path='/ebook/adk/payment/success' element={<PaymentSuccess/>}/>
+        <Route path='/ebook/adk/payment/failed' element={<PaymentFailed/>}/>
+
 
         <Route path="/admin/login" element={!isUser ? <LoginPage /> : <HomePage />} />
         
