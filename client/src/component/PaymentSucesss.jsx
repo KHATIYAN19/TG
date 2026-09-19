@@ -2,11 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   CheckCircle2,
   BookOpen,
-  Download,
   ShieldCheck,
   Clock3,
-  AlertTriangle,
-  ExternalLink,
   Eye,
   ArrowRight,
   Sparkles,
@@ -60,26 +57,6 @@ const PaymentSuccess = () => {
     }
   };
 
-  const handleDownload = () => {
-    if (!pdfUrl) return;
-
-    const link = document.createElement("a");
-    link.href = pdfUrl;
-    link.download = "Google-ADK-Complete-Developer-Handbook-2nd-Edition.pdf";
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleOpenPdf = () => {
-    if (!pdfUrl) return;
-
-    window.open(pdfUrl, "_blank", "noopener,noreferrer");
-  };
-
   /*
    * PDF READER
    */
@@ -91,7 +68,7 @@ const PaymentSuccess = () => {
 
         {/* Reader Header */}
         <header className="sticky top-0 z-20 border-b border-white/10 bg-[#07111f]/95 px-4 py-4 backdrop-blur-xl sm:px-6">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto max-w-7xl">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-blue-400">
                 <BookOpen size={15} />
@@ -106,29 +83,10 @@ const PaymentSuccess = () => {
                 32 chapters • RAG • MCP • A2A • Evaluation • Production
               </p>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-400"
-              >
-                <Download size={17} />
-                Download PDF
-              </button>
-
-              <button
-                type="button"
-                onClick={handleOpenPdf}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
-              >
-                <ExternalLink size={16} />
-                Open in New Tab
-              </button>
-            </div>
           </div>
         </header>
 
+        {/* PDF */}
         <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-7">
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/30">
             <iframe
@@ -141,8 +99,12 @@ const PaymentSuccess = () => {
           <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-xs text-slate-500 sm:flex-row">
             <ShieldCheck size={16} className="text-blue-400" />
             <span>Secure digital delivery</span>
+
             <span className="hidden sm:inline">•</span>
-            <span>Google ADK Complete Developer Handbook • 2nd Edition</span>
+
+            <span>
+              Google ADK Complete Developer Handbook • 2nd Edition
+            </span>
           </div>
         </main>
       </div>
@@ -157,7 +119,9 @@ const PaymentSuccess = () => {
       {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-blue-600/15 blur-[130px]" />
+
         <div className="absolute -left-40 bottom-0 h-96 w-96 rounded-full bg-indigo-600/10 blur-3xl" />
+
         <div
           className="absolute inset-0 opacity-[0.035]"
           style={{
@@ -173,10 +137,8 @@ const PaymentSuccess = () => {
 
       <main className="relative mx-auto max-w-5xl">
         <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-2xl shadow-black/40">
-
           {/* SUCCESS HEADER */}
           <div className="bg-gradient-to-br from-white via-white to-blue-50 px-6 pb-10 pt-10 text-center sm:px-12 sm:pb-12 sm:pt-14">
-
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-50 ring-8 ring-green-50/60">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle2
@@ -212,7 +174,6 @@ const PaymentSuccess = () => {
 
               <div className="p-6 sm:p-7">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg shadow-blue-600/20">
                     <BookOpen size={29} className="text-white" />
                   </div>
@@ -255,6 +216,7 @@ const PaymentSuccess = () => {
                       className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-3"
                     >
                       <Icon size={17} className="shrink-0 text-blue-600" />
+
                       <span className="text-xs font-semibold text-slate-600">
                         {label}
                       </span>
@@ -264,22 +226,22 @@ const PaymentSuccess = () => {
               </div>
             </div>
 
-            {/* DOWNLOAD WARNING */}
-            <div className="mx-auto mt-7 max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-left">
+            {/* READING INFORMATION */}
+            <div className="mx-auto mt-7 max-w-3xl rounded-2xl border border-blue-200 bg-blue-50 p-5 text-left">
               <div className="flex items-start gap-3">
-                <AlertTriangle
+                <ShieldCheck
                   size={21}
-                  className="mt-0.5 shrink-0 text-amber-600"
+                  className="mt-0.5 shrink-0 text-blue-600"
                 />
 
                 <div>
-                  <p className="font-black text-amber-800">
-                    Save your ebook after downloading
+                  <p className="font-black text-blue-800">
+                    Your ebook is ready to read
                   </p>
 
-                  <p className="mt-1 text-sm leading-6 text-amber-700">
-                    Download the PDF and keep a copy in a safe place. Please
-                    do not share the ebook publicly or redistribute the file.
+                  <p className="mt-1 text-sm leading-6 text-blue-700">
+                    Read the complete handbook directly on this website using
+                    the built-in PDF reader.
                   </p>
                 </div>
               </div>
@@ -294,7 +256,9 @@ const PaymentSuccess = () => {
                 className="group inline-flex w-full max-w-3xl items-center justify-center gap-3 rounded-xl bg-blue-600 px-7 py-4 text-base font-black text-white shadow-xl shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Eye size={21} />
+
                 Read the Handbook Now
+
                 <ArrowRight
                   size={19}
                   className="transition-transform group-hover:translate-x-1"
@@ -307,7 +271,9 @@ const PaymentSuccess = () => {
               <div className="mt-5">
                 <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
                   <Clock3 size={17} className="text-blue-600" />
+
                   Opening your handbook automatically in
+
                   <span className="font-black text-blue-600">
                     {countdown}s
                   </span>
@@ -365,6 +331,7 @@ const PaymentSuccess = () => {
                       size={18}
                       className="mt-0.5 shrink-0 text-blue-600"
                     />
+
                     <span className="text-sm font-medium leading-6 text-slate-700">
                       {item}
                     </span>
@@ -384,7 +351,7 @@ const PaymentSuccess = () => {
 
               <p className="mx-auto mt-2 max-w-2xl text-xs leading-5 text-slate-500">
                 Due to the digital nature of the ebook, all purchases are final
-                and non-refundable. Please keep your downloaded copy secure.
+                and non-refundable.
               </p>
 
               <p className="mt-3 text-xs text-slate-500">
