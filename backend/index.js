@@ -12,6 +12,7 @@ import portfolioRoute from "./routes/Portfolio.js"
 import  AffiliateRoute  from './routes/Affiliate.js';
 import InterestRoute from './routes/Interest.js'
 import ClientRoute from './routes/Client.js';
+import GoogleAdkRoute from './google_adk.js'
 dotenv.config();
 import dns from "node:dns/promises";
 dns.setServers(["8.8.8.8","1.1.1.1"])
@@ -34,8 +35,15 @@ app.use("/blogs",blogRoute);
 app.use("/portfolio",portfolioRoute);
 app.use("/affiliate",AffiliateRoute);
 app.use("/interest",InterestRoute);
+app.use("/ebooks/adk",GoogleAdkRoute)
 app.use("/client",ClientRoute);
 app.get('/', (req, res) => res.send('Booking API Running Successfully!'));
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    message: "Server is healthy",
+  });
+});
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Resource not found on this server.' });
 });
