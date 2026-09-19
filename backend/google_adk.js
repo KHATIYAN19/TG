@@ -18,13 +18,19 @@ router.post("/success", (req, res) => {
       );
 
     }
-    if (Number(data.amount) !== EBOOK_PRICE) {
+const receivedAmount = Number.parseFloat(data.amount);
 
-      return res.redirect(
-        `${FRONTEND_URL}/payment/failed`
-      );
+if (!Number.isFinite(receivedAmount) || receivedAmount !== EBOOK_PRICE) {
+  console.log("Amount mismatch:", {
+    received: data.amount,
+    parsed: receivedAmount,
+    expected: EBOOK_PRICE,
+  });
 
-    }
+  return res.redirect(
+    `${FRONTEND_URL}/ebook/adk/payment/failed`
+  );
+}
     if (!EBOOK_PDF_URL) {
 
       console.error(
