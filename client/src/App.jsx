@@ -65,7 +65,7 @@ import UserManagement  from "./Admin/UserManagement.jsx"
 import { Home } from 'lucide-react'
 import EmployeeDetails from './Admin/EmployeeDetails.jsx';
 import SalesDashboard from './Admin/SalesDashboard.jsx';
-
+import { Analytics } from '@vercel/analytics/react';
 function App() {
   const user=useSelector((state)=>state.auth.user);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -103,6 +103,7 @@ function App() {
   return (
     <div className='w-[90%] mx-auto max-h-max font-inter'>
        <Toaster /> 
+       <Analytics/> 
       <div className=''>
           <Navbar />
       </div>
