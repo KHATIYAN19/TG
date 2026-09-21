@@ -116,4 +116,13 @@ router.post("/failure", (req, res) => {
 });
 
 
+router.get("/failure", (req, res) => {
+  return res.redirect(
+    `${FRONTEND_URL}/ebook/adk/payment/failed`
+  );
+});
+
+
+
+
 export default router;
