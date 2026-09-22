@@ -12,6 +12,9 @@ import {
   Code2,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+const GOOGLE_ADK_PRICE = Number(
+  import.meta.env.VITE_GOOGLE_ADK_PRICE
+);
 
 const PaymentSuccess = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -198,7 +201,7 @@ const PaymentSuccess = () => {
                     </p>
 
                     <p className="mt-1 text-2xl font-black text-blue-600">
-                      ₹149
+                      ₹{GOOGLE_ADK_PRICE}
                     </p>
                   </div>
                 </div>

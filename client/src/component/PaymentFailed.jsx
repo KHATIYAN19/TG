@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ADK_PAYMENT_URL from "../utils/adk_payment_url";
+const GOOGLE_ADK_PRICE = Number(
+  import.meta.env.VITE_GOOGLE_ADK_PRICE
+);
 
 const PaymentFailed = () => {
   const navigate = useNavigate();
@@ -121,7 +124,7 @@ const PaymentFailed = () => {
                             ₹299
                           </span>
                           <span className="ml-2 text-lg font-bold text-slate-900">
-                            ₹149
+                      ₹{GOOGLE_ADK_PRICE}
                           </span>
                         </div>
                       </div>
@@ -253,7 +256,7 @@ const PaymentFailed = () => {
                         Product price
                       </span>
                       <span className="text-sm font-semibold text-slate-900">
-                        ₹149
+                      ₹{GOOGLE_ADK_PRICE}
                       </span>
                     </div>
                   </div>
