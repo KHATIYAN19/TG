@@ -147,6 +147,9 @@ const Navbar = () => {
           <NavLink to="/blogs" className="hover:text-blue-600">
             Blogs
           </NavLink>
+           <NavLink to="/books" className="hover:text-blue-600">
+            Books
+          </NavLink>
 
           {/* ✅ DASHBOARD LINK */}
           {isAdmin && (

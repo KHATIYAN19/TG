@@ -8,47 +8,6 @@ import sendMail from '../utils/MailSender.js';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// export const signup = async (req, res) => {
-//   try {
-//     const { name, email, mobile, password, role } = req.body;
-//     if (!name || !email || !mobile || !password||!role) {
-//       return res.status(400).json({ success: false, message: 'All fields are required' });
-//     }
-//     if (!validator.isEmail(email)) {
-//       return res.status(400).json({ success: false, message: 'Invalid email format' });
-//     }
-
-//     if (!/^\d{10}$/.test(mobile)) {
-//       return res.status(400).json({ success: false, message: 'Invalid mobile number' });
-//     }
-
-//     const existingUser = await User.findOne({
-//       $or: [{ email }, { mobile }]
-//     });
-
-//     if (existingUser) {
-//       return res.status(400).json({ success: false, message: 'User already exists with email or mobile' });
-//     }
-
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const user = new User({
-//       name,
-//       email,
-//       mobile,
-//       password: hashedPassword,
-//       role: role 
-//     });
-//     await user.save();
-//     res.status(201).json({ success: true, message: 'User created successfully' });
-//   } catch (error) {
-//     console.log(error)
-//     res.status(500).json({ success: false, message: 'Server error',error });
-//   }
-// };
-
-
-
-
 
 const generateEmployeeId = async () => {
   let employeeId;
