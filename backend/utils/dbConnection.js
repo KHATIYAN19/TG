@@ -1,20 +1,24 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 dotenv.config();
+
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGO_URI;
-    if (!mongoURI) {
-      throw new Error('MONGO_URI is not defined in the .env file.');
-    }
-    await mongoose.connect(process.env.MONGO_URI, {
-      tls: true
-      })
-      
-    console.log('MongoDB Connected...');
-  } catch (err) {
-    console.error('MongoDB Connection Error:', err.message);
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      maxPoolSize: 20,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+    });
+
+    console.log(
+      `MongoDB connected: ${conn.connection.host}`
+    );
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+
     process.exit(1);
   }
 };
+
 export default connectDB;
