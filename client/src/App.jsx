@@ -29,7 +29,6 @@ import {
 
 import Navbar from "./component/Navbar";
 import Footer from "./component/Footer.jsx";
-import FloatingContact from "./component/FloatingContact.jsx";
 
 import HomePage from "./component/HomePage";
 import BookCallPage from "./component/BookCallPage";
@@ -655,7 +654,6 @@ function App() {
         />
       </Routes>
 
-      <FloatingContact />
 
       <Footer />
     </div>

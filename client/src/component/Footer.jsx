@@ -339,34 +339,7 @@ const Footer = () => {
                   <FaLinkedin size={17} />
                 </a>
 
-                {/* WhatsApp */}
-
-                <a
-                  href="https://wa.me/9873208210"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="WhatsApp"
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-[#E1E9F1]
-                    bg-[#F5F9FC]
-                    text-[#5B6B82]
-                    transition-all
-                    duration-300
-                    hover:-translate-y-1
-                    hover:border-[#D9E7F2]
-                    hover:bg-[#EAF4FC]
-                    hover:text-[#1D5C86]
-                  "
-                >
-                  <FaWhatsapp size={17} />
-                </a>
+              
 
               </div>
 
