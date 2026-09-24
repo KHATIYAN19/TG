@@ -144,9 +144,9 @@ const Navbar = () => {
             )}
           </li>
 
-          <NavLink to="/blogs" className="hover:text-blue-600">
+          {/* <NavLink to="/blogs" className="hover:text-blue-600">
             Blogs
-          </NavLink>
+          </NavLink> */}
            <NavLink to="/books" className="hover:text-blue-600">
             Books
           </NavLink>
@@ -238,7 +238,9 @@ const Navbar = () => {
 
           <NavLink to="/" className="block">Home</NavLink>
           <NavLink to="/about" className="block">About</NavLink>
-          <NavLink to="/blogs" className="block">Blog</NavLink>
+          {/* <NavLink to="/blogs" className="block">Blog</NavLink> */}
+          <NavLink to="/books" className="block">Books</NavLink>
+
 
           {/* DASHBOARD MOBILE */}
           {isAdmin && (

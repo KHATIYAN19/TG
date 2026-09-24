@@ -47,6 +47,7 @@ import UserProfile from "./component/UserProfile.jsx";
 import CareerPage from "./component/CareerPage.jsx";
 import PrivacyPolicy from "./component/PrivacyPolicy.jsx";
 import TermsOfService from "./component/TermsOfService.jsx";
+import RefundPolicy from "./component/RefundPolicy.jsx";
 
 import GenAIServicesPage from "./Services/GenAIServicesPage.jsx";
 import WebDevelopmentPage from "./Services/WebDevelopmentPage.jsx";
@@ -216,6 +217,13 @@ function App() {
           path="/terms-of-service"
           element={
             <TermsOfService />
+          }
+        />
+
+        <Route
+          path="/refund-policy"
+          element={
+            <RefundPolicy />
           }
         />
 

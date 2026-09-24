@@ -24,6 +24,11 @@ import BookRoute from "./routes/bookRoute.js";
 
 import payuRoutes from "./routes/payuRoutes.js";
 import paymentRoutes from "./routes/paymentRoute.js"
+
+
+
+import { globalRateLimiter } from "./Middleware/rateLimiter.js";
+
 // ============================================================
 // ENV
 // ============================================================
@@ -78,6 +83,7 @@ app.use(
 // ============================================================
 // DATABASE
 // ============================================================
+app.use(globalRateLimiter);
 
 connectDB();
 
