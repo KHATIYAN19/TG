@@ -55,6 +55,15 @@ const SystemDesignHLD = () => {
         }
 
         setProduct(result.data);
+        if (window.fbq) {
+          window.fbq("track", "ViewContent", {
+            content_name: result.data.title || "Mastering System Design HLD",
+            content_ids: [result.data._id],
+            content_type: "product",
+            value: Number(result.data.price || 0),
+            currency: result.data.currency || "INR",
+          });
+        }
       } catch (error) {
         if (error?.name === "AbortError") return;
 
@@ -94,11 +103,25 @@ const SystemDesignHLD = () => {
     }
   };
 
-  const handleBuyNow = () => {
-    if (!product?._id) return;
-    setIsCheckoutOpen(true);
-  };
+  // const handleBuyNow = () => {
+  //   if (!product?._id) return;
+  //   setIsCheckoutOpen(true);
+  // };
+const handleBuyNow = () => {
+  if (!product?._id) return;
 
+  if (window.fbq) {
+    window.fbq("track", "InitiateCheckout", {
+      content_name: product.title || "Mastering System Design HLD",
+      content_ids: [product._id],
+      content_type: "product",
+      value: Number(product.price || 0),
+      currency: product.currency || "INR",
+    });
+  }
+
+  setIsCheckoutOpen(true);
+};
   const handleCloseCheckout = () => {
     setIsCheckoutOpen(false);
   };
