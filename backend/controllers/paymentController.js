@@ -102,6 +102,9 @@ export const getBookPayments = async (req, res) => {
 
         paidAt:
           order.payment?.paidAt,
+        
+        affiliateCode:
+          order.payment?.affiliateCode,
 
         failedAt:
           order.payment?.failedAt,

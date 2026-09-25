@@ -60,6 +60,7 @@ import Books from "./Ebooks/Books.jsx";
 import SystemDesignHLD from "./component/SystemDesignHLD.jsx";
 import SystemDesignLLD from "./component/SystemDesignLLD.jsx";
 import GenAiGoogleAdk from "./component/GenAiGoogleAdk.jsx";
+import GenaiMCP from "./component/GenaiMCP.jsx"
 
 import PaymentFailed from "./payment/paymentFailed.jsx";
 import PaymentSuccess from "./payment/paymentSuccess.jsx";
@@ -89,6 +90,7 @@ import SalesDashboard from "./Admin/SalesDashboard.jsx";
 import AdminBooks from "./Admin/AdminBooks.jsx";
 import AddBook from "./Admin/AddBook.jsx";
 import AdminBookDetails from "./Admin/AdminBookDetails.jsx";
+import GenaiRAG from "./component/GenaiRAG.jsx";
 
 function App() {
   const user = useSelector(
@@ -321,6 +323,21 @@ function App() {
             <GenAiGoogleAdk />
           }
         />
+
+        <Route
+          path="/book/genai/mcp"
+          element={
+            <GenaiMCP />
+          }
+        />
+
+         <Route
+          path="/book/genai/rag"
+          element={
+            <GenaiRAG />
+          }
+        />
+        
 
 
         {/* ============================== */}

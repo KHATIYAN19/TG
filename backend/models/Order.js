@@ -79,7 +79,12 @@ const orderSchema = new mongoose.Schema(
         trim: true,
         index: true,
       },
-
+      affiliateCode: {
+        type: String,
+        default: null,
+        trim: true,
+        lowercase: true,
+      },
       // PayU mihpayid
       paymentId: {
         type: String,

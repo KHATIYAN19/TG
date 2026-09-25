@@ -960,6 +960,7 @@ function PaymentOrderCard({
               payment.provider ||
               "Payment"}
           </p>
+
         </div>
       </div>
 
@@ -1022,6 +1023,14 @@ function PaymentOrderCard({
               label="Transaction ID"
               value={
                 payment.transactionId
+              }
+              mono
+            />
+
+             <PaymentDetail
+              label="Affilate code"
+              value={
+                payment?.affiliateCode
               }
               mono
             />
@@ -1125,7 +1134,7 @@ function PaymentOrderCard({
               value={formatDate(
                 order.createdAt
               )}
-            />
+            />           
           </div>
         </div>
 

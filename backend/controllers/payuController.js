@@ -55,6 +55,7 @@ export const createPayUPayment = async (
 ) => {
   try {
     const {
+      affiliateCode,
       bookId,
       firstname,
       email,
@@ -63,6 +64,7 @@ export const createPayUPayment = async (
       utmMedium,
       utmCampaign,
     } = req.body;
+
 
     if (
       !bookId ||
@@ -89,6 +91,10 @@ export const createPayUPayment = async (
         message: "Book not found.",
       });
     }
+    const normalizedAffiliateCode =
+      typeof affiliateCode === "string"
+        ? affiliateCode.trim().toLowerCase()
+        : null;
 
     const amount = Number(
       book.price
@@ -158,6 +164,8 @@ export const createPayUPayment = async (
         payment: {
           provider:
             "PayU",
+          
+          affiliateCode: normalizedAffiliateCode,
 
           transactionId:
             txnid,

@@ -43,7 +43,17 @@ export default function GenAiGoogleAdk() {
   const [activeCode, setActiveCode] = useState(0);
   const [activeSkill, setActiveSkill] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+ 
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const referralCode = (
+    params.get("referralCode") || params.get("ref") || ""
+  ).trim();
 
+  if (referralCode) {
+    localStorage.setItem("referralCode", referralCode);
+  }
+}, []);
   /* =========================================================
      DATA
      ========================================================= */

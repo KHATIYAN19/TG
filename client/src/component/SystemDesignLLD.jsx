@@ -13,6 +13,16 @@ export default function SystemDesignLLD() {
   const [productError, setProductError] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const referralCode = (
+    params.get("referralCode") || params.get("ref") || ""
+  ).trim();
+
+  if (referralCode) {
+    localStorage.setItem("referralCode", referralCode);
+  }
+}, []);
 
   useEffect(() => {
     const controller = new AbortController();
