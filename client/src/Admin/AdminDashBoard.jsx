@@ -14,14 +14,17 @@ import {
     FileText,
     BookAIcon,
     UserPlus, // For Add a user
-    UserCog // For User Management
+    UserCog, // For User Management
+    icons
 } from 'lucide-react';
 import { useSelector } from 'react-redux'; 
 
 const adminRoutes = [
     {path: '/admin/books', name:'Books',icon:BookAIcon, description:'Admin Book management'},
+    {path: '/admin/book/analytics' , name: 'Book Analytics', icon:BookAIcon, description: 'Books Analytics Dashboard'},
+    {path: '/admin/coupon/dashboard' , name: 'Coupons DashBoard', icon:BookAIcon, description: 'Coupons Dashboard'},
     { path: '/admin/dashboard', name: 'Sales Dashboard', icon: LayoutDashboard , description: 'Sales Dashboard' },
-     { path: '/profile', name: 'Profile', icon: UserCog, description: 'View and manage Profile' },
+    { path: '/profile', name: 'Profile', icon: UserCog, description: 'View and manage Profile' },
     { path: '/admin/users', name: 'User Management', icon: UserCog, description: 'View, edit, and manage all user accounts.' },
     { path: '/admin/signup', name: 'Add a User', icon: UserPlus, description: 'Create new user accounts for the system.' },
     { path: '/admin/add-blog', name: 'Add Blog', icon: PlusCircle, description: 'Create new blog posts.' },

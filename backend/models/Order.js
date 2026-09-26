@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
-
     orderId: {
       type: String,
       required: true,
@@ -66,6 +65,85 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
+    coupon: {
+      applied: {
+        type: Boolean,
+        default: false,
+      },
+
+      couponId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupon",
+        default: null,
+      },
+
+      code: {
+        type: String,
+        default: null,
+        trim: true,
+        uppercase: true,
+      },
+
+      name: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      description: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      discountType: {
+        type: String,
+        enum: ["PERCENTAGE", "FIXED"],
+        default: null,
+      },
+
+      discountValue: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      maxDiscountAmount: {
+        type: Number,
+        default: null,
+        min: 0,
+      },
+
+      minimumOrderAmount: {
+        type: Number,
+        default: null,
+        min: 0,
+      },
+
+      originalAmount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      discountAmount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      finalAmount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      appliedAt: {
+        type: Date,
+        default: null,
+      },
+    },
+
     payment: {
       provider: {
         type: String,
@@ -79,13 +157,14 @@ const orderSchema = new mongoose.Schema(
         trim: true,
         index: true,
       },
+
       affiliateCode: {
         type: String,
         default: null,
         trim: true,
         lowercase: true,
       },
-      // PayU mihpayid
+
       paymentId: {
         type: String,
         default: null,
@@ -93,14 +172,12 @@ const orderSchema = new mongoose.Schema(
         index: true,
       },
 
-      // UPI / CC / DC / NB etc.
       method: {
         type: String,
         default: null,
         trim: true,
       },
 
-      // Actual payment amount
       amount: {
         type: Number,
         default: 0,
@@ -115,6 +192,7 @@ const orderSchema = new mongoose.Schema(
           "FAILED",
           "CANCELLED",
           "REFUNDED",
+          "PARTIALLY_REFUNDED",
         ],
         default: "PENDING",
         index: true,
@@ -135,22 +213,155 @@ const orderSchema = new mongoose.Schema(
         default: null,
       },
 
-      // Raw callback received from PayU
       callbackResponse: {
         type: mongoose.Schema.Types.Mixed,
         default: null,
       },
 
-      // Response received from PayU Verify Payment API
       verificationResponse: {
         type: mongoose.Schema.Types.Mixed,
         default: null,
       },
     },
 
-    // =====================================================
-    // ORDER STATUS
-    // =====================================================
+    refund: {
+      status: {
+        type: String,
+        enum: [
+          "NOT_REQUESTED",
+          "PENDING",
+          "PROCESSING",
+          "PARTIAL",
+          "REFUNDED",
+          "FAILED",
+          "CANCELLED",
+        ],
+        default: "NOT_REQUESTED",
+        index: true,
+      },
+
+      requestedAmount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      refundedAmount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      remainingAmount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      reason: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      provider: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      providerRefundId: {
+        type: String,
+        default: null,
+        trim: true,
+        index: true,
+      },
+
+      refundTransactionId: {
+        type: String,
+        default: null,
+        trim: true,
+        index: true,
+      },
+
+      initiatedBy: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      initiatedAt: {
+        type: Date,
+        default: null,
+      },
+
+      processedAt: {
+        type: Date,
+        default: null,
+      },
+
+      completedAt: {
+        type: Date,
+        default: null,
+      },
+
+      failedAt: {
+        type: Date,
+        default: null,
+      },
+
+      failureReason: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      requestPayload: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
+      },
+
+      providerResponse: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
+      },
+    },
+
+    pendingMail: {
+      sentCount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      firstSentAt: {
+        type: Date,
+        default: null,
+      },
+
+      lastSentAt: {
+        type: Date,
+        default: null,
+        index: true,
+      },
+
+      lastSentBy: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      lastStatus: {
+        type: String,
+        enum: ["NOT_SENT", "SENT", "FAILED"],
+        default: "NOT_SENT",
+      },
+
+      lastError: {
+        type: String,
+        default: null,
+      },
+    },
 
     orderStatus: {
       type: String,
@@ -160,17 +371,13 @@ const orderSchema = new mongoose.Schema(
         "FAILED",
         "CANCELLED",
         "REFUNDED",
+        "PARTIALLY_REFUNDED",
       ],
       default: "PENDING",
       index: true,
     },
 
-    // =====================================================
-    // BOOK ACCESS
-    // =====================================================
-
     access: {
-    
       tokenHash: {
         type: String,
         default: null,
@@ -205,7 +412,6 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-
     verification: {
       callbackHashVerified: {
         type: Boolean,
@@ -228,7 +434,6 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-  
     metadata: {
       ipAddress: {
         type: String,
@@ -286,21 +491,28 @@ orderSchema.index({
   createdAt: -1,
 });
 
-// Find orders for a particular book
 orderSchema.index({
   bookId: 1,
   createdAt: -1,
 });
 
-// Payment/order reporting
 orderSchema.index({
   orderStatus: 1,
   createdAt: -1,
 });
 
-// Customer purchase history
 orderSchema.index({
   "customer.email": 1,
+  createdAt: -1,
+});
+
+orderSchema.index({
+  "coupon.code": 1,
+  createdAt: -1,
+});
+
+orderSchema.index({
+  "payment.affiliateCode": 1,
   createdAt: -1,
 });
 

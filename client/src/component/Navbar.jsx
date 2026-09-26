@@ -159,8 +159,8 @@ const Navbar = () => {
           )}
           {/* ✅ Sales DashBoard LINK */}
           {isAdmin && (
-            <NavLink to="/admin/dashboard" className="hover:text-blue-600">
-              Sales
+            <NavLink to="/admin/book/analytics" className="hover:text-blue-600">
+              Analytics
             </NavLink>
           )}
         </ul>

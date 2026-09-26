@@ -20,8 +20,9 @@ import AffiliateRoute from "./routes/Affiliate.js";
 import InterestRoute from "./routes/Interest.js";
 import ClientRoute from "./routes/Client.js";
 import BookRoute from "./routes/bookRoute.js";
-
-
+import BookSalesRoute from "./routes/bookSales.js"
+import OrderMailRoute from "./routes/orderMailRoute.js"
+import CouponRoute from "./routes/couponRoute.js"
 import payuRoutes from "./routes/payuRoutes.js";
 import paymentRoutes from "./routes/paymentRoute.js"
 
@@ -161,6 +162,21 @@ app.use(
   "/admin/books",
   paymentRoutes
 )
+
+app.use(
+  "/api/admin/analytics",
+  BookSalesRoute
+)
+
+app.use(
+  "/api/admin/notification",
+  OrderMailRoute
+)
+app.use(
+  "/api/coupon",
+  CouponRoute
+)
+
 // ============================================================
 // HOME
 // ============================================================

@@ -87,11 +87,15 @@ import UserManagement from "./Admin/UserManagement.jsx";
 import EmployeeDetails from "./Admin/EmployeeDetails.jsx";
 import SalesDashboard from "./Admin/SalesDashboard.jsx";
 
+import BookSalesAnalytics from "./Admin/BookSalesAnalytics.jsx";
 import AdminBooks from "./Admin/AdminBooks.jsx";
 import AddBook from "./Admin/AddBook.jsx";
 import AdminBookDetails from "./Admin/AdminBookDetails.jsx";
 import GenaiRAG from "./component/GenaiRAG.jsx";
 
+
+import AdminCouponDashboard from "./Admin/AdminCouponDashboard.jsx"
+import CouponDetails from "./Admin/couponDetails.jsx";
 function App() {
   const user = useSelector(
     (state) => state.auth.user
@@ -401,6 +405,39 @@ function App() {
           element={
             isAdmin ? (
               <SalesDashboard />
+            ) : (
+              <NotFoundPage />
+            )
+          }
+        />
+
+          <Route
+          path="/admin/book/analytics"
+          element={
+            isAdmin ? (
+              <BookSalesAnalytics />
+            ) : (
+              <NotFoundPage />
+            )
+          }
+        />
+
+         <Route
+          path="/admin/coupon/dashboard"
+          element={
+            isAdmin ? (
+              <AdminCouponDashboard />
+            ) : (
+              <NotFoundPage />
+            )
+          }
+        />
+
+         <Route
+          path="/admin/coupon/:id"
+          element={
+            isAdmin ? (
+              <CouponDetails />
             ) : (
               <NotFoundPage />
             )
