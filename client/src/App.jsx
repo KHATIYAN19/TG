@@ -91,6 +91,7 @@ import BookSalesAnalytics from "./Admin/BookSalesAnalytics.jsx";
 import AdminBooks from "./Admin/AdminBooks.jsx";
 import AddBook from "./Admin/AddBook.jsx";
 import AdminBookDetails from "./Admin/AdminBookDetails.jsx";
+import AdminBookPayments from "./Admin/AdminBookPayments.jsx";
 import GenaiRAG from "./component/GenaiRAG.jsx";
 
 
@@ -475,6 +476,17 @@ function App() {
           element={
             isAdmin ? (
               <AdminBookDetails />
+            ) : (
+              <NotFoundPage />
+            )
+          }
+        />
+
+         <Route
+          path="/admin/book/:bookId/payments"
+          element={
+            isAdmin ? (
+              <AdminBookPayments />
             ) : (
               <NotFoundPage />
             )

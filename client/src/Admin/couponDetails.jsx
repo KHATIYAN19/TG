@@ -767,7 +767,7 @@ const CouponDetails = () => {
         setShowDeleteConfirm(false);
 
         navigate(
-          "/admin/coupon"
+          "/admin/coupon/dashboard"
         );
       } catch (err) {
         console.error(
@@ -893,7 +893,7 @@ const CouponDetails = () => {
               type="button"
               onClick={() =>
                 navigate(
-                  "/admin/coupon"
+                  "/admin/coupon/dashboard"
                 )
               }
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
@@ -939,7 +939,7 @@ const CouponDetails = () => {
             type="button"
             onClick={() =>
               navigate(
-                "/admin/coupon"
+                "/admin/coupon/dashboard"
               )
             }
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600"

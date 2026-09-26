@@ -5,7 +5,7 @@ const ratelimit = new Ratelimit({
   redis,
 
   limiter: Ratelimit.slidingWindow(
-    30,
+    50,
     "1 m"
   ),
 
