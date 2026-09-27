@@ -1,6 +1,9 @@
 import express from "express";
 
-import sendPendingPurchaseMail from "../controllers/orderMailSender.js";
+import {
+  sendPendingPurchaseMail,
+  resendBookAccessMail,
+} from "../controllers/orderMailSender.js";
 import {auth,isAdmin} from "../Middleware/auth.js";
 
 const router = express.Router();
@@ -11,6 +14,11 @@ router.post(
    auth,
    isAdmin,
   sendPendingPurchaseMail
+);
+
+router.post(
+  "/orders/:orderId/resend-book-access",
+  resendBookAccessMail
 );
 
 export default router;

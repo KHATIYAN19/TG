@@ -3,6 +3,7 @@ import Order from "../models/Order.js";
 import Book from "../models/Book.js";
 import sendMail from "../utils/MailSender.js";
 import { validateCouponForPayment } from "../controllers/couponController.js";
+import crypto from "crypto";
 
 const TARGET_TREK_URL = "https://www.targettrek.in";
 const ALL_BOOKS_URL = `${TARGET_TREK_URL}/books`;
@@ -2225,4 +2226,1991 @@ const sendPendingPurchaseMail =
     }
   };
 
-export default sendPendingPurchaseMail;
+
+
+
+
+
+const ACCESS_DURATION = 3 * 60 * 60 * 1000;
+
+
+const formatDate = (date) => {
+  if (!date) {
+    return "N/A";
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "N/A";
+  }
+
+  return parsedDate.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+
+const getPaymentTransactionId = (order) => {
+  return (
+    order.payment?.mihpayid ||
+    order.payment?.transactionId ||
+    order.payment?.transaction_id ||
+    order.payment?.paymentId ||
+    order.payment?.payment_id ||
+    order.payment?.txnid ||
+    order.txnid ||
+    "N/A"
+  );
+};
+
+const getPaymentMethod = (order) => {
+  return (
+    order.payment?.mode ||
+    order.payment?.method ||
+    order.payment?.paymentMethod ||
+    order.paymentMethod ||
+    "Online Payment"
+  );
+};
+
+const getPaidAmount = (
+  order,
+  book
+) => {
+  const possibleAmounts = [
+    order.payment?.amount,
+    order.finalAmount,
+    order.totalAmount,
+    order.amount,
+    order.book?.price,
+    book?.price,
+  ];
+
+  for (
+    const amount of possibleAmounts
+  ) {
+    const parsedAmount =
+      Number(amount);
+
+    if (
+      Number.isFinite(
+        parsedAmount
+      ) &&
+      parsedAmount >= 0
+    ) {
+      return parsedAmount;
+    }
+  }
+
+  return 0;
+};
+
+const getMrp = (
+  order,
+  book
+) => {
+  const possibleMrps = [
+    order.book?.mrp,
+    order.mrp,
+    book?.mrp,
+  ];
+
+  for (
+    const mrp of possibleMrps
+  ) {
+    const parsedMrp =
+      Number(mrp);
+
+    if (
+      Number.isFinite(
+        parsedMrp
+      ) &&
+      parsedMrp > 0
+    ) {
+      return parsedMrp;
+    }
+  }
+
+  return 0;
+};
+
+const getCurrency = (
+  order,
+  book
+) => {
+  return (
+    order.payment?.currency ||
+    order.book?.currency ||
+    order.currency ||
+    book?.currency ||
+    "INR"
+  );
+};
+
+const getCouponCode = (
+  order
+) => {
+  return (
+    order.coupon?.code ||
+    order.coupon?.couponCode ||
+    order.couponCode ||
+    ""
+  );
+};
+
+const getDiscountAmount = (
+  order
+) => {
+  const possibleDiscounts = [
+    order.coupon?.discountAmount,
+    order.discountAmount,
+    order.pricing?.discountAmount,
+  ];
+
+  for (
+    const discount of possibleDiscounts
+  ) {
+    const parsedDiscount =
+      Number(discount);
+
+    if (
+      Number.isFinite(
+        parsedDiscount
+      ) &&
+      parsedDiscount > 0
+    ) {
+      return parsedDiscount;
+    }
+  }
+
+  return 0;
+};
+
+const getPurchaseDate = (
+  order
+) => {
+  return (
+    order.payment?.paidAt ||
+    order.payment?.completedAt ||
+    order.paidAt ||
+    order.updatedAt ||
+    order.createdAt
+  );
+};
+
+const generateAccessToken = () => {
+  return crypto
+    .randomBytes(32)
+    .toString("hex");
+};
+
+const hashAccessToken = (
+  token
+) => {
+  return crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+};
+
+const buildAccessUrl = (
+  rawToken,
+  orderId
+) => {
+  return (
+    `${TARGET_TREK_URL}/payment/success` +
+    `?token=${encodeURIComponent(rawToken)}` +
+    `&order=${encodeURIComponent(orderId)}`
+  );
+};
+
+const buildBookAccessEmail = ({
+  order,
+  book,
+  accessUrl,
+  accessExpiresAt,
+}) => {
+  const customerName =
+    order.customer?.name
+      ?.trim() ||
+    "there";
+
+  const customerEmail =
+    order.customer?.email
+      ?.trim() ||
+    "";
+
+  const bookTitle =
+    book.title ||
+    order.book?.title ||
+    "your ebook";
+
+  const bookSubtitle =
+    book.subtitle ||
+    order.book?.subtitle ||
+    "";
+
+  const currency =
+    getCurrency(
+      order,
+      book
+    );
+
+  const paidAmount =
+    getPaidAmount(
+      order,
+      book
+    );
+
+  const mrp =
+    getMrp(
+      order,
+      book
+    );
+
+  const couponCode =
+    getCouponCode(
+      order
+    );
+
+  const discountAmount =
+    getDiscountAmount(
+      order
+    );
+
+  const transactionId =
+    getPaymentTransactionId(
+      order
+    );
+
+  const paymentMethod =
+    getPaymentMethod(
+      order
+    );
+
+  const purchaseDate =
+    getPurchaseDate(
+      order
+    );
+
+  const orderStatus =
+    String(
+      order.orderStatus ||
+        "PAID"
+    ).toUpperCase();
+
+  const paymentStatus =
+    String(
+      order.payment?.status ||
+        "SUCCESS"
+    ).toUpperCase();
+
+  const coverImageUrl =
+    getBookCoverUrl(
+      book.coverImage
+    );
+
+  const safeCustomerName =
+    escapeHtml(
+      customerName
+    );
+
+  const safeCustomerEmail =
+    escapeHtml(
+      customerEmail
+    );
+
+  const safeBookTitle =
+    escapeHtml(
+      bookTitle
+    );
+
+  const safeBookSubtitle =
+    escapeHtml(
+      bookSubtitle
+    );
+
+  const safeTransactionId =
+    escapeHtml(
+      transactionId
+    );
+
+  const safePaymentMethod =
+    escapeHtml(
+      paymentMethod
+    );
+
+  const safeOrderStatus =
+    escapeHtml(
+      orderStatus
+    );
+
+  const safePaymentStatus =
+    escapeHtml(
+      paymentStatus
+    );
+
+  const safeCouponCode =
+    escapeHtml(
+      couponCode
+    );
+
+  const safeAccessUrl =
+    escapeHtml(
+      accessUrl
+    );
+
+  const safeCoverImageUrl =
+    escapeHtml(
+      coverImageUrl
+    );
+
+  const safeAllBooksUrl =
+    escapeHtml(
+      ALL_BOOKS_URL
+    );
+
+  const subject =
+    `Your ${bookTitle} access link | Target Trek`;
+
+  const text = `
+Hi ${customerName},
+
+Thanks for purchasing "${bookTitle}" from Target Trek.
+
+Your new book access link is ready.
+
+ACCESS YOUR BOOK
+
+${accessUrl}
+
+If the button in the email does not work, copy and paste the link above into your browser.
+
+BOOK DETAILS
+
+Book:
+${bookTitle}
+
+${bookSubtitle ? `Subtitle:\n${bookSubtitle}\n` : ""}
+
+Order ID:
+${order.orderId || order._id}
+
+Customer Email:
+${customerEmail}
+
+Order Status:
+${orderStatus}
+
+Payment Status:
+${paymentStatus}
+
+Transaction ID:
+${transactionId}
+
+Payment Method:
+${paymentMethod}
+
+${mrp > paidAmount ? `MRP:\n${formatAmount(mrp, currency)}\n` : ""}
+
+${couponCode ? `Coupon Used:\n${couponCode}\n` : ""}
+
+${
+  discountAmount > 0
+    ? `Discount:\n${formatAmount(
+        discountAmount,
+        currency
+      )}\n`
+    : ""
+}
+
+Amount Paid:
+${formatAmount(
+  paidAmount,
+  currency
+)}
+
+Purchase Date:
+${formatDate(
+  purchaseDate
+)}
+
+This access link is valid until:
+${formatDate(
+  accessExpiresAt
+)}
+
+Please do not share your access link with anyone.
+
+Facing any issue while accessing your book?
+
+Contact:
+${SUPPORT_EMAIL}
+
+Explore more Target Trek books:
+${ALL_BOOKS_URL}
+
+Regards,
+Team Target Trek
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <meta
+    name="color-scheme"
+    content="light"
+  />
+
+  <meta
+    name="supported-color-schemes"
+    content="light"
+  />
+
+  <title>
+    Your Book Access
+  </title>
+
+</head>
+
+<body
+  style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #0f172a;
+  "
+>
+
+  <table
+    width="100%"
+    cellspacing="0"
+    cellpadding="0"
+    border="0"
+    style="
+      width: 100%;
+      background-color: #f4f7fb;
+    "
+  >
+
+    <tr>
+
+      <td
+        align="center"
+        style="
+          padding: 32px 14px;
+        "
+      >
+
+        <table
+          width="100%"
+          cellspacing="0"
+          cellpadding="0"
+          border="0"
+          style="
+            width: 100%;
+            max-width: 680px;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+          "
+        >
+
+          <!-- HEADER -->
+
+          <tr>
+
+            <td
+              style="
+                padding: 24px 30px;
+                background-color: #eff6ff;
+                border-bottom: 1px solid #dbeafe;
+              "
+            >
+
+              <div
+                style="
+                  color: #2563eb;
+                  font-size: 24px;
+                  font-weight: 800;
+                  letter-spacing: -0.4px;
+                "
+              >
+                Target Trek
+              </div>
+
+              <div
+                style="
+                  margin-top: 5px;
+                  color: #64748b;
+                  font-size: 12px;
+                "
+              >
+                Learn. Build. Grow.
+              </div>
+
+            </td>
+
+          </tr>
+
+
+          <!-- BODY -->
+
+          <tr>
+
+            <td
+              style="
+                padding: 32px 30px 30px;
+              "
+            >
+
+              <div
+                style="
+                  display: inline-block;
+                  padding: 7px 12px;
+                  background-color: #ecfdf5;
+                  color: #15803d;
+                  border-radius: 999px;
+                  font-size: 11px;
+                  font-weight: 800;
+                  letter-spacing: 0.07em;
+                  text-transform: uppercase;
+                "
+              >
+                Payment successful
+              </div>
+
+
+              <h1
+                style="
+                  margin: 18px 0 10px;
+                  color: #0f172a;
+                  font-size: 27px;
+                  line-height: 1.35;
+                "
+              >
+                Hi ${safeCustomerName},
+              </h1>
+
+
+              <p
+                style="
+                  margin: 0;
+                  color: #475569;
+                  font-size: 15px;
+                  line-height: 1.75;
+                "
+              >
+                Thanks for purchasing
+
+                <strong
+                  style="
+                    color: #0f172a;
+                  "
+                >
+                  ${safeBookTitle}
+                </strong>
+
+                from Target Trek.
+              </p>
+
+
+              <p
+                style="
+                  margin: 12px 0 0;
+                  color: #475569;
+                  font-size: 15px;
+                  line-height: 1.75;
+                "
+              >
+                We have generated a fresh secure access link
+                for your purchased book. Click the button below
+                to continue to your book.
+              </p>
+
+
+              <!-- BOOK CARD -->
+
+              <table
+                width="100%"
+                cellspacing="0"
+                cellpadding="0"
+                border="0"
+                style="
+                  margin-top: 24px;
+                  background-color: #f8fafc;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 14px;
+                "
+              >
+
+                <tr>
+
+                  ${
+                    coverImageUrl
+                      ? `
+                  <td
+                    width="140"
+                    valign="top"
+                    style="
+                      padding: 18px;
+                    "
+                  >
+
+                    <img
+                      src="${safeCoverImageUrl}"
+                      alt="${safeBookTitle}"
+                      width="120"
+                      style="
+                        display: block;
+                        width: 120px;
+                        max-width: 120px;
+                        height: auto;
+                        border: 0;
+                        border-radius: 9px;
+                        box-shadow: 0 4px 14px rgba(15,23,42,0.10);
+                      "
+                    />
+
+                  </td>
+                  `
+                      : ""
+                  }
+
+
+                  <td
+                    valign="top"
+                    style="
+                      padding: 20px;
+                    "
+                  >
+
+                    <div
+                      style="
+                        color: #2563eb;
+                        font-size: 11px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                      "
+                    >
+                      Your purchased book
+                    </div>
+
+
+                    <div
+                      style="
+                        margin-top: 7px;
+                        color: #0f172a;
+                        font-size: 19px;
+                        font-weight: 800;
+                        line-height: 1.4;
+                      "
+                    >
+                      ${safeBookTitle}
+                    </div>
+
+
+                    ${
+                      safeBookSubtitle
+                        ? `
+                    <div
+                      style="
+                        margin-top: 6px;
+                        color: #64748b;
+                        font-size: 13px;
+                        line-height: 1.6;
+                      "
+                    >
+                      ${safeBookSubtitle}
+                    </div>
+                    `
+                        : ""
+                    }
+
+
+                    ${
+                      book.edition
+                        ? `
+                    <div
+                      style="
+                        margin-top: 12px;
+                        color: #64748b;
+                        font-size: 12px;
+                      "
+                    >
+                      Edition:
+                      <strong style="color:#334155;">
+                        ${escapeHtml(book.edition)}
+                      </strong>
+                    </div>
+                    `
+                        : ""
+                    }
+
+
+                    ${
+                      book.format
+                        ? `
+                    <div
+                      style="
+                        margin-top: 5px;
+                        color: #64748b;
+                        font-size: 12px;
+                      "
+                    >
+                      Format:
+                      <strong style="color:#334155;">
+                        ${escapeHtml(book.format)}
+                      </strong>
+                    </div>
+                    `
+                        : ""
+                    }
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+
+              <!-- ACCESS BUTTON -->
+
+              <table
+                width="100%"
+                cellspacing="0"
+                cellpadding="0"
+                border="0"
+                style="
+                  margin-top: 28px;
+                "
+              >
+
+                <tr>
+
+                  <td
+                    align="center"
+                  >
+
+                    <a
+                      href="${safeAccessUrl}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style="
+                        display: inline-block;
+                        padding: 15px 34px;
+                        background-color: #2563eb;
+                        color: #ffffff;
+                        text-decoration: none;
+                        border-radius: 10px;
+                        font-size: 15px;
+                        font-weight: 800;
+                      "
+                    >
+                      Access Your Book
+                    </a>
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+
+              <!-- RAW LINK -->
+
+              <div
+                style="
+                  margin-top: 22px;
+                  padding: 16px;
+                  background-color: #f8fafc;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 12px;
+                "
+              >
+
+                <div
+                  style="
+                    color: #475569;
+                    font-size: 12px;
+                    font-weight: 800;
+                  "
+                >
+                  Button not opening?
+                </div>
+
+
+                <div
+                  style="
+                    margin-top: 6px;
+                    color: #64748b;
+                    font-size: 12px;
+                    line-height: 1.65;
+                  "
+                >
+                  Copy and paste this secure link into your browser:
+                </div>
+
+
+                <div
+                  style="
+                    margin-top: 8px;
+                    word-break: break-all;
+                  "
+                >
+
+                  <a
+                    href="${safeAccessUrl}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="
+                      color: #2563eb;
+                      font-size: 12px;
+                      line-height: 1.7;
+                      text-decoration: underline;
+                    "
+                  >
+                    ${safeAccessUrl}
+                  </a>
+
+                </div>
+
+              </div>
+
+
+              <!-- PAYMENT DETAILS -->
+
+              <div
+                style="
+                  margin-top: 26px;
+                  background-color: #ffffff;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 14px;
+                  padding: 20px;
+                "
+              >
+
+                <div
+                  style="
+                    color: #0f172a;
+                    font-size: 16px;
+                    font-weight: 800;
+                    margin-bottom: 12px;
+                  "
+                >
+                  Payment details
+                </div>
+
+
+                <table
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Order ID
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #0f172a;
+                        font-size: 13px;
+                        font-weight: 700;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${escapeHtml(
+                        order.orderId ||
+                          order._id
+                      )}
+                    </td>
+
+                  </tr>
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Customer Email
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #0f172a;
+                        font-size: 13px;
+                        font-weight: 600;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${safeCustomerEmail}
+                    </td>
+
+                  </tr>
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Order Status
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #15803d;
+                        font-size: 13px;
+                        font-weight: 800;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${safeOrderStatus}
+                    </td>
+
+                  </tr>
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Payment Status
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #15803d;
+                        font-size: 13px;
+                        font-weight: 800;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${safePaymentStatus}
+                    </td>
+
+                  </tr>
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Transaction ID
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #0f172a;
+                        font-size: 13px;
+                        font-weight: 600;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${safeTransactionId}
+                    </td>
+
+                  </tr>
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Payment Method
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #0f172a;
+                        font-size: 13px;
+                        font-weight: 600;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${safePaymentMethod}
+                    </td>
+
+                  </tr>
+
+
+                  ${
+                    mrp > paidAmount
+                      ? `
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      MRP
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        font-weight: 600;
+                        text-decoration: line-through;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${formatAmount(
+                        mrp,
+                        currency
+                      )}
+                    </td>
+
+                  </tr>
+                  `
+                      : ""
+                  }
+
+
+                  ${
+                    couponCode
+                      ? `
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Coupon Used
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #2563eb;
+                        font-size: 13px;
+                        font-weight: 800;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${safeCouponCode}
+                    </td>
+
+                  </tr>
+                  `
+                      : ""
+                  }
+
+
+                  ${
+                    discountAmount > 0
+                      ? `
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Discount
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #15803d;
+                        font-size: 13px;
+                        font-weight: 700;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      -${formatAmount(
+                        discountAmount,
+                        currency
+                      )}
+                    </td>
+
+                  </tr>
+                  `
+                      : ""
+                  }
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 12px 0;
+                        color: #0f172a;
+                        font-size: 14px;
+                        font-weight: 800;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      Amount Paid
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 12px 0;
+                        color: #2563eb;
+                        font-size: 17px;
+                        font-weight: 800;
+                        border-bottom: 1px solid #f1f5f9;
+                      "
+                    >
+                      ${formatAmount(
+                        paidAmount,
+                        currency
+                      )}
+                    </td>
+
+                  </tr>
+
+
+                  <tr>
+
+                    <td
+                      style="
+                        padding: 10px 0;
+                        color: #64748b;
+                        font-size: 13px;
+                      "
+                    >
+                      Purchase Date
+                    </td>
+
+                    <td
+                      align="right"
+                      style="
+                        padding: 10px 0;
+                        color: #0f172a;
+                        font-size: 13px;
+                        font-weight: 600;
+                      "
+                    >
+                      ${formatDate(
+                        purchaseDate
+                      )}
+                    </td>
+
+                  </tr>
+
+                </table>
+
+              </div>
+
+
+              <!-- LINK EXPIRY -->
+
+              <div
+                style="
+                  margin-top: 22px;
+                  padding: 16px;
+                  background-color: #fff7ed;
+                  border: 1px solid #fed7aa;
+                  border-radius: 12px;
+                  color: #9a3412;
+                  font-size: 13px;
+                  line-height: 1.7;
+                "
+              >
+
+                <strong>
+                  Secure access link
+                </strong>
+
+                <br />
+
+                This newly generated access link is valid until
+
+                <strong>
+                  ${formatDate(
+                    accessExpiresAt
+                  )}
+                </strong>.
+
+                Please do not share this link publicly.
+
+              </div>
+
+
+              <!-- SUPPORT -->
+
+              <div
+                style="
+                  margin-top: 24px;
+                  padding: 18px;
+                  background-color: #eff6ff;
+                  border: 1px solid #dbeafe;
+                  border-radius: 12px;
+                "
+              >
+
+                <div
+                  style="
+                    color: #1d4ed8;
+                    font-size: 14px;
+                    font-weight: 800;
+                  "
+                >
+                  Facing any issue?
+                </div>
+
+
+                <div
+                  style="
+                    margin-top: 7px;
+                    color: #475569;
+                    font-size: 13px;
+                    line-height: 1.7;
+                  "
+                >
+                  If you are unable to access your purchased book,
+                  contact our support team at
+
+                  <a
+                    href="mailto:${SUPPORT_EMAIL}"
+                    style="
+                      color: #2563eb;
+                      text-decoration: none;
+                      font-weight: 700;
+                    "
+                  >
+                    ${SUPPORT_EMAIL}
+                  </a>.
+
+                </div>
+
+              </div>
+
+
+              <!-- EXPLORE -->
+
+              <div
+                style="
+                  margin-top: 22px;
+                  text-align: center;
+                "
+              >
+
+                <a
+                  href="${safeAllBooksUrl}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="
+                    color: #2563eb;
+                    font-size: 13px;
+                    font-weight: 700;
+                    text-decoration: none;
+                  "
+                >
+                  Explore more Target Trek books →
+                </a>
+
+              </div>
+
+
+              <p
+                style="
+                  margin: 26px 0 0;
+                  color: #475569;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                Regards,
+                <br />
+
+                <strong
+                  style="
+                    color: #0f172a;
+                  "
+                >
+                  Team Target Trek
+                </strong>
+              </p>
+
+            </td>
+
+          </tr>
+
+
+          <!-- FOOTER -->
+
+          <tr>
+
+            <td
+              align="center"
+              style="
+                padding: 22px 26px;
+                background-color: #f8fafc;
+                border-top: 1px solid #e2e8f0;
+              "
+            >
+
+              <div
+                style="
+                  color: #64748b;
+                  font-size: 11px;
+                  line-height: 1.7;
+                "
+              >
+                © ${new Date().getFullYear()} Target Trek.
+                All rights reserved.
+              </div>
+
+
+              <div
+                style="
+                  margin-top: 6px;
+                  color: #94a3b8;
+                  font-size: 10px;
+                "
+              >
+                This email was sent because a book was purchased
+                using ${safeCustomerEmail}.
+              </div>
+
+            </td>
+
+          </tr>
+
+        </table>
+
+      </td>
+
+    </tr>
+
+  </table>
+
+</body>
+
+</html>
+  `.trim();
+
+  return {
+    subject,
+    text,
+    html,
+  };
+};
+
+const resendBookAccessMail =
+  async (req, res) => {
+    try {
+      const {
+        orderId,
+      } = req.params;
+
+      if (!orderId) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Order ID is required.",
+          });
+      }
+
+      /*
+       * Find order using either MongoDB _id
+       * or your custom orderId.
+       */
+      const order =
+        await Order.findOne(
+          getOrderQuery(
+            orderId
+          )
+        );
+
+      if (!order) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Order not found.",
+          });
+      }
+
+
+      /*
+       * Validate successful order.
+       *
+       * Your existing successful payment flow uses:
+       *
+       * orderStatus = PAID
+       * payment.status = SUCCESS
+       */
+      const orderStatus =
+        String(
+          order.orderStatus ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const paymentStatus =
+        String(
+          order.payment?.status ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
+
+
+      if (
+        orderStatus !== "paid" ||
+        paymentStatus !== "success"
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Book access email can only be sent for a successfully paid order.",
+          });
+      }
+
+
+      /*
+       * Keep the same payment verification
+       * checks used by your purchased-book
+       * access API.
+       */
+      if (
+        order.verification
+          ?.callbackHashVerified !==
+          true ||
+        order.verification
+          ?.payuVerified !==
+          true ||
+        order.verification
+          ?.amountVerified !==
+          true
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Payment verification is incomplete for this order.",
+          });
+      }
+
+
+      const customerEmail =
+        order.customer?.email
+          ?.trim()
+          .toLowerCase();
+
+      if (!customerEmail) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Customer email is not available.",
+          });
+      }
+
+
+      /*
+       * Fetch the purchased book.
+       */
+      const book =
+        await Book.findById(
+          order.bookId
+        ).select(`
+          title
+          subtitle
+          description
+          shortDescription
+          edition
+          categories
+          level
+          language
+          format
+          price
+          mrp
+          currency
+          redirectUrl
+          coverImage
+          isActive
+          isPublished
+        `);
+
+
+      if (!book) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Book associated with this order no longer exists.",
+          });
+      }
+
+
+      if (!book.isActive) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "This book is currently inactive. Access email was not sent.",
+          });
+      }
+
+
+      if (!book.isPublished) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "This book is currently unpublished. Access email was not sent.",
+          });
+      }
+
+
+      /*
+       * Store previous access information
+       * temporarily.
+       *
+       * If email sending fails we restore
+       * the previous token so the customer
+       * does not lose an existing working link.
+       */
+      const previousAccess = {
+        tokenHash:
+          order.access?.tokenHash ||
+          null,
+
+        expiresAt:
+          order.access?.expiresAt ||
+          null,
+
+        generatedAt:
+          order.access?.generatedAt ||
+          null,
+
+        lastAccessedAt:
+          order.access
+            ?.lastAccessedAt ||
+          null,
+
+        accessCount:
+          order.access
+            ?.accessCount ||
+          0,
+
+        revoked:
+          order.access
+            ?.revoked ??
+          false,
+      };
+
+
+      /*
+       * Generate NEW raw access token.
+       *
+       * Raw token is NEVER stored in MongoDB.
+       */
+      const rawAccessToken =
+        generateAccessToken();
+
+
+      /*
+       * Store only SHA-256 hash.
+       */
+      const accessTokenHash =
+        hashAccessToken(
+          rawAccessToken
+        );
+
+
+      const now =
+        new Date();
+
+
+      /*
+       * Same 24 hour duration used by
+       * the successful-payment flow.
+       */
+      const accessExpiresAt =
+        new Date(
+          Date.now() +
+            ACCESS_DURATION
+        );
+
+
+      /*
+       * Generate same style URL used after
+       * successful payment:
+       *
+       * /payment/success?token=...&order=...
+       */
+      const accessUrl =
+        buildAccessUrl(
+          rawAccessToken,
+          order.orderId ||
+            String(
+              order._id
+            )
+        );
+
+
+      /*
+       * Replace old access token with
+       * newly generated access token.
+       */
+      await Order.updateOne(
+        {
+          _id:
+            order._id,
+        },
+        {
+          $set: {
+            "access.tokenHash":
+              accessTokenHash,
+
+            "access.expiresAt":
+              accessExpiresAt,
+
+            "access.generatedAt":
+              now,
+
+            "access.lastAccessedAt":
+              null,
+
+            "access.accessCount":
+              0,
+
+            "access.revoked":
+              false,
+          },
+        }
+      );
+
+
+      const {
+        subject,
+        text,
+        html,
+      } =
+        buildBookAccessEmail(
+          {
+            order,
+            book,
+            accessUrl,
+            accessExpiresAt,
+          }
+        );
+
+
+      /*
+       * Send email.
+       */
+      try {
+        await sendMail(
+          customerEmail,
+          subject,
+          text,
+          html
+        );
+      } catch (
+        mailError
+      ) {
+        console.error(
+          "Book access mail send error:",
+          mailError
+        );
+
+
+        /*
+         * Restore old access token if
+         * sending the email failed.
+         */
+        await Order.updateOne(
+          {
+            _id:
+              order._id,
+          },
+          {
+            $set: {
+              "access.tokenHash":
+                previousAccess
+                  .tokenHash,
+
+              "access.expiresAt":
+                previousAccess
+                  .expiresAt,
+
+              "access.generatedAt":
+                previousAccess
+                  .generatedAt,
+
+              "access.lastAccessedAt":
+                previousAccess
+                  .lastAccessedAt,
+
+              "access.accessCount":
+                previousAccess
+                  .accessCount,
+
+              "access.revoked":
+                previousAccess
+                  .revoked,
+            },
+          }
+        );
+
+
+        return res
+          .status(500)
+          .json({
+            success: false,
+            message:
+              "Failed to send book access email.",
+          });
+      }
+
+
+      /*
+       * Return response.
+       *
+       * IMPORTANT:
+       * Do not return raw token or token hash
+       * in API response.
+       */
+      return res
+        .status(200)
+        .json({
+          success: true,
+
+          message:
+            "Book access email sent successfully.",
+
+          data: {
+            orderId:
+              order.orderId,
+
+            mongoOrderId:
+              order._id,
+
+            customer: {
+              name:
+                order.customer
+                  ?.name ||
+                null,
+
+              email:
+                customerEmail,
+            },
+
+            book: {
+              id:
+                book._id,
+
+              title:
+                book.title,
+
+              subtitle:
+                book.subtitle ||
+                null,
+
+              edition:
+                book.edition ||
+                null,
+
+              format:
+                book.format ||
+                null,
+
+              price:
+                book.price,
+
+              mrp:
+                book.mrp,
+
+              currency:
+                book.currency,
+
+              coverImage:
+                getBookCoverUrl(
+                  book.coverImage
+                ) ||
+                null,
+            },
+
+            payment: {
+              orderStatus:
+                order.orderStatus,
+
+              status:
+                order.payment
+                  ?.status,
+
+              transactionId:
+                getPaymentTransactionId(
+                  order
+                ),
+
+              paymentMethod:
+                getPaymentMethod(
+                  order
+                ),
+
+              amountPaid:
+                getPaidAmount(
+                  order,
+                  book
+                ),
+
+              currency:
+                getCurrency(
+                  order,
+                  book
+                ),
+
+              purchaseDate:
+                getPurchaseDate(
+                  order
+                ),
+            },
+
+            access: {
+              generatedAt:
+                now,
+
+              expiresAt:
+                accessExpiresAt,
+
+              revoked:
+                false,
+
+              accessCount:
+                0,
+            },
+
+            email: {
+              sentTo:
+                customerEmail,
+
+              subject,
+
+              sentAt:
+                now,
+            },
+          },
+        });
+
+    } catch (
+      error
+    ) {
+      console.error(
+        "resendBookAccessMail error:",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Something went wrong while sending the book access email.",
+        });
+    }
+  };
+
+export {
+  sendPendingPurchaseMail,
+  resendBookAccessMail,
+};
