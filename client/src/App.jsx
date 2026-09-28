@@ -97,6 +97,8 @@ import GenaiRAG from "./component/GenaiRAG.jsx";
 
 import AdminCouponDashboard from "./Admin/AdminCouponDashboard.jsx"
 import CouponDetails from "./Admin/couponDetails.jsx";
+import EmailCampaignDashboard from "./Admin/EmailCampaignDashboard.jsx";
+
 function App() {
   const user = useSelector(
     (state) => state.auth.user
@@ -395,6 +397,16 @@ function App() {
           element={
             isUser ? (
               <AdminDashboard />
+            ) : (
+              <NotFoundPage />
+            )
+          }
+        />
+        <Route
+          path="/campaign"
+          element={
+            isUser ? (
+              <EmailCampaignDashboard />
             ) : (
               <NotFoundPage />
             )

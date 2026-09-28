@@ -25,7 +25,7 @@ import OrderMailRoute from "./routes/orderMailRoute.js"
 import CouponRoute from "./routes/couponRoute.js"
 import payuRoutes from "./routes/payuRoutes.js";
 import paymentRoutes from "./routes/paymentRoute.js"
-
+import emailCampaignRoutes from "./routes/emailCampaignRoutes.js";
 
 
 import { globalRateLimiter } from "./Middleware/rateLimiter.js";
@@ -204,6 +204,10 @@ app.get(
   }
 );
 
+app.use(
+  "/api/admin/email-campaigns",
+  emailCampaignRoutes
+);
 // ============================================================
 // 404
 // ============================================================
