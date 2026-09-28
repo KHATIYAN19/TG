@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Document, Page, pdfjs } from "react-pdf";
+// import lldPreviewPdf from "../assets/master_lld_java_preview.pdf";
+
+import lldPreviewPdf from "../assest/master_lld_java_preview.pdf";
+
 import {
   ArrowRight,
   BookOpen,
@@ -22,6 +27,11 @@ import {
   Zap,
 } from "lucide-react";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
@@ -1919,6 +1929,289 @@ html[data-lld-theme="dark"] button[aria-label*="user" i] {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================
+   SECURE PDF PREVIEW
+   ========================= */
+.lld-preview-section {
+  padding: 30px 0 78px;
+}
+
+.lld-preview-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.lld-preview-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--surface), var(--surface-2));
+}
+
+.lld-preview-topbar-left {
+  min-width: 0;
+}
+
+.lld-preview-topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.lld-preview-topbar-copy {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.lld-preview-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 31px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.lld-pdf-shell {
+  position: relative;
+  padding: 14px;
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--bg));
+}
+
+.lld-pdf-viewport {
+  position: relative;
+  width: 100%;
+  height: min(78vh, 900px);
+  min-height: 560px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #dfe5ee;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lldPage[data-theme="dark"] .lld-pdf-viewport {
+  background: #080e1b;
+}
+
+.lld-pdf-viewport:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  border-color: var(--accent);
+}
+
+.lld-pdf-document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.lld-pdf-page-wrap {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.12),
+    0 10px 28px rgba(15, 23, 42, 0.16);
+}
+
+.lld-pdf-page-number {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.lld-pdf-page {
+  line-height: 0;
+  pointer-events: none;
+}
+
+.lld-pdf-page canvas {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+
+.lld-pdf-loading,
+.lld-pdf-error {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  padding: 30px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.lld-pdf-loading-inner {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.lld-pdf-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: lldPdfSpin 0.8s linear infinite;
+}
+
+.lld-pdf-error {
+  color: #b45309;
+}
+
+.lldPage[data-theme="dark"] .lld-pdf-error {
+  color: #fbbf24;
+}
+
+.lld-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 16px 15px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.lld-preview-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+@keyframes lldPdfSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .lld-preview-section {
+    padding: 18px 0 62px;
+  }
+
+  .lld-preview-card {
+    border-radius: 20px;
+  }
+
+  .lld-preview-topbar {
+    align-items: flex-start;
+    padding: 15px;
+  }
+
+  .lld-preview-topbar-title {
+    font-size: 13px;
+  }
+
+  .lld-preview-badge {
+    min-height: 28px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .lld-pdf-shell {
+    padding: 8px;
+  }
+
+  .lld-pdf-viewport {
+    height: 72vh;
+    min-height: 480px;
+    padding: 7px;
+    border-radius: 14px;
+  }
+
+  .lld-pdf-document {
+    gap: 10px;
+  }
+
+  .lld-pdf-page-wrap {
+    border-radius: 4px;
+  }
+
+  .lld-pdf-page-number {
+    right: 7px;
+    top: 7px;
+    height: 21px;
+    min-width: 24px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .lld-preview-topbar {
+    gap: 10px;
+  }
+
+  .lld-preview-topbar-copy {
+    font-size: 10px;
+  }
+
+  .lld-pdf-viewport {
+    height: 68vh;
+    min-height: 430px;
+    padding: 5px;
+  }
+
+  .lld-preview-note {
+    padding: 11px 12px 13px;
+  }
+}
+
 `;
 
 export default function SystemDesignLLD({ navbarOffset = 88 }) {
@@ -2718,6 +3011,9 @@ export default function SystemDesignLLD({ navbarOffset = 88 }) {
           </div>
         </section>
 
+
+        <PdfPreviewSection file={lldPreviewPdf} animation={animation} />
+
         <FullCurriculum
           handleBuyNow={openCheckout}
           canBuy={canBuy}
@@ -2867,6 +3163,148 @@ export default function SystemDesignLLD({ navbarOffset = 88 }) {
           document.body
         )}
     </>
+  );
+}
+
+
+function PdfPreviewSection({ file, animation }) {
+  const viewportRef = useRef(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [pageWidth, setPageWidth] = useState(760);
+  const [previewError, setPreviewError] = useState("");
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return undefined;
+
+    const updateWidth = () => {
+      const horizontalPadding = window.innerWidth <= 720 ? 14 : 34;
+      const available = Math.max(220, viewport.clientWidth - horizontalPadding);
+      setPageWidth(Math.min(900, available));
+    };
+
+    updateWidth();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
+
+    resizeObserver?.observe(viewport);
+    window.addEventListener("resize", updateWidth, { passive: true });
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
+
+  const previewPages = Math.min(pageCount, 5);
+
+  const blockBrowserSaveOrPrint = (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    const key = String(event.key || "").toLowerCase();
+    if (key === "s" || key === "p") event.preventDefault();
+  };
+
+  return (
+    <section className="lld-preview-section" id="preview" aria-labelledby="lld-preview-title">
+      <div className="lld-shell">
+        <motion.div className="lld-section-head" {...animation}>
+          <div className="lld-kicker">Read before you buy</div>
+          <h2 id="lld-preview-title">Preview the book directly on this page</h2>
+          <p>
+            Scroll through a short sample of the Java LLD handbook. The preview uses a custom
+            canvas viewer, so the browser PDF toolbar and its download or print buttons are not
+            shown.
+          </p>
+        </motion.div>
+
+        <motion.div className="lld-preview-card" {...animation}>
+          <div className="lld-preview-topbar">
+            <div className="lld-preview-topbar-left">
+              <div className="lld-preview-topbar-title">
+                <BookOpen size={17} /> Mastering System Design — LLD Java
+              </div>
+              <p className="lld-preview-topbar-copy">
+                Scroll vertically inside the preview. Optimized for desktop, tablet and mobile.
+              </p>
+            </div>
+            <div className="lld-preview-badge">
+              <ShieldCheck size={13} /> {previewPages || "4–5"} page preview
+            </div>
+          </div>
+
+          <div className="lld-pdf-shell">
+            <div
+              ref={viewportRef}
+              className="lld-pdf-viewport"
+              role="region"
+              aria-label="Scrollable PDF book preview"
+              tabIndex={0}
+              onContextMenu={(event) => event.preventDefault()}
+              onDragStart={(event) => event.preventDefault()}
+              onKeyDown={blockBrowserSaveOrPrint}
+            >
+              <Document
+                file={file}
+                onLoadSuccess={({ numPages }) => {
+                  setPageCount(numPages);
+                  setPreviewError("");
+                }}
+                onLoadError={(error) => {
+                  console.error("Failed to load LLD preview PDF:", error);
+                  setPreviewError("The preview could not be loaded. Please refresh and try again.");
+                }}
+                loading={
+                  <div className="lld-pdf-loading">
+                    <div className="lld-pdf-loading-inner">
+                      <span className="lld-pdf-spinner" aria-hidden="true" />
+                      <span>Loading book preview…</span>
+                    </div>
+                  </div>
+                }
+                error={
+                  <div className="lld-pdf-error">
+                    {previewError || "The preview could not be loaded. Please refresh and try again."}
+                  </div>
+                }
+                noData={<div className="lld-pdf-error">Preview file is unavailable.</div>}
+              >
+                <div className="lld-pdf-document">
+                  {Array.from({ length: previewPages }, (_, index) => {
+                    const pageNumber = index + 1;
+                    return (
+                      <div className="lld-pdf-page-wrap" key={pageNumber}>
+                        <span className="lld-pdf-page-number">{pageNumber}</span>
+                        <Page
+                          className="lld-pdf-page"
+                          pageNumber={pageNumber}
+                          width={pageWidth}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          renderForms={false}
+                          loading={
+                            <div className="lld-pdf-loading" style={{ minHeight: 260 }}>
+                              Loading page {pageNumber}…
+                            </div>
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </Document>
+            </div>
+          </div>
+
+          <div className="lld-preview-note">
+            <ShieldCheck size={14} />
+            <span>
+              This preview contains only a few selected pages from the book. Some topics may start or end midway and may not be fully covered in the preview. The complete explanations, code examples, diagrams, and remaining content are available in the full ebook.
+            </span>
+          </div>
+        </motion.div>
+      </div>
+    </section>
   );
 }
 
