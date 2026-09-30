@@ -26,7 +26,7 @@ import CouponRoute from "./routes/couponRoute.js"
 import payuRoutes from "./routes/payuRoutes.js";
 import paymentRoutes from "./routes/paymentRoute.js"
 import emailCampaignRoutes from "./routes/emailCampaignRoutes.js";
-
+import InterviewExperience from"./routes/InterviewExperience.js"
 
 import { globalRateLimiter } from "./Middleware/rateLimiter.js";
 
@@ -176,6 +176,12 @@ app.use(
   "/api/coupon",
   CouponRoute
 )
+
+app.use(
+  "/api/interview",
+  InterviewExperience
+)
+
 
 // ============================================================
 // HOME

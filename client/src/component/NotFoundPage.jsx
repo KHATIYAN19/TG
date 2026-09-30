@@ -1,201 +1,622 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
   Compass,
+  GraduationCap,
   Home,
   Search,
 } from "lucide-react";
 
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
+
+import { Helmet } from "react-helmet";
+
+const THEME_KEY = "theme";
+const THEME_EVENT =
+  "targettrek-theme-change";
+
+const readTheme = () => {
+  if (
+    typeof window === "undefined"
+  ) {
+    return "light";
+  }
+
+  const saved =
+    window.localStorage.getItem(
+      THEME_KEY
+    );
+
+  return saved === "dark"
+    ? "dark"
+    : "light";
+};
+
 function NotFoundPage() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
+
+  const [
+    theme,
+    setTheme,
+  ] = useState(
+    readTheme
+  );
+
+  const isDark =
+    theme === "dark";
+
+  useEffect(() => {
+    setTheme(
+      readTheme()
+    );
+
+    const handleThemeChange =
+      (event) => {
+        const newTheme =
+          event?.detail?.theme;
+
+        if (
+          newTheme === "dark" ||
+          newTheme === "light"
+        ) {
+          setTheme(
+            newTheme
+          );
+        }
+      };
+
+    const handleStorageChange =
+      (event) => {
+        if (
+          event.key !==
+          THEME_KEY
+        ) {
+          return;
+        }
+
+        if (
+          event.newValue ===
+            "dark" ||
+          event.newValue ===
+            "light"
+        ) {
+          setTheme(
+            event.newValue
+          );
+        }
+      };
+
+    window.addEventListener(
+      THEME_EVENT,
+      handleThemeChange
+    );
+
+    window.addEventListener(
+      "storage",
+      handleStorageChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        THEME_EVENT,
+        handleThemeChange
+      );
+
+      window.removeEventListener(
+        "storage",
+        handleStorageChange
+      );
+    };
+  }, []);
+
+  const pageBg =
+    isDark
+      ? "bg-[#080D14]"
+      : "bg-slate-50";
+
+  const primaryText =
+    isDark
+      ? "text-white"
+      : "text-slate-950";
+
+  const secondaryText =
+    isDark
+      ? "text-slate-400"
+      : "text-slate-500";
+
+  const borderColor =
+    isDark
+      ? "border-slate-800"
+      : "border-slate-200";
+
+  const cardBg =
+    isDark
+      ? "bg-[#101720]"
+      : "bg-white";
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
-      {/* =====================================================
-          BACKGROUND
-      ===================================================== */}
+    <>
+      <Helmet>
+        <title>
+          Page Not Found | TargetTrek
+        </title>
 
-      <div className="pointer-events-none absolute inset-0">
-        {/* Grid */}
-        <div
-          className="absolute inset-0 opacity-50"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px)",
-            backgroundSize: "42px 42px",
-          }}
+        <meta
+          name="description"
+          content="The TargetTrek page you requested could not be found. Explore TargetTrek learning resources, technical books and software engineering interview experiences."
         />
 
-        {/* Soft glow */}
-        <div className="absolute -left-32 top-20 h-[350px] w-[350px] rounded-full bg-blue-100/60 blur-3xl" />
+        <meta
+          name="robots"
+          content="noindex,follow"
+        />
 
-        <div className="absolute -right-40 bottom-0 h-[400px] w-[400px] rounded-full bg-indigo-100/50 blur-3xl" />
-      </div>
+        <meta
+          property="og:title"
+          content="Page Not Found | TargetTrek"
+        />
 
-      {/* =====================================================
-          PAGE CONTENT
-      ===================================================== */}
+        <meta
+          property="og:description"
+          content="The requested page could not be found. Continue exploring TargetTrek books, resources and interview experiences."
+        />
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-20 sm:px-6 lg:px-8">
-        <div className="w-full max-w-3xl text-center">
-          {/* Small badge */}
+        <meta
+          property="og:type"
+          content="website"
+        />
 
-          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-blue-600 shadow-sm">
-            <Compass className="h-3.5 w-3.5" />
-            Lost in Target Trek?
-          </div>
+        <meta
+          name="twitter:card"
+          content="summary"
+        />
 
-          {/* =================================================
-              404
-          ================================================= */}
+        <meta
+          name="twitter:title"
+          content="Page Not Found | TargetTrek"
+        />
 
-          <div className="relative mx-auto w-fit">
-            <h1 className="select-none text-[110px] font-black leading-[0.8] tracking-[-0.08em] text-slate-950 sm:text-[150px] md:text-[190px]">
-              404
-            </h1>
+        <meta
+          name="twitter:description"
+          content="The requested TargetTrek page could not be found."
+        />
+      </Helmet>
 
-            {/* Blue accent */}
-            <div className="absolute -right-2 -top-3 h-5 w-5 rounded-full bg-blue-600 sm:h-7 sm:w-7" />
-          </div>
+      <main
+        className={`
+          relative
+          min-h-screen
+          w-full
+          overflow-hidden
+          pt-16
+          font-sans
+          transition-colors
+          duration-300
+          ${pageBg}
+          ${primaryText}
+        `}
+      >
+        {/* Background */}
 
-          {/* =================================================
-              TEXT
-          ================================================= */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-50"
+            style={{
+              backgroundImage:
+                isDark
+                  ? "linear-gradient(rgba(59,130,246,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.035) 1px, transparent 1px)"
+                  : "linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px)",
 
-          <h2 className="mt-10 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl md:text-5xl">
-            This page went off the
-            <span className="text-blue-600"> roadmap.</span>
-          </h2>
+              backgroundSize:
+                "42px 42px",
+            }}
+          />
 
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-slate-500 sm:text-base">
-            The page you're looking for doesn't exist, may have been moved,
-            or the URL might be incorrect. You can head back home or explore
-            our learning resources.
-          </p>
+          <div
+            className={`
+              absolute
+              -left-40
+              top-20
+              h-[380px]
+              w-[380px]
+              rounded-full
+              blur-[120px]
+              ${
+                isDark
+                  ? "bg-blue-900/15"
+                  : "bg-blue-100/70"
+              }
+            `}
+          />
 
-          {/* =================================================
-              ACTIONS
-          ================================================= */}
+          <div
+            className={`
+              absolute
+              -right-40
+              bottom-0
+              h-[420px]
+              w-[420px]
+              rounded-full
+              blur-[130px]
+              ${
+                isDark
+                  ? "bg-cyan-900/10"
+                  : "bg-indigo-100/60"
+              }
+            `}
+          />
+        </div>
 
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="
-                group
+        {/* Content */}
+
+        <div
+          className="
+            relative
+            mx-auto
+            flex
+            min-h-[calc(100vh-4rem)]
+            max-w-7xl
+            items-center
+            justify-center
+            px-4
+            py-14
+
+            sm:px-6
+            sm:py-16
+
+            lg:px-8
+            lg:py-20
+          "
+        >
+          <div className="w-full max-w-3xl text-center">
+            {/* Badge */}
+
+            <div
+              className={`
+                mb-8
                 inline-flex
-                h-12
-                w-full
                 items-center
-                justify-center
                 gap-2
-                rounded-xl
-                bg-blue-600
-                px-6
-                text-sm
-                font-bold
-                text-white
-                shadow-[0_8px_20px_rgba(37,99,235,0.18)]
-                transition-all
-                duration-200
-                hover:-translate-y-0.5
-                hover:bg-blue-700
-                hover:shadow-[0_12px_28px_rgba(37,99,235,0.25)]
-                sm:w-auto
-              "
-            >
-              <Home className="h-4 w-4" />
-
-              Go to Homepage
-
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/books")}
-              className="
-                group
-                inline-flex
-                h-12
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
+                rounded-full
                 border
-                border-slate-200
-                bg-white
-                px-6
-                text-sm
-                font-bold
-                text-slate-700
-                shadow-sm
-                transition-all
-                duration-200
-                hover:-translate-y-0.5
-                hover:border-blue-200
-                hover:text-blue-600
-                hover:shadow-md
-                sm:w-auto
-              "
+                px-4
+                py-2
+                text-[10px]
+                font-black
+                uppercase
+                tracking-[0.16em]
+
+                sm:text-[11px]
+
+                ${
+                  isDark
+                    ? "border-blue-900/50 bg-blue-950/20 text-blue-300"
+                    : "border-blue-100 bg-white text-blue-600 shadow-sm"
+                }
+              `}
             >
-              <BookOpen className="h-4 w-4" />
+              <Compass className="h-3.5 w-3.5" />
 
-              Explore Books
-            </button>
-          </div>
-
-          {/* =================================================
-              BACK BUTTON
-          ================================================= */}
-
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="
-              group
-              mt-7
-              inline-flex
-              items-center
-              gap-2
-              text-xs
-              font-bold
-              text-slate-400
-              transition
-              hover:text-slate-700
-            "
-          >
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-
-            Go back to previous page
-          </button>
-
-          {/* =================================================
-              DIVIDER
-          ================================================= */}
-
-          <div className="mx-auto mt-12 flex max-w-md items-center gap-4">
-            <div className="h-px flex-1 bg-slate-200" />
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white">
-              <Search className="h-3.5 w-3.5 text-slate-400" />
+              Page Not Found
             </div>
 
-            <div className="h-px flex-1 bg-slate-200" />
-          </div>
+            {/* 404 */}
 
-          <p className="mt-5 text-[11px] font-medium text-slate-400">
-            Error 404 · The requested page could not be found
-          </p>
+            <div className="relative mx-auto w-fit">
+              <h1
+                className={`
+                  select-none
+                  text-[100px]
+                  font-black
+                  leading-[0.8]
+                  tracking-[-0.08em]
+
+                  sm:text-[145px]
+                  md:text-[180px]
+                  lg:text-[200px]
+
+                  ${
+                    isDark
+                      ? "text-white"
+                      : "text-slate-950"
+                  }
+                `}
+              >
+                404
+              </h1>
+
+              <div
+                className="
+                  absolute
+                  -right-1
+                  -top-2
+                  h-4
+                  w-4
+                  rounded-full
+                  bg-blue-500
+
+                  sm:-right-2
+                  sm:-top-3
+                  sm:h-6
+                  sm:w-6
+                "
+              />
+            </div>
+
+            {/* Text */}
+
+            <h2
+              className={`
+                mt-10
+                text-2xl
+                font-black
+                tracking-tight
+
+                sm:text-3xl
+                md:text-4xl
+                lg:text-5xl
+
+                ${primaryText}
+              `}
+            >
+              This page went off the{" "}
+
+              <span className="text-blue-500">
+                roadmap.
+              </span>
+            </h2>
+
+            <p
+              className={`
+                mx-auto
+                mt-5
+                max-w-2xl
+                text-sm
+                leading-7
+
+                sm:text-base
+                sm:leading-8
+
+                ${secondaryText}
+              `}
+            >
+              The page you're looking
+              for may have been moved,
+              removed or the URL may
+              be incorrect. You can
+              return to TargetTrek or
+              continue exploring our
+              books, learning
+              resources and interview
+              experiences.
+            </p>
+
+            {/* Primary Actions */}
+
+            <div
+              className="
+                mt-9
+                grid
+                gap-3
+
+                sm:flex
+                sm:flex-wrap
+                sm:items-center
+                sm:justify-center
+              "
+            >
+              <Link
+                to="/"
+                className="
+                  group
+                  inline-flex
+                  min-h-[48px]
+                  w-full
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-blue-600
+                  px-6
+                  py-3
+                  text-sm
+                  font-black
+                  text-white
+                  shadow-[0_8px_20px_rgba(37,99,235,0.18)]
+                  transition-all
+                  duration-200
+                  hover:-translate-y-0.5
+                  hover:bg-blue-700
+                  hover:shadow-[0_12px_28px_rgba(37,99,235,0.25)]
+
+                  sm:w-auto
+                "
+              >
+                <Home className="h-4 w-4" />
+
+                Homepage
+
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+
+              <Link
+                to="/learn"
+                className={`
+                  group
+                  inline-flex
+                  min-h-[48px]
+                  w-full
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  border
+                  px-6
+                  py-3
+                  text-sm
+                  font-black
+                  transition-all
+                  duration-200
+                  hover:-translate-y-0.5
+
+                  sm:w-auto
+
+                  ${
+                    isDark
+                      ? "border-slate-700 bg-slate-900 text-white hover:border-blue-700 hover:bg-slate-800"
+                      : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-200 hover:text-blue-600 hover:shadow-md"
+                  }
+                `}
+              >
+                <GraduationCap className="h-4 w-4" />
+
+                Explore Learn
+              </Link>
+
+              <Link
+                to="/books"
+                className={`
+                  group
+                  inline-flex
+                  min-h-[48px]
+                  w-full
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  border
+                  px-6
+                  py-3
+                  text-sm
+                  font-black
+                  transition-all
+                  duration-200
+                  hover:-translate-y-0.5
+
+                  sm:w-auto
+
+                  ${
+                    isDark
+                      ? "border-slate-700 bg-[#101720] text-slate-300 hover:border-blue-700 hover:text-blue-300"
+                      : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-200 hover:text-blue-600 hover:shadow-md"
+                  }
+                `}
+              >
+                <BookOpen className="h-4 w-4" />
+
+                Explore Books
+              </Link>
+            </div>
+
+            {/* Back */}
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(-1)
+              }
+              className={`
+                group
+                mt-7
+                inline-flex
+                items-center
+                gap-2
+                text-xs
+                font-bold
+                transition
+
+                ${
+                  isDark
+                    ? "text-slate-500 hover:text-slate-300"
+                    : "text-slate-400 hover:text-slate-700"
+                }
+              `}
+            >
+              <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+
+              Go back to previous page
+            </button>
+
+            {/* Divider */}
+
+            <div className="mx-auto mt-12 flex max-w-md items-center gap-4">
+              <div
+                className={`
+                  h-px
+                  flex-1
+                  ${
+                    isDark
+                      ? "bg-slate-800"
+                      : "bg-slate-200"
+                  }
+                `}
+              />
+
+              <div
+                className={`
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  ${borderColor}
+                  ${cardBg}
+                `}
+              >
+                <Search
+                  className={`h-3.5 w-3.5 ${
+                    isDark
+                      ? "text-slate-500"
+                      : "text-slate-400"
+                  }`}
+                />
+              </div>
+
+              <div
+                className={`
+                  h-px
+                  flex-1
+                  ${
+                    isDark
+                      ? "bg-slate-800"
+                      : "bg-slate-200"
+                  }
+                `}
+              />
+            </div>
+
+            <p
+              className={`
+                mt-5
+                text-[11px]
+                font-medium
+                ${
+                  isDark
+                    ? "text-slate-600"
+                    : "text-slate-400"
+                }
+              `}
+            >
+              Error 404 · The requested
+              page could not be found
+            </p>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
 
 export default NotFoundPage;
-

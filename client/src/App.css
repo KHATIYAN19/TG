@@ -1,4 +1,4 @@
- *{
+ /* *{
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -16,4 +16,28 @@
      background-repeat: no-repeat;
      border-radius: 10px;
      object-fit: scale-down;
+} */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.active {
+  color: rgba(0, 0, 0, 0.412);
+  font-weight: 900;
+}
+
+.background {
+  background-image: url(
+    "https://images.pexels.com/photos/167605/pexels-photo-167605.jpeg?auto=compress&cs=tinysrgb&w=600"
+  );
+
+  height: 400px;
+  width: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
 }
