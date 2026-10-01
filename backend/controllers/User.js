@@ -158,7 +158,7 @@ export const login = async (req, res) => {
     const subject = 'Your TargetTrek OTP';
     const plainText = `Your OTP is ${otp}. It will expire in 10 minutes.`;
 
-    await sendMail(user.email, subject, plainText, htmlTemplate);
+    // await sendMail(user.email, subject, plainText, htmlTemplate);
 
     res.status(200).json({ success: true, message: 'OTP sent successfully' });
 
