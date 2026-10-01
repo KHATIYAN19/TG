@@ -1640,6 +1640,11 @@ import CouponDetails from "./Admin/couponDetails.jsx";
 import EmailCampaignDashboard from "./Admin/EmailCampaignDashboard.jsx";
 import AdminInterviewDashboard from "./Admin/AdminInterviewDashboard.jsx";
 import AdminInterviewEdit from "./Admin/AdminInterviewEdit.jsx";
+import SQLResource from "./sql/SQLResource.jsx";
+import APIResource from "./api/APIResource.jsx";
+import BookReview from "./component/BookReview";
+
+import AdminBookReviews from "./Admin/AdminBookReviews.jsx";
 
 function App() {
   const dispatch =
@@ -1886,6 +1891,10 @@ function App() {
             <BlogPage />
           }
         />
+        <Route
+        path="/review/:token"
+        element={<BookReview />}
+      />
 
         <Route
           path="/blog/:slug"
@@ -1972,6 +1981,19 @@ function App() {
           path="/resources/hld/api-gateway"
           element={
             <HLDApiGatewayResource />
+          }
+        />
+        <Route
+          path="/resources/sql"
+          element={
+            <SQLResource />
+          }
+        />
+
+        <Route
+          path="/resources/apis"
+          element={
+            <APIResource />
           }
         />
 
@@ -2132,6 +2154,12 @@ function App() {
           path="/admin/book/:bookId/payments"
           element={requireAdmin(
             <AdminBookPayments />
+          )}
+        />
+        <Route
+          path="/admin/book/:bookId/reviews"
+          element={requireAdmin(
+            <AdminBookReviews />
           )}
         />
 

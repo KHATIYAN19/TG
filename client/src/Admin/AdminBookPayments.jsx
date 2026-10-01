@@ -1,8 +1,18 @@
-// import React, { useCallback, useEffect, useMemo, useState } from "react";
+// import React, {
+//   useCallback,
+//   useEffect,
+//   useMemo,
+//   useState,
+// } from "react";
 // import { Helmet } from "react-helmet-async";
-// import { useNavigate, useParams } from "react-router-dom";
+// import {
+//   useNavigate,
+//   useParams,
+// } from "react-router-dom";
 // import { useSelector } from "react-redux";
-// import toast, { Toaster } from "react-hot-toast";
+// import toast, {
+//   Toaster,
+// } from "react-hot-toast";
 // import {
 //   Activity,
 //   AlertCircle,
@@ -42,61 +52,102 @@
 //   X,
 //   XCircle,
 // } from "lucide-react";
+
 // import BASE_URL from "../utils/Url";
 
 // const EMPTY_SUMMARY = {
 //   totalOrders: 0,
+
 //   totalOrderAmount: 0,
+
 //   payments: {
 //     paidOrders: 0,
+
 //     successfulPayments: 0,
+
 //     failedPayments: 0,
+
 //     pendingPayments: 0,
+
 //     cancelledPayments: 0,
+
 //     fullyRefundedPayments: 0,
+
 //     partiallyRefundedPayments: 0,
+
 //     successfulAmount: 0,
+
 //     failedAmount: 0,
+
 //     pendingAmount: 0,
+
 //     cancelledAmount: 0,
+
 //     grossPaidAmount: 0,
+
 //     netRevenue: 0,
 //   },
+
 //   refunds: {
 //     refundOrders: 0,
+
 //     pendingRefunds: 0,
+
 //     processingRefunds: 0,
+
 //     partialRefunds: 0,
+
 //     completedRefunds: 0,
+
 //     failedRefunds: 0,
+
 //     cancelledRefunds: 0,
+
 //     totalRefundRequestedAmount: 0,
+
 //     totalRefundedAmount: 0,
+
 //     totalRefundRemainingAmount: 0,
 //   },
+
 //   coupons: {
 //     couponAppliedOrders: 0,
+
 //     totalDiscountAmount: 0,
+
 //     originalAmount: 0,
+
 //     finalAmount: 0,
 //   },
+
 //   reminderMails: {
 //     totalSent: 0,
+
 //     ordersWithReminderMail: 0,
+
 //     lastStatusSent: 0,
+
 //     lastStatusFailed: 0,
+
 //     firstMailSentAt: null,
+
 //     lastMailSentAt: null,
 //   },
+
 //   access: {
 //     totalAccessCount: 0,
+
 //     revokedAccessOrders: 0,
 //   },
+
 //   verification: {
 //     callbackHashVerified: 0,
+
 //     payuVerified: 0,
+
 //     amountVerified: 0,
 //   },
+
 //   affiliates: {
 //     affiliateOrders: 0,
 //   },
@@ -105,22 +156,33 @@
 // const FILTERS = [
 //   {
 //     key: "ALL",
+
 //     label: "All",
+
 //     icon: Filter,
 //   },
+
 //   {
 //     key: "SUCCESS",
+
 //     label: "Success",
+
 //     icon: CheckCircle2,
 //   },
+
 //   {
 //     key: "PENDING",
+
 //     label: "Pending",
+
 //     icon: Clock3,
 //   },
+
 //   {
 //     key: "FAILED",
+
 //     label: "Failed",
+
 //     icon: XCircle,
 //   },
 // ];
@@ -143,7 +205,10 @@
 //   "DECLINED",
 // ]);
 
-// function money(value, currency = "INR") {
+// function money(
+//   value,
+//   currency = "INR"
+// ) {
 //   if (
 //     value === undefined ||
 //     value === null ||
@@ -152,18 +217,27 @@
 //     return "—";
 //   }
 
-//   const number = Number(value);
+//   const number =
+//     Number(value);
 
-//   if (!Number.isFinite(number)) {
+//   if (
+//     !Number.isFinite(
+//       number
+//     )
+//   ) {
 //     return "—";
 //   }
 
 //   try {
 //     return new Intl.NumberFormat(
-//       currency === "INR" ? "en-IN" : "en-US",
+//       currency === "INR"
+//         ? "en-IN"
+//         : "en-US",
 //       {
 //         style: "currency",
+
 //         currency,
+
 //         maximumFractionDigits: 2,
 //       }
 //     ).format(number);
@@ -177,20 +251,33 @@
 //     return "—";
 //   }
 
-//   const date = new Date(value);
+//   const date =
+//     new Date(value);
 
-//   if (Number.isNaN(date.getTime())) {
+//   if (
+//     Number.isNaN(
+//       date.getTime()
+//     )
+//   ) {
 //     return "—";
 //   }
 
-//   return date.toLocaleString("en-IN", {
-//     day: "2-digit",
-//     month: "short",
-//     year: "numeric",
-//     hour: "2-digit",
-//     minute: "2-digit",
-//     second: "2-digit",
-//   });
+//   return date.toLocaleString(
+//     "en-IN",
+//     {
+//       day: "2-digit",
+
+//       month: "short",
+
+//       year: "numeric",
+
+//       hour: "2-digit",
+
+//       minute: "2-digit",
+
+//       second: "2-digit",
+//     }
+//   );
 // }
 
 // function yesNo(value) {
@@ -205,15 +292,22 @@
 //   return "—";
 // }
 
-// function normalizeStatus(status) {
-//   return String(status || "")
+// function normalizeStatus(
+//   status
+// ) {
+//   return String(
+//     status || ""
+//   )
 //     .trim()
 //     .toUpperCase();
 // }
 
-// function getOrderPrimaryStatus(order) {
+// function getOrderPrimaryStatus(
+//   order
+// ) {
 //   return normalizeStatus(
-//     order?.payment?.status ||
+//     order?.payment
+//       ?.status ||
 //       order?.orderStatus
 //   );
 // }
@@ -222,26 +316,36 @@
 //   order,
 //   filter
 // ) {
-//   if (filter === "ALL") {
+//   if (
+//     filter === "ALL"
+//   ) {
 //     return true;
 //   }
 
 //   const status =
-//     getOrderPrimaryStatus(order);
+//     getOrderPrimaryStatus(
+//       order
+//     );
 
-//   if (filter === "SUCCESS") {
+//   if (
+//     filter === "SUCCESS"
+//   ) {
 //     return SUCCESS_STATUSES.has(
 //       status
 //     );
 //   }
 
-//   if (filter === "PENDING") {
+//   if (
+//     filter === "PENDING"
+//   ) {
 //     return PENDING_STATUSES.has(
 //       status
 //     );
 //   }
 
-//   if (filter === "FAILED") {
+//   if (
+//     filter === "FAILED"
+//   ) {
 //     return FAILED_STATUSES.has(
 //       status
 //     );
@@ -263,7 +367,9 @@
 //   }
 
 //   navigator.clipboard
-//     ?.writeText(String(value))
+//     ?.writeText(
+//       String(value)
+//     )
 //     .then(() => {
 //       toast.success(
 //         `${label} copied`
@@ -276,113 +382,153 @@
 //     });
 // }
 
-// function StatusBadge({ status }) {
+// function StatusBadge({
+//   status,
+// }) {
 //   const normalized =
-//     normalizeStatus(status);
+//     normalizeStatus(
+//       status
+//     );
 
 //   const config = {
 //     SUCCESS: {
 //       className:
 //         "border-emerald-200 bg-emerald-50 text-emerald-700",
-//       icon: CheckCircle2,
+
+//       icon:
+//         CheckCircle2,
 //     },
 
 //     PAID: {
 //       className:
 //         "border-emerald-200 bg-emerald-50 text-emerald-700",
-//       icon: CheckCircle2,
+
+//       icon:
+//         CheckCircle2,
 //     },
 
 //     COMPLETED: {
 //       className:
 //         "border-emerald-200 bg-emerald-50 text-emerald-700",
-//       icon: CheckCircle2,
+
+//       icon:
+//         CheckCircle2,
 //     },
 
 //     SENT: {
 //       className:
 //         "border-emerald-200 bg-emerald-50 text-emerald-700",
-//       icon: CheckCircle2,
+
+//       icon:
+//         CheckCircle2,
 //     },
 
 //     ACTIVE: {
 //       className:
 //         "border-emerald-200 bg-emerald-50 text-emerald-700",
-//       icon: CheckCircle2,
+
+//       icon:
+//         CheckCircle2,
 //     },
 
 //     PENDING: {
 //       className:
 //         "border-amber-200 bg-amber-50 text-amber-700",
-//       icon: Clock3,
+
+//       icon:
+//         Clock3,
 //     },
 
 //     PROCESSING: {
 //       className:
 //         "border-blue-200 bg-blue-50 text-blue-700",
-//       icon: Clock3,
+
+//       icon:
+//         Clock3,
 //     },
 
 //     INITIATED: {
 //       className:
 //         "border-blue-200 bg-blue-50 text-blue-700",
-//       icon: Clock3,
+
+//       icon:
+//         Clock3,
 //     },
 
 //     FAILED: {
 //       className:
 //         "border-red-200 bg-red-50 text-red-700",
-//       icon: XCircle,
+
+//       icon:
+//         XCircle,
 //     },
 
 //     BOUNCED: {
 //       className:
 //         "border-red-200 bg-red-50 text-red-700",
-//       icon: XCircle,
+
+//       icon:
+//         XCircle,
 //     },
 
 //     DECLINED: {
 //       className:
 //         "border-red-200 bg-red-50 text-red-700",
-//       icon: XCircle,
+
+//       icon:
+//         XCircle,
 //     },
 
 //     CANCELLED: {
 //       className:
 //         "border-slate-200 bg-slate-100 text-slate-600",
-//       icon: XCircle,
+
+//       icon:
+//         XCircle,
 //     },
 
 //     REFUNDED: {
 //       className:
 //         "border-violet-200 bg-violet-50 text-violet-700",
-//       icon: RotateCcw,
+
+//       icon:
+//         RotateCcw,
 //     },
 
 //     PARTIAL: {
 //       className:
 //         "border-sky-200 bg-sky-50 text-sky-700",
-//       icon: RotateCcw,
+
+//       icon:
+//         RotateCcw,
 //     },
 
 //     PARTIALLY_REFUNDED: {
 //       className:
 //         "border-sky-200 bg-sky-50 text-sky-700",
-//       icon: RotateCcw,
+
+//       icon:
+//         RotateCcw,
 //     },
 
 //     REVOKED: {
 //       className:
 //         "border-red-200 bg-red-50 text-red-700",
-//       icon: XCircle,
+
+//       icon:
+//         XCircle,
 //     },
 //   };
 
 //   const selected =
-//     config[normalized] || {
+//     config[
+//       normalized
+//     ] || {
 //       className:
 //         "border-slate-200 bg-slate-50 text-slate-600",
-//       icon: Activity,
+
+//       icon:
+//         Activity,
 //     };
 
 //   const Icon =
@@ -394,7 +540,8 @@
 //     >
 //       <Icon className="h-3 w-3" />
 
-//       {normalized || "UNKNOWN"}
+//       {normalized ||
+//         "UNKNOWN"}
 //     </span>
 //   );
 // }
@@ -467,28 +614,36 @@
 //   tone,
 // }) {
 //   const tones = {
-//     ALL: active
-//       ? "border-slate-900 bg-slate-900 text-white"
-//       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+//     ALL:
+//       active
+//         ? "border-slate-900 bg-slate-900 text-white"
+//         : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
 
-//     SUCCESS: active
-//       ? "border-emerald-600 bg-emerald-600 text-white"
-//       : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300",
+//     SUCCESS:
+//       active
+//         ? "border-emerald-600 bg-emerald-600 text-white"
+//         : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300",
 
-//     PENDING: active
-//       ? "border-amber-500 bg-amber-500 text-white"
-//       : "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300",
+//     PENDING:
+//       active
+//         ? "border-amber-500 bg-amber-500 text-white"
+//         : "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300",
 
-//     FAILED: active
-//       ? "border-red-600 bg-red-600 text-white"
-//       : "border-red-200 bg-red-50 text-red-700 hover:border-red-300",
+//     FAILED:
+//       active
+//         ? "border-red-600 bg-red-600 text-white"
+//         : "border-red-200 bg-red-50 text-red-700 hover:border-red-300",
 //   };
 
 //   return (
 //     <button
 //       type="button"
-//       onClick={onClick}
-//       aria-pressed={active}
+//       onClick={
+//         onClick
+//       }
+//       aria-pressed={
+//         active
+//       }
 //       className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-extrabold transition ${tones[tone]}`}
 //     >
 //       <Icon className="h-4 w-4" />
@@ -519,7 +674,8 @@
 //   important = false,
 // }) {
 //   const hasValue =
-//     value !== undefined &&
+//     value !==
+//       undefined &&
 //     value !== null &&
 //     value !== "";
 
@@ -534,7 +690,9 @@
 //           {badge &&
 //           hasValue ? (
 //             <StatusBadge
-//               status={value}
+//               status={
+//                 value
+//               }
 //             />
 //           ) : (
 //             <p
@@ -547,7 +705,9 @@
 //               }`}
 //             >
 //               {hasValue
-//                 ? String(value)
+//                 ? String(
+//                     value
+//                   )
 //                 : "—"}
 //             </p>
 //           )}
@@ -613,11 +773,14 @@
 //   label,
 //   value,
 // }) {
-//   const [open, setOpen] =
-//     useState(false);
+//   const [
+//     open,
+//     setOpen,
+//   ] = useState(false);
 
 //   const hasValue =
-//     value !== undefined &&
+//     value !==
+//       undefined &&
 //     value !== null;
 
 //   return (
@@ -722,6 +885,8 @@
 //   menuOpen,
 //   onToggleMenu,
 //   onSendMail,
+//   onSendAccessMail,
+//   sendingAccessMail,
 //   onDelete,
 // }) {
 //   const [
@@ -745,10 +910,12 @@
 //     order?.refund || {};
 
 //   const pendingMail =
-//     order?.pendingMail || {};
+//     order?.pendingMail ||
+//     {};
 
 //   const verification =
-//     order?.verification || {};
+//     order?.verification ||
+//     {};
 
 //   const access =
 //     order?.access || {};
@@ -786,27 +953,41 @@
 //     0;
 
 //   const hasCoupon =
-//     coupon.applied === true;
+//     coupon.applied ===
+//     true;
 
 //   const hasRefund =
-//     Boolean(refund.status) ||
+//     Boolean(
+//       refund.status
+//     ) ||
 //     Number(
 //       refund.refundedAmount
-//     ) > 0 ||
+//     ) >
+//       0 ||
 //     Number(
 //       refund.requestedAmount
-//     ) > 0;
+//     ) >
+//       0;
 
 //   const hasReminder =
 //     Number(
 //       pendingMail.sentCount
-//     ) > 0 ||
+//     ) >
+//       0 ||
 //     pendingMail.firstSentAt ||
 //     pendingMail.lastSentAt;
 
 //   const primaryStatus =
 //     payment.status ||
 //     order.orderStatus;
+
+//   const canSendAccessMail =
+//     normalizeStatus(
+//       order.orderStatus
+//     ) === "PAID" &&
+//     normalizeStatus(
+//       payment.status
+//     ) === "SUCCESS";
 
 //   const timeline = [
 //     {
@@ -1037,7 +1218,9 @@
 //         <div className="absolute right-4 top-4 z-30">
 //           <button
 //             type="button"
-//             onClick={(event) => {
+//             onClick={(
+//               event
+//             ) => {
 //               event.stopPropagation();
 
 //               onToggleMenu();
@@ -1049,7 +1232,9 @@
 
 //           {menuOpen && (
 //             <div
-//               onClick={(event) =>
+//               onClick={(
+//                 event
+//               ) =>
 //                 event.stopPropagation()
 //               }
 //               className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white py-2 shadow-2xl"
@@ -1064,6 +1249,33 @@
 //                 <Mail className="h-4 w-4" />
 
 //                 Send Purchase Reminder
+//               </button>
+
+//               <button
+//                 type="button"
+//                 onClick={
+//                   onSendAccessMail
+//                 }
+//                 disabled={
+//                   !canSendAccessMail ||
+//                   sendingAccessMail
+//                 }
+//                 title={
+//                   canSendAccessMail
+//                     ? "Generate a fresh secure access link and email it to the customer"
+//                     : "Available only when order status is PAID and payment status is SUCCESS"
+//                 }
+//                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-300"
+//               >
+//                 {sendingAccessMail ? (
+//                   <Loader2 className="h-4 w-4 animate-spin" />
+//                 ) : (
+//                   <ShieldCheck className="h-4 w-4" />
+//                 )}
+
+//                 {sendingAccessMail
+//                   ? "Sending Access Mail..."
+//                   : "Send Book Access Mail"}
 //               </button>
 
 //               <div className="my-1 border-t border-slate-100" />
@@ -1234,7 +1446,8 @@
 //               important={
 //                 Number(
 //                   refundAmount
-//                 ) > 0
+//                 ) >
+//                 0
 //               }
 //             />
 
@@ -1970,14 +2183,20 @@
 //   currency,
 // }) {
 //   const hasData =
-//     breakdown.paymentStatus.length >
+//     breakdown.paymentStatus
+//       .length >
 //       0 ||
-//     breakdown.orderStatus.length >
+//     breakdown.orderStatus
+//       .length >
 //       0 ||
-//     breakdown.refundStatus.length >
+//     breakdown.refundStatus
+//       .length >
 //       0 ||
-//     breakdown.coupons.length > 0 ||
-//     breakdown.affiliates.length >
+//     breakdown.coupons
+//       .length >
+//       0 ||
+//     breakdown.affiliates
+//       .length >
 //       0;
 
 //   if (!hasData) {
@@ -1989,7 +2208,9 @@
 //     items,
 //     keyName
 //   ) => {
-//     if (!items?.length) {
+//     if (
+//       !items?.length
+//     ) {
 //       return null;
 //     }
 
@@ -2001,7 +2222,10 @@
 
 //         <div className="mt-3 flex flex-wrap gap-2">
 //           {items.map(
-//             (item, index) => {
+//             (
+//               item,
+//               index
+//             ) => {
 //               const label =
 //                 item.status ||
 //                 item.code ||
@@ -2110,8 +2334,9 @@
 //   const navigate =
 //     useNavigate();
 
-//   const { bookId } =
-//     useParams();
+//   const {
+//     bookId,
+//   } = useParams();
 
 //   const token =
 //     useSelector(
@@ -2136,9 +2361,13 @@
 //     setBreakdown,
 //   ] = useState({
 //     paymentStatus: [],
+
 //     orderStatus: [],
+
 //     refundStatus: [],
+
 //     coupons: [],
+
 //     affiliates: [],
 //   });
 
@@ -2152,12 +2381,19 @@
 //     setPagination,
 //   ] = useState({
 //     enabled: true,
+
 //     page: 1,
+
 //     limit: 10,
+
 //     totalItems: 0,
+
 //     totalPages: 1,
+
 //     returnedItems: 0,
+
 //     hasNextPage: false,
+
 //     hasPreviousPage: false,
 //   });
 
@@ -2184,7 +2420,9 @@
 //   const [
 //     statusFilter,
 //     setStatusFilter,
-//   ] = useState("ALL");
+//   ] = useState(
+//     "ALL"
+//   );
 
 //   const [
 //     searchQuery,
@@ -2212,6 +2450,11 @@
 //   ] = useState(false);
 
 //   const [
+//     sendingAccessOrderId,
+//     setSendingAccessOrderId,
+//   ] = useState(null);
+
+//   const [
 //     deleteOrder,
 //     setDeleteOrder,
 //   ] = useState(null);
@@ -2224,8 +2467,10 @@
 //   const fetchPayments =
 //     useCallback(
 //       async (
-//         requestedPage = page,
-//         signal = undefined
+//         requestedPage =
+//           page,
+//         signal =
+//           undefined
 //       ) => {
 //         try {
 //           if (
@@ -2239,7 +2484,9 @@
 //             true
 //           );
 
-//           setError("");
+//           setError(
+//             ""
+//           );
 
 //           const response =
 //             await fetch(
@@ -2299,6 +2546,7 @@
 
 //           setSummary({
 //             ...EMPTY_SUMMARY,
+
 //             ...rawSummary,
 
 //             payments: {
@@ -2529,7 +2777,9 @@
 //           .toLowerCase();
 
 //       return payments.filter(
-//         (order) => {
+//         (
+//           order
+//         ) => {
 //           if (
 //             !matchesStatusFilter(
 //               order,
@@ -2545,33 +2795,46 @@
 //             return true;
 //           }
 
-//           const searchable = [
-//             order?._id,
-//             order?.orderId,
-//             order?.customer
-//               ?.name,
-//             order?.customer
-//               ?.email,
-//             order?.customer
-//               ?.phone,
-//             order?.book
-//               ?.title,
-//             order?.payment
-//               ?.transactionId,
-//             order?.payment
-//               ?.paymentId,
-//             order?.payment
-//               ?.provider,
-//             order?.payment
-//               ?.affiliateCode,
-//             order?.coupon
-//               ?.code,
-//           ]
-//             .filter(
-//               Boolean
-//             )
-//             .join(" ")
-//             .toLowerCase();
+//           const searchable =
+//             [
+//               order?._id,
+
+//               order?.orderId,
+
+//               order?.customer
+//                 ?.name,
+
+//               order?.customer
+//                 ?.email,
+
+//               order?.customer
+//                 ?.phone,
+
+//               order?.book
+//                 ?.title,
+
+//               order?.payment
+//                 ?.transactionId,
+
+//               order?.payment
+//                 ?.paymentId,
+
+//               order?.payment
+//                 ?.provider,
+
+//               order?.payment
+//                 ?.affiliateCode,
+
+//               order?.coupon
+//                 ?.code,
+//             ]
+//               .filter(
+//                 Boolean
+//               )
+//               .join(
+//                 " "
+//               )
+//               .toLowerCase();
 
 //           return searchable.includes(
 //             normalizedSearch
@@ -2594,7 +2857,9 @@
 //         order
 //       );
 
-//       setCouponCode("");
+//       setCouponCode(
+//         ""
+//       );
 
 //       setCouponDescription(
 //         ""
@@ -2613,7 +2878,9 @@
 //         null
 //       );
 
-//       setCouponCode("");
+//       setCouponCode(
+//         ""
+//       );
 
 //       setCouponDescription(
 //         ""
@@ -2745,6 +3012,144 @@
 //       }
 //     };
 
+//   const handleSendAccessMail =
+//     async (order) => {
+//       if (
+//         !order?._id
+//       ) {
+//         toast.error(
+//           "Order ID is missing."
+//         );
+
+//         return;
+//       }
+
+//       const orderStatus =
+//         normalizeStatus(
+//           order.orderStatus
+//         );
+
+//       const paymentStatus =
+//         normalizeStatus(
+//           order.payment
+//             ?.status
+//         );
+
+//       if (
+//         orderStatus !==
+//           "PAID" ||
+//         paymentStatus !==
+//           "SUCCESS"
+//       ) {
+//         toast.error(
+//           "Book access mail can only be sent for a PAID order with SUCCESS payment status."
+//         );
+
+//         return;
+//       }
+
+//       if (!token) {
+//         toast.error(
+//           "Admin authentication token is missing."
+//         );
+
+//         return;
+//       }
+
+//       setMenuOrderId(
+//         null
+//       );
+
+//       const toastId =
+//         toast.loading(
+//           `Sending book access mail to ${
+//             order.customer
+//               ?.email ||
+//             "customer"
+//           }...`
+//         );
+
+//       try {
+//         setSendingAccessOrderId(
+//           order._id
+//         );
+
+//         const response =
+//           await fetch(
+//             `${BASE_URL}/api/admin/notification/orders/${encodeURIComponent(
+//               order._id
+//             )}/resend-book-access`,
+//             {
+//               method:
+//                 "POST",
+
+//               headers: {
+//                 Accept:
+//                   "application/json",
+
+//                 "Content-Type":
+//                   "application/json",
+
+//                 Authorization: `Bearer ${token}`,
+//               },
+//             }
+//           );
+
+//         let result =
+//           null;
+
+//         try {
+//           result =
+//             await response.json();
+//         } catch {
+//           result =
+//             null;
+//         }
+
+//         if (
+//           !response.ok ||
+//           result?.success ===
+//             false
+//         ) {
+//           throw new Error(
+//             result?.message ||
+//               "Unable to send book access email."
+//           );
+//         }
+
+//         toast.success(
+//           result?.message ||
+//             "Book access email sent successfully.",
+//           {
+//             id:
+//               toastId,
+//           }
+//         );
+
+//         await fetchPayments(
+//           page
+//         );
+//       } catch (err) {
+//         console.error(
+//           "Send book access mail error:",
+//           err
+//         );
+
+//         toast.error(
+//           err?.message ||
+//             "Unable to send book access email.",
+//           {
+//             id:
+//               toastId,
+//           }
+//         );
+//       } finally {
+//         setSendingAccessOrderId(
+//           null
+//         );
+//       }
+//     };
+
 //   const handleDeletePayment =
 //     async () => {
 //       if (
@@ -2812,11 +3217,15 @@
 //         if (
 //           payments.length ===
 //             1 &&
-//           page > 1
+//           page >
+//             1
 //         ) {
 //           setPage(
-//             (current) =>
-//               current - 1
+//             (
+//               current
+//             ) =>
+//               current -
+//               1
 //           );
 //         } else {
 //           await fetchPayments(
@@ -2846,7 +3255,8 @@
 //         Math.max(
 //           Number(
 //             pagination.totalPages
-//           ) || 1,
+//           ) ||
+//             1,
 //           1
 //         );
 
@@ -2871,7 +3281,9 @@
 
 //       window.scrollTo({
 //         top: 0,
-//         behavior: "smooth",
+
+//         behavior:
+//           "smooth",
 //       });
 //     };
 
@@ -2884,10 +3296,38 @@
 //       <Helmet>
 //         <title>
 //           {book?.title
-//             ? `${book.title} Payments`
-//             : "Book Payments"}{" "}
-//           | Admin
+//             ? `${book.title} Payment Management | Target Trek Admin`
+//             : "Book Payment Management | Target Trek Admin"}
 //         </title>
+
+//         <meta
+//           name="description"
+//           content={
+//             book?.title
+//               ? `Admin payment management for ${book.title}. Review orders, payment status, refunds, coupons, reminder emails and secure book access.`
+//               : "Target Trek admin payment management dashboard for orders, refunds, coupons, reminder emails and secure book access."
+//           }
+//         />
+
+//         <meta
+//           name="robots"
+//           content="noindex, nofollow, noarchive, nosnippet"
+//         />
+
+//         <meta
+//           name="googlebot"
+//           content="noindex, nofollow, noarchive, nosnippet"
+//         />
+
+//         <meta
+//           name="referrer"
+//           content="same-origin"
+//         />
+
+//         <meta
+//           name="theme-color"
+//           content="#f8fafc"
+//         />
 //       </Helmet>
 
 //       <Toaster position="top-right" />
@@ -2995,7 +3435,9 @@
 //             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
 //               <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
 //                 {FILTERS.map(
-//                   (filter) => (
+//                   (
+//                     filter
+//                   ) => (
 //                     <FilterTab
 //                       key={
 //                         filter.key
@@ -3137,7 +3579,8 @@
 //               )}
 //               helper={`${
 //                 summary.payments
-//                   .paidOrders || 0
+//                   .paidOrders ||
+//                 0
 //               } paid orders`}
 //               tone="blue"
 //             />
@@ -3168,7 +3611,8 @@
 //               )}
 //               helper={`${
 //                 summary.refunds
-//                   .refundOrders || 0
+//                   .refundOrders ||
+//                 0
 //               } refund orders`}
 //               tone="violet"
 //             />
@@ -3237,7 +3681,8 @@
 //               }
 //               helper={`${
 //                 summary.verification
-//                   .amountVerified || 0
+//                   .amountVerified ||
+//                 0
 //               } amount verified`}
 //               tone="green"
 //             />
@@ -3333,7 +3778,8 @@
 //                 type="button"
 //                 onClick={() =>
 //                   goToPage(
-//                     page - 1
+//                     page -
+//                       1
 //                   )
 //                 }
 //                 disabled={
@@ -3351,7 +3797,8 @@
 //                 type="button"
 //                 onClick={() =>
 //                   goToPage(
-//                     page + 1
+//                     page +
+//                       1
 //                   )
 //                 }
 //                 disabled={
@@ -3374,8 +3821,7 @@
 //               <Loader2 className="mx-auto h-9 w-9 animate-spin text-blue-600" />
 
 //               <p className="mt-3 text-sm font-semibold text-slate-500">
-//                 Loading payment
-//                 records...
+//                 Loading payment records...
 //               </p>
 //             </div>
 //           ) : payments.length ===
@@ -3390,9 +3836,8 @@
 //               </h3>
 
 //               <p className="mt-2 text-sm font-medium text-slate-400">
-//                 There are no payment
-//                 records available for
-//                 this page.
+//                 There are no payment records available for this
+//                 page.
 //               </p>
 //             </div>
 //           ) : visiblePayments.length ===
@@ -3407,10 +3852,8 @@
 //               </h3>
 
 //               <p className="mx-auto mt-2 max-w-lg text-sm font-medium leading-6 text-slate-400">
-//                 No payment on this
-//                 loaded page matches the
-//                 selected status and
-//                 search criteria.
+//                 No payment on this loaded page matches the selected
+//                 status and search criteria.
 //               </p>
 
 //               <button
@@ -3432,10 +3875,14 @@
 //           ) : (
 //             <div className="mt-6 space-y-6">
 //               {visiblePayments.map(
-//                 (order) => {
+//                 (
+//                   order
+//                 ) => {
 //                   const originalIndex =
 //                     payments.findIndex(
-//                       (item) =>
+//                       (
+//                         item
+//                       ) =>
 //                         item ===
 //                         order
 //                     );
@@ -3480,6 +3927,15 @@
 //                           order
 //                         )
 //                       }
+//                       onSendAccessMail={() =>
+//                         handleSendAccessMail(
+//                           order
+//                         )
+//                       }
+//                       sendingAccessMail={
+//                         sendingAccessOrderId ===
+//                         order._id
+//                       }
 //                       onDelete={() => {
 //                         setMenuOrderId(
 //                           null
@@ -3503,7 +3959,8 @@
 //                 type="button"
 //                 onClick={() =>
 //                   goToPage(
-//                     page - 1
+//                     page -
+//                       1
 //                   )
 //                 }
 //                 disabled={
@@ -3530,7 +3987,8 @@
 //                 type="button"
 //                 onClick={() =>
 //                   goToPage(
-//                     page + 1
+//                     page +
+//                       1
 //                   )
 //                 }
 //                 disabled={
@@ -3564,8 +4022,7 @@
 //                     </h2>
 
 //                     <p className="mt-1 text-sm leading-6 text-slate-500">
-//                       Send a recovery email
-//                       for this incomplete
+//                       Send a recovery email for this incomplete
 //                       purchase.
 //                     </p>
 //                   </div>
@@ -3646,13 +4103,9 @@
 //                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
 
 //                   <p className="text-xs font-semibold leading-5 text-blue-700">
-//                     Coupon is optional.
-//                     Enter both coupon code
-//                     and description to
-//                     include an offer, or
-//                     leave both fields empty
-//                     to send a normal
-//                     reminder.
+//                     Coupon is optional. Enter both coupon code and
+//                     description to include an offer, or leave both
+//                     fields empty to send a normal reminder.
 //                   </p>
 //                 </div>
 //               </div>
@@ -3701,7 +4154,9 @@
 //                       )
 //                     }
 //                     placeholder="Example: Get 20% off on your purchase"
-//                     rows={4}
+//                     rows={
+//                       4
+//                     }
 //                     disabled={
 //                       sendingMail
 //                     }
@@ -3781,16 +4236,14 @@
 //             </h2>
 
 //             <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
-//               This will permanently
-//               delete the payment and
-//               order record for{" "}
+//               This will permanently delete the payment and order
+//               record for{" "}
 //               <strong className="text-slate-800">
 //                 {deleteOrder.customer
 //                   ?.email ||
 //                   deleteOrder.orderId}
 //               </strong>
-//               . This action cannot be
-//               undone.
+//               . This action cannot be undone.
 //             </p>
 
 //             <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4">
@@ -3858,9 +4311,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useSelector } from "react-redux";
-import toast, {
-  Toaster,
-} from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   Activity,
   AlertCircle,
@@ -3884,7 +4335,9 @@ import {
   Hash,
   Info,
   Loader2,
+  Link2,
   Mail,
+  MessageSquareText,
   MoreVertical,
   Receipt,
   RefreshCw,
@@ -4052,6 +4505,33 @@ const FAILED_STATUSES = new Set([
   "BOUNCED",
   "DECLINED",
 ]);
+
+function getIsDarkTheme() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const storedTheme = String(
+    window.localStorage.getItem("theme") ||
+      window.localStorage.getItem("color-theme") ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (storedTheme === "dark") {
+    return true;
+  }
+
+  if (storedTheme === "light") {
+    return false;
+  }
+
+  return (
+    document.documentElement.classList.contains("dark") ||
+    document.documentElement.getAttribute("data-theme") === "dark"
+  );
+}
 
 function money(
   value,
@@ -4735,6 +5215,10 @@ function PaymentCard({
   onSendMail,
   onSendAccessMail,
   sendingAccessMail,
+  onGenerateReviewLink,
+  generatingReviewLink,
+  onSendReviewMail,
+  sendingReviewMail,
   onDelete,
 }) {
   const [
@@ -4836,6 +5320,9 @@ function PaymentCard({
     normalizeStatus(
       payment.status
     ) === "SUCCESS";
+
+  const canUseBookReview =
+    canSendAccessMail;
 
   const timeline = [
     {
@@ -5124,6 +5611,62 @@ function PaymentCard({
                 {sendingAccessMail
                   ? "Sending Access Mail..."
                   : "Send Book Access Mail"}
+              </button>
+
+              <div className="my-1 border-t border-slate-100" />
+
+              <button
+                type="button"
+                onClick={
+                  onGenerateReviewLink
+                }
+                disabled={
+                  !canUseBookReview ||
+                  generatingReviewLink
+                }
+                title={
+                  canUseBookReview
+                    ? "Create the review link or return the existing review link"
+                    : "Available only when order status is PAID and payment status is SUCCESS"
+                }
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-300"
+              >
+                {generatingReviewLink ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4" />
+                )}
+
+                {generatingReviewLink
+                  ? "Generating Review Link..."
+                  : "Generate Review Link"}
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  onSendReviewMail
+                }
+                disabled={
+                  !canUseBookReview ||
+                  sendingReviewMail
+                }
+                title={
+                  canUseBookReview
+                    ? "Send the existing review link by email, or generate one first if needed"
+                    : "Available only when order status is PAID and payment status is SUCCESS"
+                }
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-300"
+              >
+                {sendingReviewMail ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+
+                {sendingReviewMail
+                  ? "Sending Review Mail..."
+                  : "Send Review Mail"}
               </button>
 
               <div className="my-1 border-t border-slate-100" />
@@ -6193,6 +6736,13 @@ export default function AdminBookPayments() {
     );
 
   const [
+    isDark,
+    setIsDark,
+  ] = useState(() =>
+    getIsDarkTheme()
+  );
+
+  const [
     book,
     setBook,
   ] = useState(null);
@@ -6300,6 +6850,21 @@ export default function AdminBookPayments() {
   const [
     sendingAccessOrderId,
     setSendingAccessOrderId,
+  ] = useState(null);
+
+  const [
+    generatingReviewOrderId,
+    setGeneratingReviewOrderId,
+  ] = useState(null);
+
+  const [
+    sendingReviewMailOrderId,
+    setSendingReviewMailOrderId,
+  ] = useState(null);
+
+  const [
+    reviewLinkModal,
+    setReviewLinkModal,
   ] = useState(null);
 
   const [
@@ -6543,6 +7108,80 @@ export default function AdminBookPayments() {
         page,
       ]
     );
+
+  useEffect(() => {
+    const syncTheme = () => {
+      setIsDark(
+        getIsDarkTheme()
+      );
+    };
+
+    syncTheme();
+
+    window.addEventListener(
+      "storage",
+      syncTheme
+    );
+
+    window.addEventListener(
+      "themechange",
+      syncTheme
+    );
+
+    window.addEventListener(
+      "theme-change",
+      syncTheme
+    );
+
+    const observer =
+      new MutationObserver(
+        syncTheme
+      );
+
+    observer.observe(
+      document.documentElement,
+      {
+        attributes: true,
+        attributeFilter: [
+          "class",
+          "data-theme",
+        ],
+      }
+    );
+
+    // The browser does not emit a storage event in the same tab
+    // that changed localStorage. This tiny sync interval keeps this
+    // page in lockstep with the navbar even if the navbar only writes
+    // localStorage and does not dispatch a custom event.
+    const intervalId =
+      window.setInterval(
+        syncTheme,
+        400
+      );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        syncTheme
+      );
+
+      window.removeEventListener(
+        "themechange",
+        syncTheme
+      );
+
+      window.removeEventListener(
+        "theme-change",
+        syncTheme
+      );
+
+      observer.disconnect();
+
+      window.clearInterval(
+        intervalId
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const controller =
@@ -6998,6 +7637,306 @@ export default function AdminBookPayments() {
       }
     };
 
+  const handleGenerateReviewLink =
+    async (order) => {
+      if (!order?._id) {
+        toast.error(
+          "Order ID is missing."
+        );
+
+        return;
+      }
+
+      const orderStatus =
+        normalizeStatus(
+          order.orderStatus
+        );
+
+      const paymentStatus =
+        normalizeStatus(
+          order.payment
+            ?.status
+        );
+
+      if (
+        orderStatus !==
+          "PAID" ||
+        paymentStatus !==
+          "SUCCESS"
+      ) {
+        toast.error(
+          "Review link can only be generated for a PAID order with SUCCESS payment status."
+        );
+
+        return;
+      }
+
+      if (!token) {
+        toast.error(
+          "Admin authentication token is missing."
+        );
+
+        return;
+      }
+
+      setMenuOrderId(
+        null
+      );
+
+      const toastId =
+        toast.loading(
+          "Generating review link..."
+        );
+
+      try {
+        setGeneratingReviewOrderId(
+          order._id
+        );
+
+        const response =
+          await fetch(
+            `${BASE_URL}/api/book/review/admin/order/${encodeURIComponent(
+              order._id
+            )}/link`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Accept:
+                  "application/json",
+
+                "Content-Type":
+                  "application/json",
+
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+        let result =
+          null;
+
+        try {
+          result =
+            await response.json();
+        } catch {
+          result =
+            null;
+        }
+
+        if (
+          !response.ok ||
+          result?.success ===
+            false
+        ) {
+          throw new Error(
+            result?.message ||
+              "Unable to generate review link."
+          );
+        }
+
+        const reviewUrl =
+          result?.data
+            ?.reviewUrl;
+
+        if (!reviewUrl) {
+          throw new Error(
+            "Review link was not returned by the server."
+          );
+        }
+
+        setReviewLinkModal({
+          reviewUrl,
+
+          alreadyGenerated:
+            Boolean(
+              result?.data
+                ?.alreadyGenerated
+            ),
+
+          customerName:
+            order.customer
+              ?.name ||
+            "Customer",
+
+          customerEmail:
+            order.customer
+              ?.email ||
+            "",
+
+          orderId:
+            order.orderId ||
+            order._id,
+
+          bookTitle:
+            order.book
+              ?.title ||
+            book?.title ||
+            "Book",
+        });
+
+        toast.success(
+          result?.message ||
+            "Review link generated successfully.",
+          {
+            id:
+              toastId,
+          }
+        );
+      } catch (err) {
+        console.error(
+          "Generate review link error:",
+          err
+        );
+
+        toast.error(
+          err?.message ||
+            "Unable to generate review link.",
+          {
+            id:
+              toastId,
+          }
+        );
+      } finally {
+        setGeneratingReviewOrderId(
+          null
+        );
+      }
+    };
+
+  const handleSendReviewMail =
+    async (order) => {
+      if (!order?._id) {
+        toast.error(
+          "Order ID is missing."
+        );
+
+        return;
+      }
+
+      const orderStatus =
+        normalizeStatus(
+          order.orderStatus
+        );
+
+      const paymentStatus =
+        normalizeStatus(
+          order.payment
+            ?.status
+        );
+
+      if (
+        orderStatus !==
+          "PAID" ||
+        paymentStatus !==
+          "SUCCESS"
+      ) {
+        toast.error(
+          "Review mail can only be sent for a PAID order with SUCCESS payment status."
+        );
+
+        return;
+      }
+
+      if (!token) {
+        toast.error(
+          "Admin authentication token is missing."
+        );
+
+        return;
+      }
+
+      setMenuOrderId(
+        null
+      );
+
+      const toastId =
+        toast.loading(
+          `Sending review mail to ${
+            order.customer
+              ?.email ||
+            "customer"
+          }...`
+        );
+
+      try {
+        setSendingReviewMailOrderId(
+          order._id
+        );
+
+        const response =
+          await fetch(
+            `${BASE_URL}/api/book/review/admin/order/${encodeURIComponent(
+              order._id
+            )}/send-mail`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Accept:
+                  "application/json",
+
+                "Content-Type":
+                  "application/json",
+
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+        let result =
+          null;
+
+        try {
+          result =
+            await response.json();
+        } catch {
+          result =
+            null;
+        }
+
+        if (
+          !response.ok ||
+          result?.success ===
+            false
+        ) {
+          throw new Error(
+            result?.message ||
+              "Unable to send review mail."
+          );
+        }
+
+        toast.success(
+          result?.message ||
+            "Review mail sent successfully.",
+          {
+            id:
+              toastId,
+          }
+        );
+      } catch (err) {
+        console.error(
+          "Send review mail error:",
+          err
+        );
+
+        toast.error(
+          err?.message ||
+            "Unable to send review mail.",
+          {
+            id:
+              toastId,
+          }
+        );
+      } finally {
+        setSendingReviewMailOrderId(
+          null
+        );
+      }
+    };
+
   const handleDeletePayment =
     async () => {
       if (
@@ -7140,7 +8079,13 @@ export default function AdminBookPayments() {
     "INR";
 
   return (
-    <>
+    <div
+      className={
+        isDark
+          ? "admin-book-payments-root admin-book-payments-dark"
+          : "admin-book-payments-root"
+      }
+    >
       <Helmet>
         <title>
           {book?.title
@@ -7174,11 +8119,207 @@ export default function AdminBookPayments() {
 
         <meta
           name="theme-color"
-          content="#f8fafc"
+          content={
+            isDark
+              ? "#020617"
+              : "#f8fafc"
+          }
         />
       </Helmet>
 
-      <Toaster position="top-right" />
+      <style>{`
+        .admin-book-payments-dark {
+          color-scheme: dark;
+          background: #020617;
+        }
+
+        .admin-book-payments-dark main {
+          background-color: #020617 !important;
+          color: #e2e8f0 !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-white"],
+        .admin-book-payments-dark [class~="bg-white/95"] {
+          background-color: #0f172a !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-slate-50"],
+        .admin-book-payments-dark [class~="bg-slate-50/70"],
+        .admin-book-payments-dark [class~="bg-slate-50/80"],
+        .admin-book-payments-dark [class~="bg-slate-100"] {
+          background-color: #111827 !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-slate-200"] {
+          background-color: #1e293b !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-blue-50"],
+        .admin-book-payments-dark [class~="bg-blue-50/40"] {
+          background-color: rgba(37, 99, 235, 0.14) !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-emerald-50"] {
+          background-color: rgba(5, 150, 105, 0.14) !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-amber-50"] {
+          background-color: rgba(217, 119, 6, 0.14) !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-red-50"] {
+          background-color: rgba(220, 38, 38, 0.14) !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-violet-50"] {
+          background-color: rgba(124, 58, 237, 0.14) !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-sky-50"] {
+          background-color: rgba(2, 132, 199, 0.14) !important;
+        }
+
+        .admin-book-payments-dark [class~="text-slate-950"],
+        .admin-book-payments-dark [class~="text-slate-900"] {
+          color: #f8fafc !important;
+        }
+
+        .admin-book-payments-dark [class~="text-slate-800"],
+        .admin-book-payments-dark [class~="text-slate-700"] {
+          color: #e2e8f0 !important;
+        }
+
+        .admin-book-payments-dark [class~="text-slate-600"],
+        .admin-book-payments-dark [class~="text-slate-500"] {
+          color: #cbd5e1 !important;
+        }
+
+        .admin-book-payments-dark [class~="text-slate-400"] {
+          color: #94a3b8 !important;
+        }
+
+        .admin-book-payments-dark [class~="text-slate-300"] {
+          color: #64748b !important;
+        }
+
+        .admin-book-payments-dark [class~="text-blue-700"],
+        .admin-book-payments-dark [class~="text-blue-600"] {
+          color: #60a5fa !important;
+        }
+
+        .admin-book-payments-dark [class~="text-emerald-700"],
+        .admin-book-payments-dark [class~="text-emerald-600"] {
+          color: #34d399 !important;
+        }
+
+        .admin-book-payments-dark [class~="text-amber-700"],
+        .admin-book-payments-dark [class~="text-amber-600"] {
+          color: #fbbf24 !important;
+        }
+
+        .admin-book-payments-dark [class~="text-red-700"],
+        .admin-book-payments-dark [class~="text-red-600"],
+        .admin-book-payments-dark [class~="text-red-500"] {
+          color: #f87171 !important;
+        }
+
+        .admin-book-payments-dark [class~="text-violet-700"],
+        .admin-book-payments-dark [class~="text-violet-600"] {
+          color: #a78bfa !important;
+        }
+
+        .admin-book-payments-dark [class~="text-sky-700"],
+        .admin-book-payments-dark [class~="text-sky-600"] {
+          color: #38bdf8 !important;
+        }
+
+        .admin-book-payments-dark [class~="border-slate-100"],
+        .admin-book-payments-dark [class~="border-slate-200"],
+        .admin-book-payments-dark [class~="border-slate-300"] {
+          border-color: #334155 !important;
+        }
+
+        .admin-book-payments-dark [class~="border-blue-100"],
+        .admin-book-payments-dark [class~="border-blue-200"] {
+          border-color: rgba(96, 165, 250, 0.3) !important;
+        }
+
+        .admin-book-payments-dark [class~="border-emerald-100"],
+        .admin-book-payments-dark [class~="border-emerald-200"] {
+          border-color: rgba(52, 211, 153, 0.3) !important;
+        }
+
+        .admin-book-payments-dark [class~="border-red-100"],
+        .admin-book-payments-dark [class~="border-red-200"] {
+          border-color: rgba(248, 113, 113, 0.3) !important;
+        }
+
+        .admin-book-payments-dark [class~="border-violet-200"] {
+          border-color: rgba(167, 139, 250, 0.3) !important;
+        }
+
+        .admin-book-payments-dark [class~="border-amber-200"] {
+          border-color: rgba(251, 191, 36, 0.3) !important;
+        }
+
+        .admin-book-payments-dark [class~="border-sky-200"] {
+          border-color: rgba(56, 189, 248, 0.3) !important;
+        }
+
+        .admin-book-payments-dark [class~="bg-gradient-to-r"] {
+          background-image: linear-gradient(
+            to right,
+            #0f172a,
+            #111827,
+            #0f172a
+          ) !important;
+        }
+
+        .admin-book-payments-dark input,
+        .admin-book-payments-dark textarea,
+        .admin-book-payments-dark select {
+          background-color: #0f172a !important;
+          border-color: #334155 !important;
+          color: #f8fafc !important;
+        }
+
+        .admin-book-payments-dark input::placeholder,
+        .admin-book-payments-dark textarea::placeholder {
+          color: #64748b !important;
+        }
+
+        .admin-book-payments-dark [class~="disabled:bg-white"]:disabled,
+        .admin-book-payments-dark [class~="disabled:bg-slate-100"]:disabled {
+          background-color: #111827 !important;
+        }
+
+        .admin-book-payments-dark [class~="hover:bg-slate-50"]:hover,
+        .admin-book-payments-dark [class~="hover:bg-slate-100"]:hover,
+        .admin-book-payments-dark [class~="hover:bg-slate-200"]:hover {
+          background-color: #1e293b !important;
+        }
+
+        .admin-book-payments-dark [class~="hover:bg-blue-50"]:hover {
+          background-color: rgba(37, 99, 235, 0.2) !important;
+        }
+
+        .admin-book-payments-dark [class~="hover:bg-emerald-50"]:hover {
+          background-color: rgba(5, 150, 105, 0.2) !important;
+        }
+
+        .admin-book-payments-dark [class~="hover:bg-violet-50"]:hover {
+          background-color: rgba(124, 58, 237, 0.2) !important;
+        }
+
+        .admin-book-payments-dark [class~="hover:bg-red-50"]:hover {
+          background-color: rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .admin-book-payments-dark pre {
+          background-color: #020617 !important;
+          color: #e2e8f0 !important;
+        }
+      `}</style>
 
       <main className="min-h-screen bg-slate-50 pt-24 text-slate-900 sm:pt-28">
         <div className="mx-auto max-w-[1550px] px-4 pb-20 sm:px-6 lg:px-8">
@@ -7197,28 +8338,44 @@ export default function AdminBookPayments() {
               Back to Book Details
             </button>
 
-            <button
-              type="button"
-              onClick={() =>
-                fetchPayments(
-                  page
-                )
-              }
-              disabled={
-                loading
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600 disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${
-                  loading
-                    ? "animate-spin"
-                    : ""
-                }`}
-              />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/admin/book/${bookId}/reviews`
+                  )
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <MessageSquareText className="h-4 w-4" />
 
-              Refresh
-            </button>
+                Manage Reviews
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  fetchPayments(
+                    page
+                  )
+                }
+                disabled={
+                  loading
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600 disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${
+                    loading
+                      ? "animate-spin"
+                      : ""
+                  }`}
+                />
+
+                Refresh
+              </button>
+            </div>
           </div>
 
           <section className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -7784,6 +8941,24 @@ export default function AdminBookPayments() {
                         sendingAccessOrderId ===
                         order._id
                       }
+                      onGenerateReviewLink={() =>
+                        handleGenerateReviewLink(
+                          order
+                        )
+                      }
+                      generatingReviewLink={
+                        generatingReviewOrderId ===
+                        order._id
+                      }
+                      onSendReviewMail={() =>
+                        handleSendReviewMail(
+                          order
+                        )
+                      }
+                      sendingReviewMail={
+                        sendingReviewMailOrderId ===
+                        order._id
+                      }
                       onDelete={() => {
                         setMenuOrderId(
                           null
@@ -8072,6 +9247,154 @@ export default function AdminBookPayments() {
         </div>
       )}
 
+      {reviewLinkModal && (
+        <div
+          className="fixed inset-0 z-[125] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          onClick={() =>
+            setReviewLinkModal(
+              null
+            )
+          }
+        >
+          <div
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+            className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-700">
+                  <Link2 className="h-5 w-5" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-violet-600">
+                    {reviewLinkModal.alreadyGenerated
+                      ? "Existing Review Link"
+                      : "Review Link Generated"}
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-extrabold text-slate-950">
+                    Customer Review Link
+                  </h2>
+
+                  <p className="mt-1 text-sm font-medium leading-6 text-slate-500">
+                    Share this unique link with the customer. The same link is returned if it has already been generated.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setReviewLinkModal(
+                    null
+                  )
+                }
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
+                aria-label="Close review link"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Customer
+                </p>
+
+                <p className="mt-1 truncate text-sm font-extrabold text-slate-900">
+                  {reviewLinkModal.customerName}
+                </p>
+
+                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                  {reviewLinkModal.customerEmail ||
+                    "No email available"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Order / Book
+                </p>
+
+                <p className="mt-1 truncate text-sm font-extrabold text-slate-900">
+                  {reviewLinkModal.bookTitle}
+                </p>
+
+                <p className="mt-0.5 truncate font-mono text-xs font-semibold text-slate-500">
+                  {reviewLinkModal.orderId}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label className="mb-2 block text-xs font-extrabold text-slate-700">
+                Review Link
+              </label>
+
+              <div className="flex items-stretch gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={
+                    reviewLinkModal.reviewUrl
+                  }
+                  onFocus={(event) =>
+                    event.target.select()
+                  }
+                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-xs font-semibold text-slate-800 outline-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    copyValue(
+                      reviewLinkModal.reviewUrl,
+                      "Review link"
+                    )
+                  }
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-blue-700"
+                  title="Copy review link"
+                >
+                  <Copy className="h-4 w-4" />
+
+                  <span className="hidden sm:inline">
+                    Copy
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <div className="flex gap-3">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+
+                <p className="text-xs font-semibold leading-5 text-blue-700">
+                  The customer will only see the book details and review fields on this link. Customer name and email remain internal to the admin flow.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  setReviewLinkModal(
+                    null
+                  )
+                }
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteOrder && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
@@ -8144,6 +9467,6 @@ export default function AdminBookPayments() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

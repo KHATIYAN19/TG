@@ -24,10 +24,12 @@ import BookSalesRoute from "./routes/bookSales.js"
 import OrderMailRoute from "./routes/orderMailRoute.js"
 import CouponRoute from "./routes/couponRoute.js"
 import payuRoutes from "./routes/payuRoutes.js";
+import razorpayRoute from "./routes/razorpayRoute.js";
+
 import paymentRoutes from "./routes/paymentRoute.js"
 import emailCampaignRoutes from "./routes/emailCampaignRoutes.js";
 import InterviewExperience from"./routes/InterviewExperience.js"
-
+import BookReviewRoute from "./routes/bookReviewRoute.js";
 import { globalRateLimiter } from "./Middleware/rateLimiter.js";
 
 // ============================================================
@@ -97,6 +99,11 @@ app.use(
   payuRoutes
 );
 
+app.use(
+  "/payment/razorpay",
+  razorpayRoute
+);
+
 
 // ============================================================
 // EXISTING ROUTES
@@ -110,6 +117,10 @@ app.use(
 app.use(
   "/time",
   TimeSlotRoute
+);
+app.use(
+  "/api/book/review",
+  BookReviewRoute
 );
 
 app.use(
