@@ -89,7 +89,9 @@ const matchesAnyRoute = (pathname, prefixes) =>
   prefixes.some((prefix) => routeMatches(pathname, prefix));
 
 const isMainRoute = (pathname) =>
-  pathname === "/" || matchesAnyRoute(pathname, MAIN_ROUTE_PREFIXES);
+  // pathname === "/" || matchesAnyRoute(pathname, MAIN_ROUTE_PREFIXES);
+  matchesAnyRoute(pathname, MAIN_ROUTE_PREFIXES);
+
 
 /*
  * Everything other than MAIN routes is Learn.

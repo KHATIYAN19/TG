@@ -1738,7 +1738,7 @@ function App() {
         <Route
           path="/"
           element={
-            <HomePage />
+            <LearnHome />
           }
         />
 
