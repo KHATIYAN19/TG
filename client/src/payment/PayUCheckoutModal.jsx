@@ -1,4 +1,5 @@
 // import React, { useEffect, useState } from "react";
+
 // import {
 //   X,
 //   User,
@@ -14,110 +15,331 @@
 // } from "lucide-react";
 
 // const BASE_URL =
-//   import.meta.env.VITE_BASE_URL || "https://target-trek.onrender.com";
+//   import.meta.env.VITE_BASE_URL ||
+//   "https://target-trek.onrender.com";
+
+// // ======================================================
+// // PAYMENT GATEWAY
+// //
+// // .env:
+// //
+// // VITE_PAYMENT_GATEWAY=razorpay
+// //
+// // OR
+// //
+// // VITE_PAYMENT_GATEWAY=payu
+// // ======================================================
+
+// const Payment_gateway =
+//   String(
+//     import.meta.env.VITE_PAYMENT_GATEWAY ||
+//       "payu"
+//   )
+//     .trim()
+//     .toLowerCase() === "razorpay"
+//     ? "razorpay"
+//     : "payu";
+
+// const isRazorpayGateway =
+//   Payment_gateway === "razorpay";
+
+// const PAYMENT_PROVIDER_NAME =
+//   isRazorpayGateway
+//     ? "Razorpay"
+//     : "PayU";
+
+// // ======================================================
+// // THEME
+// // ======================================================
 
 // const getStoredTheme = () => {
-//   if (typeof window === "undefined") {
+//   if (
+//     typeof window ===
+//     "undefined"
+//   ) {
 //     return "light";
 //   }
 
 //   try {
-//     return localStorage.getItem("theme") === "dark" ? "dark" : "light";
+//     return localStorage.getItem(
+//       "theme"
+//     ) === "dark"
+//       ? "dark"
+//       : "light";
 //   } catch {
 //     return "light";
 //   }
 // };
+
+// // ======================================================
+// // LOAD RAZORPAY CHECKOUT SCRIPT
+// // ======================================================
+
+// const loadRazorpayScript =
+//   () => {
+//     return new Promise(
+//       (resolve) => {
+//         if (
+//           typeof window ===
+//           "undefined"
+//         ) {
+//           resolve(false);
+//           return;
+//         }
+
+//         // Already loaded
+//         if (window.Razorpay) {
+//           resolve(true);
+//           return;
+//         }
+
+//         // Script already added but still loading
+//         const existingScript =
+//           document.getElementById(
+//             "razorpay-checkout-script"
+//           );
+
+//         if (existingScript) {
+//           existingScript.addEventListener(
+//             "load",
+//             () =>
+//               resolve(
+//                 Boolean(
+//                   window.Razorpay
+//                 )
+//               ),
+//             {
+//               once: true,
+//             }
+//           );
+
+//           existingScript.addEventListener(
+//             "error",
+//             () =>
+//               resolve(false),
+//             {
+//               once: true,
+//             }
+//           );
+
+//           return;
+//         }
+
+//         const script =
+//           document.createElement(
+//             "script"
+//           );
+
+//         script.id =
+//           "razorpay-checkout-script";
+
+//         script.src =
+//           "https://checkout.razorpay.com/v1/checkout.js";
+
+//         script.async = true;
+
+//         script.onload = () => {
+//           resolve(
+//             Boolean(
+//               window.Razorpay
+//             )
+//           );
+//         };
+
+//         script.onerror = () => {
+//           resolve(false);
+//         };
+
+//         document.body.appendChild(
+//           script
+//         );
+//       }
+//     );
+//   };
+
+// // ======================================================
+// // CHECKOUT MODAL
+// // ======================================================
 
 // export default function PayUCheckoutModal({
 //   isOpen,
 //   onClose,
 //   product,
 // }) {
-//   const [theme, setTheme] = useState(getStoredTheme);
+//   const [theme, setTheme] =
+//     useState(getStoredTheme);
 
-//   const [formData, setFormData] = useState({
+//   const [
+//     formData,
+//     setFormData,
+//   ] = useState({
 //     firstname: "",
 //     email: "",
 //     phone: "",
 //   });
 
-//   const [errors, setErrors] = useState({});
-//   const [paymentLoading, setPaymentLoading] = useState(false);
-//   const [serverError, setServerError] = useState("");
+//   const [
+//     errors,
+//     setErrors,
+//   ] = useState({});
 
-//   const [showCouponInput, setShowCouponInput] = useState(false);
-//   const [couponCode, setCouponCode] = useState("");
-//   const [couponLoading, setCouponLoading] = useState(false);
-//   const [couponError, setCouponError] = useState("");
-//   const [appliedCoupon, setAppliedCoupon] = useState(null);
+//   const [
+//     paymentLoading,
+//     setPaymentLoading,
+//   ] = useState(false);
 
-//   const isDark = theme === "dark";
+//   const [
+//     serverError,
+//     setServerError,
+//   ] = useState("");
 
-//   const originalAmount = Number(product?.price || 0);
+//   const [
+//     showCouponInput,
+//     setShowCouponInput,
+//   ] = useState(false);
 
-//   const discountAmount = Number(
-//     appliedCoupon?.discountAmount || 0
-//   );
+//   const [
+//     couponCode,
+//     setCouponCode,
+//   ] = useState("");
 
-//   const finalAmount = appliedCoupon
-//     ? Number(appliedCoupon.finalAmount)
-//     : originalAmount;
+//   const [
+//     couponLoading,
+//     setCouponLoading,
+//   ] = useState(false);
+
+//   const [
+//     couponError,
+//     setCouponError,
+//   ] = useState("");
+
+//   const [
+//     appliedCoupon,
+//     setAppliedCoupon,
+//   ] = useState(null);
+
+//   const isDark =
+//     theme === "dark";
+
+//   const originalAmount =
+//     Number(
+//       product?.price || 0
+//     );
+
+//   const discountAmount =
+//     Number(
+//       appliedCoupon
+//         ?.discountAmount || 0
+//     );
+
+//   const finalAmount =
+//     appliedCoupon
+//       ? Number(
+//           appliedCoupon
+//             .finalAmount
+//         )
+//       : originalAmount;
+
+//   // ======================================================
+//   // RESET MODAL STATE
+//   // ======================================================
 
 //   useEffect(() => {
 //     if (!isOpen) {
 //       setShowCouponInput(false);
+
 //       setCouponCode("");
+
 //       setCouponError("");
+
 //       setAppliedCoupon(null);
+
 //       setCouponLoading(false);
+
 //       setServerError("");
+
+//       setPaymentLoading(false);
 //     }
 //   }, [isOpen]);
+
+//   // ======================================================
+//   // THEME SYNC
+//   // ======================================================
 
 //   useEffect(() => {
 //     if (!isOpen) {
 //       return;
 //     }
 
-//     const syncTheme = () => {
-//       setTheme(getStoredTheme());
-//     };
+//     const syncTheme =
+//       () => {
+//         setTheme(
+//           getStoredTheme()
+//         );
+//       };
 
 //     syncTheme();
 
-//     window.addEventListener("storage", syncTheme);
+//     window.addEventListener(
+//       "storage",
+//       syncTheme
+//     );
 
 //     return () => {
-//       window.removeEventListener("storage", syncTheme);
+//       window.removeEventListener(
+//         "storage",
+//         syncTheme
+//       );
 //     };
 //   }, [isOpen]);
 
+//   // ======================================================
+//   // PREVENT BACKGROUND SCROLL
+//   // ======================================================
+
 //   useEffect(() => {
-//     if (!isOpen) return;
+//     if (!isOpen) {
+//       return;
+//     }
 
-//     const oldOverflow = document.body.style.overflow;
+//     const oldOverflow =
+//       document.body.style
+//         .overflow;
 
-//     document.body.style.overflow = "hidden";
+//     document.body.style.overflow =
+//       "hidden";
 
 //     return () => {
-//       document.body.style.overflow = oldOverflow;
+//       document.body.style.overflow =
+//         oldOverflow;
 //     };
 //   }, [isOpen]);
 
+//   // ======================================================
+//   // ESCAPE TO CLOSE
+//   // ======================================================
+
 //   useEffect(() => {
-//     if (!isOpen) return;
+//     if (!isOpen) {
+//       return;
+//     }
 
-//     const handleEscape = (event) => {
-//       if (
-//         event.key === "Escape" &&
-//         !paymentLoading &&
-//         !couponLoading
-//       ) {
-//         onClose();
-//       }
-//     };
+//     const handleEscape =
+//       (event) => {
+//         if (
+//           event.key ===
+//             "Escape" &&
+//           !paymentLoading &&
+//           !couponLoading
+//         ) {
+//           onClose();
+//         }
+//       };
 
-//     window.addEventListener("keydown", handleEscape);
+//     window.addEventListener(
+//       "keydown",
+//       handleEscape
+//     );
 
 //     return () => {
 //       window.removeEventListener(
@@ -132,283 +354,370 @@
 //     couponLoading,
 //   ]);
 
-//   const formatMoney = (amount) => {
-//     try {
-//       return new Intl.NumberFormat("en-IN", {
-//         style: "currency",
-//         currency: product?.currency || "INR",
-//         maximumFractionDigits: 2,
-//       }).format(Number(amount || 0));
-//     } catch {
-//       return `₹${Number(amount || 0)}`;
-//     }
-//   };
+//   // ======================================================
+//   // FORMAT PRICE
+//   // ======================================================
 
-//   const handleChange = (event) => {
-//     const { name, value } = event.target;
+//   const formatMoney =
+//     (amount) => {
+//       try {
+//         return new Intl.NumberFormat(
+//           "en-IN",
+//           {
+//             style:
+//               "currency",
 
-//     let finalValue = value;
+//             currency:
+//               product?.currency ||
+//               "INR",
 
-//     if (name === "phone") {
-//       finalValue = value
-//         .replace(/\D/g, "")
-//         .slice(0, 10);
-//     }
+//             maximumFractionDigits:
+//               2,
+//           }
+//         ).format(
+//           Number(
+//             amount || 0
+//           )
+//         );
+//       } catch {
+//         return `₹${Number(
+//           amount || 0
+//         )}`;
+//       }
+//     };
 
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: finalValue,
-//     }));
+//   // ======================================================
+//   // FORM CHANGE
+//   // ======================================================
 
-//     setErrors((prev) => ({
-//       ...prev,
-//       [name]: "",
-//     }));
+//   const handleChange =
+//     (event) => {
+//       const {
+//         name,
+//         value,
+//       } = event.target;
 
-//     setServerError("");
+//       let finalValue =
+//         value;
 
-//     if (
-//       name === "email" &&
-//       appliedCoupon
-//     ) {
-//       setAppliedCoupon(null);
+//       if (
+//         name === "phone"
+//       ) {
+//         finalValue =
+//           value
+//             .replace(
+//               /\D/g,
+//               ""
+//             )
+//             .slice(
+//               0,
+//               10
+//             );
+//       }
 
-//       setCouponError(
-//         "Email changed. Please apply the coupon again."
-//       );
-//     }
-//   };
+//       setFormData(
+//         (prev) => ({
+//           ...prev,
 
-//   const handleCouponChange = (event) => {
-//     const value = event.target.value
-//       .toUpperCase()
-//       .replace(/\s+/g, "");
-
-//     setCouponCode(value);
-//     setCouponError("");
-
-//     if (appliedCoupon) {
-//       setAppliedCoupon(null);
-//     }
-//   };
-
-//   const handleApplyCoupon = async () => {
-//     const normalizedCode = couponCode
-//       .trim()
-//       .toUpperCase();
-
-//     if (!normalizedCode) {
-//       return;
-//     }
-
-//     if (!product?._id) {
-//       setCouponError(
-//         "Book information is unavailable."
+//           [name]:
+//             finalValue,
+//         })
 //       );
 
-//       return;
-//     }
+//       setErrors(
+//         (prev) => ({
+//           ...prev,
 
-//     try {
-//       setCouponLoading(true);
-//       setCouponError("");
-//       setAppliedCoupon(null);
+//           [name]: "",
+//         })
+//       );
+
 //       setServerError("");
 
-//       const response = await fetch(
-//         `${BASE_URL}/api/coupon/validate`,
-//         {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//           },
-//           body: JSON.stringify({
-//             couponCode: normalizedCode,
-//             bookId: product._id,
-//             email:
-//               formData.email
-//                 .trim()
-//                 .toLowerCase() || null,
-//           }),
-//         }
-//       );
-
-//       const result = await response
-//         .json()
-//         .catch(() => null);
-
 //       if (
-//         !response.ok ||
-//         !result?.success
+//         name ===
+//           "email" &&
+//         appliedCoupon
 //       ) {
-//         throw new Error(
-//           result?.message ||
-//             "Unable to apply coupon."
-//         );
-//       }
-
-//       setAppliedCoupon(result.data);
-
-//       setCouponCode(
-//         result.data?.couponCode ||
-//           normalizedCode
-//       );
-
-//       setCouponError("");
-//     } catch (error) {
-//       console.error(
-//         "Coupon validation error:",
-//         error
-//       );
-
-//       setAppliedCoupon(null);
-
-//       setCouponError(
-//         error?.message ||
-//           "Unable to apply coupon."
-//       );
-//     } finally {
-//       setCouponLoading(false);
-//     }
-//   };
-
-//   const handleRemoveCoupon = () => {
-//     setAppliedCoupon(null);
-//     setCouponCode("");
-//     setCouponError("");
-//     setShowCouponInput(false);
-//   };
-
-//   const validateForm = () => {
-//     const newErrors = {};
-
-//     if (!formData.firstname.trim()) {
-//       newErrors.firstname =
-//         "Please enter your name.";
-//     }
-
-//     if (!formData.email.trim()) {
-//       newErrors.email =
-//         "Please enter your email.";
-//     } else {
-//       const emailRegex =
-//         /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-//       if (
-//         !emailRegex.test(
-//           formData.email.trim()
-//         )
-//       ) {
-//         newErrors.email =
-//           "Please enter a valid email.";
-//       }
-//     }
-
-//     if (!formData.phone.trim()) {
-//       newErrors.phone =
-//         "Please enter your phone number.";
-//     } else if (
-//       !/^[6-9]\d{9}$/.test(
-//         formData.phone
-//       )
-//     ) {
-//       newErrors.phone =
-//         "Please enter a valid 10-digit Indian phone number.";
-//     }
-
-//     setErrors(newErrors);
-
-//     return (
-//       Object.keys(newErrors).length === 0
-//     );
-//   };
-
-//   const getAffiliateCode = () => {
-//     try {
-//       const affiliateCode =
-//         localStorage.getItem(
-//           "referralCode"
+//         setAppliedCoupon(
+//           null
 //         );
 
-//       if (!affiliateCode) {
-//         return "tt";
+//         setCouponError(
+//           "Email changed. Please apply the coupon again."
+//         );
 //       }
+//     };
 
-//       return affiliateCode
-//         .trim()
-//         .toLowerCase();
-//     } catch (error) {
-//       console.error(
-//         "Unable to read affiliate code:",
-//         error
-//       );
+//   // ======================================================
+//   // COUPON CHANGE
+//   // ======================================================
 
-//       return "tt";
-//     }
-//   };
-
-//   const submitToPayU = (
-//     paymentUrl,
-//     paymentData
-//   ) => {
-//     if (!paymentUrl || !paymentData) {
-//       throw new Error(
-//         "Invalid PayU payment response."
-//       );
-//     }
-
-//     const form =
-//       document.createElement("form");
-
-//     form.method = "POST";
-//     form.action = paymentUrl;
-//     form.style.display = "none";
-
-//     Object.entries(paymentData).forEach(
-//       ([key, value]) => {
-//         const input =
-//           document.createElement(
-//             "input"
+//   const handleCouponChange =
+//     (event) => {
+//       const value =
+//         event.target.value
+//           .toUpperCase()
+//           .replace(
+//             /\s+/g,
+//             ""
 //           );
 
-//         input.type = "hidden";
-//         input.name = key;
-//         input.value = value ?? "";
+//       setCouponCode(value);
 
-//         form.appendChild(input);
+//       setCouponError("");
+
+//       if (appliedCoupon) {
+//         setAppliedCoupon(
+//           null
+//         );
 //       }
-//     );
+//     };
 
-//     document.body.appendChild(form);
+//   // ======================================================
+//   // APPLY COUPON
+//   // ======================================================
 
-//     form.submit();
-//   };
+//   const handleApplyCoupon =
+//     async () => {
+//       const normalizedCode =
+//         couponCode
+//           .trim()
+//           .toUpperCase();
 
-//   const handlePayment = async (event) => {
-//     event.preventDefault();
+//       if (
+//         !normalizedCode
+//       ) {
+//         return;
+//       }
 
-//     if (!validateForm()) {
-//       return;
-//     }
+//       if (!product?._id) {
+//         setCouponError(
+//           "Book information is unavailable."
+//         );
 
-//     if (!product?._id) {
-//       setServerError(
-//         "Book information is unavailable. Please refresh the page."
+//         return;
+//       }
+
+//       try {
+//         setCouponLoading(
+//           true
+//         );
+
+//         setCouponError("");
+
+//         setAppliedCoupon(
+//           null
+//         );
+
+//         setServerError("");
+
+//         const response =
+//           await fetch(
+//             `${BASE_URL}/api/coupon/validate`,
+//             {
+//               method:
+//                 "POST",
+
+//               headers: {
+//                 "Content-Type":
+//                   "application/json",
+//               },
+
+//               body:
+//                 JSON.stringify(
+//                   {
+//                     couponCode:
+//                       normalizedCode,
+
+//                     bookId:
+//                       product._id,
+
+//                     email:
+//                       formData.email
+//                         .trim()
+//                         .toLowerCase() ||
+//                       null,
+//                   }
+//                 ),
+//             }
+//           );
+
+//         const result =
+//           await response
+//             .json()
+//             .catch(
+//               () => null
+//             );
+
+//         if (
+//           !response.ok ||
+//           !result?.success
+//         ) {
+//           throw new Error(
+//             result?.message ||
+//               "Unable to apply coupon."
+//           );
+//         }
+
+//         setAppliedCoupon(
+//           result.data
+//         );
+
+//         setCouponCode(
+//           result.data
+//             ?.couponCode ||
+//             normalizedCode
+//         );
+
+//         setCouponError("");
+//       } catch (error) {
+//         console.error(
+//           "Coupon validation error:",
+//           error
+//         );
+
+//         setAppliedCoupon(
+//           null
+//         );
+
+//         setCouponError(
+//           error?.message ||
+//             "Unable to apply coupon."
+//         );
+//       } finally {
+//         setCouponLoading(
+//           false
+//         );
+//       }
+//     };
+
+//   // ======================================================
+//   // REMOVE COUPON
+//   // ======================================================
+
+//   const handleRemoveCoupon =
+//     () => {
+//       setAppliedCoupon(
+//         null
 //       );
 
-//       return;
-//     }
+//       setCouponCode("");
 
-//     try {
-//       setPaymentLoading(true);
-//       setServerError("");
+//       setCouponError("");
 
+//       setShowCouponInput(
+//         false
+//       );
+//     };
+
+//   // ======================================================
+//   // VALIDATE FORM
+//   // ======================================================
+
+//   const validateForm =
+//     () => {
+//       const newErrors =
+//         {};
+
+//       if (
+//         !formData.firstname
+//           .trim()
+//       ) {
+//         newErrors.firstname =
+//           "Please enter your name.";
+//       }
+
+//       if (
+//         !formData.email
+//           .trim()
+//       ) {
+//         newErrors.email =
+//           "Please enter your email.";
+//       } else {
+//         const emailRegex =
+//           /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+//         if (
+//           !emailRegex.test(
+//             formData.email.trim()
+//           )
+//         ) {
+//           newErrors.email =
+//             "Please enter a valid email.";
+//         }
+//       }
+
+//       if (
+//         !formData.phone
+//           .trim()
+//       ) {
+//         newErrors.phone =
+//           "Please enter your phone number.";
+//       } else if (
+//         !/^[6-9]\d{9}$/.test(
+//           formData.phone
+//         )
+//       ) {
+//         newErrors.phone =
+//           "Please enter a valid 10-digit Indian phone number.";
+//       }
+
+//       setErrors(
+//         newErrors
+//       );
+
+//       return (
+//         Object.keys(
+//           newErrors
+//         ).length === 0
+//       );
+//     };
+
+//   // ======================================================
+//   // AFFILIATE CODE
+//   // ======================================================
+
+//   const getAffiliateCode =
+//     () => {
+//       try {
+//         const affiliateCode =
+//           localStorage.getItem(
+//             "referralCode"
+//           );
+
+//         if (
+//           !affiliateCode
+//         ) {
+//           return "tt";
+//         }
+
+//         return affiliateCode
+//           .trim()
+//           .toLowerCase();
+//       } catch (error) {
+//         console.error(
+//           "Unable to read affiliate code:",
+//           error
+//         );
+
+//         return "tt";
+//       }
+//     };
+
+//   // ======================================================
+//   // COMMON PAYMENT REQUEST DATA
+//   // ======================================================
+
+//   const getPaymentPayload =
+//     () => {
 //       const affiliateCode =
 //         getAffiliateCode();
 
 //       const params =
 //         new URLSearchParams(
-//           window.location.search
+//           window.location
+//             .search
 //         );
 
 //       const validatedCouponCode =
@@ -418,42 +727,140 @@
 //               .toUpperCase()
 //           : null;
 
-//       const response = await fetch(
-//         `${BASE_URL}/payment/payu/create`,
-//         {
-//           method: "POST",
-//           headers: {
-//             "Content-Type":
-//               "application/json",
-//           },
-//           body: JSON.stringify({
-//             bookId: product._id,
-//             firstname:
-//               formData.firstname.trim(),
-//             email: formData.email
-//               .trim()
-//               .toLowerCase(),
-//             phone: formData.phone.trim(),
-//             couponCode:
-//               validatedCouponCode,
-//             affiliateCode,
-//             utmSource:
-//               params.get("utm_source") ||
-//               null,
-//             utmMedium:
-//               params.get("utm_medium") ||
-//               null,
-//             utmCampaign:
-//               params.get(
-//                 "utm_campaign"
-//               ) || null,
-//           }),
-//         }
+//       return {
+//         bookId:
+//           product._id,
+
+//         firstname:
+//           formData.firstname
+//             .trim(),
+
+//         email:
+//           formData.email
+//             .trim()
+//             .toLowerCase(),
+
+//         phone:
+//           formData.phone
+//             .trim(),
+
+//         couponCode:
+//           validatedCouponCode,
+
+//         affiliateCode,
+
+//         utmSource:
+//           params.get(
+//             "utm_source"
+//           ) || null,
+
+//         utmMedium:
+//           params.get(
+//             "utm_medium"
+//           ) || null,
+
+//         utmCampaign:
+//           params.get(
+//             "utm_campaign"
+//           ) || null,
+//       };
+//     };
+
+//   // ======================================================
+//   // PAYU FORM SUBMISSION
+//   // ======================================================
+
+//   const submitToPayU = (
+//     paymentUrl,
+//     paymentData
+//   ) => {
+//     if (
+//       !paymentUrl ||
+//       !paymentData
+//     ) {
+//       throw new Error(
+//         "Invalid PayU payment response."
+//       );
+//     }
+
+//     const form =
+//       document.createElement(
+//         "form"
 //       );
 
-//       const result = await response
-//         .json()
-//         .catch(() => null);
+//     form.method =
+//       "POST";
+
+//     form.action =
+//       paymentUrl;
+
+//     form.style.display =
+//       "none";
+
+//     Object.entries(
+//       paymentData
+//     ).forEach(
+//       ([key, value]) => {
+//         const input =
+//           document.createElement(
+//             "input"
+//           );
+
+//         input.type =
+//           "hidden";
+
+//         input.name =
+//           key;
+
+//         input.value =
+//           value ?? "";
+
+//         form.appendChild(
+//           input
+//         );
+//       }
+//     );
+
+//     document.body.appendChild(
+//       form
+//     );
+
+//     form.submit();
+//   };
+
+//   // ======================================================
+//   // START PAYU PAYMENT
+//   // ======================================================
+
+//   const startPayUPayment =
+//     async (
+//       paymentPayload
+//     ) => {
+//       const response =
+//         await fetch(
+//           `${BASE_URL}/payment/payu/create`,
+//           {
+//             method:
+//               "POST",
+
+//             headers: {
+//               "Content-Type":
+//                 "application/json",
+//             },
+
+//             body:
+//               JSON.stringify(
+//                 paymentPayload
+//               ),
+//           }
+//         );
+
+//       const result =
+//         await response
+//           .json()
+//           .catch(
+//             () => null
+//           );
 
 //       if (
 //         !response.ok ||
@@ -461,22 +868,24 @@
 //       ) {
 //         throw new Error(
 //           result?.message ||
-//             "Unable to start payment."
+//             "Unable to start PayU payment."
 //         );
 //       }
 
 //       const paymentUrl =
-//         result?.data?.paymentUrl;
+//         result?.data
+//           ?.paymentUrl;
 
 //       const paymentData =
-//         result?.data?.paymentData;
+//         result?.data
+//           ?.paymentData;
 
 //       if (
 //         !paymentUrl ||
 //         !paymentData
 //       ) {
 //         throw new Error(
-//           "Invalid payment information received from server."
+//           "Invalid PayU payment information received from server."
 //         );
 //       }
 
@@ -484,27 +893,438 @@
 //         paymentUrl,
 //         paymentData
 //       );
-//     } catch (error) {
-//       console.error(
-//         "PayU payment error:",
-//         error
+//     };
+
+//   // ======================================================
+//   // VERIFY RAZORPAY PAYMENT
+//   // ======================================================
+
+//   const verifyRazorpayPayment =
+//     async (
+//       razorpayResponse
+//     ) => {
+//       const response =
+//         await fetch(
+//           `${BASE_URL}/payment/razorpay/verify`,
+//           {
+//             method:
+//               "POST",
+
+//             headers: {
+//               "Content-Type":
+//                 "application/json",
+//             },
+
+//             body:
+//               JSON.stringify(
+//                 {
+//                   razorpay_order_id:
+//                     razorpayResponse
+//                       .razorpay_order_id,
+
+//                   razorpay_payment_id:
+//                     razorpayResponse
+//                       .razorpay_payment_id,
+
+//                   razorpay_signature:
+//                     razorpayResponse
+//                       .razorpay_signature,
+//                 }
+//               ),
+//           }
+//         );
+
+//       const result =
+//         await response
+//           .json()
+//           .catch(
+//             () => null
+//           );
+
+//       if (
+//         !response.ok ||
+//         !result?.success
+//       ) {
+//         throw new Error(
+//           result?.message ||
+//             "Unable to verify Razorpay payment."
+//         );
+//       }
+
+//       return result;
+//     };
+
+//   // ======================================================
+//   // START RAZORPAY PAYMENT
+//   // ======================================================
+
+//   const startRazorpayPayment =
+//     async (
+//       paymentPayload
+//     ) => {
+//       // ==================================================
+//       // LOAD RAZORPAY CHECKOUT SDK
+//       // ==================================================
+
+//       const loaded =
+//         await loadRazorpayScript();
+
+//       if (!loaded) {
+//         throw new Error(
+//           "Unable to load Razorpay checkout. Please check your internet connection and try again."
+//         );
+//       }
+
+//       // ==================================================
+//       // CREATE ORDER THROUGH BACKEND
+//       //
+//       // POST /payment/razorpay
+//       // ==================================================
+
+//       const response =
+//         await fetch(
+//           `${BASE_URL}/payment/razorpay/create`,
+//           {
+//             method:
+//               "POST",
+
+//             headers: {
+//               "Content-Type":
+//                 "application/json",
+//             },
+
+//             body:
+//               JSON.stringify(
+//                 paymentPayload
+//               ),
+//           }
+//         );
+
+//       const result =
+//         await response
+//           .json()
+//           .catch(
+//             () => null
+//           );
+
+//       if (
+//         !response.ok ||
+//         !result?.success
+//       ) {
+//         throw new Error(
+//           result?.message ||
+//             "Unable to start Razorpay payment."
+//         );
+//       }
+
+//       // ==================================================
+//       // EXPECTED BACKEND RESPONSE
+//       //
+//       // {
+//       //   success: true,
+//       //   data: {
+//       //     orderId: "TT_RZP_...",
+//       //     checkout: {
+//       //       key: "...",
+//       //       razorpayOrderId: "order_...",
+//       //       amount: 19900,
+//       //       currency: "INR",
+//       //       name: "Target Trek",
+//       //       description: "...",
+//       //       prefill: {...}
+//       //     }
+//       //   }
+//       // }
+//       // ==================================================
+
+//       const data =
+//         result?.data;
+
+//       const checkout =
+//         data?.checkout;
+
+//       const internalOrderId =
+//         data?.orderId;
+
+//       if (
+//         !checkout?.key ||
+//         !checkout
+//           ?.razorpayOrderId ||
+//         !checkout?.amount ||
+//         !checkout?.currency
+//       ) {
+//         throw new Error(
+//           "Invalid Razorpay payment information received from server."
+//         );
+//       }
+
+//       // ==================================================
+//       // RAZORPAY OPTIONS
+//       // ==================================================
+
+//       const options = {
+//         key:
+//           checkout.key,
+
+//         amount:
+//           checkout.amount,
+
+//         currency:
+//           checkout.currency,
+
+//         name:
+//           checkout.name ||
+//           "Target Trek",
+
+//         description:
+//           checkout.description ||
+//           product?.title ||
+//           "Target Trek Ebook",
+
+//         order_id:
+//           checkout
+//             .razorpayOrderId,
+
+//         prefill: {
+//           name:
+//             checkout
+//               ?.prefill
+//               ?.name ||
+//             formData.firstname
+//               .trim(),
+
+//           email:
+//             checkout
+//               ?.prefill
+//               ?.email ||
+//             formData.email
+//               .trim()
+//               .toLowerCase(),
+
+//           contact:
+//             checkout
+//               ?.prefill
+//               ?.contact ||
+//             formData.phone
+//               .trim(),
+//         },
+
+//         notes: {
+//           targetTrekOrderId:
+//             internalOrderId ||
+//             "",
+//         },
+
+//         // ================================================
+//         // PAYMENT SUCCESS
+//         // ================================================
+
+//         handler:
+//           async (
+//             razorpayResponse
+//           ) => {
+//             try {
+//               setPaymentLoading(
+//                 true
+//               );
+
+//               setServerError(
+//                 ""
+//               );
+
+//               const verification =
+//                 await verifyRazorpayPayment(
+//                   razorpayResponse
+//                 );
+
+//               const redirectUrl =
+//                 verification
+//                   ?.data
+//                   ?.redirectUrl;
+
+//               if (
+//                 !redirectUrl
+//               ) {
+//                 throw new Error(
+//                   "Payment was verified, but the access redirect URL was not received."
+//                 );
+//               }
+
+//               window.location.href =
+//                 redirectUrl;
+//             } catch (
+//               error
+//             ) {
+//               console.error(
+//                 "Razorpay verification error:",
+//                 error
+//               );
+
+//               setServerError(
+//                 error?.message ||
+//                   "Payment verification failed. Please contact support if money was deducted."
+//               );
+
+//               setPaymentLoading(
+//                 false
+//               );
+//             }
+//           },
+
+//         // ================================================
+//         // RAZORPAY CHECKOUT SETTINGS
+//         // ================================================
+
+//         retry: {
+//           enabled:
+//             true,
+//         },
+
+//         modal: {
+//           confirm_close:
+//             true,
+
+//           escape:
+//             false,
+
+//           ondismiss:
+//             () => {
+//               setPaymentLoading(
+//                 false
+//               );
+//             },
+//         },
+
+//         theme: {
+//           color:
+//             "#2563eb",
+//         },
+//       };
+
+//       // ==================================================
+//       // CREATE RAZORPAY CHECKOUT
+//       // ==================================================
+
+//       const razorpay =
+//         new window.Razorpay(
+//           options
+//         );
+
+//       // ==================================================
+//       // PAYMENT FAILED
+//       // ==================================================
+
+//       razorpay.on(
+//         "payment.failed",
+//         (response) => {
+//           console.error(
+//             "Razorpay payment failed:",
+//             response?.error
+//           );
+
+//           const description =
+//             response
+//               ?.error
+//               ?.description;
+
+//           setServerError(
+//             description ||
+//               "Payment failed. Please try again."
+//           );
+
+//           setPaymentLoading(
+//             false
+//           );
+//         }
 //       );
 
-//       setServerError(
-//         error?.message ||
-//           "Unable to start payment. Please try again."
-//       );
+//       razorpay.open();
+//     };
 
-//       setPaymentLoading(false);
-//     }
-//   };
+//   // ======================================================
+//   // MAIN PAYMENT HANDLER
+//   // ======================================================
+
+//   const handlePayment =
+//     async (event) => {
+//       event.preventDefault();
+
+//       if (
+//         !validateForm()
+//       ) {
+//         return;
+//       }
+
+//       if (!product?._id) {
+//         setServerError(
+//           "Book information is unavailable. Please refresh the page."
+//         );
+
+//         return;
+//       }
+
+//       try {
+//         setPaymentLoading(
+//           true
+//         );
+
+//         setServerError("");
+
+//         const paymentPayload =
+//           getPaymentPayload();
+
+//         // ==================================================
+//         // PAYMENT GATEWAY SWITCH
+//         // ==================================================
+
+//         if (
+//           Payment_gateway ===
+//           "razorpay"
+//         ) {
+//           await startRazorpayPayment(
+//             paymentPayload
+//           );
+
+//           return;
+//         }
+
+//         // Default = PayU
+//         await startPayUPayment(
+//           paymentPayload
+//         );
+//       } catch (error) {
+//         console.error(
+//           `${PAYMENT_PROVIDER_NAME} payment error:`,
+//           error
+//         );
+
+//         setServerError(
+//           error?.message ||
+//             "Unable to start payment. Please try again."
+//         );
+
+//         setPaymentLoading(
+//           false
+//         );
+//       }
+//     };
+
+//   // ======================================================
+//   // DON'T RENDER
+//   // ======================================================
 
 //   if (!isOpen) {
 //     return null;
 //   }
 
+//   // ======================================================
+//   // UI
+//   // ======================================================
+
 //   return (
 //     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-6">
+//       {/* BACKDROP */}
+
 //       <button
 //         type="button"
 //         aria-label="Close checkout"
@@ -527,6 +1347,8 @@
 //         }`}
 //       />
 
+//       {/* MODAL */}
+
 //       <div
 //         className={`relative z-10 w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border shadow-2xl transition-colors sm:rounded-3xl ${
 //           isDark
@@ -534,6 +1356,10 @@
 //             : "border-slate-200 bg-white shadow-slate-950/20"
 //         } max-h-[calc(100dvh-1rem)] sm:max-h-[95vh]`}
 //       >
+//         {/* ==================================================
+//             HEADER
+//         ================================================== */}
+
 //         <div
 //           className={`border-b px-4 py-4 transition-colors sm:px-6 sm:py-5 ${
 //             isDark
@@ -554,6 +1380,7 @@
 //                   size={14}
 //                   className="shrink-0"
 //                 />
+
 //                 Secure Checkout
 //               </div>
 
@@ -564,7 +1391,8 @@
 //                     : "text-slate-950"
 //                 }`}
 //               >
-//                 Complete your purchase
+//                 Complete your
+//                 purchase
 //               </h2>
 
 //               <p
@@ -574,8 +1402,14 @@
 //                     : "text-slate-500"
 //                 }`}
 //               >
-//                 Enter your details to
-//                 continue to PayU.
+//                 Enter your details
+//                 to continue to{" "}
+//                 <span className="font-semibold">
+//                   {
+//                     PAYMENT_PROVIDER_NAME
+//                   }
+//                 </span>
+//                 .
 //               </p>
 //             </div>
 
@@ -597,6 +1431,10 @@
 //             </button>
 //           </div>
 //         </div>
+
+//         {/* ==================================================
+//             PRODUCT
+//         ================================================== */}
 
 //         <div
 //           className={`border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4 ${
@@ -711,10 +1549,18 @@
 //           </div>
 //         </div>
 
+//         {/* ==================================================
+//             FORM
+//         ================================================== */}
+
 //         <form
-//           onSubmit={handlePayment}
+//           onSubmit={
+//             handlePayment
+//           }
 //           className="space-y-3.5 px-4 py-4 sm:space-y-4 sm:px-6 sm:py-6"
 //         >
+//           {/* NAME */}
+
 //           <div>
 //             <label
 //               htmlFor="checkout-name"
@@ -747,7 +1593,9 @@
 //                 value={
 //                   formData.firstname
 //                 }
-//                 onChange={handleChange}
+//                 onChange={
+//                   handleChange
+//                 }
 //                 disabled={
 //                   paymentLoading
 //                 }
@@ -770,10 +1618,14 @@
 
 //             {errors.firstname && (
 //               <p className="mt-1.5 text-xs font-medium text-red-500">
-//                 {errors.firstname}
+//                 {
+//                   errors.firstname
+//                 }
 //               </p>
 //             )}
 //           </div>
+
+//           {/* EMAIL */}
 
 //           <div>
 //             <label
@@ -804,8 +1656,12 @@
 //                 type="email"
 //                 name="email"
 //                 autoComplete="email"
-//                 value={formData.email}
-//                 onChange={handleChange}
+//                 value={
+//                   formData.email
+//                 }
+//                 onChange={
+//                   handleChange
+//                 }
 //                 disabled={
 //                   paymentLoading
 //                 }
@@ -832,6 +1688,8 @@
 //               </p>
 //             )}
 //           </div>
+
+//           {/* PHONE */}
 
 //           <div>
 //             <label
@@ -863,8 +1721,12 @@
 //                 inputMode="numeric"
 //                 name="phone"
 //                 autoComplete="tel"
-//                 value={formData.phone}
-//                 onChange={handleChange}
+//                 value={
+//                   formData.phone
+//                 }
+//                 onChange={
+//                   handleChange
+//                 }
 //                 disabled={
 //                   paymentLoading
 //                 }
@@ -892,6 +1754,10 @@
 //             )}
 //           </div>
 
+//           {/* ==================================================
+//               COUPON
+//           ================================================== */}
+
 //           <div
 //             className={`border-t pt-2 ${
 //               isDark
@@ -910,7 +1776,10 @@
 //                   setShowCouponInput(
 //                     true
 //                   );
-//                   setCouponError("");
+
+//                   setCouponError(
+//                     ""
+//                   );
 //                 }}
 //                 className={`inline-flex items-center gap-1.5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
 //                   isDark
@@ -918,7 +1787,10 @@
 //                     : "text-blue-600 hover:text-blue-700"
 //                 }`}
 //               >
-//                 <Tag size={15} />
+//                 <Tag
+//                   size={15}
+//                 />
+
 //                 Have a coupon?
 //               </button>
 //             ) : (
@@ -968,6 +1840,7 @@
 //                               !couponLoading
 //                             ) {
 //                               event.preventDefault();
+
 //                               handleApplyCoupon();
 //                             }
 //                           }}
@@ -1010,7 +1883,9 @@
 //                       >
 //                         {couponLoading ? (
 //                           <Loader2
-//                             size={17}
+//                             size={
+//                               17
+//                             }
 //                             className="mx-auto animate-spin"
 //                           />
 //                         ) : (
@@ -1037,7 +1912,9 @@
 //                             : "text-red-700"
 //                         }`}
 //                       >
-//                         {couponError}
+//                         {
+//                           couponError
+//                         }
 //                       </p>
 //                     </div>
 //                   )}
@@ -1053,7 +1930,9 @@
 //                     <div className="flex items-start justify-between gap-3">
 //                       <div className="flex min-w-0 gap-2.5">
 //                         <CheckCircle2
-//                           size={19}
+//                           size={
+//                             19
+//                           }
 //                           className={`mt-0.5 shrink-0 ${
 //                             isDark
 //                               ? "text-emerald-400"
@@ -1133,6 +2012,10 @@
 //               </div>
 //             )}
 //           </div>
+
+//           {/* ==================================================
+//               PRICE SUMMARY
+//           ================================================== */}
 
 //           {appliedCoupon && (
 //             <div
@@ -1235,6 +2118,10 @@
 //             </div>
 //           )}
 
+//           {/* ==================================================
+//               ERROR
+//           ================================================== */}
+
 //           {serverError && (
 //             <div
 //               className={`rounded-xl border px-3.5 py-3 sm:px-4 ${
@@ -1255,6 +2142,10 @@
 //             </div>
 //           )}
 
+//           {/* ==================================================
+//               PAY BUTTON
+//           ================================================== */}
+
 //           <button
 //             type="submit"
 //             disabled={
@@ -1273,13 +2164,19 @@
 //                   size={18}
 //                   className="animate-spin"
 //                 />
-//                 Connecting to PayU...
+
+//                 Connecting to{" "}
+//                 {
+//                   PAYMENT_PROVIDER_NAME
+//                 }
+//                 ...
 //               </>
 //             ) : (
 //               <>
 //                 <CreditCard
 //                   size={18}
 //                 />
+
 //                 Pay{" "}
 //                 {formatMoney(
 //                   finalAmount
@@ -1287,6 +2184,10 @@
 //               </>
 //             )}
 //           </button>
+
+//           {/* ==================================================
+//               PAYMENT PROVIDER
+//           ================================================== */}
 
 //           <div
 //             className={`flex items-center justify-center gap-2 pb-0.5 text-center text-[11px] sm:text-xs ${
@@ -1299,9 +2200,15 @@
 //               size={13}
 //               className="shrink-0"
 //             />
+
 //             <span>
-//               Payment securely processed
-//               by PayU
+//               Payment securely
+//               processed by{" "}
+//               <strong>
+//                 {
+//                   PAYMENT_PROVIDER_NAME
+//                 }
+//               </strong>
 //             </span>
 //           </div>
 //         </form>
@@ -1309,9 +2216,7 @@
 //     </div>
 //   );
 // }
-
 import React, { useEffect, useState } from "react";
-
 import {
   X,
   User,
@@ -1330,52 +2235,35 @@ const BASE_URL =
   import.meta.env.VITE_BASE_URL ||
   "https://target-trek.onrender.com";
 
-// ======================================================
-// PAYMENT GATEWAY
-//
-// .env:
-//
-// VITE_PAYMENT_GATEWAY=razorpay
-//
-// OR
-//
-// VITE_PAYMENT_GATEWAY=payu
-// ======================================================
+const rawPaymentGateway = String(
+  import.meta.env.VITE_PAYMENT_GATEWAY || "payu"
+)
+  .trim()
+  .toLowerCase();
 
-const Payment_gateway =
-  String(
-    import.meta.env.VITE_PAYMENT_GATEWAY ||
-      "payu"
-  )
-    .trim()
-    .toLowerCase() === "razorpay"
-    ? "razorpay"
-    : "payu";
-
-const isRazorpayGateway =
-  Payment_gateway === "razorpay";
+const Payment_gateway = [
+  "payu",
+  "razorpay",
+  "cashfree",
+].includes(rawPaymentGateway)
+  ? rawPaymentGateway
+  : "payu";
 
 const PAYMENT_PROVIDER_NAME =
-  isRazorpayGateway
+  Payment_gateway === "razorpay"
     ? "Razorpay"
-    : "PayU";
-
-// ======================================================
-// THEME
-// ======================================================
+    : Payment_gateway === "cashfree"
+      ? "Cashfree"
+      : "PayU";
 
 const getStoredTheme = () => {
-  if (
-    typeof window ===
-    "undefined"
-  ) {
+  if (typeof window === "undefined") {
     return "light";
   }
 
   try {
-    return localStorage.getItem(
-      "theme"
-    ) === "dark"
+    return localStorage.getItem("theme") ===
+      "dark"
       ? "dark"
       : "light";
   } catch {
@@ -1383,95 +2271,139 @@ const getStoredTheme = () => {
   }
 };
 
-// ======================================================
-// LOAD RAZORPAY CHECKOUT SCRIPT
-// ======================================================
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
 
-const loadRazorpayScript =
-  () => {
-    return new Promise(
-      (resolve) => {
-        if (
-          typeof window ===
-          "undefined"
-        ) {
-          resolve(false);
-          return;
-        }
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
 
-        // Already loaded
-        if (window.Razorpay) {
-          resolve(true);
-          return;
-        }
+    const existingScript =
+      document.getElementById(
+        "razorpay-checkout-script"
+      );
 
-        // Script already added but still loading
-        const existingScript =
-          document.getElementById(
-            "razorpay-checkout-script"
-          );
-
-        if (existingScript) {
-          existingScript.addEventListener(
-            "load",
-            () =>
-              resolve(
-                Boolean(
-                  window.Razorpay
-                )
-              ),
-            {
-              once: true,
-            }
-          );
-
-          existingScript.addEventListener(
-            "error",
-            () =>
-              resolve(false),
-            {
-              once: true,
-            }
-          );
-
-          return;
-        }
-
-        const script =
-          document.createElement(
-            "script"
-          );
-
-        script.id =
-          "razorpay-checkout-script";
-
-        script.src =
-          "https://checkout.razorpay.com/v1/checkout.js";
-
-        script.async = true;
-
-        script.onload = () => {
+    if (existingScript) {
+      existingScript.addEventListener(
+        "load",
+        () =>
           resolve(
-            Boolean(
-              window.Razorpay
-            )
-          );
-        };
+            Boolean(window.Razorpay)
+          ),
+        {
+          once: true,
+        }
+      );
 
-        script.onerror = () => {
-          resolve(false);
-        };
+      existingScript.addEventListener(
+        "error",
+        () => resolve(false),
+        {
+          once: true,
+        }
+      );
 
-        document.body.appendChild(
-          script
-        );
-      }
+      return;
+    }
+
+    const script =
+      document.createElement("script");
+
+    script.id =
+      "razorpay-checkout-script";
+
+    script.src =
+      "https://checkout.razorpay.com/v1/checkout.js";
+
+    script.async = true;
+
+    script.onload = () => {
+      resolve(
+        Boolean(window.Razorpay)
+      );
+    };
+
+    script.onerror = () => {
+      resolve(false);
+    };
+
+    document.body.appendChild(
+      script
     );
-  };
+  });
+};
 
-// ======================================================
-// CHECKOUT MODAL
-// ======================================================
+const loadCashfreeScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+
+    if (window.Cashfree) {
+      resolve(true);
+      return;
+    }
+
+    const existingScript =
+      document.getElementById(
+        "cashfree-checkout-script"
+      );
+
+    if (existingScript) {
+      existingScript.addEventListener(
+        "load",
+        () =>
+          resolve(
+            Boolean(window.Cashfree)
+          ),
+        {
+          once: true,
+        }
+      );
+
+      existingScript.addEventListener(
+        "error",
+        () => resolve(false),
+        {
+          once: true,
+        }
+      );
+
+      return;
+    }
+
+    const script =
+      document.createElement("script");
+
+    script.id =
+      "cashfree-checkout-script";
+
+    script.src =
+      "https://sdk.cashfree.com/js/v3/cashfree.js";
+
+    script.async = true;
+
+    script.onload = () => {
+      resolve(
+        Boolean(window.Cashfree)
+      );
+    };
+
+    script.onerror = () => {
+      resolve(false);
+    };
+
+    document.body.appendChild(
+      script
+    );
+  });
+};
 
 export default function PayUCheckoutModal({
   isOpen,
@@ -1552,43 +2484,28 @@ export default function PayUCheckoutModal({
         )
       : originalAmount;
 
-  // ======================================================
-  // RESET MODAL STATE
-  // ======================================================
-
   useEffect(() => {
     if (!isOpen) {
       setShowCouponInput(false);
-
       setCouponCode("");
-
       setCouponError("");
-
       setAppliedCoupon(null);
-
       setCouponLoading(false);
-
       setServerError("");
-
       setPaymentLoading(false);
     }
   }, [isOpen]);
-
-  // ======================================================
-  // THEME SYNC
-  // ======================================================
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const syncTheme =
-      () => {
-        setTheme(
-          getStoredTheme()
-        );
-      };
+    const syncTheme = () => {
+      setTheme(
+        getStoredTheme()
+      );
+    };
 
     syncTheme();
 
@@ -1604,10 +2521,6 @@ export default function PayUCheckoutModal({
       );
     };
   }, [isOpen]);
-
-  // ======================================================
-  // PREVENT BACKGROUND SCROLL
-  // ======================================================
 
   useEffect(() => {
     if (!isOpen) {
@@ -1627,26 +2540,22 @@ export default function PayUCheckoutModal({
     };
   }, [isOpen]);
 
-  // ======================================================
-  // ESCAPE TO CLOSE
-  // ======================================================
-
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const handleEscape =
-      (event) => {
-        if (
-          event.key ===
-            "Escape" &&
-          !paymentLoading &&
-          !couponLoading
-        ) {
-          onClose();
-        }
-      };
+    const handleEscape = (
+      event
+    ) => {
+      if (
+        event.key === "Escape" &&
+        !paymentLoading &&
+        !couponLoading
+      ) {
+        onClose();
+      }
+    };
 
     window.addEventListener(
       "keydown",
@@ -1666,129 +2575,114 @@ export default function PayUCheckoutModal({
     couponLoading,
   ]);
 
-  // ======================================================
-  // FORMAT PRICE
-  // ======================================================
+  const formatMoney = (
+    amount
+  ) => {
+    try {
+      return new Intl.NumberFormat(
+        "en-IN",
+        {
+          style: "currency",
 
-  const formatMoney =
-    (amount) => {
-      try {
-        return new Intl.NumberFormat(
-          "en-IN",
-          {
-            style:
-              "currency",
+          currency:
+            product?.currency ||
+            "INR",
 
-            currency:
-              product?.currency ||
-              "INR",
-
-            maximumFractionDigits:
-              2,
-          }
-        ).format(
-          Number(
-            amount || 0
-          )
-        );
-      } catch {
-        return `₹${Number(
+          maximumFractionDigits:
+            2,
+        }
+      ).format(
+        Number(
           amount || 0
-        )}`;
-      }
-    };
-
-  // ======================================================
-  // FORM CHANGE
-  // ======================================================
-
-  const handleChange =
-    (event) => {
-      const {
-        name,
-        value,
-      } = event.target;
-
-      let finalValue =
-        value;
-
-      if (
-        name === "phone"
-      ) {
-        finalValue =
-          value
-            .replace(
-              /\D/g,
-              ""
-            )
-            .slice(
-              0,
-              10
-            );
-      }
-
-      setFormData(
-        (prev) => ({
-          ...prev,
-
-          [name]:
-            finalValue,
-        })
+        )
       );
+    } catch {
+      return `₹${Number(
+        amount || 0
+      )}`;
+    }
+  };
 
-      setErrors(
-        (prev) => ({
-          ...prev,
+  const handleChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-          [name]: "",
-        })
-      );
+    let finalValue =
+      value;
 
-      setServerError("");
-
-      if (
-        name ===
-          "email" &&
-        appliedCoupon
-      ) {
-        setAppliedCoupon(
-          null
-        );
-
-        setCouponError(
-          "Email changed. Please apply the coupon again."
-        );
-      }
-    };
-
-  // ======================================================
-  // COUPON CHANGE
-  // ======================================================
-
-  const handleCouponChange =
-    (event) => {
-      const value =
-        event.target.value
-          .toUpperCase()
+    if (
+      name === "phone"
+    ) {
+      finalValue =
+        value
           .replace(
-            /\s+/g,
+            /\D/g,
             ""
+          )
+          .slice(
+            0,
+            10
           );
+    }
 
-      setCouponCode(value);
+    setFormData(
+      (prev) => ({
+        ...prev,
 
-      setCouponError("");
+        [name]:
+          finalValue,
+      })
+    );
 
-      if (appliedCoupon) {
-        setAppliedCoupon(
-          null
+    setErrors(
+      (prev) => ({
+        ...prev,
+
+        [name]: "",
+      })
+    );
+
+    setServerError("");
+
+    if (
+      name === "email" &&
+      appliedCoupon
+    ) {
+      setAppliedCoupon(
+        null
+      );
+
+      setCouponError(
+        "Email changed. Please apply the coupon again."
+      );
+    }
+  };
+
+  const handleCouponChange = (
+    event
+  ) => {
+    const value =
+      event.target.value
+        .toUpperCase()
+        .replace(
+          /\s+/g,
+          ""
         );
-      }
-    };
 
-  // ======================================================
-  // APPLY COUPON
-  // ======================================================
+    setCouponCode(value);
+
+    setCouponError("");
+
+    if (appliedCoupon) {
+      setAppliedCoupon(
+        null
+      );
+    }
+  };
 
   const handleApplyCoupon =
     async () => {
@@ -1797,9 +2691,7 @@ export default function PayUCheckoutModal({
           .trim()
           .toUpperCase();
 
-      if (
-        !normalizedCode
-      ) {
+      if (!normalizedCode) {
         return;
       }
 
@@ -1812,9 +2704,7 @@ export default function PayUCheckoutModal({
       }
 
       try {
-        setCouponLoading(
-          true
-        );
+        setCouponLoading(true);
 
         setCouponError("");
 
@@ -1828,8 +2718,7 @@ export default function PayUCheckoutModal({
           await fetch(
             `${BASE_URL}/api/coupon/validate`,
             {
-              method:
-                "POST",
+              method: "POST",
 
               headers: {
                 "Content-Type":
@@ -1837,21 +2726,19 @@ export default function PayUCheckoutModal({
               },
 
               body:
-                JSON.stringify(
-                  {
-                    couponCode:
-                      normalizedCode,
+                JSON.stringify({
+                  couponCode:
+                    normalizedCode,
 
-                    bookId:
-                      product._id,
+                  bookId:
+                    product._id,
 
-                    email:
-                      formData.email
-                        .trim()
-                        .toLowerCase() ||
-                      null,
-                  }
-                ),
+                  email:
+                    formData.email
+                      .trim()
+                      .toLowerCase() ||
+                    null,
+                }),
             }
           );
 
@@ -1904,10 +2791,6 @@ export default function PayUCheckoutModal({
       }
     };
 
-  // ======================================================
-  // REMOVE COUPON
-  // ======================================================
-
   const handleRemoveCoupon =
     () => {
       setAppliedCoupon(
@@ -1923,72 +2806,62 @@ export default function PayUCheckoutModal({
       );
     };
 
-  // ======================================================
-  // VALIDATE FORM
-  // ======================================================
+  const validateForm = () => {
+    const newErrors = {};
 
-  const validateForm =
-    () => {
-      const newErrors =
-        {};
+    if (
+      !formData.firstname
+        .trim()
+    ) {
+      newErrors.firstname =
+        "Please enter your name.";
+    }
 
-      if (
-        !formData.firstname
-          .trim()
-      ) {
-        newErrors.firstname =
-          "Please enter your name.";
-      }
-
-      if (
-        !formData.email
-          .trim()
-      ) {
-        newErrors.email =
-          "Please enter your email.";
-      } else {
-        const emailRegex =
-          /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (
-          !emailRegex.test(
-            formData.email.trim()
-          )
-        ) {
-          newErrors.email =
-            "Please enter a valid email.";
-        }
-      }
+    if (
+      !formData.email
+        .trim()
+    ) {
+      newErrors.email =
+        "Please enter your email.";
+    } else {
+      const emailRegex =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (
-        !formData.phone
-          .trim()
-      ) {
-        newErrors.phone =
-          "Please enter your phone number.";
-      } else if (
-        !/^[6-9]\d{9}$/.test(
-          formData.phone
+        !emailRegex.test(
+          formData.email.trim()
         )
       ) {
-        newErrors.phone =
-          "Please enter a valid 10-digit Indian phone number.";
+        newErrors.email =
+          "Please enter a valid email.";
       }
+    }
 
-      setErrors(
+    if (
+      !formData.phone
+        .trim()
+    ) {
+      newErrors.phone =
+        "Please enter your phone number.";
+    } else if (
+      !/^[6-9]\d{9}$/.test(
+        formData.phone
+      )
+    ) {
+      newErrors.phone =
+        "Please enter a valid 10-digit Indian phone number.";
+    }
+
+    setErrors(
+      newErrors
+    );
+
+    return (
+      Object.keys(
         newErrors
-      );
-
-      return (
-        Object.keys(
-          newErrors
-        ).length === 0
-      );
-    };
-
-  // ======================================================
-  // AFFILIATE CODE
-  // ======================================================
+      ).length === 0
+    );
+  };
 
   const getAffiliateCode =
     () => {
@@ -1998,9 +2871,7 @@ export default function PayUCheckoutModal({
             "referralCode"
           );
 
-        if (
-          !affiliateCode
-        ) {
+        if (!affiliateCode) {
           return "tt";
         }
 
@@ -2016,10 +2887,6 @@ export default function PayUCheckoutModal({
         return "tt";
       }
     };
-
-  // ======================================================
-  // COMMON PAYMENT REQUEST DATA
-  // ======================================================
 
   const getPaymentPayload =
     () => {
@@ -2078,10 +2945,6 @@ export default function PayUCheckoutModal({
       };
     };
 
-  // ======================================================
-  // PAYU FORM SUBMISSION
-  // ======================================================
-
   const submitToPayU = (
     paymentUrl,
     paymentData
@@ -2100,8 +2963,7 @@ export default function PayUCheckoutModal({
         "form"
       );
 
-    form.method =
-      "POST";
+    form.method = "POST";
 
     form.action =
       paymentUrl;
@@ -2139,10 +3001,6 @@ export default function PayUCheckoutModal({
 
     form.submit();
   };
-
-  // ======================================================
-  // START PAYU PAYMENT
-  // ======================================================
 
   const startPayUPayment =
     async (
@@ -2207,10 +3065,6 @@ export default function PayUCheckoutModal({
       );
     };
 
-  // ======================================================
-  // VERIFY RAZORPAY PAYMENT
-  // ======================================================
-
   const verifyRazorpayPayment =
     async (
       razorpayResponse
@@ -2228,21 +3082,19 @@ export default function PayUCheckoutModal({
             },
 
             body:
-              JSON.stringify(
-                {
-                  razorpay_order_id:
-                    razorpayResponse
-                      .razorpay_order_id,
+              JSON.stringify({
+                razorpay_order_id:
+                  razorpayResponse
+                    .razorpay_order_id,
 
-                  razorpay_payment_id:
-                    razorpayResponse
-                      .razorpay_payment_id,
+                razorpay_payment_id:
+                  razorpayResponse
+                    .razorpay_payment_id,
 
-                  razorpay_signature:
-                    razorpayResponse
-                      .razorpay_signature,
-                }
-              ),
+                razorpay_signature:
+                  razorpayResponse
+                    .razorpay_signature,
+              }),
           }
         );
 
@@ -2266,18 +3118,10 @@ export default function PayUCheckoutModal({
       return result;
     };
 
-  // ======================================================
-  // START RAZORPAY PAYMENT
-  // ======================================================
-
   const startRazorpayPayment =
     async (
       paymentPayload
     ) => {
-      // ==================================================
-      // LOAD RAZORPAY CHECKOUT SDK
-      // ==================================================
-
       const loaded =
         await loadRazorpayScript();
 
@@ -2286,12 +3130,6 @@ export default function PayUCheckoutModal({
           "Unable to load Razorpay checkout. Please check your internet connection and try again."
         );
       }
-
-      // ==================================================
-      // CREATE ORDER THROUGH BACKEND
-      //
-      // POST /payment/razorpay
-      // ==================================================
 
       const response =
         await fetch(
@@ -2329,26 +3167,6 @@ export default function PayUCheckoutModal({
         );
       }
 
-      // ==================================================
-      // EXPECTED BACKEND RESPONSE
-      //
-      // {
-      //   success: true,
-      //   data: {
-      //     orderId: "TT_RZP_...",
-      //     checkout: {
-      //       key: "...",
-      //       razorpayOrderId: "order_...",
-      //       amount: 19900,
-      //       currency: "INR",
-      //       name: "Target Trek",
-      //       description: "...",
-      //       prefill: {...}
-      //     }
-      //   }
-      // }
-      // ==================================================
-
       const data =
         result?.data;
 
@@ -2369,10 +3187,6 @@ export default function PayUCheckoutModal({
           "Invalid Razorpay payment information received from server."
         );
       }
-
-      // ==================================================
-      // RAZORPAY OPTIONS
-      // ==================================================
 
       const options = {
         key:
@@ -2427,10 +3241,6 @@ export default function PayUCheckoutModal({
             "",
         },
 
-        // ================================================
-        // PAYMENT SUCCESS
-        // ================================================
-
         handler:
           async (
             razorpayResponse
@@ -2440,9 +3250,7 @@ export default function PayUCheckoutModal({
                 true
               );
 
-              setServerError(
-                ""
-              );
+              setServerError("");
 
               const verification =
                 await verifyRazorpayPayment(
@@ -2454,9 +3262,7 @@ export default function PayUCheckoutModal({
                   ?.data
                   ?.redirectUrl;
 
-              if (
-                !redirectUrl
-              ) {
+              if (!redirectUrl) {
                 throw new Error(
                   "Payment was verified, but the access redirect URL was not received."
                 );
@@ -2464,9 +3270,7 @@ export default function PayUCheckoutModal({
 
               window.location.href =
                 redirectUrl;
-            } catch (
-              error
-            ) {
+            } catch (error) {
               console.error(
                 "Razorpay verification error:",
                 error
@@ -2483,13 +3287,8 @@ export default function PayUCheckoutModal({
             }
           },
 
-        // ================================================
-        // RAZORPAY CHECKOUT SETTINGS
-        // ================================================
-
         retry: {
-          enabled:
-            true,
+          enabled: true,
         },
 
         modal: {
@@ -2499,12 +3298,11 @@ export default function PayUCheckoutModal({
           escape:
             false,
 
-          ondismiss:
-            () => {
-              setPaymentLoading(
-                false
-              );
-            },
+          ondismiss: () => {
+            setPaymentLoading(
+              false
+            );
+          },
         },
 
         theme: {
@@ -2513,18 +3311,10 @@ export default function PayUCheckoutModal({
         },
       };
 
-      // ==================================================
-      // CREATE RAZORPAY CHECKOUT
-      // ==================================================
-
       const razorpay =
         new window.Razorpay(
           options
         );
-
-      // ==================================================
-      // PAYMENT FAILED
-      // ==================================================
 
       razorpay.on(
         "payment.failed",
@@ -2553,17 +3343,125 @@ export default function PayUCheckoutModal({
       razorpay.open();
     };
 
-  // ======================================================
-  // MAIN PAYMENT HANDLER
-  // ======================================================
+  const startCashfreePayment =
+    async (
+      paymentPayload
+    ) => {
+      const loaded =
+        await loadCashfreeScript();
+
+      if (!loaded) {
+        throw new Error(
+          "Unable to load Cashfree checkout. Please check your internet connection and try again."
+        );
+      }
+
+      const response =
+        await fetch(
+          `${BASE_URL}/payment/cashfree/create`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                paymentPayload
+              ),
+          }
+        );
+
+      const result =
+        await response
+          .json()
+          .catch(
+            () => null
+          );
+
+      if (
+        !response.ok ||
+        !result?.success
+      ) {
+        throw new Error(
+          result?.message ||
+            "Unable to start Cashfree payment."
+        );
+      }
+
+      const data =
+        result?.data;
+
+      const paymentSessionId =
+        data?.paymentSessionId;
+
+      if (!paymentSessionId) {
+        throw new Error(
+          "Invalid Cashfree payment session received from server."
+        );
+      }
+
+      const backendEnvironment =
+        String(
+          data?.environment ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const frontendEnvironment =
+        String(
+          import.meta.env
+            .VITE_CASHFREE_MODE ||
+            "sandbox"
+        )
+          .trim()
+          .toLowerCase();
+
+      const mode = [
+        "sandbox",
+        "production",
+      ].includes(
+        backendEnvironment
+      )
+        ? backendEnvironment
+        : frontendEnvironment ===
+            "production"
+          ? "production"
+          : "sandbox";
+
+      const cashfree =
+        window.Cashfree({
+          mode,
+        });
+
+      const checkoutResult =
+        await cashfree.checkout({
+          paymentSessionId,
+
+          redirectTarget:
+            "_self",
+        });
+
+      if (
+        checkoutResult?.error
+      ) {
+        throw new Error(
+          checkoutResult.error
+            ?.message ||
+            "Unable to open Cashfree checkout."
+        );
+      }
+    };
 
   const handlePayment =
     async (event) => {
       event.preventDefault();
 
-      if (
-        !validateForm()
-      ) {
+      if (!validateForm()) {
         return;
       }
 
@@ -2585,10 +3483,6 @@ export default function PayUCheckoutModal({
         const paymentPayload =
           getPaymentPayload();
 
-        // ==================================================
-        // PAYMENT GATEWAY SWITCH
-        // ==================================================
-
         if (
           Payment_gateway ===
           "razorpay"
@@ -2600,7 +3494,17 @@ export default function PayUCheckoutModal({
           return;
         }
 
-        // Default = PayU
+        if (
+          Payment_gateway ===
+          "cashfree"
+        ) {
+          await startCashfreePayment(
+            paymentPayload
+          );
+
+          return;
+        }
+
         await startPayUPayment(
           paymentPayload
         );
@@ -2621,22 +3525,12 @@ export default function PayUCheckoutModal({
       }
     };
 
-  // ======================================================
-  // DON'T RENDER
-  // ======================================================
-
   if (!isOpen) {
     return null;
   }
 
-  // ======================================================
-  // UI
-  // ======================================================
-
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-6">
-      {/* BACKDROP */}
-
       <button
         type="button"
         aria-label="Close checkout"
@@ -2659,8 +3553,6 @@ export default function PayUCheckoutModal({
         }`}
       />
 
-      {/* MODAL */}
-
       <div
         className={`relative z-10 w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border shadow-2xl transition-colors sm:rounded-3xl ${
           isDark
@@ -2668,10 +3560,6 @@ export default function PayUCheckoutModal({
             : "border-slate-200 bg-white shadow-slate-950/20"
         } max-h-[calc(100dvh-1rem)] sm:max-h-[95vh]`}
       >
-        {/* ==================================================
-            HEADER
-        ================================================== */}
-
         <div
           className={`border-b px-4 py-4 transition-colors sm:px-6 sm:py-5 ${
             isDark
@@ -2743,10 +3631,6 @@ export default function PayUCheckoutModal({
             </button>
           </div>
         </div>
-
-        {/* ==================================================
-            PRODUCT
-        ================================================== */}
 
         <div
           className={`border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4 ${
@@ -2861,18 +3745,12 @@ export default function PayUCheckoutModal({
           </div>
         </div>
 
-        {/* ==================================================
-            FORM
-        ================================================== */}
-
         <form
           onSubmit={
             handlePayment
           }
           className="space-y-3.5 px-4 py-4 sm:space-y-4 sm:px-6 sm:py-6"
         >
-          {/* NAME */}
-
           <div>
             <label
               htmlFor="checkout-name"
@@ -2937,8 +3815,6 @@ export default function PayUCheckoutModal({
             )}
           </div>
 
-          {/* EMAIL */}
-
           <div>
             <label
               htmlFor="checkout-email"
@@ -3000,8 +3876,6 @@ export default function PayUCheckoutModal({
               </p>
             )}
           </div>
-
-          {/* PHONE */}
 
           <div>
             <label
@@ -3065,10 +3939,6 @@ export default function PayUCheckoutModal({
               </p>
             )}
           </div>
-
-          {/* ==================================================
-              COUPON
-          ================================================== */}
 
           <div
             className={`border-t pt-2 ${
@@ -3195,9 +4065,7 @@ export default function PayUCheckoutModal({
                       >
                         {couponLoading ? (
                           <Loader2
-                            size={
-                              17
-                            }
+                            size={17}
                             className="mx-auto animate-spin"
                           />
                         ) : (
@@ -3242,9 +4110,7 @@ export default function PayUCheckoutModal({
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 gap-2.5">
                         <CheckCircle2
-                          size={
-                            19
-                          }
+                          size={19}
                           className={`mt-0.5 shrink-0 ${
                             isDark
                               ? "text-emerald-400"
@@ -3324,10 +4190,6 @@ export default function PayUCheckoutModal({
               </div>
             )}
           </div>
-
-          {/* ==================================================
-              PRICE SUMMARY
-          ================================================== */}
 
           {appliedCoupon && (
             <div
@@ -3430,10 +4292,6 @@ export default function PayUCheckoutModal({
             </div>
           )}
 
-          {/* ==================================================
-              ERROR
-          ================================================== */}
-
           {serverError && (
             <div
               className={`rounded-xl border px-3.5 py-3 sm:px-4 ${
@@ -3453,10 +4311,6 @@ export default function PayUCheckoutModal({
               </p>
             </div>
           )}
-
-          {/* ==================================================
-              PAY BUTTON
-          ================================================== */}
 
           <button
             type="submit"
@@ -3496,10 +4350,6 @@ export default function PayUCheckoutModal({
               </>
             )}
           </button>
-
-          {/* ==================================================
-              PAYMENT PROVIDER
-          ================================================== */}
 
           <div
             className={`flex items-center justify-center gap-2 pb-0.5 text-center text-[11px] sm:text-xs ${

@@ -1461,233 +1461,116 @@ export const payUFailure = async (
 //     }
 //   };
 
-export const getPurchasedBookAccess =
-  async (req, res) => {
-    try {
-      const { token } =
-        req.query;
+export const getPurchasedBookAccess=async(req,res)=>{
+  try{
+    const {token}=req.query;
 
-      // ======================================================
-      // VALIDATE ACCESS TOKEN
-      // ======================================================
-
-      if (!token) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-
-            message:
-              "Access token is required.",
-          });
-      }
-
-      // ======================================================
-      // HASH TOKEN
-      // ======================================================
-
-      const tokenHash =
-        hashDownloadToken(
-          token
-        );
-
-      // ======================================================
-      // FIND VERIFIED PAID ORDER
-      //
-      // Supports:
-      // - PayU
-      // - Razorpay
-      // ======================================================
-
-      const order =
-        await Order.findOne({
-          "access.tokenHash":
-            tokenHash,
-
-          orderStatus:
-            "PAID",
-
-          "payment.status":
-            "SUCCESS",
-
-          "verification.callbackHashVerified":
-            true,
-
-          "verification.amountVerified":
-            true,
-
-          "access.revoked":
-            false,
-
-          "access.expiresAt": {
-            $gt:
-              new Date(),
-          },
-
-          $or: [
-            // ================================================
-            // PAYU VERIFIED PAYMENT
-            // ================================================
-
-            {
-              "payment.provider":
-                "PayU",
-
-              "verification.payuVerified":
-                true,
-            },
-
-            // ================================================
-            // RAZORPAY VERIFIED PAYMENT
-            // ================================================
-
-            {
-              "payment.provider":
-                "Razorpay",
-
-              "verification.razorpayVerified":
-                true,
-            },
-          ],
-        });
-
-      // ======================================================
-      // INVALID / EXPIRED / REVOKED TOKEN
-      // ======================================================
-
-      if (!order) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-
-            message:
-              "Access link is invalid or expired.",
-          });
-      }
-
-      // ======================================================
-      // FETCH BOOK
-      // ======================================================
-
-      const book =
-        await Book.findOne({
-          _id:
-            order.bookId,
-
-          isActive:
-            true,
-        })
-          .select(
-            "title pdfUrl coverPageUrl"
-          )
-          .lean();
-
-      // ======================================================
-      // BOOK NOT FOUND
-      // ======================================================
-
-      if (!book) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-
-            message:
-              "Book not found.",
-          });
-      }
-
-      // ======================================================
-      // PDF NOT AVAILABLE
-      // ======================================================
-
-      if (!book.pdfUrl) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-
-            message:
-              "Book PDF is unavailable.",
-          });
-      }
-
-      // ======================================================
-      // UPDATE ACCESS INFORMATION
-      // ======================================================
-
-      await Order.updateOne(
-        {
-          _id:
-            order._id,
-
-          "access.tokenHash":
-            tokenHash,
-
-          "access.revoked":
-            false,
-
-          "access.expiresAt": {
-            $gt:
-              new Date(),
-          },
-        },
-
-        {
-          $set: {
-            "access.lastAccessedAt":
-              new Date(),
-          },
-
-          $inc: {
-            "access.accessCount":
-              1,
-          },
-        }
-      );
-
-      // ======================================================
-      // SUCCESS
-      // ======================================================
-
-      return res
-        .status(200)
-        .json({
-          success: true,
-
-          data: {
-            orderId:
-              order.orderId,
-
-            title:
-              book.title,
-
-            coverPageUrl:
-              book.coverPageUrl,
-
-            pdfUrl:
-              book.pdfUrl,
-
-            expiresAt:
-              order
-                .access
-                .expiresAt,
-          },
-        });
-    } catch (error) {
-      console.error(
-        "Get purchased book access error:",
-        error
-      );
-
-      return res
-        .status(500)
-        .json({
-          success: false,
-
-          message:
-            "Unable to load purchased ebook.",
-        });
+    if(!token){
+      return res.status(400).json({
+        success:false,
+        message:"Access token is required."
+      });
     }
-  };
+
+    const tokenHash=hashDownloadToken(token);
+
+    const order=await Order.findOne({
+      "access.tokenHash":tokenHash,
+      orderStatus:"PAID",
+      "payment.status":"SUCCESS",
+      "verification.amountVerified":true,
+      "access.revoked":false,
+      "access.expiresAt":{
+        $gt:new Date()
+      },
+      $or:[
+        {
+          "payment.provider":"PayU",
+          "verification.callbackHashVerified":true,
+          "verification.payuVerified":true
+        },
+        {
+          "payment.provider":"Razorpay",
+          "verification.callbackHashVerified":true,
+          "verification.razorpayVerified":true
+        },
+        {
+          "payment.provider":"Cashfree",
+          "verification.cashfreeVerified":true
+        }
+      ]
+    });
+
+    if(!order){
+      return res.status(403).json({
+        success:false,
+        message:"Access link is invalid or expired."
+      });
+    }
+
+    const book=await Book.findOne({
+      _id:order.bookId,
+      isActive:true
+    })
+      .select("title pdfUrl coverPageUrl")
+      .lean();
+
+    if(!book){
+      return res.status(404).json({
+        success:false,
+        message:"Book not found."
+      });
+    }
+
+    if(!book.pdfUrl){
+      return res.status(404).json({
+        success:false,
+        message:"Book PDF is unavailable."
+      });
+    }
+
+    const accessUpdated=await Order.updateOne(
+      {
+        _id:order._id,
+        "access.tokenHash":tokenHash,
+        "access.revoked":false,
+        "access.expiresAt":{
+          $gt:new Date()
+        }
+      },
+      {
+        $set:{
+          "access.lastAccessedAt":new Date()
+        },
+        $inc:{
+          "access.accessCount":1
+        }
+      }
+    );
+
+    if(!accessUpdated.modifiedCount){
+      return res.status(403).json({
+        success:false,
+        message:"Access link is invalid or expired."
+      });
+    }
+
+    return res.status(200).json({
+      success:true,
+      data:{
+        orderId:order.orderId,
+        title:book.title,
+        coverPageUrl:book.coverPageUrl,
+        pdfUrl:book.pdfUrl,
+        expiresAt:order.access.expiresAt
+      }
+    });
+  }catch(error){
+    console.error("Get purchased book access error:",error);
+
+    return res.status(500).json({
+      success:false,
+      message:"Unable to load purchased ebook."
+    });
+  }
+};

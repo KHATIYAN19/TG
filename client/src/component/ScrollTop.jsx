@@ -1,23 +1,18 @@
-import { useEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
+  const previousPathname = useRef(pathname);
 
-  useEffect(() => {
-    // Stop browser from restoring the previous scroll position
+  useLayoutEffect(() => {
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
-
-    // Wait until the new route has rendered
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-
-      // Extra fallback
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname]);
 
   return null;
