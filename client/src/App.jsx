@@ -1362,12 +1362,12 @@ function App() {
             }
           />
 
-          <Route
+          {/* <Route
             path="/affiliate-marketing"
             element={
               <AffiliateMarketing />
             }
-          />
+          /> */}
 
           <Route
             path="/carrers"
