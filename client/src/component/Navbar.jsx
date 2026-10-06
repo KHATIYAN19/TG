@@ -14,7 +14,6 @@
 //   LogOut,
 //   Mail,
 //   Menu,
-//   Megaphone,
 //   Moon,
 //   Sparkles,
 //   Sun,
@@ -26,16 +25,9 @@
 // import { useDispatch, useSelector } from "react-redux";
 // import { logout } from "../Redux/authSlice";
 // import logo from "../utils/target_Trek_logo_2.jpg";
-
 // const THEME_KEY = "theme";
 // const THEME_EVENT = "targettrek-theme-change";
-
 // const services = [
-//   {
-//     slug: "ppc-advertising",
-//     title: "PPC Advertising",
-//     icon: Megaphone,
-//   },
 //   {
 //     slug: "social-media-marketing",
 //     title: "Social Media Marketing",
@@ -62,99 +54,103 @@
 //     icon: Sparkles,
 //   },
 // ];
-
 // /*
-//  * Only these routes belong to the normal TargetTrek website.
+//  * ======================================================
+//  * NAVBAR ROUTE MODE CONFIGURATION
+//  * ======================================================
 //  *
-//  * Every route NOT present here automatically becomes
-//  * a TargetTrek Learn route.
+//  * CURRENT STATE:
+//  * All normal TargetTrek routes are commented.
+//  *
+//  * Therefore every route currently uses:
+//  * - TargetTrek Learn navbar
+//  * - Learn light/dark theme
+//  *
+//  * FUTURE:
+//  * Uncomment the routes below and Main + Learn mode will
+//  * automatically start working again.
+//  *
+//  * IMPORTANT:
+//  * "/" is an exact route. Do not put "/" inside the
+//  * prefix array because it would match every pathname.
 //  */
-// const MAIN_ROUTE_PREFIXES = [
-//   "/services",
-//   "/portfolio",
-//   "/affiliate-marketing",
-//   "/carrers",
-//   "/submit-review",
+// const MAIN_EXACT_ROUTES = [
+//   // "/",
+//   // "/about",
+//   // "/contact",
 // ];
-
+// const MAIN_ROUTE_PREFIXES = [
+//   // "/services",
+//   // "/portfolio",
+//   // "/affiliate-marketing",
+//   // "/carrers",
+//   // "/submit-review",
+// ];
+// const matchesExactRoute = (pathname, routes) =>
+//   routes.includes(pathname);
 // const routeMatches = (pathname, prefix) =>
 //   pathname === prefix || pathname.startsWith(`${prefix}/`);
-
 // const matchesAnyRoute = (pathname, prefixes) =>
 //   prefixes.some((prefix) => routeMatches(pathname, prefix));
-
 // const isMainRoute = (pathname) =>
-//   // pathname === "/" || matchesAnyRoute(pathname, MAIN_ROUTE_PREFIXES);
+//   matchesExactRoute(pathname, MAIN_EXACT_ROUTES) ||
 //   matchesAnyRoute(pathname, MAIN_ROUTE_PREFIXES);
-
-
 // /*
-//  * Everything other than MAIN routes is Learn.
+//  * Used by the mobile Learn -> Main switch.
 //  *
-//  * Examples:
+//  * While all Main routes are commented this is null,
+//  * so the switch is hidden.
 //  *
-//  * /                    -> main
-//  * /about               -> main
-//  * /services/...        -> main
-//  *
-//  * /learn               -> learn
-//  * /books               -> learn
-//  * /book/...            -> learn
-//  * /blogs               -> learn
-//  * /resources           -> learn
-//  * /reviews             -> learn
-//  * /dashboard           -> learn
-//  * /admin/...           -> learn
-//  * /profile             -> learn
-//  * /anything-new        -> learn
+//  * As soon as you uncomment at least one Main route,
+//  * the switch automatically becomes available.
+//  */
+// const MAIN_SITE_ENTRY =
+//   MAIN_EXACT_ROUTES.includes("/")
+//     ? "/"
+//     : MAIN_EXACT_ROUTES[0] ||
+//       MAIN_ROUTE_PREFIXES[0] ||
+//       null;
+// const HAS_MAIN_SITE = Boolean(MAIN_SITE_ENTRY);
+// /*
+//  * Any route that is not explicitly Main is Learn.
 //  */
 // const getNavbarMode = (pathname) => {
 //   return isMainRoute(pathname) ? "main" : "learn";
 // };
-
 // const readTheme = () => {
 //   if (typeof window === "undefined") {
 //     return "light";
 //   }
-
 //   return window.localStorage.getItem(THEME_KEY) === "dark"
 //     ? "dark"
 //     : "light";
 // };
-
 // const applyThemeToDocument = (theme) => {
 //   if (typeof document === "undefined") {
 //     return;
 //   }
-
 //   document.documentElement.classList.toggle(
 //     "dark",
 //     theme === "dark"
 //   );
-
 //   document.documentElement.setAttribute(
 //     "data-theme",
 //     theme
 //   );
 // };
-
 // const Navbar = () => {
 //   const navigate = useNavigate();
 //   const location = useLocation();
 //   const dispatch = useDispatch();
-
 //   const { user, isAuthenticated } = useSelector(
 //     (state) => state.auth
 //   );
-
 //   const [menuOpen, setMenuOpen] = useState(false);
 //   const [servicesOpen, setServicesOpen] = useState(false);
 //   const [profileOpen, setProfileOpen] = useState(false);
-
 //   const [navMode, setNavMode] = useState(() =>
 //     getNavbarMode(location.pathname)
 //   );
-
 //   /*
 //    * Main TargetTrek is always light.
 //    * Learn uses saved theme.
@@ -163,47 +159,35 @@
 //     if (isMainRoute(location.pathname)) {
 //       return "light";
 //     }
-
 //     return readTheme();
 //   });
-
 //   const profileRef = useRef(null);
 //   const servicesTimeoutRef = useRef(null);
-
 //   const isLearn = navMode === "learn";
-
 //   /*
 //    * Main TargetTrek is always light,
 //    * even if Learn has dark theme saved.
 //    */
 //   const isDark = isLearn && theme === "dark";
-
 //   const isAdmin =
 //     isAuthenticated &&
 //     (user?.role === "admin" || user?.role === "Employee");
-
 //   const userInitial =
 //     user?.name?.trim()?.charAt(0)?.toUpperCase() || "U";
-
 //   const closeMenus = () => {
 //     setMenuOpen(false);
 //     setServicesOpen(false);
 //     setProfileOpen(false);
 //   };
-
 //   const goTo = (path) => {
 //     closeMenus();
 //     navigate(path);
 //   };
-
 //   const handleLogout = () => {
 //     dispatch(logout());
-
 //     closeMenus();
-
 //     navigate(isLearn ? "/learn" : "/");
 //   };
-
 //   /*
 //    * Theme changes are allowed ONLY inside Learn.
 //    */
@@ -211,20 +195,15 @@
 //     if (!isLearn) {
 //       return;
 //     }
-
 //     if (newTheme !== "dark" && newTheme !== "light") {
 //       return;
 //     }
-
 //     setTheme(newTheme);
-
 //     window.localStorage.setItem(
 //       THEME_KEY,
 //       newTheme
 //     );
-
 //     applyThemeToDocument(newTheme);
-
 //     window.dispatchEvent(
 //       new CustomEvent(THEME_EVENT, {
 //         detail: {
@@ -233,17 +212,14 @@
 //       })
 //     );
 //   };
-
 //   const toggleTheme = () => {
 //     if (!isLearn) {
 //       return;
 //     }
-
 //     changeTheme(
 //       isDark ? "light" : "dark"
 //     );
 //   };
-
 //   /*
 //    * Listen for theme updates.
 //    *
@@ -254,25 +230,19 @@
 //     const applyCorrectTheme = () => {
 //       const currentPath =
 //         window.location.pathname;
-
 //       if (isMainRoute(currentPath)) {
 //         setTheme("light");
 //         applyThemeToDocument("light");
 //         return;
 //       }
-
 //       const savedTheme = readTheme();
-
 //       setTheme(savedTheme);
 //       applyThemeToDocument(savedTheme);
 //     };
-
 //     applyCorrectTheme();
-
 //     const handleThemeEvent = (event) => {
 //       const currentPath =
 //         window.location.pathname;
-
 //       /*
 //        * Never allow dark mode on normal TargetTrek.
 //        */
@@ -281,10 +251,8 @@
 //         applyThemeToDocument("light");
 //         return;
 //       }
-
 //       const newTheme =
 //         event?.detail?.theme;
-
 //       if (
 //         newTheme === "dark" ||
 //         newTheme === "light"
@@ -293,21 +261,17 @@
 //         applyThemeToDocument(newTheme);
 //       }
 //     };
-
 //     const handleStorage = (event) => {
 //       if (event.key !== THEME_KEY) {
 //         return;
 //       }
-
 //       const currentPath =
 //         window.location.pathname;
-
 //       if (isMainRoute(currentPath)) {
 //         setTheme("light");
 //         applyThemeToDocument("light");
 //         return;
 //       }
-
 //       if (
 //         event.newValue === "dark" ||
 //         event.newValue === "light"
@@ -316,30 +280,25 @@
 //         applyThemeToDocument(event.newValue);
 //       }
 //     };
-
 //     window.addEventListener(
 //       THEME_EVENT,
 //       handleThemeEvent
 //     );
-
 //     window.addEventListener(
 //       "storage",
 //       handleStorage
 //     );
-
 //     return () => {
 //       window.removeEventListener(
 //         THEME_EVENT,
 //         handleThemeEvent
 //       );
-
 //       window.removeEventListener(
 //         "storage",
 //         handleStorage
 //       );
 //     };
 //   }, []);
-
 //   /*
 //    * Navbar mode is completely based on URL.
 //    *
@@ -348,12 +307,9 @@
 //    */
 //   useEffect(() => {
 //     const pathname = location.pathname;
-
 //     const mode =
 //       getNavbarMode(pathname);
-
 //     setNavMode(mode);
-
 //     if (mode === "main") {
 //       /*
 //        * Force normal TargetTrek to light mode.
@@ -369,25 +325,20 @@
 //        * Restore Learn theme when entering Learn.
 //        */
 //       const storedTheme = readTheme();
-
 //       setTheme(storedTheme);
 //       applyThemeToDocument(storedTheme);
 //     }
-
 //     setMenuOpen(false);
 //     setServicesOpen(false);
 //     setProfileOpen(false);
 //   }, [location.pathname]);
-
 //   useEffect(() => {
 //     document.body.style.overflow =
 //       menuOpen ? "hidden" : "";
-
 //     return () => {
 //       document.body.style.overflow = "";
 //     };
 //   }, [menuOpen]);
-
 //   useEffect(() => {
 //     const handleOutsideClick = (event) => {
 //       if (
@@ -397,12 +348,10 @@
 //         setProfileOpen(false);
 //       }
 //     };
-
 //     document.addEventListener(
 //       "mousedown",
 //       handleOutsideClick
 //     );
-
 //     return () => {
 //       document.removeEventListener(
 //         "mousedown",
@@ -410,7 +359,6 @@
 //       );
 //     };
 //   }, []);
-
 //   useEffect(() => {
 //     return () => {
 //       if (servicesTimeoutRef.current) {
@@ -420,89 +368,78 @@
 //       }
 //     };
 //   }, []);
-
 //   const handleServicesEnter = () => {
 //     clearTimeout(
 //       servicesTimeoutRef.current
 //     );
-
 //     setServicesOpen(true);
 //   };
-
 //   const handleServicesLeave = () => {
 //     servicesTimeoutRef.current =
 //       setTimeout(() => {
 //         setServicesOpen(false);
 //       }, 150);
 //   };
-
 //   const isActive = (path) =>
 //     routeMatches(
 //       location.pathname,
 //       path
 //     );
-
 //   const booksActive =
 //     isActive("/books") ||
 //     isActive("/book") ||
 //     isActive("/ebook");
-
 //   const interviewsActive =
 //     isActive("/interviews") ||
 //     isActive("/interview");
-
 //   const resourcesActive =
 //     isActive("/resources") ||
 //     isActive("/resource");
-
 //   const blogsActive =
 //     isActive("/blogs") ||
 //     isActive("/blog");
-
+//   const learnHomeActive =
+//     location.pathname === "/" ||
+//     location.pathname === "/learn";
+//   const aboutActive =
+//     isActive("/about");
+//   const contactActive =
+//     isActive("/contact");
 //   const navBackground = isDark
 //     ? "border-slate-800 bg-[#090D14]/95"
 //     : "border-slate-200 bg-white/95";
-
 //   const drawerBackground = isDark
 //     ? "border-slate-800 bg-[#0B1119]"
 //     : "border-slate-200 bg-white";
-
 //   const primaryText = isDark
 //     ? "text-white"
 //     : "text-slate-950";
-
 //   const secondaryText = isDark
 //     ? "text-slate-400"
 //     : "text-slate-600";
-
 //   const cardBackground = isDark
 //     ? "border-slate-700 bg-slate-900"
 //     : "border-slate-200 bg-white";
-
 //   const desktopLinkClass = (active) => {
 //     if (active) {
 //       return isDark
 //         ? "bg-blue-950/40 text-blue-300"
 //         : "bg-blue-50 text-blue-700";
 //     }
-
 //     return isDark
 //       ? "text-slate-300 hover:bg-slate-800 hover:text-white"
 //       : "text-slate-600 hover:bg-slate-100 hover:text-slate-950";
 //   };
-
 //   const mobileLinkClass = (active) => {
 //     if (active) {
 //       return isDark
 //         ? "bg-blue-950/40 text-blue-300"
 //         : "bg-blue-50 text-blue-700";
 //     }
-
 //     return isDark
 //       ? "text-slate-300 hover:bg-slate-800"
 //       : "text-slate-700 hover:bg-slate-100";
 //   };
-
 //   const Brand = ({ mobile = false }) => {
 //     if (!isLearn) {
 //       return (
@@ -532,7 +469,6 @@
 //               className="h-full w-full object-cover"
 //             />
 //           </div>
-
 //           <span
 //             className={`
 //               font-extrabold
@@ -553,7 +489,6 @@
 //         </button>
 //       );
 //     }
-
 //     return (
 //       <button
 //         type="button"
@@ -580,7 +515,6 @@
 //             className="h-full w-full object-cover"
 //           />
 //         </div>
-
 //         <div
 //           className={`
 //             relative
@@ -600,7 +534,6 @@
 //           <span className="text-blue-500">
 //             Trek
 //           </span>
-
 //           <span
 //             className="
 //               absolute
@@ -619,7 +552,6 @@
 //       </button>
 //     );
 //   };
-
 //   /*
 //    * This button is rendered only on Learn.
 //    */
@@ -627,7 +559,6 @@
 //     if (!isLearn) {
 //       return null;
 //     }
-
 //     return (
 //       <button
 //         type="button"
@@ -662,12 +593,10 @@
 //       </button>
 //     );
 //   };
-
 //   const DesktopProfile = () => {
 //     if (!isAuthenticated) {
 //       return null;
 //     }
-
 //     return (
 //       <div
 //         ref={profileRef}
@@ -701,7 +630,6 @@
 //         >
 //           {userInitial}
 //         </button>
-
 //         {profileOpen && (
 //           <div
 //             className={`
@@ -746,7 +674,6 @@
 //                 >
 //                   {userInitial}
 //                 </div>
-
 //                 <div className="min-w-0">
 //                   <p
 //                     className={`
@@ -758,7 +685,6 @@
 //                   >
 //                     {user?.name || "User"}
 //                   </p>
-
 //                   <p
 //                     className={`
 //                       mt-0.5
@@ -772,7 +698,6 @@
 //                 </div>
 //               </div>
 //             </div>
-
 //             <button
 //               type="button"
 //               onClick={() => goTo("/profile")}
@@ -799,7 +724,6 @@
 //               <User size={17} />
 //               Profile
 //             </button>
-
 //             {isAdmin && (
 //               <>
 //                 <button
@@ -829,7 +753,6 @@
 //                   <LayoutDashboard size={17} />
 //                   Dashboard
 //                 </button>
-
 //                 <button
 //                   type="button"
 //                   onClick={() =>
@@ -861,7 +784,6 @@
 //                 </button>
 //               </>
 //             )}
-
 //             <div
 //               className={`
 //                 my-2
@@ -873,7 +795,6 @@
 //                 }
 //               `}
 //             />
-
 //             <button
 //               type="button"
 //               onClick={handleLogout}
@@ -904,7 +825,6 @@
 //       </div>
 //     );
 //   };
-
 //   const MainDesktopNavigation = () => (
 //     <>
 //       <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
@@ -924,7 +844,6 @@
 //         >
 //           About
 //         </NavLink>
-
 //         <div
 //           className="relative"
 //           onMouseEnter={handleServicesEnter}
@@ -948,7 +867,6 @@
 //             `}
 //           >
 //             Services
-
 //             <ChevronDown
 //               size={15}
 //               className={`
@@ -961,7 +879,6 @@
 //               `}
 //             />
 //           </NavLink>
-
 //           {servicesOpen && (
 //             <div
 //               className={`
@@ -992,10 +909,8 @@
 //               >
 //                 Services
 //               </p>
-
 //               {services.map((service) => {
 //                 const Icon = service.icon;
-
 //                 return (
 //                   <NavLink
 //                     key={service.slug}
@@ -1028,7 +943,6 @@
 //                     >
 //                       <Icon size={16} />
 //                     </div>
-
 //                     {service.title}
 //                   </NavLink>
 //                 );
@@ -1036,7 +950,6 @@
 //             </div>
 //           )}
 //         </div>
-
 //         <button
 //           type="button"
 //           onClick={() =>
@@ -1059,7 +972,6 @@
 //           Learn
 //         </button>
 //       </div>
-
 //       <div className="hidden items-center gap-1 xl:flex">
 //         <NavLink
 //           to="/contact"
@@ -1077,7 +989,6 @@
 //         >
 //           Contact
 //         </NavLink>
-
 //         {isAdmin && (
 //           <>
 //             <button
@@ -1097,7 +1008,6 @@
 //             >
 //               Dashboard
 //             </button>
-
 //             <button
 //               type="button"
 //               onClick={() =>
@@ -1119,17 +1029,14 @@
 //             </button>
 //           </>
 //         )}
-
 //         {/*
 //           No ThemeButton here.
 //           Main TargetTrek is always light.
 //         */}
-
 //         <DesktopProfile />
 //       </div>
 //     </>
 //   );
-
 //   const LearnDesktopNavigation = () => (
 //     <>
 //       <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
@@ -1142,14 +1049,11 @@
 //             text-sm
 //             font-semibold
 //             transition
-//             ${desktopLinkClass(
-//               booksActive
-//             )}
+//             ${desktopLinkClass(booksActive)}
 //           `}
 //         >
 //           Books
 //         </NavLink>
-
 //         <NavLink
 //           to="/interviews"
 //           className={`
@@ -1159,14 +1063,11 @@
 //             text-sm
 //             font-semibold
 //             transition
-//             ${desktopLinkClass(
-//               interviewsActive
-//             )}
+//             ${desktopLinkClass(interviewsActive)}
 //           `}
 //         >
 //           Interviews
 //         </NavLink>
-
 //         <NavLink
 //           to="/resources"
 //           className={`
@@ -1176,14 +1077,11 @@
 //             text-sm
 //             font-semibold
 //             transition
-//             ${desktopLinkClass(
-//               resourcesActive
-//             )}
+//             ${desktopLinkClass(resourcesActive)}
 //           `}
 //         >
 //           Resources
 //         </NavLink>
-
 //         <NavLink
 //           to="/blogs"
 //           className={`
@@ -1193,23 +1091,46 @@
 //             text-sm
 //             font-semibold
 //             transition
-//             ${desktopLinkClass(
-//               blogsActive
-//             )}
+//             ${desktopLinkClass(blogsActive)}
 //           `}
 //         >
 //           Blogs
 //         </NavLink>
+//         <NavLink
+//           to="/about"
+//           className={`
+//             rounded-lg
+//             px-4
+//             py-2
+//             text-sm
+//             font-semibold
+//             transition
+//             ${desktopLinkClass(aboutActive)}
+//           `}
+//         >
+//           About Us
+//         </NavLink>
 //       </div>
-
 //       <div className="hidden items-center gap-1 xl:flex">
+//         <NavLink
+//           to="/contact"
+//           className={`
+//             rounded-lg
+//             px-3
+//             py-2
+//             text-sm
+//             font-semibold
+//             transition
+//             ${desktopLinkClass(contactActive)}
+//           `}
+//         >
+//           Contact Us
+//         </NavLink>
 //         {isAdmin && (
 //           <>
 //             <button
 //               type="button"
-//               onClick={() =>
-//                 goTo("/dashboard")
-//               }
+//               onClick={() => goTo("/dashboard")}
 //               className={`
 //                 rounded-lg
 //                 px-3
@@ -1217,21 +1138,14 @@
 //                 text-sm
 //                 font-semibold
 //                 transition
-//                 ${desktopLinkClass(
-//                   isActive("/dashboard")
-//                 )}
+//                 ${desktopLinkClass(isActive("/dashboard"))}
 //               `}
 //             >
 //               Dashboard
 //             </button>
-
 //             <button
 //               type="button"
-//               onClick={() =>
-//                 goTo(
-//                   "/admin/book/analytics"
-//                 )
-//               }
+//               onClick={() => goTo("/admin/book/analytics")}
 //               className={`
 //                 rounded-lg
 //                 px-3
@@ -1240,9 +1154,7 @@
 //                 font-semibold
 //                 transition
 //                 ${desktopLinkClass(
-//                   isActive(
-//                     "/admin/book/analytics"
-//                   )
+//                   isActive("/admin/book/analytics")
 //                 )}
 //               `}
 //             >
@@ -1250,16 +1162,13 @@
 //             </button>
 //           </>
 //         )}
-
 //         <div className="ml-1">
 //           <ThemeButton />
 //         </div>
-
 //         <DesktopProfile />
 //       </div>
 //     </>
 //   );
-
 //   const MobileTopBar = () => (
 //     <div
 //       className="
@@ -1291,11 +1200,9 @@
 //       >
 //         <Menu size={20} />
 //       </button>
-
 //       <div className="flex justify-center">
 //         <Brand mobile />
 //       </div>
-
 //       {isLearn ? (
 //         <ThemeButton />
 //       ) : (
@@ -1309,7 +1216,6 @@
 //       )}
 //     </div>
 //   );
-
 //   const MainMobileNavigation = () => (
 //     <div className="space-y-1">
 //       <NavLink
@@ -1329,7 +1235,6 @@
 //       >
 //         About
 //       </NavLink>
-
 //       <div>
 //         <button
 //           type="button"
@@ -1354,7 +1259,6 @@
 //           `}
 //         >
 //           Services
-
 //           <ChevronDown
 //             size={17}
 //             className={`
@@ -1367,7 +1271,6 @@
 //             `}
 //           />
 //         </button>
-
 //         {servicesOpen && (
 //           <div
 //             className="
@@ -1394,10 +1297,8 @@
 //             >
 //               All Services
 //             </NavLink>
-
 //             {services.map((service) => {
 //               const Icon = service.icon;
-
 //               return (
 //                 <NavLink
 //                   key={service.slug}
@@ -1417,7 +1318,6 @@
 //                   "
 //                 >
 //                   <Icon size={15} />
-
 //                   {service.title}
 //                 </NavLink>
 //               );
@@ -1425,7 +1325,6 @@
 //           </div>
 //         )}
 //       </div>
-
 //       <button
 //         type="button"
 //         onClick={() =>
@@ -1448,10 +1347,8 @@
 //           <GraduationCap size={18} />
 //           Learn
 //         </span>
-
 //         <ArrowUpRight size={16} />
 //       </button>
-
 //       <NavLink
 //         to="/contact"
 //         onClick={closeMenus}
@@ -1471,7 +1368,6 @@
 //       </NavLink>
 //     </div>
 //   );
-
 //   const LearnMobileNavigation = () => (
 //     <div className="space-y-1">
 //       <NavLink
@@ -1486,15 +1382,12 @@
 //           py-3
 //           text-sm
 //           font-semibold
-//           ${mobileLinkClass(
-//             location.pathname === "/learn"
-//           )}
+//           ${mobileLinkClass(learnHomeActive)}
 //         `}
 //       >
 //         <GraduationCap size={18} />
 //         Learn Home
 //       </NavLink>
-
 //       <NavLink
 //         to="/books"
 //         onClick={closeMenus}
@@ -1507,15 +1400,12 @@
 //           py-3
 //           text-sm
 //           font-semibold
-//           ${mobileLinkClass(
-//             booksActive
-//           )}
+//           ${mobileLinkClass(booksActive)}
 //         `}
 //       >
 //         <BookOpen size={18} />
 //         Books
 //       </NavLink>
-
 //       <NavLink
 //         to="/interviews"
 //         onClick={closeMenus}
@@ -1528,15 +1418,12 @@
 //           py-3
 //           text-sm
 //           font-semibold
-//           ${mobileLinkClass(
-//             interviewsActive
-//           )}
+//           ${mobileLinkClass(interviewsActive)}
 //         `}
 //       >
 //         <Users size={18} />
 //         Interviews
 //       </NavLink>
-
 //       <NavLink
 //         to="/resources"
 //         onClick={closeMenus}
@@ -1549,15 +1436,12 @@
 //           py-3
 //           text-sm
 //           font-semibold
-//           ${mobileLinkClass(
-//             resourcesActive
-//           )}
+//           ${mobileLinkClass(resourcesActive)}
 //         `}
 //       >
 //         <GraduationCap size={18} />
 //         Resources
 //       </NavLink>
-
 //       <NavLink
 //         to="/blogs"
 //         onClick={closeMenus}
@@ -1570,22 +1454,61 @@
 //           py-3
 //           text-sm
 //           font-semibold
-//           ${mobileLinkClass(
-//             blogsActive
-//           )}
+//           ${mobileLinkClass(blogsActive)}
 //         `}
 //       >
 //         <FileText size={18} />
 //         Blogs
 //       </NavLink>
+//       <div
+//         className={`
+//           my-3
+//           border-t
+//           ${isDark ? "border-slate-800" : "border-slate-200"}
+//         `}
+//       />
+//       <NavLink
+//         to="/about"
+//         onClick={closeMenus}
+//         className={`
+//           flex
+//           items-center
+//           gap-3
+//           rounded-xl
+//           px-4
+//           py-3
+//           text-sm
+//           font-semibold
+//           ${mobileLinkClass(aboutActive)}
+//         `}
+//       >
+//         <User size={18} />
+//         About Us
+//       </NavLink>
+//       <NavLink
+//         to="/contact"
+//         onClick={closeMenus}
+//         className={`
+//           flex
+//           items-center
+//           gap-3
+//           rounded-xl
+//           px-4
+//           py-3
+//           text-sm
+//           font-semibold
+//           ${mobileLinkClass(contactActive)}
+//         `}
+//       >
+//         <Mail size={18} />
+//         Contact Us
+//       </NavLink>
 //     </div>
 //   );
-
 //   const MobileAdmin = () => {
 //     if (!isAdmin) {
 //       return null;
 //     }
-
 //     return (
 //       <div
 //         className={`
@@ -1616,7 +1539,6 @@
 //         >
 //           Administration
 //         </p>
-
 //         <button
 //           type="button"
 //           onClick={() =>
@@ -1641,7 +1563,6 @@
 //           <LayoutDashboard size={18} />
 //           Dashboard
 //         </button>
-
 //         <button
 //           type="button"
 //           onClick={() =>
@@ -1673,7 +1594,6 @@
 //       </div>
 //     );
 //   };
-
 //   const MobileProfile = () => {
 //     if (!isAuthenticated) {
 //       return (
@@ -1690,7 +1610,7 @@
 //         >
 //           {isLearn ? (
 //             <a
-//               href="mailto:supporttargettrek@gmail.com"
+//               href="mailto:supporttargettrek\@gmail.com"
 //               className={`
 //                 flex
 //                 items-center
@@ -1731,14 +1651,12 @@
 //               "
 //             >
 //               Contact TargetTrek
-
 //               <ArrowRight size={16} />
 //             </button>
 //           )}
 //         </div>
 //       );
 //     }
-
 //     return (
 //       <div
 //         className={`
@@ -1780,7 +1698,6 @@
 //             >
 //               {userInitial}
 //             </div>
-
 //             <div className="min-w-0 flex-1">
 //               <p
 //                 className={`
@@ -1792,7 +1709,6 @@
 //               >
 //                 {user?.name || "User"}
 //               </p>
-
 //               <p
 //                 className={`
 //                   mt-0.5
@@ -1803,7 +1719,6 @@
 //               >
 //                 {user?.email}
 //               </p>
-
 //               {user?.role && (
 //                 <p
 //                   className="
@@ -1820,7 +1735,6 @@
 //               )}
 //             </div>
 //           </div>
-
 //           <div className="mt-4 grid grid-cols-2 gap-2">
 //             <button
 //               type="button"
@@ -1842,7 +1756,6 @@
 //             >
 //               Profile
 //             </button>
-
 //             <button
 //               type="button"
 //               onClick={handleLogout}
@@ -1872,7 +1785,6 @@
 //       </div>
 //     );
 //   };
-
 //   const MobileDrawer = () => (
 //     <>
 //       <div
@@ -1895,7 +1807,6 @@
 //           }
 //         `}
 //       />
-
 //       <aside
 //         className={`
 //           fixed
@@ -1938,7 +1849,6 @@
 //           `}
 //         >
 //           <Brand mobile />
-
 //           <button
 //             type="button"
 //             onClick={() =>
@@ -1963,7 +1873,6 @@
 //             <X size={20} />
 //           </button>
 //         </div>
-
 //         <div className="flex-1 overflow-y-auto px-3 py-5">
 //           <p
 //             className={`
@@ -1984,86 +1893,76 @@
 //               ? "Learning"
 //               : "Navigation"}
 //           </p>
-
 //           {isLearn ? (
 //             <LearnMobileNavigation />
 //           ) : (
 //             <MainMobileNavigation />
 //           )}
-
 //           <MobileAdmin />
-
-//           <div
-//             className={`
-//               mt-6
-//               border-t
-//               pt-5
-//               ${
-//                 isDark
-//                   ? "border-slate-800"
-//                   : "border-slate-200"
-//               }
-//             `}
-//           >
-//             {isLearn ? (
-//               <button
-//                 type="button"
-//                 onClick={() =>
-//                   goTo("/")
-//                 }
-//                 className={`
-//                   flex
-//                   w-full
-//                   items-center
-//                   justify-between
-//                   rounded-xl
-//                   px-4
-//                   py-3
-//                   text-sm
-//                   font-semibold
-//                   ${mobileLinkClass(false)}
-//                 `}
-//               >
-//                 TargetTrek Website
-
-//                 <ArrowUpRight size={16} />
-//               </button>
-//             ) : (
-//               <button
-//                 type="button"
-//                 onClick={() =>
-//                   goTo("/learn")
-//                 }
-//                 className="
-//                   flex
-//                   w-full
-//                   items-center
-//                   justify-between
-//                   rounded-xl
-//                   bg-blue-50
-//                   px-4
-//                   py-3
-//                   text-sm
-//                   font-bold
-//                   text-blue-700
-//                 "
-//               >
-//                 <span className="flex items-center gap-3">
-//                   <GraduationCap size={18} />
-//                   TargetTrek Learn
-//                 </span>
-
-//                 <ArrowRight size={16} />
-//               </button>
-//             )}
-//           </div>
+//           {(!isLearn || HAS_MAIN_SITE) && (
+//             <div
+//               className={`
+//                 mt-6
+//                 border-t
+//                 pt-5
+//                 ${isDark ? "border-slate-800" : "border-slate-200"}
+//               `}
+//             >
+//               {isLearn ? (
+//                 <button
+//                   type="button"
+//                   onClick={() => goTo(MAIN_SITE_ENTRY)}
+//                   className={`
+//                     flex
+//                     w-full
+//                     items-center
+//                     justify-between
+//                     rounded-xl
+//                     px-4
+//                     py-3
+//                     text-sm
+//                     font-semibold
+//                     ${mobileLinkClass(false)}
+//                   `}
+//                 >
+//                   TargetTrek Website
+//                   <ArrowUpRight size={16} />
+//                 </button>
+//               ) : (
+//                 <button
+//                   type="button"
+//                   onClick={() => goTo("/learn")}
+//                   className={`
+//                     flex
+//                     w-full
+//                     items-center
+//                     justify-between
+//                     rounded-xl
+//                     px-4
+//                     py-3
+//                     text-sm
+//                     font-bold
+//                     ${
+//                       isDark
+//                         ? "bg-blue-950/40 text-blue-300"
+//                         : "bg-blue-50 text-blue-700"
+//                     }
+//                   `}
+//                 >
+//                   <span className="flex items-center gap-3">
+//                     <GraduationCap size={18} />
+//                     TargetTrek Learn
+//                   </span>
+//                   <ArrowRight size={16} />
+//                 </button>
+//               )}
+//             </div>
+//           )}
 //         </div>
-
 //         <MobileProfile />
 //       </aside>
 //     </>
 //   );
-
 //   return (
 //     <>
 //       <nav
@@ -2083,25 +1982,28 @@
 //         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 //           <div className="hidden h-16 items-center xl:flex">
 //             <Brand />
-
 //             {isLearn ? (
 //               <LearnDesktopNavigation />
 //             ) : (
 //               <MainDesktopNavigation />
 //             )}
 //           </div>
-
 //           <MobileTopBar />
 //         </div>
 //       </nav>
-
 //       <MobileDrawer />
 //     </>
 //   );
 // };
-
 // export default Navbar;
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import {
   ArrowRight,
   ArrowUpRight,
@@ -2124,12 +2026,24 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+
+import {
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  useDispatch,
+  useSelector,
+} from "react-redux";
+
 import { logout } from "../Redux/authSlice";
 import logo from "../utils/target_Trek_logo_2.jpg";
+
 const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
+
 const services = [
   {
     slug: "social-media-marketing",
@@ -2157,31 +2071,21 @@ const services = [
     icon: Sparkles,
   },
 ];
+
 /*
  * ======================================================
  * NAVBAR ROUTE MODE CONFIGURATION
  * ======================================================
  *
- * CURRENT STATE:
- * All normal TargetTrek routes are commented.
- *
- * Therefore every route currently uses:
- * - TargetTrek Learn navbar
- * - Learn light/dark theme
- *
- * FUTURE:
- * Uncomment the routes below and Main + Learn mode will
- * automatically start working again.
- *
- * IMPORTANT:
- * "/" is an exact route. Do not put "/" inside the
- * prefix array because it would match every pathname.
+ * Keep your current setup.
+ * While these stay commented, all routes use Learn navbar.
  */
 const MAIN_EXACT_ROUTES = [
   // "/",
   // "/about",
   // "/contact",
 ];
+
 const MAIN_ROUTE_PREFIXES = [
   // "/services",
   // "/portfolio",
@@ -2189,435 +2093,200 @@ const MAIN_ROUTE_PREFIXES = [
   // "/carrers",
   // "/submit-review",
 ];
+
 const matchesExactRoute = (pathname, routes) =>
   routes.includes(pathname);
+
 const routeMatches = (pathname, prefix) =>
-  pathname === prefix || pathname.startsWith(`${prefix}/`);
+  pathname === prefix ||
+  pathname.startsWith(`${prefix}/`);
+
 const matchesAnyRoute = (pathname, prefixes) =>
-  prefixes.some((prefix) => routeMatches(pathname, prefix));
+  prefixes.some((prefix) =>
+    routeMatches(pathname, prefix)
+  );
+
 const isMainRoute = (pathname) =>
-  matchesExactRoute(pathname, MAIN_EXACT_ROUTES) ||
-  matchesAnyRoute(pathname, MAIN_ROUTE_PREFIXES);
-/*
- * Used by the mobile Learn -> Main switch.
- *
- * While all Main routes are commented this is null,
- * so the switch is hidden.
- *
- * As soon as you uncomment at least one Main route,
- * the switch automatically becomes available.
- */
+  matchesExactRoute(
+    pathname,
+    MAIN_EXACT_ROUTES
+  ) ||
+  matchesAnyRoute(
+    pathname,
+    MAIN_ROUTE_PREFIXES
+  );
+
 const MAIN_SITE_ENTRY =
   MAIN_EXACT_ROUTES.includes("/")
     ? "/"
     : MAIN_EXACT_ROUTES[0] ||
       MAIN_ROUTE_PREFIXES[0] ||
       null;
-const HAS_MAIN_SITE = Boolean(MAIN_SITE_ENTRY);
-/*
- * Any route that is not explicitly Main is Learn.
- */
-const getNavbarMode = (pathname) => {
-  return isMainRoute(pathname) ? "main" : "learn";
-};
+
+const HAS_MAIN_SITE =
+  Boolean(MAIN_SITE_ENTRY);
+
+const getNavbarMode = (pathname) =>
+  isMainRoute(pathname)
+    ? "main"
+    : "learn";
+
 const readTheme = () => {
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined"
+  ) {
     return "light";
   }
-  return window.localStorage.getItem(THEME_KEY) === "dark"
+
+  return window.localStorage.getItem(
+    THEME_KEY
+  ) === "dark"
     ? "dark"
     : "light";
 };
-const applyThemeToDocument = (theme) => {
-  if (typeof document === "undefined") {
+
+const applyThemeToDocument = (
+  theme
+) => {
+  if (
+    typeof document === "undefined"
+  ) {
     return;
   }
+
   document.documentElement.classList.toggle(
     "dark",
     theme === "dark"
   );
+
   document.documentElement.setAttribute(
     "data-theme",
     theme
   );
 };
-const Navbar = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const dispatch = useDispatch();
-  const { user, isAuthenticated } = useSelector(
-    (state) => state.auth
-  );
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [servicesOpen, setServicesOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [navMode, setNavMode] = useState(() =>
-    getNavbarMode(location.pathname)
-  );
-  /*
-   * Main TargetTrek is always light.
-   * Learn uses saved theme.
-   */
-  const [theme, setTheme] = useState(() => {
-    if (isMainRoute(location.pathname)) {
-      return "light";
-    }
-    return readTheme();
-  });
-  const profileRef = useRef(null);
-  const servicesTimeoutRef = useRef(null);
-  const isLearn = navMode === "learn";
-  /*
-   * Main TargetTrek is always light,
-   * even if Learn has dark theme saved.
-   */
-  const isDark = isLearn && theme === "dark";
-  const isAdmin =
-    isAuthenticated &&
-    (user?.role === "admin" || user?.role === "Employee");
-  const userInitial =
-    user?.name?.trim()?.charAt(0)?.toUpperCase() || "U";
-  const closeMenus = () => {
-    setMenuOpen(false);
-    setServicesOpen(false);
-    setProfileOpen(false);
-  };
-  const goTo = (path) => {
-    closeMenus();
-    navigate(path);
-  };
-  const handleLogout = () => {
-    dispatch(logout());
-    closeMenus();
-    navigate(isLearn ? "/learn" : "/");
-  };
-  /*
-   * Theme changes are allowed ONLY inside Learn.
-   */
-  const changeTheme = (newTheme) => {
-    if (!isLearn) {
-      return;
-    }
-    if (newTheme !== "dark" && newTheme !== "light") {
-      return;
-    }
-    setTheme(newTheme);
-    window.localStorage.setItem(
-      THEME_KEY,
-      newTheme
-    );
-    applyThemeToDocument(newTheme);
-    window.dispatchEvent(
-      new CustomEvent(THEME_EVENT, {
-        detail: {
-          theme: newTheme,
-        },
-      })
-    );
-  };
-  const toggleTheme = () => {
-    if (!isLearn) {
-      return;
-    }
-    changeTheme(
-      isDark ? "light" : "dark"
-    );
-  };
-  /*
-   * Listen for theme updates.
-   *
-   * Main website always stays light.
-   * Learn responds to stored/theme events.
-   */
-  useEffect(() => {
-    const applyCorrectTheme = () => {
-      const currentPath =
-        window.location.pathname;
-      if (isMainRoute(currentPath)) {
-        setTheme("light");
-        applyThemeToDocument("light");
-        return;
-      }
-      const savedTheme = readTheme();
-      setTheme(savedTheme);
-      applyThemeToDocument(savedTheme);
-    };
-    applyCorrectTheme();
-    const handleThemeEvent = (event) => {
-      const currentPath =
-        window.location.pathname;
-      /*
-       * Never allow dark mode on normal TargetTrek.
-       */
-      if (isMainRoute(currentPath)) {
-        setTheme("light");
-        applyThemeToDocument("light");
-        return;
-      }
-      const newTheme =
-        event?.detail?.theme;
-      if (
-        newTheme === "dark" ||
-        newTheme === "light"
-      ) {
-        setTheme(newTheme);
-        applyThemeToDocument(newTheme);
-      }
-    };
-    const handleStorage = (event) => {
-      if (event.key !== THEME_KEY) {
-        return;
-      }
-      const currentPath =
-        window.location.pathname;
-      if (isMainRoute(currentPath)) {
-        setTheme("light");
-        applyThemeToDocument("light");
-        return;
-      }
-      if (
-        event.newValue === "dark" ||
-        event.newValue === "light"
-      ) {
-        setTheme(event.newValue);
-        applyThemeToDocument(event.newValue);
-      }
-    };
-    window.addEventListener(
-      THEME_EVENT,
-      handleThemeEvent
-    );
-    window.addEventListener(
-      "storage",
-      handleStorage
-    );
-    return () => {
-      window.removeEventListener(
-        THEME_EVENT,
-        handleThemeEvent
-      );
-      window.removeEventListener(
-        "storage",
-        handleStorage
-      );
-    };
-  }, []);
-  /*
-   * Navbar mode is completely based on URL.
-   *
-   * Main routes -> TargetTrek
-   * Anything else -> TargetTrek Learn
-   */
-  useEffect(() => {
-    const pathname = location.pathname;
-    const mode =
-      getNavbarMode(pathname);
-    setNavMode(mode);
-    if (mode === "main") {
-      /*
-       * Force normal TargetTrek to light mode.
-       *
-       * IMPORTANT:
-       * We do NOT overwrite localStorage.
-       * This preserves the user's Learn theme.
-       */
-      setTheme("light");
-      applyThemeToDocument("light");
-    } else {
-      /*
-       * Restore Learn theme when entering Learn.
-       */
-      const storedTheme = readTheme();
-      setTheme(storedTheme);
-      applyThemeToDocument(storedTheme);
-    }
-    setMenuOpen(false);
-    setServicesOpen(false);
-    setProfileOpen(false);
-  }, [location.pathname]);
-  useEffect(() => {
-    document.body.style.overflow =
-      menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target)
-      ) {
-        setProfileOpen(false);
-      }
-    };
-    document.addEventListener(
-      "mousedown",
-      handleOutsideClick
-    );
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick
-      );
-    };
-  }, []);
-  useEffect(() => {
-    return () => {
-      if (servicesTimeoutRef.current) {
-        clearTimeout(
-          servicesTimeoutRef.current
-        );
-      }
-    };
-  }, []);
-  const handleServicesEnter = () => {
-    clearTimeout(
-      servicesTimeoutRef.current
-    );
-    setServicesOpen(true);
-  };
-  const handleServicesLeave = () => {
-    servicesTimeoutRef.current =
-      setTimeout(() => {
-        setServicesOpen(false);
-      }, 150);
-  };
-  const isActive = (path) =>
-    routeMatches(
-      location.pathname,
-      path
-    );
-  const booksActive =
-    isActive("/books") ||
-    isActive("/book") ||
-    isActive("/ebook");
-  const interviewsActive =
-    isActive("/interviews") ||
-    isActive("/interview");
-  const resourcesActive =
-    isActive("/resources") ||
-    isActive("/resource");
-  const blogsActive =
-    isActive("/blogs") ||
-    isActive("/blog");
-  const learnHomeActive =
-    location.pathname === "/" ||
-    location.pathname === "/learn";
-  const aboutActive =
-    isActive("/about");
-  const contactActive =
-    isActive("/contact");
-  const navBackground = isDark
+
+const getColors = (isDark) => ({
+  navBackground: isDark
     ? "border-slate-800 bg-[#090D14]/95"
-    : "border-slate-200 bg-white/95";
-  const drawerBackground = isDark
+    : "border-slate-200 bg-white/95",
+
+  drawerBackground: isDark
     ? "border-slate-800 bg-[#0B1119]"
-    : "border-slate-200 bg-white";
-  const primaryText = isDark
+    : "border-slate-200 bg-white",
+
+  primaryText: isDark
     ? "text-white"
-    : "text-slate-950";
-  const secondaryText = isDark
+    : "text-slate-950",
+
+  secondaryText: isDark
     ? "text-slate-400"
-    : "text-slate-600";
-  const cardBackground = isDark
+    : "text-slate-600",
+
+  cardBackground: isDark
     ? "border-slate-700 bg-slate-900"
-    : "border-slate-200 bg-white";
-  const desktopLinkClass = (active) => {
-    if (active) {
-      return isDark
-        ? "bg-blue-950/40 text-blue-300"
-        : "bg-blue-50 text-blue-700";
-    }
+    : "border-slate-200 bg-white",
+});
+
+const desktopLinkClass = (
+  isDark,
+  active
+) => {
+  if (active) {
     return isDark
-      ? "text-slate-300 hover:bg-slate-800 hover:text-white"
-      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950";
-  };
-  const mobileLinkClass = (active) => {
-    if (active) {
-      return isDark
-        ? "bg-blue-950/40 text-blue-300"
-        : "bg-blue-50 text-blue-700";
-    }
+      ? "bg-blue-950/40 text-blue-300"
+      : "bg-blue-50 text-blue-700";
+  }
+
+  return isDark
+    ? "text-slate-300 hover:bg-slate-800 hover:text-white"
+    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950";
+};
+
+const mobileLinkClass = (
+  isDark,
+  active
+) => {
+  if (active) {
     return isDark
-      ? "text-slate-300 hover:bg-slate-800"
-      : "text-slate-700 hover:bg-slate-100";
-  };
-  const Brand = ({ mobile = false }) => {
-    if (!isLearn) {
-      return (
-        <button
-          type="button"
-          onClick={() => goTo("/")}
-          className="flex shrink-0 items-center gap-2.5"
-          aria-label="Go to TargetTrek home"
-        >
-          <div
-            className={`
-              overflow-hidden
-              rounded-xl
-              border
-              shadow-sm
-              ${cardBackground}
-              ${
-                mobile
-                  ? "h-9 w-9"
-                  : "h-10 w-10"
-              }
-            `}
-          >
-            <img
-              src={logo}
-              alt="TargetTrek"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <span
-            className={`
-              font-extrabold
-              tracking-tight
-              ${primaryText}
-              ${
-                mobile
-                  ? "text-lg"
-                  : "text-xl"
-              }
-            `}
-          >
-            Target
-            <span className="text-blue-500">
-              Trek
-            </span>
-          </span>
-        </button>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => goTo("/learn")}
-        className="flex shrink-0 items-center gap-2.5"
-        aria-label="Go to TargetTrek Learn home"
+      ? "bg-blue-950/40 text-blue-300"
+      : "bg-blue-50 text-blue-700";
+  }
+
+  return isDark
+    ? "text-slate-300 hover:bg-slate-800"
+    : "text-slate-700 hover:bg-slate-100";
+};
+
+/* ======================================================
+ * BRAND
+ * ====================================================== */
+
+const Brand = memo(function Brand({
+  mobile = false,
+  isLearn,
+  isDark,
+  onNavigate,
+}) {
+  const {
+    cardBackground,
+    primaryText,
+  } = getColors(isDark);
+
+  const destination = isLearn
+    ? "/learn"
+    : "/";
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        onNavigate(destination)
+      }
+      className="
+        flex
+        shrink-0
+        touch-manipulation
+        items-center
+        gap-2.5
+      "
+      aria-label={
+        isLearn
+          ? "Go to TargetTrek Learn home"
+          : "Go to TargetTrek home"
+      }
+    >
+      <div
+        className={`
+          overflow-hidden
+          rounded-xl
+          border
+          ${!isLearn ? "shadow-sm" : ""}
+          ${cardBackground}
+          ${
+            mobile
+              ? "h-9 w-9"
+              : "h-10 w-10"
+          }
+        `}
       >
-        <div
-          className={`
-            overflow-hidden
-            rounded-xl
-            border
-            ${cardBackground}
-            ${
-              mobile
-                ? "h-9 w-9"
-                : "h-10 w-10"
-            }
-          `}
-        >
-          <img
-            src={logo}
-            alt="TargetTrek Learn"
-            className="h-full w-full object-cover"
-          />
-        </div>
+        <img
+          src={logo}
+          alt={
+            isLearn
+              ? "TargetTrek Learn"
+              : "TargetTrek"
+          }
+          className="
+            h-full
+            w-full
+            object-cover
+          "
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+
+      {isLearn ? (
         <div
           className={`
             relative
@@ -2637,6 +2306,7 @@ const Navbar = () => {
           <span className="text-blue-500">
             Trek
           </span>
+
           <span
             className="
               absolute
@@ -2652,20 +2322,47 @@ const Navbar = () => {
             Learn
           </span>
         </div>
-      </button>
-    );
-  };
-  /*
-   * This button is rendered only on Learn.
-   */
-  const ThemeButton = () => {
+      ) : (
+        <span
+          className={`
+            font-extrabold
+            tracking-tight
+            ${primaryText}
+            ${
+              mobile
+                ? "text-lg"
+                : "text-xl"
+            }
+          `}
+        >
+          Target
+          <span className="text-blue-500">
+            Trek
+          </span>
+        </span>
+      )}
+    </button>
+  );
+});
+
+/* ======================================================
+ * THEME BUTTON
+ * ====================================================== */
+
+const ThemeButton = memo(
+  function ThemeButton({
+    isLearn,
+    isDark,
+    onToggle,
+  }) {
     if (!isLearn) {
       return null;
     }
+
     return (
       <button
         type="button"
-        onClick={toggleTheme}
+        onClick={onToggle}
         aria-label={
           isDark
             ? "Switch to light mode"
@@ -2676,11 +2373,13 @@ const Navbar = () => {
           h-10
           w-10
           shrink-0
+          touch-manipulation
           items-center
           justify-center
           rounded-xl
           border
-          transition
+          transition-colors
+          duration-150
           ${
             isDark
               ? "border-slate-700 bg-slate-900 text-yellow-400 hover:bg-slate-800"
@@ -2695,11 +2394,90 @@ const Navbar = () => {
         )}
       </button>
     );
-  };
-  const DesktopProfile = () => {
+  }
+);
+
+/* ======================================================
+ * DESKTOP PROFILE
+ * State is LOCAL so Navbar does not rerender.
+ * ====================================================== */
+
+const DesktopProfile = memo(
+  function DesktopProfile({
+    user,
+    isAuthenticated,
+    isAdmin,
+    isDark,
+    onNavigate,
+    onLogout,
+  }) {
+    const [
+      profileOpen,
+      setProfileOpen,
+    ] = useState(false);
+
+    const profileRef =
+      useRef(null);
+
+    useEffect(() => {
+      if (!profileOpen) {
+        return undefined;
+      }
+
+      const handleOutsideClick = (
+        event
+      ) => {
+        if (
+          profileRef.current &&
+          !profileRef.current.contains(
+            event.target
+          )
+        ) {
+          setProfileOpen(false);
+        }
+      };
+
+      document.addEventListener(
+        "pointerdown",
+        handleOutsideClick
+      );
+
+      return () => {
+        document.removeEventListener(
+          "pointerdown",
+          handleOutsideClick
+        );
+      };
+    }, [profileOpen]);
+
     if (!isAuthenticated) {
       return null;
     }
+
+    const {
+      cardBackground,
+      primaryText,
+      secondaryText,
+    } = getColors(isDark);
+
+    const userInitial =
+      user?.name
+        ?.trim()
+        ?.charAt(0)
+        ?.toUpperCase() || "U";
+
+    const navigateAndClose = (
+      path
+    ) => {
+      setProfileOpen(false);
+      onNavigate(path);
+    };
+
+    const logoutAndClose = () => {
+      setProfileOpen(false);
+      onLogout();
+    };
+
     return (
       <div
         ref={profileRef}
@@ -2713,6 +2491,7 @@ const Navbar = () => {
             )
           }
           aria-label="Open profile menu"
+          aria-expanded={profileOpen}
           className={`
             flex
             h-10
@@ -2723,7 +2502,8 @@ const Navbar = () => {
             border
             text-sm
             font-black
-            transition
+            transition-colors
+            duration-150
             ${
               isDark
                 ? "border-slate-700 bg-slate-900 text-blue-300 hover:border-blue-700"
@@ -2733,6 +2513,7 @@ const Navbar = () => {
         >
           {userInitial}
         </button>
+
         {profileOpen && (
           <div
             className={`
@@ -2745,7 +2526,7 @@ const Navbar = () => {
               rounded-2xl
               border
               p-2
-              shadow-2xl
+              shadow-xl
               ${cardBackground}
             `}
           >
@@ -2777,6 +2558,7 @@ const Navbar = () => {
                 >
                   {userInitial}
                 </div>
+
                 <div className="min-w-0">
                   <p
                     className={`
@@ -2786,8 +2568,10 @@ const Navbar = () => {
                       ${primaryText}
                     `}
                   >
-                    {user?.name || "User"}
+                    {user?.name ||
+                      "User"}
                   </p>
+
                   <p
                     className={`
                       mt-0.5
@@ -2801,9 +2585,14 @@ const Navbar = () => {
                 </div>
               </div>
             </div>
+
             <button
               type="button"
-              onClick={() => goTo("/profile")}
+              onClick={() =>
+                navigateAndClose(
+                  "/profile"
+                )
+              }
               className={`
                 mt-2
                 flex
@@ -2827,12 +2616,15 @@ const Navbar = () => {
               <User size={17} />
               Profile
             </button>
+
             {isAdmin && (
               <>
                 <button
                   type="button"
                   onClick={() =>
-                    goTo("/dashboard")
+                    navigateAndClose(
+                      "/dashboard"
+                    )
                   }
                   className={`
                     flex
@@ -2853,13 +2645,16 @@ const Navbar = () => {
                     }
                   `}
                 >
-                  <LayoutDashboard size={17} />
+                  <LayoutDashboard
+                    size={17}
+                  />
                   Dashboard
                 </button>
+
                 <button
                   type="button"
                   onClick={() =>
-                    goTo(
+                    navigateAndClose(
                       "/admin/book/analytics"
                     )
                   }
@@ -2882,11 +2677,14 @@ const Navbar = () => {
                     }
                   `}
                 >
-                  <BarChart3 size={17} />
+                  <BarChart3
+                    size={17}
+                  />
                   Analytics
                 </button>
               </>
             )}
+
             <div
               className={`
                 my-2
@@ -2898,9 +2696,10 @@ const Navbar = () => {
                 }
               `}
             />
+
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={logoutAndClose}
               className={`
                 flex
                 w-full
@@ -2927,53 +2726,757 @@ const Navbar = () => {
         )}
       </div>
     );
-  };
-  const MainDesktopNavigation = () => (
-    <>
-      <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
+  }
+);
+
+/* ======================================================
+ * MAIN DESKTOP NAVIGATION
+ * Services state is LOCAL.
+ * ====================================================== */
+
+const MainDesktopNavigation = memo(
+  function MainDesktopNavigation({
+    pathname,
+    isDark,
+    isAdmin,
+    user,
+    isAuthenticated,
+    onNavigate,
+    onLogout,
+  }) {
+    const [
+      servicesOpen,
+      setServicesOpen,
+    ] = useState(false);
+
+    const servicesTimeoutRef =
+      useRef(null);
+
+    useEffect(() => {
+      return () => {
+        if (
+          servicesTimeoutRef.current
+        ) {
+          clearTimeout(
+            servicesTimeoutRef.current
+          );
+        }
+      };
+    }, []);
+
+    const handleServicesEnter =
+      () => {
+        clearTimeout(
+          servicesTimeoutRef.current
+        );
+        setServicesOpen(true);
+      };
+
+    const handleServicesLeave =
+      () => {
+        servicesTimeoutRef.current =
+          setTimeout(() => {
+            setServicesOpen(false);
+          }, 120);
+      };
+
+    const {
+      cardBackground,
+    } = getColors(isDark);
+
+    const isActive = (path) =>
+      routeMatches(
+        pathname,
+        path
+      );
+
+    return (
+      <>
+        <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
+          <NavLink
+            to="/about"
+            className={`
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                isActive("/about")
+              )}
+            `}
+          >
+            About
+          </NavLink>
+
+          <div
+            className="relative"
+            onMouseEnter={
+              handleServicesEnter
+            }
+            onMouseLeave={
+              handleServicesLeave
+            }
+          >
+            <NavLink
+              to="/services"
+              className={`
+                flex
+                items-center
+                gap-1.5
+                rounded-lg
+                px-4
+                py-2
+                text-sm
+                font-semibold
+                transition-colors
+                duration-150
+                ${desktopLinkClass(
+                  isDark,
+                  isActive("/services")
+                )}
+              `}
+            >
+              Services
+
+              <ChevronDown
+                size={15}
+                className={`
+                  transition-transform
+                  duration-150
+                  ${
+                    servicesOpen
+                      ? "rotate-180"
+                      : ""
+                  }
+                `}
+              />
+            </NavLink>
+
+            {servicesOpen && (
+              <div
+                className={`
+                  absolute
+                  left-1/2
+                  top-full
+                  mt-2
+                  w-80
+                  -translate-x-1/2
+                  rounded-2xl
+                  border
+                  p-2
+                  shadow-xl
+                  ${cardBackground}
+                `}
+              >
+                <p
+                  className="
+                    px-3
+                    pb-2
+                    pt-2
+                    text-[10px]
+                    font-black
+                    uppercase
+                    tracking-[0.15em]
+                    text-slate-400
+                  "
+                >
+                  Services
+                </p>
+
+                {services.map(
+                  (service) => {
+                    const Icon =
+                      service.icon;
+
+                    return (
+                      <NavLink
+                        key={
+                          service.slug
+                        }
+                        to={`/services/${service.slug}`}
+                        className={`
+                          flex
+                          items-center
+                          gap-3
+                          rounded-xl
+                          px-3
+                          py-3
+                          text-sm
+                          font-semibold
+                          transition-colors
+                          duration-150
+                          ${
+                            isDark
+                              ? "text-slate-300 hover:bg-slate-800 hover:text-white"
+                              : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                          }
+                        `}
+                      >
+                        <div
+                          className={`
+                            flex
+                            h-8
+                            w-8
+                            items-center
+                            justify-center
+                            rounded-lg
+                            ${
+                              isDark
+                                ? "bg-slate-800"
+                                : "bg-slate-100"
+                            }
+                          `}
+                        >
+                          <Icon
+                            size={16}
+                          />
+                        </div>
+
+                        {
+                          service.title
+                        }
+                      </NavLink>
+                    );
+                  }
+                )}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              onNavigate("/learn")
+            }
+            className={`
+              flex
+              items-center
+              gap-2
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                false
+              )}
+            `}
+          >
+            <GraduationCap
+              size={16}
+            />
+            Learn
+          </button>
+        </div>
+
+        <div className="hidden items-center gap-1 xl:flex">
+          <NavLink
+            to="/contact"
+            className={`
+              rounded-lg
+              px-3
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                isActive("/contact")
+              )}
+            `}
+          >
+            Contact
+          </NavLink>
+
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  onNavigate(
+                    "/dashboard"
+                  )
+                }
+                className={`
+                  rounded-lg
+                  px-3
+                  py-2
+                  text-sm
+                  font-semibold
+                  transition-colors
+                  duration-150
+                  ${desktopLinkClass(
+                    isDark,
+                    pathname ===
+                      "/dashboard"
+                  )}
+                `}
+              >
+                Dashboard
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onNavigate(
+                    "/admin/book/analytics"
+                  )
+                }
+                className={`
+                  rounded-lg
+                  px-3
+                  py-2
+                  text-sm
+                  font-semibold
+                  transition-colors
+                  duration-150
+                  ${desktopLinkClass(
+                    isDark,
+                    pathname.startsWith(
+                      "/admin/book/analytics"
+                    )
+                  )}
+                `}
+              >
+                Analytics
+              </button>
+            </>
+          )}
+
+          <DesktopProfile
+            user={user}
+            isAuthenticated={
+              isAuthenticated
+            }
+            isAdmin={isAdmin}
+            isDark={isDark}
+            onNavigate={onNavigate}
+            onLogout={onLogout}
+          />
+        </div>
+      </>
+    );
+  }
+);
+
+/* ======================================================
+ * LEARN DESKTOP NAVIGATION
+ * ====================================================== */
+
+const LearnDesktopNavigation = memo(
+  function LearnDesktopNavigation({
+    pathname,
+    isDark,
+    isAdmin,
+    user,
+    isAuthenticated,
+    onNavigate,
+    onLogout,
+    onToggleTheme,
+  }) {
+    const isActive = (path) =>
+      routeMatches(
+        pathname,
+        path
+      );
+
+    const booksActive =
+      isActive("/books") ||
+      isActive("/book") ||
+      isActive("/ebook");
+
+    const interviewsActive =
+      isActive("/interviews") ||
+      isActive("/interview");
+
+    const resourcesActive =
+      isActive("/resources") ||
+      isActive("/resource");
+
+    const blogsActive =
+      isActive("/blogs") ||
+      isActive("/blog");
+
+    const aboutActive =
+      isActive("/about");
+
+    const contactActive =
+      isActive("/contact");
+
+    return (
+      <>
+        <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
+          <NavLink
+            to="/books"
+            className={`
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                booksActive
+              )}
+            `}
+          >
+            Books
+          </NavLink>
+
+          <NavLink
+            to="/interviews"
+            className={`
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                interviewsActive
+              )}
+            `}
+          >
+            Interviews
+          </NavLink>
+
+          <NavLink
+            to="/resources"
+            className={`
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                resourcesActive
+              )}
+            `}
+          >
+            Resources
+          </NavLink>
+
+          <NavLink
+            to="/blogs"
+            className={`
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                blogsActive
+              )}
+            `}
+          >
+            Blogs
+          </NavLink>
+
+          <NavLink
+            to="/about"
+            className={`
+              rounded-lg
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                aboutActive
+              )}
+            `}
+          >
+            About Us
+          </NavLink>
+        </div>
+
+        <div className="hidden items-center gap-1 xl:flex">
+          <NavLink
+            to="/contact"
+            className={`
+              rounded-lg
+              px-3
+              py-2
+              text-sm
+              font-semibold
+              transition-colors
+              duration-150
+              ${desktopLinkClass(
+                isDark,
+                contactActive
+              )}
+            `}
+          >
+            Contact Us
+          </NavLink>
+
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  onNavigate(
+                    "/dashboard"
+                  )
+                }
+                className={`
+                  rounded-lg
+                  px-3
+                  py-2
+                  text-sm
+                  font-semibold
+                  transition-colors
+                  duration-150
+                  ${desktopLinkClass(
+                    isDark,
+                    pathname ===
+                      "/dashboard"
+                  )}
+                `}
+              >
+                Dashboard
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onNavigate(
+                    "/admin/book/analytics"
+                  )
+                }
+                className={`
+                  rounded-lg
+                  px-3
+                  py-2
+                  text-sm
+                  font-semibold
+                  transition-colors
+                  duration-150
+                  ${desktopLinkClass(
+                    isDark,
+                    pathname.startsWith(
+                      "/admin/book/analytics"
+                    )
+                  )}
+                `}
+              >
+                Analytics
+              </button>
+            </>
+          )}
+
+          <div className="ml-1">
+            <ThemeButton
+              isLearn
+              isDark={isDark}
+              onToggle={
+                onToggleTheme
+              }
+            />
+          </div>
+
+          <DesktopProfile
+            user={user}
+            isAuthenticated={
+              isAuthenticated
+            }
+            isAdmin={isAdmin}
+            isDark={isDark}
+            onNavigate={onNavigate}
+            onLogout={onLogout}
+          />
+        </div>
+      </>
+    );
+  }
+);
+
+/* ======================================================
+ * MOBILE TOP BAR
+ * ====================================================== */
+
+const MobileTopBar = memo(
+  function MobileTopBar({
+    isLearn,
+    isDark,
+    onOpen,
+    onNavigate,
+    onToggleTheme,
+  }) {
+    const {
+      cardBackground,
+      primaryText,
+    } = getColors(isDark);
+
+    return (
+      <div
+        className="
+          grid
+          h-16
+          grid-cols-[40px_1fr_40px]
+          items-center
+          gap-3
+          xl:hidden
+        "
+      >
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Open menu"
+          className={`
+            flex
+            h-10
+            w-10
+            touch-manipulation
+            items-center
+            justify-center
+            rounded-xl
+            border
+            ${cardBackground}
+            ${primaryText}
+          `}
+        >
+          <Menu size={20} />
+        </button>
+
+        <div className="flex justify-center">
+          <Brand
+            mobile
+            isLearn={isLearn}
+            isDark={isDark}
+            onNavigate={
+              onNavigate
+            }
+          />
+        </div>
+
+        {isLearn ? (
+          <ThemeButton
+            isLearn
+            isDark={isDark}
+            onToggle={
+              onToggleTheme
+            }
+          />
+        ) : (
+          <div
+            className="h-10 w-10"
+            aria-hidden="true"
+          />
+        )}
+      </div>
+    );
+  }
+);
+
+/* ======================================================
+ * MAIN MOBILE NAVIGATION
+ * Services state is LOCAL.
+ * ====================================================== */
+
+const MainMobileNavigation = memo(
+  function MainMobileNavigation({
+    pathname,
+    isDark,
+    onNavigate,
+    onClose,
+  }) {
+    const [
+      servicesOpen,
+      setServicesOpen,
+    ] = useState(false);
+
+    const isActive = (path) =>
+      routeMatches(
+        pathname,
+        path
+      );
+
+    const handleNavigate = (
+      path
+    ) => {
+      onClose();
+      onNavigate(path);
+    };
+
+    return (
+      <div className="space-y-1">
         <NavLink
           to="/about"
+          onClick={onClose}
           className={`
-            rounded-lg
+            block
+            rounded-xl
             px-4
-            py-2
+            py-3
             text-sm
             font-semibold
-            transition
-            ${desktopLinkClass(
+            ${mobileLinkClass(
+              isDark,
               isActive("/about")
             )}
           `}
         >
           About
         </NavLink>
-        <div
-          className="relative"
-          onMouseEnter={handleServicesEnter}
-          onMouseLeave={handleServicesLeave}
-        >
-          <NavLink
-            to="/services"
+
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              setServicesOpen(
+                (previous) =>
+                  !previous
+              )
+            }
+            aria-expanded={
+              servicesOpen
+            }
             className={`
               flex
+              w-full
               items-center
-              gap-1.5
-              rounded-lg
+              justify-between
+              rounded-xl
               px-4
-              py-2
+              py-3
               text-sm
               font-semibold
-              transition
-              ${desktopLinkClass(
-                isActive("/services")
+              ${mobileLinkClass(
+                isDark,
+                isActive(
+                  "/services"
+                )
               )}
             `}
           >
             Services
+
             <ChevronDown
-              size={15}
+              size={17}
               className={`
                 transition-transform
+                duration-150
                 ${
                   servicesOpen
                     ? "rotate-180"
@@ -2981,369 +3484,88 @@ const Navbar = () => {
                 }
               `}
             />
-          </NavLink>
+          </button>
+
           {servicesOpen && (
             <div
               className={`
-                absolute
-                left-1/2
-                top-full
-                mt-2
-                w-80
-                -translate-x-1/2
-                rounded-2xl
-                border
-                p-2
-                shadow-2xl
-                ${cardBackground}
+                ml-4
+                mt-1
+                space-y-1
+                border-l
+                pl-3
+                ${
+                  isDark
+                    ? "border-slate-800"
+                    : "border-slate-200"
+                }
               `}
             >
-              <p
+              <NavLink
+                to="/services"
+                onClick={onClose}
                 className="
+                  block
+                  rounded-lg
                   px-3
-                  pb-2
-                  pt-2
-                  text-[10px]
+                  py-2
+                  text-xs
                   font-black
-                  uppercase
-                  tracking-[0.15em]
-                  text-slate-400
+                  text-blue-500
                 "
               >
-                Services
-              </p>
-              {services.map((service) => {
-                const Icon = service.icon;
-                return (
-                  <NavLink
-                    key={service.slug}
-                    to={`/services/${service.slug}`}
-                    className="
-                      flex
-                      items-center
-                      gap-3
-                      rounded-xl
-                      px-3
-                      py-3
-                      text-sm
-                      font-semibold
-                      text-slate-600
-                      transition
-                      hover:bg-blue-50
-                      hover:text-blue-700
-                    "
-                  >
-                    <div
-                      className="
+                All Services
+              </NavLink>
+
+              {services.map(
+                (service) => {
+                  const Icon =
+                    service.icon;
+
+                  return (
+                    <NavLink
+                      key={
+                        service.slug
+                      }
+                      to={`/services/${service.slug}`}
+                      onClick={
+                        onClose
+                      }
+                      className={`
                         flex
-                        h-8
-                        w-8
                         items-center
-                        justify-center
+                        gap-3
                         rounded-lg
-                        bg-slate-100
-                      "
+                        px-3
+                        py-2.5
+                        text-xs
+                        font-semibold
+                        ${
+                          isDark
+                            ? "text-slate-300 hover:bg-slate-800"
+                            : "text-slate-600 hover:bg-slate-100"
+                        }
+                      `}
                     >
-                      <Icon size={16} />
-                    </div>
-                    {service.title}
-                  </NavLink>
-                );
-              })}
+                      <Icon
+                        size={15}
+                      />
+                      {
+                        service.title
+                      }
+                    </NavLink>
+                  );
+                }
+              )}
             </div>
           )}
         </div>
+
         <button
           type="button"
           onClick={() =>
-            goTo("/learn")
-          }
-          className={`
-            flex
-            items-center
-            gap-2
-            rounded-lg
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(false)}
-          `}
-        >
-          <GraduationCap size={16} />
-          Learn
-        </button>
-      </div>
-      <div className="hidden items-center gap-1 xl:flex">
-        <NavLink
-          to="/contact"
-          className={`
-            rounded-lg
-            px-3
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(
-              isActive("/contact")
-            )}
-          `}
-        >
-          Contact
-        </NavLink>
-        {isAdmin && (
-          <>
-            <button
-              type="button"
-              onClick={() =>
-                goTo("/dashboard")
-              }
-              className={`
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                font-semibold
-                transition
-                ${desktopLinkClass(false)}
-              `}
-            >
-              Dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                goTo(
-                  "/admin/book/analytics"
-                )
-              }
-              className={`
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                font-semibold
-                transition
-                ${desktopLinkClass(false)}
-              `}
-            >
-              Analytics
-            </button>
-          </>
-        )}
-        {/*
-          No ThemeButton here.
-          Main TargetTrek is always light.
-        */}
-        <DesktopProfile />
-      </div>
-    </>
-  );
-  const LearnDesktopNavigation = () => (
-    <>
-      <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
-        <NavLink
-          to="/books"
-          className={`
-            rounded-lg
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(booksActive)}
-          `}
-        >
-          Books
-        </NavLink>
-        <NavLink
-          to="/interviews"
-          className={`
-            rounded-lg
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(interviewsActive)}
-          `}
-        >
-          Interviews
-        </NavLink>
-        <NavLink
-          to="/resources"
-          className={`
-            rounded-lg
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(resourcesActive)}
-          `}
-        >
-          Resources
-        </NavLink>
-        <NavLink
-          to="/blogs"
-          className={`
-            rounded-lg
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(blogsActive)}
-          `}
-        >
-          Blogs
-        </NavLink>
-        <NavLink
-          to="/about"
-          className={`
-            rounded-lg
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(aboutActive)}
-          `}
-        >
-          About Us
-        </NavLink>
-      </div>
-      <div className="hidden items-center gap-1 xl:flex">
-        <NavLink
-          to="/contact"
-          className={`
-            rounded-lg
-            px-3
-            py-2
-            text-sm
-            font-semibold
-            transition
-            ${desktopLinkClass(contactActive)}
-          `}
-        >
-          Contact Us
-        </NavLink>
-        {isAdmin && (
-          <>
-            <button
-              type="button"
-              onClick={() => goTo("/dashboard")}
-              className={`
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                font-semibold
-                transition
-                ${desktopLinkClass(isActive("/dashboard"))}
-              `}
-            >
-              Dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() => goTo("/admin/book/analytics")}
-              className={`
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                font-semibold
-                transition
-                ${desktopLinkClass(
-                  isActive("/admin/book/analytics")
-                )}
-              `}
-            >
-              Analytics
-            </button>
-          </>
-        )}
-        <div className="ml-1">
-          <ThemeButton />
-        </div>
-        <DesktopProfile />
-      </div>
-    </>
-  );
-  const MobileTopBar = () => (
-    <div
-      className="
-        grid
-        h-16
-        grid-cols-[40px_1fr_40px]
-        items-center
-        gap-3
-        xl:hidden
-      "
-    >
-      <button
-        type="button"
-        onClick={() =>
-          setMenuOpen(true)
-        }
-        aria-label="Open menu"
-        className={`
-          flex
-          h-10
-          w-10
-          items-center
-          justify-center
-          rounded-xl
-          border
-          ${cardBackground}
-          ${primaryText}
-        `}
-      >
-        <Menu size={20} />
-      </button>
-      <div className="flex justify-center">
-        <Brand mobile />
-      </div>
-      {isLearn ? (
-        <ThemeButton />
-      ) : (
-        /*
-         * Empty placeholder keeps logo centered.
-         */
-        <div
-          className="h-10 w-10"
-          aria-hidden="true"
-        />
-      )}
-    </div>
-  );
-  const MainMobileNavigation = () => (
-    <div className="space-y-1">
-      <NavLink
-        to="/about"
-        onClick={closeMenus}
-        className={`
-          block
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(
-            isActive("/about")
-          )}
-        `}
-      >
-        About
-      </NavLink>
-      <div>
-        <button
-          type="button"
-          onClick={() =>
-            setServicesOpen(
-              (previous) => !previous
+            handleNavigate(
+              "/learn"
             )
           }
           className={`
@@ -3357,261 +3579,241 @@ const Navbar = () => {
             text-sm
             font-semibold
             ${mobileLinkClass(
-              isActive("/services")
+              isDark,
+              false
             )}
           `}
         >
-          Services
-          <ChevronDown
-            size={17}
-            className={`
-              transition-transform
-              ${
-                servicesOpen
-                  ? "rotate-180"
-                  : ""
-              }
-            `}
+          <span className="flex items-center gap-3">
+            <GraduationCap
+              size={18}
+            />
+            Learn
+          </span>
+
+          <ArrowUpRight
+            size={16}
           />
         </button>
-        {servicesOpen && (
-          <div
-            className="
-              ml-4
-              mt-1
-              space-y-1
-              border-l
-              border-slate-200
-              pl-3
-            "
-          >
-            <NavLink
-              to="/services"
-              onClick={closeMenus}
-              className="
-                block
-                rounded-lg
-                px-3
-                py-2
-                text-xs
-                font-black
-                text-blue-500
-              "
-            >
-              All Services
-            </NavLink>
-            {services.map((service) => {
-              const Icon = service.icon;
-              return (
-                <NavLink
-                  key={service.slug}
-                  to={`/services/${service.slug}`}
-                  onClick={closeMenus}
-                  className="
-                    flex
-                    items-center
-                    gap-3
-                    rounded-lg
-                    px-3
-                    py-2.5
-                    text-xs
-                    font-semibold
-                    text-slate-600
-                    hover:bg-slate-100
-                  "
-                >
-                  <Icon size={15} />
-                  {service.title}
-                </NavLink>
-              );
-            })}
-          </div>
-        )}
+
+        <NavLink
+          to="/contact"
+          onClick={onClose}
+          className={`
+            block
+            rounded-xl
+            px-4
+            py-3
+            text-sm
+            font-semibold
+            ${mobileLinkClass(
+              isDark,
+              isActive("/contact")
+            )}
+          `}
+        >
+          Contact
+        </NavLink>
       </div>
-      <button
-        type="button"
-        onClick={() =>
-          goTo("/learn")
-        }
-        className={`
-          flex
-          w-full
-          items-center
-          justify-between
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(false)}
-        `}
-      >
-        <span className="flex items-center gap-3">
-          <GraduationCap size={18} />
-          Learn
-        </span>
-        <ArrowUpRight size={16} />
-      </button>
-      <NavLink
-        to="/contact"
-        onClick={closeMenus}
-        className={`
-          block
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(
-            isActive("/contact")
-          )}
-        `}
-      >
-        Contact
-      </NavLink>
-    </div>
-  );
-  const LearnMobileNavigation = () => (
-    <div className="space-y-1">
-      <NavLink
-        to="/learn"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(learnHomeActive)}
-        `}
-      >
-        <GraduationCap size={18} />
-        Learn Home
-      </NavLink>
-      <NavLink
-        to="/books"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(booksActive)}
-        `}
-      >
-        <BookOpen size={18} />
-        Books
-      </NavLink>
-      <NavLink
-        to="/interviews"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(interviewsActive)}
-        `}
-      >
-        <Users size={18} />
-        Interviews
-      </NavLink>
-      <NavLink
-        to="/resources"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(resourcesActive)}
-        `}
-      >
-        <GraduationCap size={18} />
-        Resources
-      </NavLink>
-      <NavLink
-        to="/blogs"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(blogsActive)}
-        `}
-      >
-        <FileText size={18} />
-        Blogs
-      </NavLink>
-      <div
-        className={`
-          my-3
-          border-t
-          ${isDark ? "border-slate-800" : "border-slate-200"}
-        `}
-      />
-      <NavLink
-        to="/about"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(aboutActive)}
-        `}
-      >
-        <User size={18} />
-        About Us
-      </NavLink>
-      <NavLink
-        to="/contact"
-        onClick={closeMenus}
-        className={`
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          px-4
-          py-3
-          text-sm
-          font-semibold
-          ${mobileLinkClass(contactActive)}
-        `}
-      >
-        <Mail size={18} />
-        Contact Us
-      </NavLink>
-    </div>
-  );
-  const MobileAdmin = () => {
+    );
+  }
+);
+
+/* ======================================================
+ * LEARN MOBILE NAVIGATION
+ * ====================================================== */
+
+const LearnMobileNavigation = memo(
+  function LearnMobileNavigation({
+    pathname,
+    isDark,
+    onClose,
+  }) {
+    const isActive = (path) =>
+      routeMatches(
+        pathname,
+        path
+      );
+
+    const booksActive =
+      isActive("/books") ||
+      isActive("/book") ||
+      isActive("/ebook");
+
+    const interviewsActive =
+      isActive("/interviews") ||
+      isActive("/interview");
+
+    const resourcesActive =
+      isActive("/resources") ||
+      isActive("/resource");
+
+    const blogsActive =
+      isActive("/blogs") ||
+      isActive("/blog");
+
+    const learnHomeActive =
+      pathname === "/" ||
+      pathname === "/learn";
+
+    const aboutActive =
+      isActive("/about");
+
+    const contactActive =
+      isActive("/contact");
+
+    const links = [
+      {
+        to: "/learn",
+        label: "Learn Home",
+        icon: GraduationCap,
+        active: learnHomeActive,
+      },
+      {
+        to: "/books",
+        label: "Books",
+        icon: BookOpen,
+        active: booksActive,
+      },
+      {
+        to: "/interviews",
+        label: "Interviews",
+        icon: Users,
+        active:
+          interviewsActive,
+      },
+      {
+        to: "/resources",
+        label: "Resources",
+        icon: GraduationCap,
+        active:
+          resourcesActive,
+      },
+      {
+        to: "/blogs",
+        label: "Blogs",
+        icon: FileText,
+        active: blogsActive,
+      },
+    ];
+
+    return (
+      <div className="space-y-1">
+        {links.map(
+          ({
+            to,
+            label,
+            icon: Icon,
+            active,
+          }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onClose}
+              className={`
+                flex
+                items-center
+                gap-3
+                rounded-xl
+                px-4
+                py-3
+                text-sm
+                font-semibold
+                ${mobileLinkClass(
+                  isDark,
+                  active
+                )}
+              `}
+            >
+              <Icon size={18} />
+              {label}
+            </NavLink>
+          )
+        )}
+
+        <div
+          className={`
+            my-3
+            border-t
+            ${
+              isDark
+                ? "border-slate-800"
+                : "border-slate-200"
+            }
+          `}
+        />
+
+        <NavLink
+          to="/about"
+          onClick={onClose}
+          className={`
+            flex
+            items-center
+            gap-3
+            rounded-xl
+            px-4
+            py-3
+            text-sm
+            font-semibold
+            ${mobileLinkClass(
+              isDark,
+              aboutActive
+            )}
+          `}
+        >
+          <User size={18} />
+          About Us
+        </NavLink>
+
+        <NavLink
+          to="/contact"
+          onClick={onClose}
+          className={`
+            flex
+            items-center
+            gap-3
+            rounded-xl
+            px-4
+            py-3
+            text-sm
+            font-semibold
+            ${mobileLinkClass(
+              isDark,
+              contactActive
+            )}
+          `}
+        >
+          <Mail size={18} />
+          Contact Us
+        </NavLink>
+      </div>
+    );
+  }
+);
+
+/* ======================================================
+ * MOBILE ADMIN
+ * ====================================================== */
+
+const MobileAdmin = memo(
+  function MobileAdmin({
+    pathname,
+    isAdmin,
+    isDark,
+    onNavigate,
+    onClose,
+  }) {
     if (!isAdmin) {
       return null;
     }
+
+    const handleNavigate = (
+      path
+    ) => {
+      onClose();
+      onNavigate(path);
+    };
+
     return (
       <div
         className={`
@@ -3642,10 +3844,13 @@ const Navbar = () => {
         >
           Administration
         </p>
+
         <button
           type="button"
           onClick={() =>
-            goTo("/dashboard")
+            handleNavigate(
+              "/dashboard"
+            )
           }
           className={`
             flex
@@ -3658,18 +3863,22 @@ const Navbar = () => {
             text-sm
             font-semibold
             ${mobileLinkClass(
-              location.pathname ===
+              isDark,
+              pathname ===
                 "/dashboard"
             )}
           `}
         >
-          <LayoutDashboard size={18} />
+          <LayoutDashboard
+            size={18}
+          />
           Dashboard
         </button>
+
         <button
           type="button"
           onClick={() =>
-            goTo(
+            handleNavigate(
               "/admin/book/analytics"
             )
           }
@@ -3685,7 +3894,8 @@ const Navbar = () => {
             text-sm
             font-semibold
             ${mobileLinkClass(
-              location.pathname.startsWith(
+              isDark,
+              pathname.startsWith(
                 "/admin/book/analytics"
               )
             )}
@@ -3696,8 +3906,35 @@ const Navbar = () => {
         </button>
       </div>
     );
-  };
-  const MobileProfile = () => {
+  }
+);
+
+/* ======================================================
+ * MOBILE PROFILE
+ * ====================================================== */
+
+const MobileProfile = memo(
+  function MobileProfile({
+    user,
+    isAuthenticated,
+    isLearn,
+    isDark,
+    onNavigate,
+    onLogout,
+    onClose,
+  }) {
+    const {
+      primaryText,
+      secondaryText,
+    } = getColors(isDark);
+
+    const handleNavigate = (
+      path
+    ) => {
+      onClose();
+      onNavigate(path);
+    };
+
     if (!isAuthenticated) {
       return (
         <div
@@ -3713,7 +3950,7 @@ const Navbar = () => {
         >
           {isLearn ? (
             <a
-              href="mailto:supporttargettrek\@gmail.com"
+              href="mailto:supporttargettrek@gmail.com"
               className={`
                 flex
                 items-center
@@ -3736,7 +3973,9 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() =>
-                goTo("/contact")
+                handleNavigate(
+                  "/contact"
+                )
               }
               className="
                 flex
@@ -3754,12 +3993,21 @@ const Navbar = () => {
               "
             >
               Contact TargetTrek
-              <ArrowRight size={16} />
+              <ArrowRight
+                size={16}
+              />
             </button>
           )}
         </div>
       );
     }
+
+    const userInitial =
+      user?.name
+        ?.trim()
+        ?.charAt(0)
+        ?.toUpperCase() || "U";
+
     return (
       <div
         className={`
@@ -3801,6 +4049,7 @@ const Navbar = () => {
             >
               {userInitial}
             </div>
+
             <div className="min-w-0 flex-1">
               <p
                 className={`
@@ -3810,8 +4059,10 @@ const Navbar = () => {
                   ${primaryText}
                 `}
               >
-                {user?.name || "User"}
+                {user?.name ||
+                  "User"}
               </p>
+
               <p
                 className={`
                   mt-0.5
@@ -3822,6 +4073,7 @@ const Navbar = () => {
               >
                 {user?.email}
               </p>
+
               {user?.role && (
                 <p
                   className="
@@ -3838,11 +4090,14 @@ const Navbar = () => {
               )}
             </div>
           </div>
+
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() =>
-                goTo("/profile")
+                handleNavigate(
+                  "/profile"
+                )
               }
               className={`
                 rounded-xl
@@ -3859,9 +4114,13 @@ const Navbar = () => {
             >
               Profile
             </button>
+
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => {
+                onClose();
+                onLogout();
+              }}
               className={`
                 flex
                 items-center
@@ -3887,185 +4146,626 @@ const Navbar = () => {
         </div>
       </div>
     );
-  };
-  const MobileDrawer = () => (
-    <>
-      <div
-        onClick={() =>
-          setMenuOpen(false)
-        }
-        className={`
-          fixed
-          inset-0
-          z-[70]
-          bg-black/50
-          backdrop-blur-[2px]
-          transition-opacity
-          duration-300
-          xl:hidden
-          ${
-            menuOpen
-              ? "pointer-events-auto opacity-100"
-              : "pointer-events-none opacity-0"
-          }
-        `}
-      />
-      <aside
-        className={`
-          fixed
-          bottom-0
-          left-0
-          top-0
-          z-[80]
-          flex
-          w-[88vw]
-          max-w-[360px]
-          flex-col
-          border-r
-          shadow-2xl
-          transition-transform
-          duration-300
-          ease-out
-          xl:hidden
-          ${drawerBackground}
-          ${
-            menuOpen
-              ? "translate-x-0"
-              : "-translate-x-full"
-          }
-        `}
-      >
+  }
+);
+
+/* ======================================================
+ * MOBILE DRAWER
+ * Only this component needs to rerender when menu opens.
+ * No backdrop blur.
+ * GPU transform.
+ * 200ms animation.
+ * ====================================================== */
+
+const MobileDrawer = memo(
+  function MobileDrawer({
+    menuOpen,
+    pathname,
+    isLearn,
+    isDark,
+    isAdmin,
+    user,
+    isAuthenticated,
+    onClose,
+    onNavigate,
+    onLogout,
+  }) {
+    const {
+      drawerBackground,
+      secondaryText,
+    } = getColors(isDark);
+
+    return (
+      <>
         <div
+          onClick={onClose}
+          aria-hidden="true"
           className={`
-            flex
-            h-16
-            shrink-0
-            items-center
-            justify-between
-            border-b
-            px-4
+            fixed
+            inset-0
+            z-[70]
+            bg-black/50
+            transition-opacity
+            duration-150
+            xl:hidden
             ${
-              isDark
-                ? "border-slate-800"
-                : "border-slate-200"
+              menuOpen
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0"
+            }
+          `}
+        />
+
+        <aside
+          aria-hidden={!menuOpen}
+          className={`
+            fixed
+            inset-y-0
+            left-0
+            z-[80]
+            flex
+            w-[88vw]
+            max-w-[360px]
+            flex-col
+            border-r
+            shadow-xl
+            transform-gpu
+            will-change-transform
+            transition-transform
+            duration-200
+            ease-out
+            xl:hidden
+            ${drawerBackground}
+            ${
+              menuOpen
+                ? "translate-x-0"
+                : "-translate-x-full"
             }
           `}
         >
-          <Brand mobile />
-          <button
-            type="button"
-            onClick={() =>
-              setMenuOpen(false)
-            }
-            aria-label="Close menu"
+          <div
             className={`
               flex
-              h-9
-              w-9
+              h-16
+              shrink-0
               items-center
-              justify-center
-              rounded-xl
-              ${secondaryText}
-              ${
-                isDark
-                  ? "hover:bg-slate-800"
-                  : "hover:bg-slate-100"
-              }
-            `}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-3 py-5">
-          <p
-            className={`
-              mb-3
+              justify-between
+              border-b
               px-4
-              text-[10px]
-              font-black
-              uppercase
-              tracking-[0.16em]
               ${
                 isDark
-                  ? "text-slate-600"
-                  : "text-slate-400"
+                  ? "border-slate-800"
+                  : "border-slate-200"
               }
             `}
           >
-            {isLearn
-              ? "Learning"
-              : "Navigation"}
-          </p>
-          {isLearn ? (
-            <LearnMobileNavigation />
-          ) : (
-            <MainMobileNavigation />
-          )}
-          <MobileAdmin />
-          {(!isLearn || HAS_MAIN_SITE) && (
-            <div
+            <Brand
+              mobile
+              isLearn={isLearn}
+              isDark={isDark}
+              onNavigate={
+                onNavigate
+              }
+            />
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close menu"
               className={`
-                mt-6
-                border-t
-                pt-5
-                ${isDark ? "border-slate-800" : "border-slate-200"}
+                flex
+                h-9
+                w-9
+                touch-manipulation
+                items-center
+                justify-center
+                rounded-xl
+                ${secondaryText}
+                ${
+                  isDark
+                    ? "hover:bg-slate-800"
+                    : "hover:bg-slate-100"
+                }
               `}
             >
-              {isLearn ? (
-                <button
-                  type="button"
-                  onClick={() => goTo(MAIN_SITE_ENTRY)}
-                  className={`
-                    flex
-                    w-full
-                    items-center
-                    justify-between
-                    rounded-xl
-                    px-4
-                    py-3
-                    text-sm
-                    font-semibold
-                    ${mobileLinkClass(false)}
-                  `}
-                >
-                  TargetTrek Website
-                  <ArrowUpRight size={16} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => goTo("/learn")}
-                  className={`
-                    flex
-                    w-full
-                    items-center
-                    justify-between
-                    rounded-xl
-                    px-4
-                    py-3
-                    text-sm
-                    font-bold
-                    ${
-                      isDark
-                        ? "bg-blue-950/40 text-blue-300"
-                        : "bg-blue-50 text-blue-700"
-                    }
-                  `}
-                >
-                  <span className="flex items-center gap-3">
-                    <GraduationCap size={18} />
-                    TargetTrek Learn
-                  </span>
-                  <ArrowRight size={16} />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <MobileProfile />
-      </aside>
-    </>
+              <X size={20} />
+            </button>
+          </div>
+
+          <div
+            className="
+              flex-1
+              overflow-y-auto
+              overscroll-contain
+              px-3
+              py-5
+              [-webkit-overflow-scrolling:touch]
+            "
+          >
+            <p
+              className={`
+                mb-3
+                px-4
+                text-[10px]
+                font-black
+                uppercase
+                tracking-[0.16em]
+                ${
+                  isDark
+                    ? "text-slate-600"
+                    : "text-slate-400"
+                }
+              `}
+            >
+              {isLearn
+                ? "Learning"
+                : "Navigation"}
+            </p>
+
+            {isLearn ? (
+              <LearnMobileNavigation
+                pathname={
+                  pathname
+                }
+                isDark={isDark}
+                onClose={onClose}
+              />
+            ) : (
+              <MainMobileNavigation
+                pathname={
+                  pathname
+                }
+                isDark={isDark}
+                onNavigate={
+                  onNavigate
+                }
+                onClose={onClose}
+              />
+            )}
+
+            <MobileAdmin
+              pathname={pathname}
+              isAdmin={isAdmin}
+              isDark={isDark}
+              onNavigate={
+                onNavigate
+              }
+              onClose={onClose}
+            />
+
+            {(!isLearn ||
+              HAS_MAIN_SITE) && (
+              <div
+                className={`
+                  mt-6
+                  border-t
+                  pt-5
+                  ${
+                    isDark
+                      ? "border-slate-800"
+                      : "border-slate-200"
+                  }
+                `}
+              >
+                {isLearn ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onNavigate(
+                        MAIN_SITE_ENTRY
+                      );
+                    }}
+                    className={`
+                      flex
+                      w-full
+                      items-center
+                      justify-between
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-sm
+                      font-semibold
+                      ${mobileLinkClass(
+                        isDark,
+                        false
+                      )}
+                    `}
+                  >
+                    TargetTrek Website
+                    <ArrowUpRight
+                      size={16}
+                    />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onNavigate(
+                        "/learn"
+                      );
+                    }}
+                    className={`
+                      flex
+                      w-full
+                      items-center
+                      justify-between
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-sm
+                      font-bold
+                      ${
+                        isDark
+                          ? "bg-blue-950/40 text-blue-300"
+                          : "bg-blue-50 text-blue-700"
+                      }
+                    `}
+                  >
+                    <span className="flex items-center gap-3">
+                      <GraduationCap
+                        size={18}
+                      />
+                      TargetTrek Learn
+                    </span>
+
+                    <ArrowRight
+                      size={16}
+                    />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <MobileProfile
+            user={user}
+            isAuthenticated={
+              isAuthenticated
+            }
+            isLearn={isLearn}
+            isDark={isDark}
+            onNavigate={
+              onNavigate
+            }
+            onLogout={onLogout}
+            onClose={onClose}
+          />
+        </aside>
+      </>
+    );
+  }
+);
+
+/* ======================================================
+ * MAIN NAVBAR
+ * Only top-level state:
+ * - menuOpen
+ * - theme
+ * ====================================================== */
+
+const Navbar = () => {
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
+
+  const dispatch =
+    useDispatch();
+
+  const {
+    user,
+    isAuthenticated,
+  } = useSelector(
+    (state) => state.auth
   );
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  const [theme, setTheme] =
+    useState(() => {
+      if (
+        isMainRoute(
+          location.pathname
+        )
+      ) {
+        return "light";
+      }
+
+      return readTheme();
+    });
+
+  const navMode = getNavbarMode(
+    location.pathname
+  );
+
+  const isLearn =
+    navMode === "learn";
+
+  const isDark =
+    isLearn &&
+    theme === "dark";
+
+  const isAdmin =
+    isAuthenticated &&
+    (user?.role === "admin" ||
+      user?.role ===
+        "Employee");
+
+  const {
+    navBackground,
+  } = getColors(isDark);
+
+  const closeMenu =
+    useCallback(() => {
+      setMenuOpen(false);
+    }, []);
+
+  const openMenu =
+    useCallback(() => {
+      setMenuOpen(true);
+    }, []);
+
+  const goTo =
+    useCallback(
+      (path) => {
+        if (!path) {
+          return;
+        }
+
+        navigate(path);
+      },
+      [navigate]
+    );
+
+  const handleLogout =
+    useCallback(() => {
+      dispatch(logout());
+
+      navigate(
+        isLearn
+          ? "/learn"
+          : "/"
+      );
+    }, [
+      dispatch,
+      navigate,
+      isLearn,
+    ]);
+
+  const changeTheme =
+    useCallback(
+      (newTheme) => {
+        if (
+          !isLearn ||
+          (newTheme !== "dark" &&
+            newTheme !== "light")
+        ) {
+          return;
+        }
+
+        setTheme(newTheme);
+
+        window.localStorage.setItem(
+          THEME_KEY,
+          newTheme
+        );
+
+        applyThemeToDocument(
+          newTheme
+        );
+
+        window.dispatchEvent(
+          new CustomEvent(
+            THEME_EVENT,
+            {
+              detail: {
+                theme: newTheme,
+              },
+            }
+          )
+        );
+      },
+      [isLearn]
+    );
+
+  const toggleTheme =
+    useCallback(() => {
+      changeTheme(
+        isDark
+          ? "light"
+          : "dark"
+      );
+    }, [
+      changeTheme,
+      isDark,
+    ]);
+
+  /*
+   * Listen for theme changes from other parts of app.
+   */
+  useEffect(() => {
+    const handleThemeEvent = (
+      event
+    ) => {
+      const currentPath =
+        window.location.pathname;
+
+      if (
+        isMainRoute(
+          currentPath
+        )
+      ) {
+        setTheme("light");
+        applyThemeToDocument(
+          "light"
+        );
+        return;
+      }
+
+      const newTheme =
+        event?.detail?.theme;
+
+      if (
+        newTheme === "dark" ||
+        newTheme === "light"
+      ) {
+        setTheme(newTheme);
+        applyThemeToDocument(
+          newTheme
+        );
+      }
+    };
+
+    const handleStorage = (
+      event
+    ) => {
+      if (
+        event.key !==
+        THEME_KEY
+      ) {
+        return;
+      }
+
+      const currentPath =
+        window.location.pathname;
+
+      if (
+        isMainRoute(
+          currentPath
+        )
+      ) {
+        setTheme("light");
+        applyThemeToDocument(
+          "light"
+        );
+        return;
+      }
+
+      if (
+        event.newValue ===
+          "dark" ||
+        event.newValue ===
+          "light"
+      ) {
+        setTheme(
+          event.newValue
+        );
+
+        applyThemeToDocument(
+          event.newValue
+        );
+      }
+    };
+
+    window.addEventListener(
+      THEME_EVENT,
+      handleThemeEvent
+    );
+
+    window.addEventListener(
+      "storage",
+      handleStorage
+    );
+
+    return () => {
+      window.removeEventListener(
+        THEME_EVENT,
+        handleThemeEvent
+      );
+
+      window.removeEventListener(
+        "storage",
+        handleStorage
+      );
+    };
+  }, []);
+
+  /*
+   * Apply correct theme when route changes.
+   */
+  useEffect(() => {
+    if (
+      isMainRoute(
+        location.pathname
+      )
+    ) {
+      setTheme("light");
+
+      applyThemeToDocument(
+        "light"
+      );
+    } else {
+      const storedTheme =
+        readTheme();
+
+      setTheme(storedTheme);
+
+      applyThemeToDocument(
+        storedTheme
+      );
+    }
+
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  /*
+   * Lock background scroll while drawer is open.
+   */
+  useEffect(() => {
+    if (!menuOpen) {
+      document.body.style.overflow =
+        "";
+
+      return undefined;
+    }
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, [menuOpen]);
+
+  /*
+   * Escape key closes mobile drawer.
+   */
+  useEffect(() => {
+    if (!menuOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (
+      event
+    ) => {
+      if (
+        event.key === "Escape"
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [menuOpen]);
+
   return (
     <>
       <nav
@@ -4076,26 +4776,95 @@ const Navbar = () => {
           z-50
           w-full
           border-b
-          backdrop-blur-xl
           transition-colors
-          duration-300
+          duration-200
           ${navBackground}
         `}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="hidden h-16 items-center xl:flex">
-            <Brand />
+            <Brand
+              isLearn={isLearn}
+              isDark={isDark}
+              onNavigate={
+                goTo
+              }
+            />
+
             {isLearn ? (
-              <LearnDesktopNavigation />
+              <LearnDesktopNavigation
+                pathname={
+                  location.pathname
+                }
+                isDark={isDark}
+                isAdmin={isAdmin}
+                user={user}
+                isAuthenticated={
+                  isAuthenticated
+                }
+                onNavigate={
+                  goTo
+                }
+                onLogout={
+                  handleLogout
+                }
+                onToggleTheme={
+                  toggleTheme
+                }
+              />
             ) : (
-              <MainDesktopNavigation />
+              <MainDesktopNavigation
+                pathname={
+                  location.pathname
+                }
+                isDark={isDark}
+                isAdmin={isAdmin}
+                user={user}
+                isAuthenticated={
+                  isAuthenticated
+                }
+                onNavigate={
+                  goTo
+                }
+                onLogout={
+                  handleLogout
+                }
+              />
             )}
           </div>
-          <MobileTopBar />
+
+          <MobileTopBar
+            isLearn={isLearn}
+            isDark={isDark}
+            onOpen={openMenu}
+            onNavigate={goTo}
+            onToggleTheme={
+              toggleTheme
+            }
+          />
         </div>
       </nav>
-      <MobileDrawer />
+
+      <MobileDrawer
+        menuOpen={menuOpen}
+        pathname={
+          location.pathname
+        }
+        isLearn={isLearn}
+        isDark={isDark}
+        isAdmin={isAdmin}
+        user={user}
+        isAuthenticated={
+          isAuthenticated
+        }
+        onClose={closeMenu}
+        onNavigate={goTo}
+        onLogout={
+          handleLogout
+        }
+      />
     </>
   );
 };
+
 export default Navbar;
