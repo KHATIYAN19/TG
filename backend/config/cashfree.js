@@ -1,59 +1,68 @@
-const appId =
-  String(
-    process.env.CASHFREE_APP_ID ||
-    ""
-  ).trim();
+const appId = String(
+  process.env.CASHFREE_APP_ID || ""
+).trim();
 
-const secretKey =
-  String(
-    process.env.CASHFREE_SECRET_KEY ||
-    ""
-  ).trim();
+const secretKey = String(
+  process.env.CASHFREE_SECRET_KEY || ""
+).trim();
 
-const environment =
-  String(
-    process.env.CASHFREE_ENV ||
-    "sandbox"
-  )
-    .trim()
-    .toLowerCase();
+const environment = String(
+  process.env.CASHFREE_ENV || ""
+)
+  .trim()
+  .toLowerCase();
 
-const apiVersion =
-  String(
-    process.env.CASHFREE_API_VERSION ||
-    "2025-01-01"
-  ).trim();
+const apiVersion = String(
+  process.env.CASHFREE_API_VERSION || "2025-01-01"
+).trim();
 
-export const CASHFREE_APP_ID =
-  appId;
+export const CASHFREE_APP_ID = appId;
 
-export const CASHFREE_SECRET_KEY =
-  secretKey;
+export const CASHFREE_SECRET_KEY = secretKey;
 
-export const CASHFREE_ENV =
-  environment === "production"
-    ? "production"
-    : "sandbox";
+export const CASHFREE_ENV = environment;
 
-export const CASHFREE_API_VERSION =
-  apiVersion;
+export const CASHFREE_API_VERSION = apiVersion;
 
 export const CASHFREE_BASE_URL =
   CASHFREE_ENV === "production"
     ? "https://api.cashfree.com/pg"
     : "https://sandbox.cashfree.com/pg";
 
-export const validateCashfreeConfig =
-  () => {
-    if (!CASHFREE_APP_ID) {
-      throw new Error(
-        "CASHFREE_APP_ID is missing."
-      );
-    }
+export const validateCashfreeConfig = () => {
+  if (!CASHFREE_APP_ID) {
+    throw new Error(
+      "CASHFREE_APP_ID is missing."
+    );
+  }
 
-    if (!CASHFREE_SECRET_KEY) {
-      throw new Error(
-        "CASHFREE_SECRET_KEY is missing."
-      );
-    }
-  };
+  if (!CASHFREE_SECRET_KEY) {
+    throw new Error(
+      "CASHFREE_SECRET_KEY is missing."
+    );
+  }
+
+  if (
+    CASHFREE_ENV !== "production" &&
+    CASHFREE_ENV !== "sandbox"
+  ) {
+    throw new Error(
+      `Invalid CASHFREE_ENV: ${CASHFREE_ENV}. Use production or sandbox.`
+    );
+  }
+
+  if (!CASHFREE_API_VERSION) {
+    throw new Error(
+      "CASHFREE_API_VERSION is missing."
+    );
+  }
+};
+
+console.log(
+  "Cashfree configuration:",
+  {
+    environment: CASHFREE_ENV,
+    baseUrl: CASHFREE_BASE_URL,
+    apiVersion: CASHFREE_API_VERSION
+  }
+);

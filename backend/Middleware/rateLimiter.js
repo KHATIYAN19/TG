@@ -20,7 +20,16 @@ export const globalRateLimiter = async (
   next
 ) => {
   try {
-    // Cloud Run sets x-forwarded-for
+
+    // Skip Cashfree webhook
+    if (
+      req.originalUrl.startsWith(
+        "/payment/cashfree/webhook"
+      )
+    ) {
+      return next();
+    }
+
     const forwarded =
       req.headers["x-forwarded-for"];
 
@@ -38,7 +47,6 @@ export const globalRateLimiter = async (
       reset,
     } = await ratelimit.limit(ip);
 
-    // Helpful standard headers
     res.setHeader(
       "X-RateLimit-Limit",
       limit
@@ -62,7 +70,7 @@ export const globalRateLimiter = async (
       });
     }
 
-    next();
+    return next();
 
   } catch (error) {
     console.error(
@@ -70,6 +78,6 @@ export const globalRateLimiter = async (
       error
     );
 
-    next();
+    return next();
   }
 };

@@ -22,7 +22,7 @@ import {
 } from "../config/cashfree.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://targettrek.in";
-const BACKEND_URL = process.env.BACKEND_URL || "https://target-trek.onrender.com";
+const BACKEND_URL = process.env.BACKEND_URL || "https://tg-backend-821609451366.asia-south2.run.app";
 const ACCESS_DURATION = 24 * 60 * 60 * 1000;
 
 const failedRedirect = (orderId = null) => {
