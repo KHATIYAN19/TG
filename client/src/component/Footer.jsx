@@ -335,46 +335,46 @@ const Footer = () => {
   |--------------------------------------------------------------------------
   */
 
-  const socialLinks = [
-    {
-      label:
-        "Instagram",
+  // const socialLinks = [
+  //   {
+  //     label:
+  //       "Instagram",
 
-      href:
-        "https://www.instagram.com/target_trek",
+  //     href:
+  //       "https://www.instagram.com/target_trek",
 
-      icon:
-        FaInstagram,
-    },
+  //     icon:
+  //       FaInstagram,
+  //   },
 
-    {
-      label:
-        "Facebook",
+  //   {
+  //     label:
+  //       "Facebook",
 
-      href:
-        "https://www.facebook.com/targettreks/",
+  //     href:
+  //       "https://www.facebook.com/targettreks/",
 
-      icon:
-        FaFacebook,
-    },
+  //     icon:
+  //       FaFacebook,
+  //   },
 
-    {
-      label:
-        "LinkedIn",
+  //   {
+  //     label:
+  //       "LinkedIn",
 
-      href:
-        "https://www.linkedin.com/company/target-trek/",
+  //     href:
+  //       "https://www.linkedin.com/company/target-trek/",
 
-      icon:
-        FaLinkedin,
-    },
-  ];
+  //     icon:
+  //       FaLinkedin,
+  //   },
+  // ];
 
-  /*
-  |--------------------------------------------------------------------------
-  | THEME CLASSES
-  |--------------------------------------------------------------------------
-  */
+  // /*
+  // |--------------------------------------------------------------------------
+  // | THEME CLASSES
+  // |--------------------------------------------------------------------------
+  // */
 
   const footerBg =
     isDark
@@ -616,7 +616,7 @@ const Footer = () => {
 
               {/* SOCIAL LINKS */}
 
-              <div className="mt-6 flex items-center gap-2.5">
+              {/* <div className="mt-6 flex items-center gap-2.5">
                 {socialLinks.map(
                   (social) => {
                     const Icon =
@@ -663,7 +663,7 @@ const Footer = () => {
                     );
                   }
                 )}
-              </div>
+              </div> */}
             </div>
 
             {/* ====================================================== */}

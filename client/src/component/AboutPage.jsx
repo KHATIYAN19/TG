@@ -2970,7 +2970,7 @@ const AboutPage = () => {
             </div>
 
             <div className="mt-9 flex justify-center gap-4">
-              <a
+              {/* <a
                 href="https://www.facebook.com/targettreks/"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -2988,7 +2988,7 @@ const AboutPage = () => {
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white hover:text-blue-700"
               >
                 <FaLinkedinIn />
-              </a>
+              </a> */}
 
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
