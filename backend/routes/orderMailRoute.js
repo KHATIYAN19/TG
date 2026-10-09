@@ -16,11 +16,6 @@ import {
 const router =
   express.Router();
 
-
-/* =========================================================
-   SEND PENDING PURCHASE REMINDER
-========================================================= */
-
 router.post(
   "/orders/:orderId/send-pending-mail",
   auth,
@@ -28,22 +23,12 @@ router.post(
   sendPendingPurchaseMail
 );
 
-
-/* =========================================================
-   RESEND BOOK ACCESS
-========================================================= */
-
 router.post(
   "/orders/:orderId/resend-book-access",
   auth,
   isAdmin,
   resendBookAccessMail
 );
-
-
-/* =========================================================
-   REVOKE BOOK ACCESS
-========================================================= */
 
 router.patch(
   "/orders/:orderId/access/revoke",
@@ -53,20 +38,6 @@ router.patch(
 );
 
 
-/* =========================================================
-   EXTEND / REACTIVATE BOOK ACCESS
-========================================================= */
-
-/*
- * Body:
- *
- * {
- *   "hours": 24
- * }
- *
- * New expiry =
- * current time + hours
- */
 router.patch(
   "/orders/:orderId/access/extend",
   auth,
