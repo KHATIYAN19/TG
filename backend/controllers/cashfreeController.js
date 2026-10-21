@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Book from "../models/Book.js";
 import Order from "../models/Order.js";
 import Coupon from "../models/Coupon.js";
+import User from "../models/User.js";
 import {
     generateCashfreeOrderId,
     createCashfreeOrderRequest,
@@ -352,223 +353,843 @@ const markCashfreePaymentSuccessful = async ({
     };
 };
 
+// export const createCashfreePayment = async (req, res) => {
+//     let createdOrder = null;
+
+//     try {
+//         const {
+//             affiliateCode,
+//             bookId,
+//             firstname,
+//             email,
+//             phone,
+//             couponCode,
+//             utmSource,
+//             utmMedium,
+//             utmCampaign
+//         } = req.body;
+
+//         if (!bookId || !firstname || !email || !phone) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Name, email, phone and bookId are required."
+//             });
+//         }
+
+//         if (!mongoose.Types.ObjectId.isValid(bookId)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid book ID."
+//             });
+//         }
+
+//         const book = await Book.findOne({
+//             _id: bookId,
+//             isPublished: true,
+//             isActive: true
+//         });
+
+//         if (!book) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Book not found."
+//             });
+//         }
+
+//         const normalizedAffiliateCode =
+//             typeof affiliateCode === "string" && affiliateCode.trim()
+//                 ? affiliateCode.trim().toLowerCase()
+//                 : null;
+
+//         const normalizedEmail = String(email).trim().toLowerCase();
+//         const normalizedName = String(firstname).trim();
+//         const normalizedPhone = String(phone).trim();
+
+//         let pricing;
+
+//         try {
+//             pricing = await validateCouponForPayment({
+//                 couponCode,
+//                 book,
+//                 email: normalizedEmail
+//             });
+//         } catch (error) {
+//             return res.status(error.statusCode || 400).json({
+//                 success: false,
+//                 code: error.code || "COUPON_INVALID",
+//                 message: error.message || "Invalid coupon."
+//             });
+//         }
+
+//         const finalAmount = Number(pricing.finalAmount);
+
+//         if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid payment amount."
+//             });
+//         }
+
+//         const orderId = generateCashfreeOrderId();
+//         const couponData = buildCouponData(pricing);
+
+//         createdOrder = await Order.create({
+//             orderId,
+//             bookId: book._id,
+//             book: {
+//                 title: book.title,
+//                 price: book.price,
+//                 mrp: book.mrp || book.price,
+//                 currency: book.currency || "INR"
+//             },
+//             customer: {
+//                 name: normalizedName,
+//                 email: normalizedEmail,
+//                 phone: normalizedPhone
+//             },
+//             coupon: couponData,
+//             payment: {
+//                 provider: "Cashfree",
+//                 affiliateCode: normalizedAffiliateCode,
+//                 transactionId: orderId,
+//                 amount: finalAmount,
+//                 status: "PENDING"
+//             },
+//             orderStatus: "PENDING",
+//             metadata: {
+//                 ipAddress:
+//                     req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+//                     req.socket.remoteAddress ||
+//                     null,
+//                 userAgent: req.headers["user-agent"] || null,
+//                 referrer: req.headers.referer || null,
+//                 utmSource: utmSource || null,
+//                 utmMedium: utmMedium || null,
+//                 utmCampaign: utmCampaign || null
+//             },
+//             createdBy: "customer"
+//         });
+
+//         const cashfreePayload = {
+//             order_id: orderId,
+//             order_amount: finalAmount,
+//             order_currency: String(book.currency || "INR").toUpperCase(),
+//             customer_details: {
+//                 customer_id: orderId,
+//                 customer_name: normalizedName,
+//                 customer_email: normalizedEmail,
+//                 customer_phone: normalizedPhone
+//             },
+//             order_meta: {
+//                 return_url: `${BACKEND_URL}/payment/cashfree/return?order_id={order_id}`,
+//                 notify_url: `${BACKEND_URL}/payment/cashfree/webhook`
+//             },
+//             order_note: `Purchase ${book.title}`,
+//             order_tags: {
+//                 book_id: String(book._id),
+//                 affiliate_code: normalizedAffiliateCode || "direct"
+//             }
+//         };
+
+//         const cashfreeOrder = await createCashfreeOrderRequest(cashfreePayload);
+
+//         if (!cashfreeOrder?.payment_session_id) {
+//             throw new Error("Cashfree did not return payment_session_id.");
+//         }
+
+//         await Order.updateOne(
+//             {
+//                 _id: createdOrder._id
+//             },
+//             {
+//                 $set: {
+//                     "payment.sessionId": cashfreeOrder.payment_session_id,
+//                     "payment.createResponse": cashfreeOrder,
+//                     updatedBy: "cashfree-create"
+//                 }
+//             }
+//         );
+
+//         return res.status(200).json({
+//             success: true,
+//             data: {
+//                 orderId,
+//                 paymentSessionId: cashfreeOrder.payment_session_id,
+//                 cashfreeOrderId: cashfreeOrder.cf_order_id || null,
+//                 environment: CASHFREE_ENV,
+//                 pricing: {
+//                     couponApplied: pricing.couponApplied,
+//                     couponCode: pricing.coupon?.code || null,
+//                     couponName: pricing.coupon?.name || null,
+//                     originalAmount: pricing.originalAmount,
+//                     discountAmount: pricing.discountAmount,
+//                     finalAmount: pricing.finalAmount,
+//                     currency: book.currency || "INR"
+//                 }
+//             }
+//         });
+//     } catch (error) {
+//         console.error(
+//             "Create Cashfree payment error:",
+//             getCashfreeError(error)
+//         );
+
+//         if (createdOrder?._id) {
+//             try {
+//                 await Order.updateOne(
+//                     {
+//                         _id: createdOrder._id,
+//                         orderStatus: {
+//                             $ne: "PAID"
+//                         }
+//                     },
+//                     {
+//                         $set: {
+//                             orderStatus: "FAILED",
+//                             "payment.status": "FAILED",
+//                             "payment.failedAt": new Date(),
+//                             "payment.createResponse": getCashfreeError(error),
+//                             updatedBy: "cashfree-create"
+//                         }
+//                     }
+//                 );
+//             } catch (updateError) {
+//                 console.error(
+//                     "Cashfree order failure update error:",
+//                     updateError
+//                 );
+//             }
+//         }
+
+//         return res.status(502).json({
+//             success: false,
+//             message:
+//                 error?.response?.data?.message ||
+//                 error?.message ||
+//                 "Unable to create Cashfree payment."
+//         });
+//     }
+// };
+
+
+
+/* ============================================================
+   AFFILIATE HELPERS
+============================================================ */
+
+const normalizeAffiliateCode = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const code = value.trim().toLowerCase();
+
+  return code || null;
+};
+
+const roundMoney = (value) => {
+  return Math.round(
+    (Number(value) + Number.EPSILON) * 100
+  ) / 100;
+};
+
+/**
+ * Resolve an affiliate against the User collection.
+ *
+ * Returns:
+ * {
+ *   affiliateCode,
+ *   affiliateUserId,
+ *   affiliateType,
+ *   affiliateValue,
+ *   affiliateAmount,
+ *   remainingAmount
+ * }
+ *
+ * If no valid affiliate is found, only affiliateCode
+ * is populated. Other fields are null.
+ */
+const resolveAffiliate = async ({
+  affiliateCode,
+  finalAmount,
+  currency,
+}) => {
+  const code = normalizeAffiliateCode(affiliateCode);
+
+  const empty = {
+    affiliateCode: code,
+    affiliateUserId: null,
+    affiliateType: null,
+    affiliateValue: null,
+    affiliateAmount: null,
+    remainingAmount: null,
+  };
+
+  /* ----------------------------------------------------------
+     DIRECT TARGET TREK SALE
+  ---------------------------------------------------------- */
+
+  if (!code || code === "tt") {
+    return empty;
+  }
+
+  /* ----------------------------------------------------------
+     FIND ACTIVE AFFILIATE USER
+
+     Your User model stores affiliate.code in uppercase,
+     while Order.payment.affiliateCode is lowercase.
+  ---------------------------------------------------------- */
+
+  const affiliateUser = await User.findOne({
+    role: "affiliate",
+    status: "active",
+    isDeleted: { $ne: true },
+
+    "affiliate.code": code.toUpperCase(),
+    "affiliate.status": "active",
+  })
+    .select(
+      "_id name role status " +
+      "affiliate.code " +
+      "affiliate.status " +
+      "affiliate.commissionType " +
+      "affiliate.commissionValue"
+    )
+    .lean();
+
+  /* ----------------------------------------------------------
+     INVALID / INACTIVE AFFILIATE
+
+     Keep the referral code only.
+  ---------------------------------------------------------- */
+
+  if (!affiliateUser?.affiliate) {
+    return empty;
+  }
+
+  const commissionType =
+    affiliateUser.affiliate.commissionType;
+
+  const commissionValue = Number(
+    affiliateUser.affiliate.commissionValue
+  );
+
+  /* ----------------------------------------------------------
+     VALIDATE COMMISSION CONFIGURATION
+  ---------------------------------------------------------- */
+
+  if (
+    !["percentage", "fixed"].includes(commissionType) ||
+    !Number.isFinite(commissionValue) ||
+    commissionValue <= 0
+  ) {
+    return empty;
+  }
+
+  if (
+    commissionType === "percentage" &&
+    commissionValue > 100
+  ) {
+    return empty;
+  }
+
+  const amount = roundMoney(finalAmount);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return empty;
+  }
+
+  /*
+   * Percentage commissions work with any currency.
+   *
+   * Fixed commissions are assumed to be configured
+   * in INR, since User.affiliate does not currently
+   * store a commission currency.
+   *
+   * Skip fixed commissions for non-INR orders to
+   * avoid incorrect payouts.
+   */
+  if (
+    commissionType === "fixed" &&
+    String(currency).toUpperCase() !== "INR"
+  ) {
+    return empty;
+  }
+
+  /* ----------------------------------------------------------
+     CALCULATE COMMISSION
+  ---------------------------------------------------------- */
+
+  let affiliateAmount = 0;
+
+  if (commissionType === "percentage") {
+    affiliateAmount = roundMoney(
+      (amount * commissionValue) / 100
+    );
+  } else {
+    affiliateAmount = roundMoney(commissionValue);
+  }
+
+  /*
+   * Never allocate more affiliate commission
+   * than the amount actually charged.
+   */
+  affiliateAmount = Math.min(
+    Math.max(affiliateAmount, 0),
+    amount
+  );
+
+  const remainingAmount = roundMoney(
+    amount - affiliateAmount
+  );
+
+  return {
+    affiliateCode: code,
+
+    affiliateUserId: affiliateUser._id,
+
+    affiliateType:
+      commissionType === "percentage"
+        ? "PERCENTAGE"
+        : "FIXED",
+
+    affiliateValue: commissionValue,
+
+    affiliateAmount,
+
+    remainingAmount,
+  };
+};
+
+/* ============================================================
+   CREATE CASHFREE PAYMENT
+============================================================ */
+
 export const createCashfreePayment = async (req, res) => {
-    let createdOrder = null;
+  let createdOrder = null;
+
+  try {
+    const {
+      affiliateCode,
+      bookId,
+      firstname,
+      email,
+      phone,
+      couponCode,
+      utmSource,
+      utmMedium,
+      utmCampaign,
+    } = req.body;
+
+    /* ========================================================
+       VALIDATE REQUIRED FIELDS
+    ======================================================== */
+
+    if (
+      !bookId ||
+      !firstname ||
+      !email ||
+      !phone
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Name, email, phone and bookId are required.",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID.",
+      });
+    }
+
+    /* ========================================================
+       FIND PUBLISHED, ACTIVE BOOK
+    ======================================================== */
+
+    const book = await Book.findOne({
+      _id: bookId,
+      isPublished: true,
+      isActive: true,
+    });
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found.",
+      });
+    }
+
+    /* ========================================================
+       NORMALIZE CUSTOMER DATA
+    ======================================================== */
+
+    const normalizedName = String(firstname).trim();
+
+    const normalizedEmail = String(email)
+      .trim()
+      .toLowerCase();
+
+    const normalizedPhone = String(phone).trim();
+
+    const currency = String(
+      book.currency || "INR"
+    ).toUpperCase();
+
+    if (
+      !normalizedName ||
+      !normalizedEmail ||
+      !normalizedPhone
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Valid name, email and phone are required.",
+      });
+    }
+
+    /* ========================================================
+       VALIDATE COUPON & GET FINAL PRICE
+
+       Coupon is applied first.
+
+       Example:
+         Book price: ₹199
+         Coupon discount: ₹50
+         Final payment: ₹149
+
+       Affiliate commission is calculated on ₹149.
+    ======================================================== */
+
+    let pricing;
 
     try {
-        const {
-            affiliateCode,
-            bookId,
-            firstname,
-            email,
-            phone,
-            couponCode,
-            utmSource,
-            utmMedium,
-            utmCampaign
-        } = req.body;
-
-        if (!bookId || !firstname || !email || !phone) {
-            return res.status(400).json({
-                success: false,
-                message: "Name, email, phone and bookId are required."
-            });
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(bookId)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid book ID."
-            });
-        }
-
-        const book = await Book.findOne({
-            _id: bookId,
-            isPublished: true,
-            isActive: true
-        });
-
-        if (!book) {
-            return res.status(404).json({
-                success: false,
-                message: "Book not found."
-            });
-        }
-
-        const normalizedAffiliateCode =
-            typeof affiliateCode === "string" && affiliateCode.trim()
-                ? affiliateCode.trim().toLowerCase()
-                : null;
-
-        const normalizedEmail = String(email).trim().toLowerCase();
-        const normalizedName = String(firstname).trim();
-        const normalizedPhone = String(phone).trim();
-
-        let pricing;
-
-        try {
-            pricing = await validateCouponForPayment({
-                couponCode,
-                book,
-                email: normalizedEmail
-            });
-        } catch (error) {
-            return res.status(error.statusCode || 400).json({
-                success: false,
-                code: error.code || "COUPON_INVALID",
-                message: error.message || "Invalid coupon."
-            });
-        }
-
-        const finalAmount = Number(pricing.finalAmount);
-
-        if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid payment amount."
-            });
-        }
-
-        const orderId = generateCashfreeOrderId();
-        const couponData = buildCouponData(pricing);
-
-        createdOrder = await Order.create({
-            orderId,
-            bookId: book._id,
-            book: {
-                title: book.title,
-                price: book.price,
-                mrp: book.mrp || book.price,
-                currency: book.currency || "INR"
-            },
-            customer: {
-                name: normalizedName,
-                email: normalizedEmail,
-                phone: normalizedPhone
-            },
-            coupon: couponData,
-            payment: {
-                provider: "Cashfree",
-                affiliateCode: normalizedAffiliateCode,
-                transactionId: orderId,
-                amount: finalAmount,
-                status: "PENDING"
-            },
-            orderStatus: "PENDING",
-            metadata: {
-                ipAddress:
-                    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
-                    req.socket.remoteAddress ||
-                    null,
-                userAgent: req.headers["user-agent"] || null,
-                referrer: req.headers.referer || null,
-                utmSource: utmSource || null,
-                utmMedium: utmMedium || null,
-                utmCampaign: utmCampaign || null
-            },
-            createdBy: "customer"
-        });
-
-        const cashfreePayload = {
-            order_id: orderId,
-            order_amount: finalAmount,
-            order_currency: String(book.currency || "INR").toUpperCase(),
-            customer_details: {
-                customer_id: orderId,
-                customer_name: normalizedName,
-                customer_email: normalizedEmail,
-                customer_phone: normalizedPhone
-            },
-            order_meta: {
-                return_url: `${BACKEND_URL}/payment/cashfree/return?order_id={order_id}`,
-                notify_url: `${BACKEND_URL}/payment/cashfree/webhook`
-            },
-            order_note: `Purchase ${book.title}`,
-            order_tags: {
-                book_id: String(book._id),
-                affiliate_code: normalizedAffiliateCode || "direct"
-            }
-        };
-
-        const cashfreeOrder = await createCashfreeOrderRequest(cashfreePayload);
-
-        if (!cashfreeOrder?.payment_session_id) {
-            throw new Error("Cashfree did not return payment_session_id.");
-        }
-
-        await Order.updateOne(
-            {
-                _id: createdOrder._id
-            },
-            {
-                $set: {
-                    "payment.sessionId": cashfreeOrder.payment_session_id,
-                    "payment.createResponse": cashfreeOrder,
-                    updatedBy: "cashfree-create"
-                }
-            }
-        );
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                orderId,
-                paymentSessionId: cashfreeOrder.payment_session_id,
-                cashfreeOrderId: cashfreeOrder.cf_order_id || null,
-                environment: CASHFREE_ENV,
-                pricing: {
-                    couponApplied: pricing.couponApplied,
-                    couponCode: pricing.coupon?.code || null,
-                    couponName: pricing.coupon?.name || null,
-                    originalAmount: pricing.originalAmount,
-                    discountAmount: pricing.discountAmount,
-                    finalAmount: pricing.finalAmount,
-                    currency: book.currency || "INR"
-                }
-            }
-        });
+      pricing = await validateCouponForPayment({
+        couponCode,
+        book,
+        email: normalizedEmail,
+      });
     } catch (error) {
-        console.error(
-            "Create Cashfree payment error:",
-            getCashfreeError(error)
-        );
-
-        if (createdOrder?._id) {
-            try {
-                await Order.updateOne(
-                    {
-                        _id: createdOrder._id,
-                        orderStatus: {
-                            $ne: "PAID"
-                        }
-                    },
-                    {
-                        $set: {
-                            orderStatus: "FAILED",
-                            "payment.status": "FAILED",
-                            "payment.failedAt": new Date(),
-                            "payment.createResponse": getCashfreeError(error),
-                            updatedBy: "cashfree-create"
-                        }
-                    }
-                );
-            } catch (updateError) {
-                console.error(
-                    "Cashfree order failure update error:",
-                    updateError
-                );
-            }
-        }
-
-        return res.status(502).json({
-            success: false,
-            message:
-                error?.response?.data?.message ||
-                error?.message ||
-                "Unable to create Cashfree payment."
-        });
+      return res.status(error.statusCode || 400).json({
+        success: false,
+        code: error.code || "COUPON_INVALID",
+        message: error.message || "Invalid coupon.",
+      });
     }
+
+    const finalAmount = Number(pricing.finalAmount);
+
+    if (
+      !Number.isFinite(finalAmount) ||
+      finalAmount <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment amount.",
+      });
+    }
+
+    /* ========================================================
+       RESOLVE AFFILIATE CODE
+
+       If code is "tt", this is a direct sale.
+
+       Otherwise, lookup active affiliate user in User DB.
+
+       Invalid / inactive codes do not get commission.
+    ======================================================== */
+
+    const affiliateDetails = await resolveAffiliate({
+      affiliateCode,
+      finalAmount,
+      currency,
+    });
+
+    /* ========================================================
+       GENERATE ORDER
+    ======================================================== */
+
+    const orderId = generateCashfreeOrderId();
+
+    const couponData = buildCouponData(pricing);
+
+    /* ========================================================
+       CREATE ORDER IN MONGODB
+
+       payment.amount = Final amount customer pays.
+
+       affiliateAmount = Affiliate commission.
+
+       remainingAmount = payment.amount - affiliateAmount.
+
+       No affiliate payout-status fields are stored.
+    ======================================================== */
+
+    createdOrder = await Order.create({
+      orderId,
+
+      bookId: book._id,
+
+      book: {
+        title: book.title,
+        price: book.price,
+        mrp: book.mrp || book.price,
+        currency,
+      },
+
+      customer: {
+        name: normalizedName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      },
+
+      coupon: couponData,
+
+      payment: {
+        provider: "Cashfree",
+
+        transactionId: orderId,
+
+        /* ------------------------------------
+           AFFILIATE DETAILS
+        ------------------------------------ */
+
+        affiliateCode:
+          affiliateDetails.affiliateCode,
+
+        affiliateUserId:
+          affiliateDetails.affiliateUserId,
+
+        affiliateType:
+          affiliateDetails.affiliateType,
+
+        affiliateValue:
+          affiliateDetails.affiliateValue,
+
+        affiliateAmount:
+          affiliateDetails.affiliateAmount,
+
+        remainingAmount:
+          affiliateDetails.remainingAmount,
+
+        /* ------------------------------------
+           PAYMENT DETAILS
+        ------------------------------------ */
+
+        amount: finalAmount,
+
+        status: "PENDING",
+      },
+
+      orderStatus: "PENDING",
+
+      metadata: {
+        ipAddress:
+          req.headers["x-forwarded-for"]
+            ?.split(",")[0]
+            ?.trim() ||
+          req.socket.remoteAddress ||
+          null,
+
+        userAgent:
+          req.headers["user-agent"] || null,
+
+        referrer:
+          req.headers.referer || null,
+
+        utmSource:
+          typeof utmSource === "string"
+            ? utmSource.trim() || null
+            : null,
+
+        utmMedium:
+          typeof utmMedium === "string"
+            ? utmMedium.trim() || null
+            : null,
+
+        utmCampaign:
+          typeof utmCampaign === "string"
+            ? utmCampaign.trim() || null
+            : null,
+      },
+
+      createdBy: "customer",
+    });
+
+    /* ========================================================
+       CREATE CASHFREE PAYMENT SESSION
+
+       IMPORTANT:
+       Cashfree receives the full payment amount.
+       Affiliate commission is internal accounting.
+    ======================================================== */
+
+    const cashfreePayload = {
+      order_id: orderId,
+
+      order_amount: finalAmount,
+
+      order_currency: currency,
+
+      customer_details: {
+        customer_id: orderId,
+
+        customer_name: normalizedName,
+
+        customer_email: normalizedEmail,
+
+        customer_phone: normalizedPhone,
+      },
+
+      order_meta: {
+        return_url:
+          `${BACKEND_URL}/payment/cashfree/return` +
+          "?order_id={order_id}",
+
+        notify_url:
+          `${BACKEND_URL}/payment/cashfree/webhook`,
+      },
+
+      order_note: `Purchase ${book.title}`,
+
+      order_tags: {
+        book_id: String(book._id),
+
+        affiliate_code:
+          affiliateDetails.affiliateCode || "direct",
+      },
+    };
+
+    const cashfreeOrder =
+      await createCashfreeOrderRequest(cashfreePayload);
+
+    if (!cashfreeOrder?.payment_session_id) {
+      throw new Error(
+        "Cashfree did not return payment_session_id."
+      );
+    }
+
+    /* ========================================================
+       STORE CASHFREE SESSION DETAILS
+    ======================================================== */
+
+    await Order.updateOne(
+      {
+        _id: createdOrder._id,
+      },
+      {
+        $set: {
+          "payment.sessionId":
+            cashfreeOrder.payment_session_id,
+
+          "payment.createResponse":
+            cashfreeOrder,
+
+          updatedBy: "cashfree-create",
+        },
+      }
+    );
+
+    /* ========================================================
+       SUCCESS RESPONSE
+
+       Never expose internal affiliate commission
+       details to the customer-facing frontend.
+    ======================================================== */
+
+    return res.status(200).json({
+      success: true,
+
+      data: {
+        orderId,
+
+        paymentSessionId:
+          cashfreeOrder.payment_session_id,
+
+        cashfreeOrderId:
+          cashfreeOrder.cf_order_id || null,
+
+        environment: CASHFREE_ENV,
+
+        pricing: {
+          couponApplied:
+            pricing.couponApplied,
+
+          couponCode:
+            pricing.coupon?.code || null,
+
+          couponName:
+            pricing.coupon?.name || null,
+
+          originalAmount:
+            pricing.originalAmount,
+
+          discountAmount:
+            pricing.discountAmount,
+
+          finalAmount:
+            pricing.finalAmount,
+
+          currency,
+        },
+      },
+    });
+  } catch (error) {
+    /* ========================================================
+       ERROR HANDLING
+    ======================================================== */
+
+    console.error(
+      "Create Cashfree payment error:",
+      getCashfreeError(error)
+    );
+
+    if (createdOrder?._id) {
+      try {
+        await Order.updateOne(
+          {
+            _id: createdOrder._id,
+
+            orderStatus: {
+              $ne: "PAID",
+            },
+          },
+          {
+            $set: {
+              orderStatus: "FAILED",
+
+              "payment.status": "FAILED",
+
+              "payment.failedAt": new Date(),
+
+              "payment.createResponse":
+                getCashfreeError(error),
+
+              updatedBy: "cashfree-create",
+            },
+          }
+        );
+      } catch (updateError) {
+        console.error(
+          "Cashfree order failure update error:",
+          updateError
+        );
+      }
+    }
+
+    return res.status(502).json({
+      success: false,
+
+      message:
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to create Cashfree payment.",
+    });
+  }
 };
+
 
 export const cashfreeReturn = async (req, res) => {
     try {

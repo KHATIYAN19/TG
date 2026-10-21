@@ -1,3 +1,466 @@
+// import mongoose from "mongoose";
+
+// const orderSchema = new mongoose.Schema(
+//   {
+//     orderId: {
+//       type: String,
+//       required: true,
+//       unique: true,
+//       trim: true,
+//       index: true
+//     },
+//     bookId: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "Book",
+//       required: true,
+//       index: true
+//     },
+//     purchasedBookIds: {
+//       type: [
+//         {
+//           type: mongoose.Schema.Types.ObjectId,
+//           ref: "Book"
+//         }
+//       ],
+//       default: []
+//     },
+//     book: {
+//       title: {
+//         type: String,
+//         required: true,
+//         trim: true
+//       },
+//       price: {
+//         type: Number,
+//         required: true,
+//         min: 0
+//       },
+//       mrp: {
+//         type: Number,
+//         required: true,
+//         min: 0
+//       },
+//       currency: {
+//         type: String,
+//         default: "INR",
+//         uppercase: true,
+//         trim: true
+//       }
+//     },
+//     customer: {
+//       name: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       email: {
+//         type: String,
+//         default: null,
+//         lowercase: true,
+//         trim: true
+//       },
+//       phone: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       }
+//     },
+//     coupon: {
+//       applied: {
+//         type: Boolean,
+//         default: false
+//       },
+//       couponId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: "Coupon",
+//         default: null
+//       },
+//       code: {
+//         type: String,
+//         default: null,
+//         trim: true,
+//         uppercase: true
+//       },
+//       name: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       description: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       discountType: {
+//         type: String,
+//         enum: ["PERCENTAGE", "FIXED"],
+//         default: null
+//       },
+//       discountValue: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       maxDiscountAmount: {
+//         type: Number,
+//         default: null,
+//         min: 0
+//       },
+//       minimumOrderAmount: {
+//         type: Number,
+//         default: null,
+//         min: 0
+//       },
+//       originalAmount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       discountAmount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       finalAmount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       appliedAt: {
+//         type: Date,
+//         default: null
+//       }
+//     },
+//     payment: {
+//       provider: {
+//         type: String,
+//         default: "PayU",
+//         trim: true,
+//         index: true
+//       },
+//       transactionId: {
+//         type: String,
+//         default: null,
+//         trim: true,
+//         index: true
+//       },
+//       affiliateCode: {
+//         type: String,
+//         default: null,
+//         trim: true,
+//         lowercase: true
+//       },
+//       paymentId: {
+//         type: String,
+//         default: null,
+//         trim: true,
+//         index: true
+//       },
+//       sessionId: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       method: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       amount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       status: {
+//         type: String,
+//         enum: [
+//           "PENDING",
+//           "SUCCESS",
+//           "FAILED",
+//           "CANCELLED",
+//           "REFUNDED",
+//           "PARTIALLY_REFUNDED"
+//         ],
+//         default: "PENDING",
+//         index: true
+//       },
+//       paidAt: {
+//         type: Date,
+//         default: null
+//       },
+//       failedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       refundedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       createResponse: {
+//         type: mongoose.Schema.Types.Mixed,
+//         default: null
+//       },
+//       callbackResponse: {
+//         type: mongoose.Schema.Types.Mixed,
+//         default: null
+//       },
+//       verificationResponse: {
+//         type: mongoose.Schema.Types.Mixed,
+//         default: null
+//       }
+//     },
+//     refund: {
+//       status: {
+//         type: String,
+//         enum: [
+//           "NOT_REQUESTED",
+//           "PENDING",
+//           "PROCESSING",
+//           "PARTIAL",
+//           "REFUNDED",
+//           "FAILED",
+//           "CANCELLED"
+//         ],
+//         default: "NOT_REQUESTED",
+//         index: true
+//       },
+//       requestedAmount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       refundedAmount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       remainingAmount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       reason: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       provider: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       providerRefundId: {
+//         type: String,
+//         default: null,
+//         trim: true,
+//         index: true
+//       },
+//       refundTransactionId: {
+//         type: String,
+//         default: null,
+//         trim: true,
+//         index: true
+//       },
+//       initiatedBy: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       initiatedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       processedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       completedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       failedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       failureReason: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       requestPayload: {
+//         type: mongoose.Schema.Types.Mixed,
+//         default: null
+//       },
+//       providerResponse: {
+//         type: mongoose.Schema.Types.Mixed,
+//         default: null
+//       }
+//     },
+//     pendingMail: {
+//       sentCount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       firstSentAt: {
+//         type: Date,
+//         default: null
+//       },
+//       lastSentAt: {
+//         type: Date,
+//         default: null,
+//         index: true
+//       },
+//       lastSentBy: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       lastStatus: {
+//         type: String,
+//         enum: ["NOT_SENT", "SENT", "FAILED"],
+//         default: "NOT_SENT"
+//       },
+//       lastError: {
+//         type: String,
+//         default: null
+//       }
+//     },
+//     orderStatus: {
+//       type: String,
+//       enum: [
+//         "PENDING",
+//         "PAID",
+//         "FAILED",
+//         "CANCELLED",
+//         "REFUNDED",
+//         "PARTIALLY_REFUNDED"
+//       ],
+//       default: "PENDING",
+//       index: true
+//     },
+//     access: {
+//       tokenHash: {
+//         type: String,
+//         default: null,
+//         index: true
+//       },
+//       expiresAt: {
+//         type: Date,
+//         default: null,
+//         index: true
+//       },
+//       generatedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       lastAccessedAt: {
+//         type: Date,
+//         default: null
+//       },
+//       accessCount: {
+//         type: Number,
+//         default: 0,
+//         min: 0
+//       },
+//       revoked: {
+//         type: Boolean,
+//         default: false
+//       }
+//     },
+//     verification: {
+//       callbackHashVerified: {
+//         type: Boolean,
+//         default: false
+//       },
+//       payuVerified: {
+//         type: Boolean,
+//         default: false
+//       },
+//       razorpayVerified: {
+//         type: Boolean,
+//         default: false
+//       },
+//       cashfreeVerified: {
+//         type: Boolean,
+//         default: false
+//       },
+//       amountVerified: {
+//         type: Boolean,
+//         default: false
+//       },
+//       verifiedAt: {
+//         type: Date,
+//         default: null
+//       }
+//     },
+//     metadata: {
+//       ipAddress: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       userAgent: {
+//         type: String,
+//         default: null
+//       },
+//       referrer: {
+//         type: String,
+//         default: null
+//       },
+//       utmSource: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       utmMedium: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       },
+//       utmCampaign: {
+//         type: String,
+//         default: null,
+//         trim: true
+//       }
+//     },
+//     createdBy: {
+//       type: String,
+//       required: true,
+//       trim: true
+//     },
+//     updatedBy: {
+//       type: String,
+//       default: null,
+//       trim: true
+//     }
+//   },
+//   {
+//     timestamps: true
+//   }
+// );
+
+// orderSchema.index({ createdAt: -1 });
+// orderSchema.index({ bookId: 1, createdAt: -1 });
+// orderSchema.index({ orderStatus: 1, createdAt: -1 });
+// orderSchema.index({ "customer.email": 1, createdAt: -1 });
+// orderSchema.index({ "coupon.code": 1, createdAt: -1 });
+// orderSchema.index({ "payment.affiliateCode": 1, createdAt: -1 });
+// orderSchema.index({ "payment.provider": 1, createdAt: -1 });
+// orderSchema.index({
+//   "payment.provider": 1,
+//   "payment.transactionId": 1
+// });
+// orderSchema.index({
+//   "payment.provider": 1,
+//   "payment.status": 1,
+//   createdAt: -1
+// });
+
+// const Order = mongoose.model("Order", orderSchema);
+
+// export default Order;
+
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
@@ -7,161 +470,312 @@ const orderSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
-      index: true
+      index: true,
     },
+
     bookId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Book",
       required: true,
-      index: true
+      index: true,
     },
+
+    purchasedBookIds: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Book",
+        },
+      ],
+      default: [],
+    },
+
+    /* ==========================================
+       BOOK SNAPSHOT
+    ========================================== */
+
     book: {
       title: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
       },
+
       price: {
         type: Number,
         required: true,
-        min: 0
+        min: 0,
       },
+
       mrp: {
         type: Number,
         required: true,
-        min: 0
+        min: 0,
       },
+
       currency: {
         type: String,
         default: "INR",
         uppercase: true,
-        trim: true
-      }
+        trim: true,
+      },
     },
+
+    /* ==========================================
+       CUSTOMER DETAILS
+    ========================================== */
+
     customer: {
       name: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       email: {
         type: String,
         default: null,
         lowercase: true,
-        trim: true
+        trim: true,
       },
+
       phone: {
         type: String,
         default: null,
-        trim: true
-      }
+        trim: true,
+      },
     },
+
+    /* ==========================================
+       COUPON DETAILS
+    ========================================== */
+
     coupon: {
       applied: {
         type: Boolean,
-        default: false
+        default: false,
       },
+
       couponId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Coupon",
-        default: null
+        default: null,
       },
+
       code: {
         type: String,
         default: null,
         trim: true,
-        uppercase: true
+        uppercase: true,
       },
+
       name: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       description: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       discountType: {
         type: String,
         enum: ["PERCENTAGE", "FIXED"],
-        default: null
+        default: null,
       },
+
       discountValue: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       maxDiscountAmount: {
         type: Number,
         default: null,
-        min: 0
+        min: 0,
       },
+
       minimumOrderAmount: {
         type: Number,
         default: null,
-        min: 0
+        min: 0,
       },
+
       originalAmount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       discountAmount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       finalAmount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       appliedAt: {
         type: Date,
-        default: null
-      }
+        default: null,
+      },
     },
+
+    /* ==========================================
+       PAYMENT DETAILS
+    ========================================== */
+
     payment: {
       provider: {
         type: String,
         default: "PayU",
         trim: true,
-        index: true
+        index: true,
       },
+
       transactionId: {
         type: String,
         default: null,
         trim: true,
-        index: true
+        index: true,
       },
+
+      /*
+       * AFFILIATE CODE
+       *
+       * Kept in the exact same position.
+       *
+       * Examples:
+       * "tt"       -> Direct Target Trek sale
+       * "creator20" -> Affiliate referral
+       * null       -> No referral code
+       */
       affiliateCode: {
         type: String,
         default: null,
         trim: true,
-        lowercase: true
+        lowercase: true,
       },
+
+      /* ========================================
+         AFFILIATE COMMISSION DETAILS
+
+         Only populated for valid affiliates.
+         No payout status fields.
+      ======================================== */
+
+      affiliateUserId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+
+      /*
+       * PERCENTAGE:
+       * Commission is a percentage of payment.amount.
+       *
+       * FIXED:
+       * Commission is a fixed currency amount.
+       */
+      affiliateType: {
+        type: String,
+        enum: ["PERCENTAGE", "FIXED"],
+        default: null,
+      },
+
+      /*
+       * Stores the affiliate configuration
+       * at the time the order was created.
+       *
+       * Example:
+       * affiliateType = "PERCENTAGE"
+       * affiliateValue = 20
+       *
+       * Means 20%.
+       *
+       * affiliateType = "FIXED"
+       * affiliateValue = 50
+       *
+       * Means ₹50 for an INR order.
+       */
+      affiliateValue: {
+        type: Number,
+        default: null,
+        min: 0,
+      },
+
+      /*
+       * Actual calculated commission amount.
+       *
+       * Example:
+       * payment.amount = 199
+       * affiliateType = "PERCENTAGE"
+       * affiliateValue = 20
+       *
+       * affiliateAmount = 39.80
+       */
+      affiliateAmount: {
+        type: Number,
+        default: null,
+        min: 0,
+      },
+
+      /*
+       * Amount remaining after the
+       * calculated affiliate commission.
+       *
+       * Example:
+       * payment.amount = 199
+       * affiliateAmount = 39.80
+       *
+       * remainingAmount = 159.20
+       *
+       * This does not deduct payment
+       * gateway fees, tax, or refunds.
+       */
+      remainingAmount: {
+        type: Number,
+        default: null,
+        min: 0,
+      },
+
+      /* ========================================
+         EXISTING PAYMENT FIELDS
+      ======================================== */
+
       paymentId: {
         type: String,
         default: null,
         trim: true,
-        index: true
+        index: true,
       },
+
       sessionId: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       method: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       amount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       status: {
         type: String,
         enum: [
@@ -170,36 +784,47 @@ const orderSchema = new mongoose.Schema(
           "FAILED",
           "CANCELLED",
           "REFUNDED",
-          "PARTIALLY_REFUNDED"
+          "PARTIALLY_REFUNDED",
         ],
         default: "PENDING",
-        index: true
+        index: true,
       },
+
       paidAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       failedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       refundedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       createResponse: {
         type: mongoose.Schema.Types.Mixed,
-        default: null
+        default: null,
       },
+
       callbackResponse: {
         type: mongoose.Schema.Types.Mixed,
-        default: null
+        default: null,
       },
+
       verificationResponse: {
         type: mongoose.Schema.Types.Mixed,
-        default: null
-      }
+        default: null,
+      },
     },
+
+    /* ==========================================
+       REFUND DETAILS
+    ========================================== */
+
     refund: {
       status: {
         type: String,
@@ -210,113 +835,143 @@ const orderSchema = new mongoose.Schema(
           "PARTIAL",
           "REFUNDED",
           "FAILED",
-          "CANCELLED"
+          "CANCELLED",
         ],
         default: "NOT_REQUESTED",
-        index: true
+        index: true,
       },
+
       requestedAmount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       refundedAmount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       remainingAmount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       reason: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       provider: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       providerRefundId: {
         type: String,
         default: null,
         trim: true,
-        index: true
+        index: true,
       },
+
       refundTransactionId: {
         type: String,
         default: null,
         trim: true,
-        index: true
+        index: true,
       },
+
       initiatedBy: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       initiatedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       processedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       completedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       failedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       failureReason: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       requestPayload: {
         type: mongoose.Schema.Types.Mixed,
-        default: null
+        default: null,
       },
+
       providerResponse: {
         type: mongoose.Schema.Types.Mixed,
-        default: null
-      }
+        default: null,
+      },
     },
+
+    /* ==========================================
+       PENDING PAYMENT EMAIL
+    ========================================== */
+
     pendingMail: {
       sentCount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       firstSentAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       lastSentAt: {
         type: Date,
         default: null,
-        index: true
+        index: true,
       },
+
       lastSentBy: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       lastStatus: {
         type: String,
         enum: ["NOT_SENT", "SENT", "FAILED"],
-        default: "NOT_SENT"
+        default: "NOT_SENT",
       },
+
       lastError: {
         type: String,
-        default: null
-      }
+        default: null,
+      },
     },
+
+    /* ==========================================
+       ORDER STATUS
+    ========================================== */
+
     orderStatus: {
       type: String,
       enum: [
@@ -325,129 +980,217 @@ const orderSchema = new mongoose.Schema(
         "FAILED",
         "CANCELLED",
         "REFUNDED",
-        "PARTIALLY_REFUNDED"
+        "PARTIALLY_REFUNDED",
       ],
       default: "PENDING",
-      index: true
+      index: true,
     },
+
+    /* ==========================================
+       DIGITAL BOOK ACCESS
+    ========================================== */
+
     access: {
       tokenHash: {
         type: String,
         default: null,
-        index: true
+        index: true,
       },
+
       expiresAt: {
         type: Date,
         default: null,
-        index: true
+        index: true,
       },
+
       generatedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       lastAccessedAt: {
         type: Date,
-        default: null
+        default: null,
       },
+
       accessCount: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
+
       revoked: {
         type: Boolean,
-        default: false
-      }
+        default: false,
+      },
     },
+
+    /* ==========================================
+       PAYMENT VERIFICATION
+    ========================================== */
+
     verification: {
       callbackHashVerified: {
         type: Boolean,
-        default: false
+        default: false,
       },
+
       payuVerified: {
         type: Boolean,
-        default: false
+        default: false,
       },
+
       razorpayVerified: {
         type: Boolean,
-        default: false
+        default: false,
       },
+
       cashfreeVerified: {
         type: Boolean,
-        default: false
+        default: false,
       },
+
       amountVerified: {
         type: Boolean,
-        default: false
+        default: false,
       },
+
       verifiedAt: {
         type: Date,
-        default: null
-      }
+        default: null,
+      },
     },
+
+    /* ==========================================
+       REQUEST / ATTRIBUTION METADATA
+    ========================================== */
+
     metadata: {
       ipAddress: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       userAgent: {
         type: String,
-        default: null
+        default: null,
       },
+
       referrer: {
         type: String,
-        default: null
+        default: null,
       },
+
       utmSource: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       utmMedium: {
         type: String,
         default: null,
-        trim: true
+        trim: true,
       },
+
       utmCampaign: {
         type: String,
         default: null,
-        trim: true
-      }
+        trim: true,
+      },
     },
+
+    /* ==========================================
+       AUDIT FIELDS
+    ========================================== */
+
     createdBy: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
+
     updatedBy: {
       type: String,
       default: null,
-      trim: true
-    }
+      trim: true,
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 
+/* =====================================================
+   INDEXES
+===================================================== */
+
+// General order indexes
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ bookId: 1, createdAt: -1 });
-orderSchema.index({ orderStatus: 1, createdAt: -1 });
-orderSchema.index({ "customer.email": 1, createdAt: -1 });
-orderSchema.index({ "coupon.code": 1, createdAt: -1 });
-orderSchema.index({ "payment.affiliateCode": 1, createdAt: -1 });
-orderSchema.index({ "payment.provider": 1, createdAt: -1 });
+
+orderSchema.index({
+  bookId: 1,
+  createdAt: -1,
+});
+
+orderSchema.index({
+  orderStatus: 1,
+  createdAt: -1,
+});
+
+orderSchema.index({
+  "customer.email": 1,
+  createdAt: -1,
+});
+
+orderSchema.index({
+  "coupon.code": 1,
+  createdAt: -1,
+});
+
+// Affiliate code + order date
+orderSchema.index({
+  "payment.affiliateCode": 1,
+  createdAt: -1,
+});
+
+// Affiliate user ID + order date
+orderSchema.index({
+  "payment.affiliateUserId": 1,
+  createdAt: -1,
+});
+
+// Useful for affiliate sales dashboards
+orderSchema.index({
+  "payment.affiliateUserId": 1,
+  "payment.status": 1,
+  createdAt: -1,
+});
+
+// Payment provider indexes
 orderSchema.index({
   "payment.provider": 1,
-  "payment.transactionId": 1
+  createdAt: -1,
 });
+
+orderSchema.index({
+  "payment.provider": 1,
+  "payment.transactionId": 1,
+});
+
 orderSchema.index({
   "payment.provider": 1,
   "payment.status": 1,
-  createdAt: -1
+  createdAt: -1,
 });
 
-const Order = mongoose.model("Order", orderSchema);
+/* =====================================================
+   EXPORT MODEL
+===================================================== */
+
+const Order =
+  mongoose.models.Order ||
+  mongoose.model("Order", orderSchema);
 
 export default Order;

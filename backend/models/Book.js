@@ -33,6 +33,13 @@ const bookSchema = new mongoose.Schema(
       enum: ["pdf", "ebook", "course", "bundle", "template", "notes", "other"],
       default: "pdf",
     },
+    includedBooks: {
+      type: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Book"
+      }],
+      default: []
+    },
 
     price: {
       type: Number,
