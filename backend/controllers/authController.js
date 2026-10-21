@@ -354,7 +354,7 @@ export const login = async (req, res) => {
     //   });
     // }
     if (
-      // user.role === "admin" ||
+      user.role === "admin" ||
       user.role === "affiliate"
     ) {
       const session = await createPendingSession(user, req);
