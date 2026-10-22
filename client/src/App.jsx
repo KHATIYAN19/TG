@@ -1197,6 +1197,10 @@ const UserProfile = lazy(() =>
   import("./component/UserProfile.jsx")
 );
 
+const SaleCampaign = lazy(() =>
+  import("./component/SaleCampaign.jsx")
+);
+
 const SubmitReviewPage = lazy(() =>
   import("./component/SumbitReviewPage")
 );
@@ -1665,6 +1669,8 @@ function App() {
       <Analytics />
 
       <Navbar />
+      
+      <SaleCampaign/>
 
       <Suspense
         fallback={
