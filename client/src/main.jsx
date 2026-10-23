@@ -1,8 +1,12 @@
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
-import ScrollToTop from "./component/ScrollTop.jsx";
+
+import ScrollTop from "./component/ScrollTop.jsx";
+import MetaPageTracker from "./component/MetaPageTracker.jsx";
+
 import { BrowserRouter } from "react-router-dom";
 
 import { ToastContainer } from "react-toastify";
@@ -17,11 +21,18 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <HelmetProvider>
       <BrowserRouter>
-       <ScrollToTop />
+        {/* Scroll to top on route changes */}
+        <ScrollTop />
+
+        {/* Track Meta Pixel PageView on SPA navigation */}
+        <MetaPageTracker />
+
+        {/* Redux application */}
         <Provider store={store}>
           <App />
         </Provider>
 
+        {/* Global toast notifications */}
         <ToastContainer />
       </BrowserRouter>
     </HelmetProvider>
