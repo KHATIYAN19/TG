@@ -1,43 +1,280 @@
-
 <!doctype html>
 <html lang="en">
   <head>
-    <meta name="mitgo-verification" content="da002d67-db0d-47d3-b964-300a4d8f8d37" />
-    <meta name="mitgo-verification" content="1ef945b5-b5fc-4e97-a315-557380b3c830" />
-    <meta name="ppck-ver" content="127fbdf4ff52eaabdacbeb965ff4b6e4" />
-    <meta charset="UTF-8" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="./src/utils/target_Trek_logo_2.jpg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Target Trek</title>
+    <!-- ========================================
+         BASIC CONFIGURATION
+    ========================================= -->
 
-  <meta property="og:title" content="TargetTrek - Digital & Affiliate Marketing Experts" />
-  <meta property="og:description" content="We deliver tailored digital marketing & affiliate marketing solutions that drive growth, engagement, and measurable results for your business." />
-  <meta property="og:image" content="https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg" />
-  <meta property="og:url" content="https://www.targettrek.in" />
-  <meta property="og:type" content="website" />
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+
+    <meta
+      name="referrer"
+      content="strict-origin-when-cross-origin"
+    />
+
+    <title>Target Trek | Developer Learning & eBooks</title>
+
+    <meta
+      name="description"
+      content="Master System Design, Backend Engineering, GenAI and technical interviews with practical eBooks and developer learning resources from Target Trek."
+    />
+
+    <!-- ========================================
+         WEBSITE VERIFICATION
+    ========================================= -->
+
+    <meta
+      name="mitgo-verification"
+      content="da002d67-db0d-47d3-b964-300a4d8f8d37"
+    />
+
+    <meta
+      name="mitgo-verification"
+      content="1ef945b5-b5fc-4e97-a315-557380b3c830"
+    />
+
+    <meta
+      name="ppck-ver"
+      content="127fbdf4ff52eaabdacbeb965ff4b6e4"
+    />
+
+    <!-- ========================================
+         GOOGLE FONTS
+    ========================================= -->
+
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- ========================================
+         FAVICON
+    ========================================= -->
+
+    <link
+      rel="icon"
+      type="image/jpeg"
+      href="/src/utils/target_Trek_logo_2.jpg"
+    />
+
+    <!-- ========================================
+         OPEN GRAPH / SOCIAL SHARING
+    ========================================= -->
+
+    <meta
+      property="og:title"
+      content="Target Trek | System Design & Developer eBooks"
+    />
+
+    <meta
+      property="og:description"
+      content="Learn System Design, Backend Development, GenAI and interview preparation through practical eBooks and developer resources."
+    />
+
+    <meta
+      property="og:image"
+      content="https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg"
+    />
+
+    <meta
+      property="og:url"
+      content="https://www.targettrek.in"
+    />
+
+    <meta
+      property="og:type"
+      content="website"
+    />
+
+    <!-- ========================================
+         META PIXEL
+         Pixel ID: 965336112563401
+
+         Initialize once here.
+
+         PageView:
+           Initial page loads handled here.
+           React SPA navigation handled by
+           MetaPageTracker.jsx.
+
+         ViewContent / InitiateCheckout:
+           Handled by metaPixel.js.
+
+         Purchase:
+           Handled by PaymentSuccess.jsx.
+
+         IMPORTANT:
+           Payment tokens must not be sent
+           to Meta Pixel.
+    ========================================= -->
 
     <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '965336112563401');
-    fbq('track', 'PageView');
-    </script>
- 
- 
+      (function () {
+        "use strict";
 
+        var PIXEL_ID = "965336112563401";
+
+        // =====================================
+        // DETECT SENSITIVE PAYMENT URLS
+        // =====================================
+
+        function isSensitivePaymentUrl() {
+          var pathname =
+            window.location.pathname.toLowerCase();
+
+          var params = new URLSearchParams(
+            window.location.search
+          );
+
+          var sensitivePaths = [
+            "/payment/success",
+            "/ebook/adk/payment/success"
+          ];
+
+          var sensitiveParameters = [
+            "token",
+            "access_token",
+            "accesstoken",
+            "download_token",
+            "pdf"
+          ];
+
+          var sensitivePath =
+            sensitivePaths.some(function (path) {
+              return (
+                pathname === path ||
+                pathname.indexOf(path + "/") === 0
+              );
+            });
+
+          var sensitiveQuery = false;
+
+          params.forEach(function (_value, key) {
+            if (
+              sensitiveParameters.indexOf(
+                key.toLowerCase()
+              ) !== -1
+            ) {
+              sensitiveQuery = true;
+            }
+          });
+
+          return sensitivePath || sensitiveQuery;
+        }
+
+        // =====================================
+        // META PIXEL INITIALIZATION
+        // =====================================
+
+        !function(f,b,e,v,n,t,s) {
+          if (f.fbq) return;
+
+          n = f.fbq = function() {
+            n.callMethod
+              ? n.callMethod.apply(n, arguments)
+              : n.queue.push(arguments);
+          };
+
+          if (!f._fbq) {
+            f._fbq = n;
+          }
+
+          n.push = n;
+          n.loaded = true;
+          n.version = "2.0";
+          n.queue = [];
+
+          t = b.createElement(e);
+          t.async = true;
+          t.src = v;
+
+          s = b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t, s);
+
+        }(
+          window,
+          document,
+          "script",
+          "https://connect.facebook.net/en_US/fbevents.js"
+        );
+
+        // =====================================
+        // REGISTER PIXEL
+        // =====================================
+
+        fbq("init", PIXEL_ID);
+
+        // =====================================
+        // INITIAL PAGE VIEW
+        // =====================================
+
+        // MetaPageTracker.jsx should handle
+        // subsequent SPA navigations only.
+        //
+        // Skip pages with sensitive payment
+        // credentials to avoid URL leakage.
+
+        if (!isSensitivePaymentUrl()) {
+          fbq("track", "PageView");
+        }
+
+        // =====================================
+        // DEVELOPMENT DEBUGGING
+        // =====================================
+
+        var hostname = window.location.hostname;
+
+        if (
+          hostname === "localhost" ||
+          hostname === "127.0.0.1"
+        ) {
+          console.log("[Meta Pixel] Initialized", {
+            pixelId: PIXEL_ID,
+            pageViewAllowed: !isSensitivePaymentUrl()
+          });
+        }
+      })();
+    </script>
+
+    <!-- ========================================
+         END META PIXEL
+    ========================================= -->
   </head>
+
   <body>
-        <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=965336112563401&ev=PageView&noscript=1"
-    /></noscript>
+    <!-- ========================================
+         REACT ROOT
+    ========================================= -->
+
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ========================================
+         VITE / REACT ENTRY POINT
+
+         Keep this script exactly as a module.
+         Vite injects React Fast Refresh
+         during development.
+    ========================================= -->
+
+    <script
+      type="module"
+      src="/src/main.jsx"
+    ></script>
   </body>
 </html>
