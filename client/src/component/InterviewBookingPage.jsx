@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -27,20 +28,17 @@ import {
   Network,
   BrainCircuit,
   BriefcaseBusiness,
-  Star,
   MessageSquareText,
   LoaderCircle,
   LockKeyhole,
   CreditCard,
-  Users,
   Sparkles,
   AlertCircle,
   Check,
-  FileText,
-  ChevronRight,
   Mail,
   RefreshCw,
-  ExternalLink,
+  ChevronRight,
+  HelpCircle,
 } from "lucide-react";
 
 /* =========================================================
@@ -59,68 +57,85 @@ const PAYMENT_STATUS_PATH =
 
 const TIMEZONE = "Asia/Kolkata";
 
+const SUPPORT_EMAIL =
+  "supporttargettrek@gmail.com";
+
 const DEFAULT_CASHFREE_MODE =
-  import.meta.env.VITE_CASHFREE_ENV === "production"
+  import.meta.env.VITE_CASHFREE_ENV ===
+  "production"
     ? "production"
     : "sandbox";
+
+/* =========================================================
+   INTERVIEW TOPICS
+========================================================= */
 
 const TOPIC_INFO = {
   DSA: {
     title: "Data Structures & Algorithms",
     description:
-      "Problem solving, coding, complexity and edge cases.",
+      "Coding questions, problem solving, complexity analysis and edge cases.",
     Icon: Code2,
   },
+
   LLD: {
     title: "Low-Level Design",
     description:
-      "OOP, SOLID, design patterns and concurrency.",
+      "Object-oriented design, SOLID, design patterns and concurrency.",
     Icon: Layers3,
   },
+
   HLD: {
     title: "High-Level System Design",
     description:
-      "Architecture, caching, scaling and distributed systems.",
+      "Distributed systems, scalability, caching, databases and architecture.",
     Icon: Network,
   },
+
   GENAI: {
-    title: "GenAI Engineering",
+    title: "Generative AI Engineering",
     description:
-      "RAG, AI agents, LLMs, evaluations and production systems.",
+      "RAG, AI agents, LLMs, evaluation and production GenAI systems.",
     Icon: BrainCircuit,
   },
+
   PROJECTS: {
     title: "Project Discussion",
     description:
-      "Architecture decisions, impact, trade-offs and ownership.",
+      "Project architecture, technical decisions, impact and trade-offs.",
     Icon: BriefcaseBusiness,
   },
 };
 
-const ALL_TOPICS = Object.keys(TOPIC_INFO);
+const ALL_TOPICS = Object.keys(
+  TOPIC_INFO
+);
 
 /* =========================================================
    THEME
 
-   Uses navbar's localStorage theme.
-   No additional theme toggle.
+   Uses the theme from your Navbar.
+   No duplicate theme toggle.
 ========================================================= */
 
-function getStoredTheme() {
+function readTheme() {
   if (typeof window === "undefined") {
     return "light";
   }
 
   try {
-    const value = localStorage.getItem("theme");
+    const saved =
+      localStorage.getItem("theme");
 
-    if (value === "dark" || value === "light") {
-      return value;
+    if (
+      saved === "light" ||
+      saved === "dark"
+    ) {
+      return saved;
     }
 
-    return document.documentElement.classList.contains(
-      "dark"
-    )
+    return document.documentElement.classList
+      .contains("dark")
       ? "dark"
       : "light";
   } catch {
@@ -129,25 +144,31 @@ function getStoredTheme() {
 }
 
 function useNavbarTheme() {
-  const [theme, setTheme] = useState(
-    getStoredTheme
-  );
+  const [theme, setTheme] =
+    useState(readTheme);
 
   useEffect(() => {
     const sync = () => {
-      setTheme(getStoredTheme());
+      setTheme(readTheme());
     };
 
-    sync();
+    window.addEventListener(
+      "storage",
+      sync
+    );
 
-    window.addEventListener("storage", sync);
-    window.addEventListener("themechange", sync);
+    window.addEventListener(
+      "themechange",
+      sync
+    );
+
     window.addEventListener(
       "targettrek-theme-change",
       sync
     );
 
-    const observer = new MutationObserver(sync);
+    const observer =
+      new MutationObserver(sync);
 
     observer.observe(
       document.documentElement,
@@ -184,78 +205,15 @@ function useNavbarTheme() {
 }
 
 /* =========================================================
-   DATE HELPERS
-
-   All interview dates/times display in IST.
+   DATE HELPERS — IST
 ========================================================= */
-
-function dateKey(date) {
-  const parts = new Intl.DateTimeFormat(
-    "en-US",
-    {
-      timeZone: TIMEZONE,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }
-  ).formatToParts(date);
-
-  const get = (type) =>
-    parts.find((part) => part.type === type)
-      ?.value;
-
-  return (
-    `${get("year")}-` +
-    `${get("month")}-` +
-    `${get("day")}`
-  );
-}
-
-function upcomingDays() {
-  const result = [];
-
-  const now = new Date();
-
-  /*
-    Use distinct IST calendar dates.
-
-    Twelve-hour steps avoid accidentally
-    skipping a date near UTC boundaries.
-  */
-
-  for (
-    let i = 0;
-    result.length < 8 && i < 22;
-    i++
-  ) {
-    const date = new Date(
-      now.getTime() +
-        i * 12 * 60 * 60 * 1000
-    );
-
-    const key = dateKey(date);
-
-    if (
-      !result.some((item) => item.key === key)
-    ) {
-      result.push({
-        key,
-        date,
-      });
-    }
-  }
-
-  return result;
-}
 
 function fmtDate(value, options = {}) {
   if (!value) return "—";
 
   const date = new Date(value);
 
-  if (
-    Number.isNaN(date.getTime())
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return "—";
   }
 
@@ -276,24 +234,84 @@ function fmtTime(value) {
   });
 }
 
-function fmtMoney(value, currency = "INR") {
+function fmtMoney(
+  value,
+  currency = "INR"
+) {
   const amount = Number(value);
 
   if (!Number.isFinite(amount)) {
     return "—";
   }
 
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }
-  ).format(amount);
+  try {
+    return new Intl.NumberFormat(
+      "en-IN",
+      {
+        style: "currency",
+        currency: currency || "INR",
+        maximumFractionDigits: 2,
+      }
+    ).format(amount);
+  } catch {
+    return `₹${amount}`;
+  }
 }
 
-function formatSelectedDate(day) {
+function dateKey(date) {
+  const parts = new Intl.DateTimeFormat(
+    "en-US",
+    {
+      timeZone: TIMEZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).formatToParts(date);
+
+  const get = (type) =>
+    parts.find(
+      (part) => part.type === type
+    )?.value;
+
+  return [
+    get("year"),
+    get("month"),
+    get("day"),
+  ].join("-");
+}
+
+function upcomingDays() {
+  const result = [];
+  const seen = new Set();
+  const now = new Date();
+
+  for (
+    let i = 0;
+    result.length < 8 && i < 22;
+    i++
+  ) {
+    const date = new Date(
+      now.getTime() +
+        i * 12 * 60 * 60 * 1000
+    );
+
+    const key = dateKey(date);
+
+    if (!seen.has(key)) {
+      seen.add(key);
+
+      result.push({
+        key,
+        date,
+      });
+    }
+  }
+
+  return result;
+}
+
+function selectedDateLabel(day) {
   if (!day) return "";
 
   return fmtDate(
@@ -307,31 +325,23 @@ function formatSelectedDate(day) {
   );
 }
 
-/* =========================================================
-   AUTH TOKEN
-
-   Pass authToken from Redux if available.
-========================================================= */
-
-function getToken(propToken) {
-  if (propToken) {
-    return propToken;
-  }
-
-  try {
-    return (
-      localStorage.getItem("token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("authToken") ||
-      ""
-    );
-  } catch {
-    return "";
-  }
+function paymentStatusUrl(bookingId) {
+  return (
+    `${PAYMENT_STATUS_PATH}?bookingId=` +
+    encodeURIComponent(bookingId)
+  );
 }
 
 /* =========================================================
-   API HELPER
+   PUBLIC API HELPER
+
+   IMPORTANT:
+   - NO JWT
+   - NO ACCOUNT LOGIN
+   - NO AUTHORIZATION HEADER
+   - NO AUTH REDIRECT
+
+   Uses the public Express endpoints.
 ========================================================= */
 
 async function apiRequest(
@@ -339,7 +349,6 @@ async function apiRequest(
   {
     method = "GET",
     body,
-    token,
     signal,
   } = {}
 ) {
@@ -352,17 +361,11 @@ async function apiRequest(
       "application/json";
   }
 
-  if (token) {
-    headers.Authorization =
-      `Bearer ${token}`;
-  }
-
   const response = await fetch(
     `${API}${path}`,
     {
       method,
       headers,
-      credentials: "include",
       signal,
       cache: "no-store",
       ...(body !== undefined
@@ -387,6 +390,7 @@ async function apiRequest(
     );
 
     error.status = response.status;
+    error.code = data.code;
 
     throw error;
   }
@@ -394,17 +398,10 @@ async function apiRequest(
   return data;
 }
 
-function paymentStatusUrl(bookingId) {
-  return (
-    PAYMENT_STATUS_PATH +
-    `?bookingId=${encodeURIComponent(
-      bookingId
-    )}`
-  );
-}
-
 /* =========================================================
    CASHFREE SDK
+
+   SDK is loaded only when payment starts.
 ========================================================= */
 
 let cashfreeLoadPromise = null;
@@ -425,80 +422,79 @@ function loadCashfreeSDK() {
   }
 
   if (!cashfreeLoadPromise) {
-    cashfreeLoadPromise =
-      new Promise(
-        (resolve, reject) => {
-          const existing =
-            document.querySelector(
-              'script[src="https://sdk.cashfree.com/js/v3/cashfree.js"]'
-            );
+    cashfreeLoadPromise = new Promise(
+      (resolve, reject) => {
+        const src =
+          "https://sdk.cashfree.com/js/v3/cashfree.js";
 
-          const script =
-            existing ||
+        let script =
+          document.querySelector(
+            `script[src="${src}"]`
+          );
+
+        if (!script) {
+          script =
             document.createElement(
               "script"
             );
 
-          if (!existing) {
-            script.src =
-              "https://sdk.cashfree.com/js/v3/cashfree.js";
+          script.src = src;
+          script.async = true;
+        }
 
-            script.async = true;
-          }
-
-          const onLoad = () => {
-            if (window.Cashfree) {
-              resolve(
-                window.Cashfree
-              );
-            } else {
-              reject(
-                new Error(
-                  "Cashfree SDK is unavailable."
-                )
-              );
-            }
-          };
-
-          const onError = () => {
+        const onLoad = () => {
+          if (window.Cashfree) {
+            resolve(window.Cashfree);
+          } else {
             reject(
               new Error(
-                "Unable to load Cashfree checkout."
+                "Cashfree SDK is unavailable."
               )
             );
-          };
-
-          script.addEventListener(
-            "load",
-            onLoad,
-            { once: true }
-          );
-
-          script.addEventListener(
-            "error",
-            onError,
-            { once: true }
-          );
-
-          if (!existing) {
-            document.head.appendChild(
-              script
-            );
-          } else if (window.Cashfree) {
-            resolve(window.Cashfree);
           }
+        };
+
+        const onError = () => {
+          reject(
+            new Error(
+              "Unable to load Cashfree checkout."
+            )
+          );
+        };
+
+        script.addEventListener(
+          "load",
+          onLoad,
+          { once: true }
+        );
+
+        script.addEventListener(
+          "error",
+          onError,
+          { once: true }
+        );
+
+        if (!script.isConnected) {
+          document.head.appendChild(
+            script
+          );
         }
-      ).catch((error) => {
-        cashfreeLoadPromise = null;
-        throw error;
-      });
+
+        if (window.Cashfree) {
+          resolve(window.Cashfree);
+        }
+      }
+    ).catch((error) => {
+      cashfreeLoadPromise = null;
+      throw error;
+    });
   }
 
   return cashfreeLoadPromise;
 }
 
 /* =========================================================
-   FORM VALIDATION
+   FORM DATA
 ========================================================= */
 
 const emptyCandidate = {
@@ -513,11 +509,11 @@ const emptyCandidate = {
   notes: "",
 };
 
-function validateDetails(candidate) {
+function validateCandidate(candidate) {
   if (
     candidate.name.trim().length < 2
   ) {
-    return "Enter your full name.";
+    return "Please enter your full name.";
   }
 
   if (
@@ -525,49 +521,43 @@ function validateDetails(candidate) {
       candidate.email.trim()
     )
   ) {
-    return "Enter a valid email address.";
+    return "Please enter a valid email address.";
   }
 
-  const normalizedPhone =
+  const phone =
     candidate.phone.replace(
       /[\s()-]/g,
       ""
     );
 
-  if (
-    !/^\+?\d{10,15}$/.test(
-      normalizedPhone
-    )
-  ) {
-    return "Enter a valid phone number.";
+  if (!/^\+?\d{10,15}$/.test(phone)) {
+    return "Please enter a valid phone number.";
   }
 
   if (
     candidate.experienceYears !== ""
   ) {
-    const experience = Number(
+    const years = Number(
       candidate.experienceYears
     );
 
     if (
-      !Number.isFinite(experience) ||
-      experience < 0 ||
-      experience > 50
+      !Number.isFinite(years) ||
+      years < 0 ||
+      years > 50
     ) {
       return "Experience must be between 0 and 50 years.";
     }
   }
 
-  if (
-    candidate.resumeUrl.trim()
-  ) {
+  if (candidate.resumeUrl.trim()) {
     try {
       const url = new URL(
         candidate.resumeUrl.trim()
       );
 
       if (
-        !["https:", "http:"].includes(
+        !["http:", "https:"].includes(
           url.protocol
         )
       ) {
@@ -582,21 +572,21 @@ function validateDetails(candidate) {
 }
 
 /* =========================================================
-   LOCAL STYLES
+   SCOPED STYLES
 
-   Fully scoped to .tt-ib.
-
-   The portal receives the same class and
-   theme attributes so modal variables work.
-
-   No navbar/footer/global theme toggle.
+   Compatible with:
+   - Light theme
+   - Dark theme
+   - Mobile
+   - Tablet
+   - Desktop
 ========================================================= */
 
 const styles = `
 .tt-ib {
   --ib-bg: #fffcf8;
   --ib-surface: #ffffff;
-  --ib-alt: #fff5eb;
+  --ib-alt: #fff4e8;
   --ib-text: #28211d;
   --ib-muted: #74665c;
   --ib-border: #eadfd4;
@@ -608,9 +598,9 @@ const styles = `
   --ib-red: #b91c1c;
   --ib-red-bg: #fef2f2;
 
-  color: var(--ib-text);
   background: var(--ib-bg);
-  font-family: "DM Sans", Inter, system-ui, sans-serif;
+  color: var(--ib-text);
+  font-family: Inter, system-ui, sans-serif;
   color-scheme: light;
   min-height: 100vh;
 }
@@ -691,6 +681,7 @@ const styles = `
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  text-decoration: none;
   transition: .18s ease;
 }
 
@@ -711,6 +702,7 @@ const styles = `
   font-size: 13px;
   font-weight: 750;
   cursor: pointer;
+  text-decoration: none;
   transition: .18s ease;
 }
 
@@ -761,21 +753,14 @@ const styles = `
 }
 
 .tt-ib .ib-overlay {
-  background: rgba(8, 5, 3, .86) !important;
+  background: rgba(8,5,3,.86) !important;
 }
 
 .tt-ib .ib-modal-surface {
   background: var(--ib-surface) !important;
   color: var(--ib-text) !important;
-  opacity: 1 !important;
   isolation: isolate;
   box-shadow: 0 35px 115px rgba(0,0,0,.5);
-}
-
-.tt-ib .ib-modal-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--ib-border) transparent;
-  overscroll-behavior: contain;
 }
 
 .tt-ib .ib-error {
@@ -789,27 +774,24 @@ const styles = `
   border: 1px solid var(--ib-border);
 }
 
+.tt-ib .ib-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ib-border) transparent;
+  overscroll-behavior: contain;
+}
+
 .tt-ib a {
   text-decoration: none;
 }
 
+.tt-ib button,
 .tt-ib input,
-.tt-ib textarea,
-.tt-ib button {
+.tt-ib textarea {
   font: inherit;
 }
 
-.tt-ib .ib-primary,
-.tt-ib .ib-outline {
-  text-decoration: none;
-}
-
-.tt-ib .ib-day {
-  min-width: 0;
-  transition: border-color .18s, background .18s;
-}
-
-.tt-ib .ib-day:hover {
+.tt-ib .ib-day:hover,
+.tt-ib .ib-slot:hover {
   border-color: var(--ib-orange);
 }
 
@@ -817,8 +799,8 @@ const styles = `
   transition: border-color .18s, transform .18s;
 }
 
-.tt-ib .ib-slot:hover {
-  border-color: var(--ib-orange);
+.tt-ib .ib-slot:hover:not(:disabled) {
+  transform: translateY(-2px);
 }
 
 @media (max-width: 640px) {
@@ -827,15 +809,26 @@ const styles = `
     border-bottom-right-radius: 0;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-ib *,
+  .tt-ib *::before,
+  .tt-ib *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
 `;
 
 /* =========================================================
-   SMALL SHARED COMPONENTS
+   SHARED COMPONENTS
 ========================================================= */
 
 function StatusPill({ slot }) {
   const status =
-    slot.status || "AVAILABLE";
+    String(slot.status || "AVAILABLE")
+      .toUpperCase();
 
   let label = "Unavailable";
   let className =
@@ -922,11 +915,10 @@ function TopicCard({
       type="button"
       disabled={disabled}
       onClick={onClick}
+      aria-pressed={selected}
       className={
         `ib-card flex items-start gap-3 rounded-xl p-4 text-left ${
-          selected
-            ? "ib-selected"
-            : ""
+          selected ? "ib-selected" : ""
         }`
       }
     >
@@ -998,17 +990,16 @@ function TextField({
 /* =========================================================
    BOOKING MODAL
 
-   STEP 1: Select topics
-   STEP 2: Enter candidate details
-   STEP 3: Review + Cashfree checkout
+   Step 1: Topics
+   Step 2: Candidate details
+   Step 3: Payment
 
-   Payment result is handled by separate routes.
+   NO LOGIN OR TOKEN REQUIRED.
 ========================================================= */
 
 function BookingModal({
   slot,
   onClose,
-  token,
   cashfreeMode,
   theme,
 }) {
@@ -1035,16 +1026,22 @@ function BookingModal({
     setPaymentStarted,
   ] = useState(false);
 
+  const processingRef = useRef(false);
+
   const availableTopics = (
-    slot.allowedTopics ||
-    ALL_TOPICS
-  ).filter(
-    (topic) =>
-      Boolean(TOPIC_INFO[topic])
+    Array.isArray(slot.allowedTopics) &&
+    slot.allowedTopics.length > 0
+      ? slot.allowedTopics
+      : ALL_TOPICS
+  ).filter((topic) =>
+    Boolean(TOPIC_INFO[topic])
   );
 
   const maxTopics = Math.min(
-    Number(slot.maxTopics) || 3,
+    Math.max(
+      1,
+      Number(slot.maxTopics) || 3
+    ),
     availableTopics.length
   );
 
@@ -1054,16 +1051,18 @@ function BookingModal({
   );
 
   const detailsError =
-    validateDetails(candidate);
+    validateCandidate(candidate);
 
-  const validDetails =
-    !detailsError;
+  const change = (key, value) => {
+    setCandidate((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+  };
 
   const toggleTopic = (topic) => {
     setTopics((previous) => {
-      if (
-        previous.includes(topic)
-      ) {
+      if (previous.includes(topic)) {
         return previous.filter(
           (item) => item !== topic
         );
@@ -1079,18 +1078,25 @@ function BookingModal({
     });
   };
 
-  const change = (key, value) => {
-    setCandidate((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-  };
+  useEffect(() => {
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event) => {
       if (
         event.key === "Escape" &&
-        !busy
+        !busy &&
+        !processingRef.current
       ) {
         onClose();
       }
@@ -1109,268 +1115,291 @@ function BookingModal({
     };
   }, [busy, onClose]);
 
-  /*
-    Lock body scroll while the modal is open.
-  */
-
-  useEffect(() => {
-    const oldOverflow =
-      document.body.style.overflow;
-
-    document.body.style.overflow =
-      "hidden";
-
-    return () => {
-      document.body.style.overflow =
-        oldOverflow;
-    };
-  }, []);
-
   /* =====================================================
-     CHECKOUT
+     PUBLIC CHECKOUT
 
-     Booking creation and payment order creation
-     happen on the backend.
+     1. Load Cashfree
+     2. Create booking
+     3. Create payment
+     4. Open Cashfree
+     5. Redirect to payment-status
 
-     The frontend never marks payment SUCCESS.
-
-     Cashfree redirects to:
-
-     /mock-interviews/payment-status?bookingId=...
-
-     That page reconciles and routes to
-     /success or /failed.
+     No JWT used in any request.
   ===================================================== */
 
-
-async function checkout() {
-  if (busy) return;
-
-  setError("");
-
-  if (topics.length === 0) {
-    setError("Please select at least one interview topic.");
-    setStep(0);
-    return;
-  }
-
-  const validationError = validateDetails(candidate);
-
-  if (validationError) {
-    setError(validationError);
-    setStep(1);
-    return;
-  }
-
-  if (!token) {
-    setError(
-      "Please sign in to your Target Trek account before paying."
-    );
-    return;
-  }
-
-  /*
-    Existing bookings must be checked before
-    starting another payment.
-
-    Do not create a second Cashfree order
-    after checkout has already started.
-  */
-
-  if (paymentStarted && bookingId) {
-    window.location.assign(
-      paymentStatusUrl(bookingId)
-    );
-    return;
-  }
-
-  setBusy(true);
-
-  let currentBookingId = bookingId;
-
-  try {
-    /* ==========================================
-       STEP 1: LOAD CASHFREE SDK FIRST
-
-       No booking or slot hold exists yet
-       if this is the first attempt.
-    ========================================== */
-
-    const Cashfree = await loadCashfreeSDK();
-
-    if (typeof Cashfree !== "function") {
-      throw new Error(
-        "Unable to initialize Cashfree payment gateway."
-      );
+  async function checkout() {
+    if (
+      busy ||
+      processingRef.current
+    ) {
+      return;
     }
 
-    const cashfree = Cashfree({
-      mode: cashfreeMode,
-    });
+    setError("");
+
+    if (topics.length === 0) {
+      setError(
+        "Select at least one interview topic."
+      );
+
+      setStep(0);
+      return;
+    }
+
+    const validationError =
+      validateCandidate(candidate);
+
+    if (validationError) {
+      setError(validationError);
+      setStep(1);
+      return;
+    }
+
+    /*
+      Do not create duplicate payment orders
+      after a Cashfree checkout was initiated.
+    */
 
     if (
-      !cashfree ||
-      typeof cashfree.checkout !== "function"
+      paymentStarted &&
+      bookingId
     ) {
-      throw new Error(
-        "Cashfree checkout is not available. Please try again."
+      window.location.assign(
+        paymentStatusUrl(bookingId)
       );
+
+      return;
     }
 
-    /* ==========================================
-       STEP 2: CREATE BOOKING
+    processingRef.current = true;
+    setBusy(true);
 
-       The backend atomically holds the slot.
-       Amount comes from the database.
-    ========================================== */
+    let currentBookingId =
+      bookingId;
 
-    if (!currentBookingId) {
-      const response = await apiRequest(
-        "/bookings",
-        {
-          method: "POST",
-          token,
+    try {
+      /* -------------------------------------
+         STEP 1: Load Cashfree SDK
+      ------------------------------------- */
 
-          body: {
-            slotId: slot._id,
-            selectedTopics: topics,
+      const Cashfree =
+        await loadCashfreeSDK();
 
-            candidate: {
-              name: candidate.name.trim(),
-              email: candidate.email.trim(),
-              phone: candidate.phone.trim(),
-
-              experienceYears:
-                candidate.experienceYears === ""
-                  ? 0
-                  : Number(candidate.experienceYears),
-
-              currentRole:
-                candidate.currentRole.trim(),
-
-              targetRole:
-                candidate.targetRole.trim(),
-
-              currentCompany:
-                candidate.currentCompany.trim(),
-
-              resumeUrl:
-                candidate.resumeUrl.trim(),
-
-              notes:
-                candidate.notes.trim(),
-            },
-          },
-        }
-      );
-
-      currentBookingId =
-        response.data?.bookingId;
-
-      if (!currentBookingId) {
+      if (
+        typeof Cashfree !==
+        "function"
+      ) {
         throw new Error(
-          "Booking creation did not return a booking ID."
+          "Unable to initialize Cashfree."
         );
       }
 
-      setBookingId(currentBookingId);
-    }
+      const cashfree = Cashfree({
+        mode: cashfreeMode,
+      });
 
-    /* ==========================================
-       STEP 3: CREATE CASHFREE ORDER
-    ========================================== */
-
-    const paymentResponse = await apiRequest(
-      `/bookings/${encodeURIComponent(
-        currentBookingId
-      )}/payment`,
-      {
-        method: "POST",
-        token,
+      if (
+        !cashfree ||
+        typeof cashfree.checkout !==
+          "function"
+      ) {
+        throw new Error(
+          "Cashfree checkout is unavailable."
+        );
       }
-    );
 
-    const sessionId =
-      paymentResponse.data?.paymentSessionId;
+      /* -------------------------------------
+         STEP 2: Create public booking
 
-    const orderId =
-      paymentResponse.data?.orderId;
+         POST /api/interviews/bookings
 
-    if (!sessionId) {
-      throw new Error(
-        "Cashfree did not return a payment session ID."
-      );
-    }
+         No Authorization header.
+      ------------------------------------- */
 
-    /*
-      An order is now registered with Cashfree.
+      if (!currentBookingId) {
+        const bookingResponse =
+          await apiRequest(
+            "/bookings",
+            {
+              method: "POST",
 
-      Never create another order just because
-      the customer closes the payment screen.
-    */
+              body: {
+                slotId: slot._id,
 
-    setPaymentStarted(true);
+                selectedTopics:
+                  topics,
 
-    console.info("[Interview Checkout]", {
-      bookingId: currentBookingId,
-      orderId,
-      mode: cashfreeMode,
-      sessionCreated: Boolean(sessionId),
-    });
+                candidate: {
+                  name:
+                    candidate.name.trim(),
 
-    /* ==========================================
-       STEP 4: OPEN CASHFREE PAYMENT GATEWAY
-    ========================================== */
+                  email:
+                    candidate.email.trim(),
 
-    const result = await cashfree.checkout({
-      paymentSessionId: sessionId,
-      redirectTarget: "_self",
-    });
+                  phone:
+                    candidate.phone.trim(),
 
-    /* ==========================================
-       STEP 5: HANDLE SDK ERRORS
+                  experienceYears:
+                    candidate.experienceYears ===
+                    ""
+                      ? 0
+                      : Number(
+                          candidate.experienceYears
+                        ),
 
-       Cashfree handles the redirect.
+                  currentRole:
+                    candidate.currentRole.trim(),
 
-       DO NOT call window.location.assign()
-       after checkout() returns successfully.
-    ========================================== */
+                  targetRole:
+                    candidate.targetRole.trim(),
 
-    if (result?.error) {
-      throw new Error(
-        result.error.message ||
-          "Cashfree checkout could not be opened."
-      );
-    }
+                  currentCompany:
+                    candidate.currentCompany.trim(),
 
-    /*
-      If Cashfree returns without navigating,
-      do not assume payment was made.
+                  resumeUrl:
+                    candidate.resumeUrl.trim(),
 
-      Keep the booking available for a status
-      check using the recovery link shown
-      in the modal.
-    */
-  } catch (error) {
-    console.error(
-      "[Interview Checkout Error]",
-      {
-        bookingId: currentBookingId,
-        message: error.message,
+                  notes:
+                    candidate.notes.trim(),
+                },
+              },
+            }
+          );
+
+        currentBookingId =
+          bookingResponse.data
+            ?.bookingId ||
+          bookingResponse.bookingId;
+
+        if (!currentBookingId) {
+          throw new Error(
+            "Booking was created but no booking ID was returned."
+          );
+        }
+
+        setBookingId(
+          currentBookingId
+        );
       }
-    );
 
-    setError(
-      currentBookingId
-        ? `${error.message || "Payment could not be started."} Your booking reference has been preserved. Please check its payment status before paying again.`
-        : error.message ||
-            "Unable to open the payment gateway."
-    );
-  } finally {
-    setBusy(false);
+      /* -------------------------------------
+         STEP 3: Create Cashfree payment
+
+         POST /api/interviews/bookings/:id/payment
+
+         NO TOKEN
+         NO AUTHORIZATION HEADER
+      ------------------------------------- */
+
+      const paymentResponse =
+        await apiRequest(
+          `/bookings/${encodeURIComponent(
+            currentBookingId
+          )}/payment`,
+          {
+            method: "POST",
+          }
+        );
+
+      const paymentData =
+        paymentResponse.data ||
+        paymentResponse;
+
+      const sessionId =
+        paymentData.paymentSessionId;
+
+      const orderId =
+        paymentData.orderId;
+
+      if (!sessionId) {
+        throw new Error(
+          "Cashfree did not return a payment session ID."
+        );
+      }
+
+      /*
+        The payment order exists now.
+        Do not create another on repeated clicks.
+      */
+
+      setPaymentStarted(true);
+
+      console.info(
+        "[Mock Interview Checkout]",
+        {
+          bookingId:
+            currentBookingId,
+
+          orderId,
+
+          mode: cashfreeMode,
+
+          sessionCreated:
+            Boolean(sessionId),
+        }
+      );
+
+      /* -------------------------------------
+         STEP 4: Open Cashfree
+      ------------------------------------- */
+
+      const result =
+        await cashfree.checkout({
+          paymentSessionId:
+            sessionId,
+
+          redirectTarget:
+            "_self",
+        });
+
+      if (result?.error) {
+        throw new Error(
+          result.error.message ||
+            "Unable to open Cashfree checkout."
+        );
+      }
+
+      /*
+        Cashfree normally redirects the browser.
+        Do not mark payment successful here.
+
+        Confirmation must come from backend
+        Cashfree verification / webhook.
+      */
+    } catch (err) {
+      console.error(
+        "[Mock Interview Payment Error]",
+        {
+          bookingId:
+            currentBookingId,
+
+          message: err.message,
+        }
+      );
+
+      if (
+        err.status === 401 ||
+        err.status === 403
+      ) {
+        setError(
+          "The server refused this public booking request. Check whether the deployed booking or payment controller still requires account authentication."
+        );
+      } else {
+        setError(
+          currentBookingId
+            ? `${
+                err.message ||
+                "Unable to start payment."
+              } Your booking reference has been saved. Check its status before attempting another payment.`
+            : err.message ||
+                "Unable to open payment gateway."
+        );
+      }
+    } finally {
+      processingRef.current = false;
+      setBusy(false);
+    }
   }
-}
-
 
   const modal = (
     <motion.div
@@ -1380,11 +1409,11 @@ async function checkout() {
         background: "transparent",
         isolation: "isolate",
       }}
-      initial={{ opacity: 1 }}
+      initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
     >
-      {/* OPAQUE BACKDROP */}
+      {/* BACKDROP */}
 
       <button
         type="button"
@@ -1394,26 +1423,24 @@ async function checkout() {
         className="ib-overlay absolute inset-0 z-0 w-full"
       />
 
-      {/* FULLY OPAQUE DIALOG */}
+      {/* MODAL */}
 
       <motion.section
         role="dialog"
         aria-modal="true"
-        aria-label="Book your mock interview"
-        className="ib-card ib-modal-surface relative z-10 flex max-h-[96dvh] w-full max-w-[730px] flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:max-h-[91dvh] sm:rounded-3xl"
+        aria-label="Book mock interview"
+        className="ib-card ib-modal-surface relative z-10 flex max-h-[96dvh] w-full max-w-[730px] flex-col overflow-hidden rounded-t-3xl sm:max-h-[91dvh] sm:rounded-3xl"
         initial={{
-          y: 28,
-          scale: 0.99,
-          opacity: 1,
+          y: 30,
+          opacity: 0,
         }}
         animate={{
           y: 0,
-          scale: 1,
           opacity: 1,
         }}
         exit={{
-          y: 20,
-          opacity: 1,
+          y: 25,
+          opacity: 0,
         }}
       >
         {/* HEADER */}
@@ -1446,7 +1473,7 @@ async function checkout() {
           </button>
         </div>
 
-        {/* SCROLLABLE BODY */}
+        {/* BODY */}
 
         <div className="ib-modal-scroll flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
           <Progress step={step} />
@@ -1455,7 +1482,7 @@ async function checkout() {
 
           <div className="ib-panel mt-5 rounded-2xl p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-extrabold">
+              <strong>
                 {fmtDate(
                   slot.startTime,
                   {
@@ -1464,7 +1491,7 @@ async function checkout() {
                     month: "short",
                   }
                 )}
-              </div>
+              </strong>
 
               <span className="ib-orange text-lg font-black">
                 {priceText}
@@ -1492,50 +1519,45 @@ async function checkout() {
             </div>
           </div>
 
-          {/* STEP 1 — TOPICS */}
+          {/* ==================================
+              STEP 1: TOPICS
+          ================================== */}
 
           {step === 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-extrabold">
-                Which topics should we focus on?
+                What would you like to practice?
               </h3>
 
-              <p className="ib-muted mt-1 text-sm leading-7">
-                Choose up to {maxTopics} topics.
-                Your interviewer can tailor
-                the discussion to your target
-                role and experience.
+              <p className="ib-muted mt-2 text-sm leading-7">
+                Select up to {maxTopics}{" "}
+                topics. Your interviewer can
+                tailor the session to your
+                experience and target role.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {availableTopics.map(
-                  (topic) => {
-                    const selected =
-                      topics.includes(
-                        topic
-                      );
-
-                    return (
-                      <TopicCard
-                        key={topic}
-                        topic={topic}
-                        selected={
-                          selected
-                        }
-                        onClick={() =>
-                          toggleTopic(
-                            topic
-                          )
-                        }
-                      />
-                    );
-                  }
+                  (topic) => (
+                    <TopicCard
+                      key={topic}
+                      topic={topic}
+                      selected={
+                        topics.includes(topic)
+                      }
+                      onClick={() =>
+                        toggleTopic(topic)
+                      }
+                    />
+                  )
                 )}
               </div>
             </div>
           )}
 
-          {/* STEP 2 — CANDIDATE DETAILS */}
+          {/* ==================================
+              STEP 2: CANDIDATE DETAILS
+          ================================== */}
 
           {step === 1 && (
             <div className="mt-6">
@@ -1543,10 +1565,11 @@ async function checkout() {
                 Tell us about yourself
               </h3>
 
-              <p className="ib-muted mt-1 text-sm leading-7">
-                These details help us prepare
-                your session and send your
-                interview confirmation.
+              <p className="ib-muted mt-2 text-sm leading-7">
+                No account is required.
+                Enter your details so we can
+                prepare your session and send
+                interview information by email.
               </p>
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1693,7 +1716,7 @@ async function checkout() {
                         event.target.value
                       )
                     }
-                    placeholder="Share your goals, upcoming interview, weaker topics or projects you'd like to discuss."
+                    placeholder="Share your goals, upcoming interview, weaker topics or projects."
                     maxLength={3000}
                   />
                 </label>
@@ -1706,30 +1729,32 @@ async function checkout() {
                 />
 
                 <p className="ib-muted text-xs leading-6">
-                  After your payment is verified,
-                  your booking details and
-                  joining instructions will be
-                  sent to your email address.
-                  If the meeting link hasn't
-                  been assigned, it will be
-                  shared separately.
+                  Your interview confirmation
+                  and joining instructions will
+                  be sent to your email after
+                  payment verification. If the
+                  meeting link is not yet
+                  assigned, it will be shared
+                  separately.
                 </p>
               </div>
             </div>
           )}
 
-          {/* STEP 3 — REVIEW + PAYMENT */}
+          {/* ==================================
+              STEP 3: REVIEW AND PAYMENT
+          ================================== */}
 
           {step === 2 && (
             <div className="mt-6">
               <h3 className="text-lg font-extrabold">
-                Review and pay
+                Review your booking
               </h3>
 
-              <p className="ib-muted mt-1 text-sm leading-7">
-                Confirm your information
-                before continuing to
-                Cashfree's secure checkout.
+              <p className="ib-muted mt-2 text-sm leading-7">
+                Review everything before
+                continuing to Cashfree's
+                secure checkout.
               </p>
 
               <div className="ib-card mt-4 overflow-hidden rounded-2xl">
@@ -1739,10 +1764,8 @@ async function checkout() {
                       Interview topics
                     </span>
 
-                    <strong className="text-right">
-                      {topics.join(
-                        " · "
-                      )}
+                    <strong className="max-w-[60%] text-right">
+                      {topics.join(" · ")}
                     </strong>
                   </div>
 
@@ -1768,6 +1791,23 @@ async function checkout() {
 
                   <div className="flex justify-between gap-4">
                     <span className="ib-muted">
+                      Interview date
+                    </span>
+
+                    <strong className="text-right">
+                      {fmtDate(
+                        slot.startTime,
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        }
+                      )}
+                    </strong>
+                  </div>
+
+                  <div className="flex justify-between gap-4">
+                    <span className="ib-muted">
                       Interview time
                     </span>
 
@@ -1785,23 +1825,20 @@ async function checkout() {
                     </span>
 
                     <strong>
-                      {slot.durationMinutes} minutes
+                      {slot.durationMinutes}{" "}
+                      minutes
                     </strong>
                   </div>
                 </div>
 
-                <div className="ib-panel flex items-center justify-between gap-3 p-4 sm:p-5">
-                  <span className="font-bold">
+                <div className="ib-panel flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+                  <strong>
                     Total to pay
-                  </span>
+                  </strong>
 
                   <div className="text-right">
-                    {Number(
-                      slot.mrp
-                    ) >
-                      Number(
-                        slot.price
-                      ) && (
+                    {Number(slot.mrp) >
+                      Number(slot.price) && (
                       <span className="ib-muted mr-2 text-xs line-through">
                         {fmtMoney(
                           slot.mrp,
@@ -1823,11 +1860,11 @@ async function checkout() {
                   className="mt-0.5 shrink-0"
                 />
 
-                Payment is processed securely
-                by Cashfree. Your interview
-                is confirmed only after
-                our backend verifies
-                successful payment.
+                Cashfree securely processes
+                the payment. Your interview
+                is confirmed only after the
+                backend verifies successful
+                payment.
               </div>
             </div>
           )}
@@ -1848,7 +1885,7 @@ async function checkout() {
             </div>
           )}
 
-          {/* PAYMENT RECOVERY */}
+          {/* BOOKING RECOVERY */}
 
           {bookingId && (
             <div className="ib-recovery mt-5 rounded-xl p-4">
@@ -1859,18 +1896,19 @@ async function checkout() {
                 />
 
                 <div className="min-w-0">
-                  <div className="text-sm font-extrabold">
+                  <strong className="text-sm">
                     Booking reference created
-                  </div>
+                  </strong>
 
-                  <div className="ib-muted mt-1 break-all text-xs">
+                  <p className="ib-muted mt-1 break-all text-xs">
                     {bookingId}
-                  </div>
+                  </p>
 
                   <p className="ib-muted mt-2 text-xs leading-6">
                     If checkout was interrupted,
-                    verify this booking before
-                    attempting another payment.
+                    check your booking's payment
+                    status before making another
+                    payment.
                   </p>
 
                   <a
@@ -1879,13 +1917,11 @@ async function checkout() {
                     )}
                     className="ib-outline mt-3"
                   >
-                    <RefreshCw
-                      size={15}
-                    />
+                    <RefreshCw size={15} />
+
                     Check Payment Status
-                    <ArrowRight
-                      size={15}
-                    />
+
+                    <ArrowRight size={15} />
                   </a>
                 </div>
               </div>
@@ -1893,10 +1929,10 @@ async function checkout() {
           )}
         </div>
 
-        {/* FOOTER BUTTONS INSIDE MODAL */}
+        {/* FOOTER */}
 
         <div
-          className="flex shrink-0 items-center justify-between gap-3 border-t p-4 sm:px-7"
+          className="flex shrink-0 items-center justify-between gap-2 border-t p-4 sm:px-7"
           style={{
             borderColor:
               "var(--ib-border)",
@@ -1917,12 +1953,10 @@ async function checkout() {
                   }
             }
           >
-            <ArrowLeft
-              size={16}
-            />
+            <ArrowLeft size={16} />
 
             {step === 0
-              ? "Cancel"
+              ? "Close"
               : "Back"}
           </button>
 
@@ -1933,7 +1967,7 @@ async function checkout() {
               disabled={
                 step === 0
                   ? topics.length === 0
-                  : !validDetails
+                  : Boolean(detailsError)
               }
               onClick={() => {
                 setError("");
@@ -1945,6 +1979,7 @@ async function checkout() {
                   setError(
                     detailsError
                   );
+
                   return;
                 }
 
@@ -1954,9 +1989,8 @@ async function checkout() {
               }}
             >
               Continue
-              <ArrowRight
-                size={16}
-              />
+
+              <ArrowRight size={16} />
             </button>
           ) : (
             <button
@@ -1971,9 +2005,7 @@ async function checkout() {
                   className="animate-spin"
                 />
               ) : (
-                <CreditCard
-                  size={17}
-                />
+                <CreditCard size={17} />
               )}
 
               {busy
@@ -1988,22 +2020,29 @@ async function checkout() {
     </motion.div>
   );
 
-  return typeof document === "undefined"
-    ? null
-    : createPortal(
-        modal,
-        document.body
-      );
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    modal,
+    document.body
+  );
 }
 
 /* =========================================================
-   MAIN CUSTOMER PAGE
+   MAIN PAGE
+
+   PUBLIC GUEST BOOKING PAGE.
+
+   No authToken prop.
+   No onLoginRequired prop.
+   No Redux user.
+   No login redirect.
 ========================================================= */
 
 export default function InterviewBookingPage({
-  authToken,
   cashfreeMode = DEFAULT_CASHFREE_MODE,
-  onLoginRequired,
 }) {
   const theme = useNavbarTheme();
 
@@ -2025,10 +2064,8 @@ export default function InterviewBookingPage({
   const [loading, setLoading] =
     useState(true);
 
-  const [
-    loadError,
-    setLoadError,
-  ] = useState("");
+  const [loadError, setLoadError] =
+    useState("");
 
   const [
     selectedSlot,
@@ -2045,79 +2082,68 @@ export default function InterviewBookingPage({
     setTopicFilter,
   ] = useState("all");
 
-  const token =
-    getToken(authToken);
-
   /* =====================================================
-     FETCH SLOTS FOR SELECTED DATE
+     GET PUBLIC SLOTS
 
      GET /api/interviews/slots
-       ?date=YYYY-MM-DD
-       &includeUnavailable=true
+
+     No token required.
   ===================================================== */
 
-  const fetchSlots =
-    useCallback(
-      async (
-        signal
-      ) => {
-        if (!selectedDay) {
-          return;
-        }
+  const fetchSlots = useCallback(
+    async (signal) => {
+      if (!selectedDay) {
+        return;
+      }
 
-        setLoading(true);
-        setLoadError("");
+      setLoading(true);
+      setLoadError("");
 
-        try {
-          const result =
-            await apiRequest(
-              `/slots?date=${encodeURIComponent(
-                selectedDay
-              )}&includeUnavailable=true`,
-              {
-                signal,
-              }
-            );
+      try {
+        const result =
+          await apiRequest(
+            `/slots?date=${encodeURIComponent(
+              selectedDay
+            )}&includeUnavailable=true`,
+            { signal }
+          );
 
-          const list =
-            Array.isArray(
-              result.data
-            )
-              ? result.data
+        const list =
+          Array.isArray(result.data)
+            ? result.data
+            : Array.isArray(
+                result.data?.slots
+              )
+              ? result.data.slots
               : [];
 
-          if (
-            !signal?.aborted
-          ) {
-            setSlots(
-              list.filter(
-                (slot) =>
-                  !slot.isDeleted
-              )
-            );
-          }
-        } catch (error) {
-          if (
-            error.name !==
-            "AbortError"
-          ) {
-            setSlots([]);
-
-            setLoadError(
-              error.message ||
-                "Unable to load interview slots."
-            );
-          }
-        } finally {
-          if (
-            !signal?.aborted
-          ) {
-            setLoading(false);
-          }
+        if (!signal?.aborted) {
+          setSlots(
+            list.filter(
+              (slot) =>
+                !slot.isDeleted
+            )
+          );
         }
-      },
-      [selectedDay]
-    );
+      } catch (error) {
+        if (
+          error.name !== "AbortError"
+        ) {
+          setSlots([]);
+
+          setLoadError(
+            error.message ||
+              "Unable to load interview slots."
+          );
+        }
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    [selectedDay]
+  );
 
   useEffect(() => {
     const controller =
@@ -2132,7 +2158,7 @@ export default function InterviewBookingPage({
   }, [fetchSlots]);
 
   /* =====================================================
-     DERIVED SLOT FILTERS
+     FILTERS
   ===================================================== */
 
   const shownSlots = useMemo(
@@ -2158,14 +2184,11 @@ export default function InterviewBookingPage({
           }
 
           if (
-            topicFilter !==
-              "all" &&
+            topicFilter !== "all" &&
             !(
               slot.allowedTopics ||
               []
-            ).includes(
-              topicFilter
-            )
+            ).includes(topicFilter)
           ) {
             return false;
           }
@@ -2210,42 +2233,38 @@ export default function InterviewBookingPage({
     ).length;
 
   /* =====================================================
-     OPEN BOOKING MODAL
+     OPEN MODAL
 
-     Authentication is required.
+     No authentication check.
   ===================================================== */
 
-  const handleBook = (
-    slot
-  ) => {
+  const handleBook = (slot) => {
     if (
       slot.status !==
       "AVAILABLE"
     ) {
       return;
     }
+
     setLoadError("");
+
     setSelectedSlot(slot);
   };
 
-  /* =====================================================
-     RENDER
-  ===================================================== */
-
   return (
     <div
-      className="tt-ib mt-16"
+      className="tt-ib pt-[116px] xl:pt-[76px]"
       data-ib-theme={theme}
     >
       <style>{styles}</style>
 
       <main>
-        {/* =================================================
-           HERO
-        ================================================= */}
+        {/* ==========================================
+            HERO
+        ========================================== */}
 
         <section
-          className="relative overflow-hidden px-4 pb-14 pt-12 sm:px-6 sm:pt-20 lg:px-8"
+          className="relative overflow-hidden px-4 pb-14 pt-12 sm:px-6 sm:pt-16 lg:px-8"
           style={{
             background:
               "linear-gradient(140deg,var(--ib-bg),var(--ib-alt))",
@@ -2285,12 +2304,12 @@ export default function InterviewBookingPage({
               <p className="ib-muted mt-5 max-w-2xl text-base leading-8 sm:text-lg">
                 Practice technical interviews
                 with engineers experienced in
-                backend engineering and
-                large-scale distributed systems.
-                Strengthen your technical depth,
-                problem-solving approach and
-                communication through realistic
-                discussions and actionable feedback.
+                backend development, system
+                design and production systems.
+                Strengthen your problem-solving
+                skills, architecture decisions
+                and communication through
+                realistic technical discussions.
               </p>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -2299,9 +2318,8 @@ export default function InterviewBookingPage({
                   className="ib-primary"
                 >
                   Explore Available Slots
-                  <ArrowRight
-                    size={17}
-                  />
+
+                  <ArrowRight size={17} />
                 </a>
 
                 <a
@@ -2309,9 +2327,8 @@ export default function InterviewBookingPage({
                   className="ib-outline"
                 >
                   How It Works
-                  <ChevronRight
-                    size={17}
-                  />
+
+                  <ChevronRight size={17} />
                 </a>
               </div>
 
@@ -2339,10 +2356,18 @@ export default function InterviewBookingPage({
                   />
                   Secure Checkout
                 </span>
+
+                <span className="flex items-center gap-2">
+                  <CheckCircle2
+                    size={15}
+                    className="ib-orange"
+                  />
+                  No Account Required
+                </span>
               </div>
             </div>
 
-            {/* HERO TOPIC CARD */}
+            {/* TOPIC CARD */}
 
             <div className="ib-card rounded-3xl p-5 shadow-xl sm:p-7">
               <div className="flex items-center justify-between">
@@ -2401,21 +2426,21 @@ export default function InterviewBookingPage({
 
               <div className="ib-panel ib-muted mt-5 rounded-xl px-4 py-3 text-xs leading-6">
                 Sessions can be tailored to
-                your experience, target
-                company, upcoming interviews
-                and improvement areas.
+                your experience, target role,
+                upcoming interviews and
+                improvement areas.
               </div>
             </div>
           </div>
         </section>
 
-        {/* =================================================
-           SLOT CALENDAR
-        ================================================= */}
+        {/* ==========================================
+            SLOT CALENDAR
+        ========================================== */}
 
         <section
           id="interview-slots"
-          className="scroll-mt-24 px-4 py-14 sm:px-6 lg:px-8"
+          className="scroll-mt-36 px-4 py-14 sm:px-6 lg:px-8"
         >
           <div className="mx-auto max-w-6xl">
             <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
@@ -2429,12 +2454,10 @@ export default function InterviewBookingPage({
                 </h2>
 
                 <p className="ib-muted mt-2 max-w-2xl text-sm leading-7">
-                  Browse today and the next
-                  seven days. Select a date
-                  to view available,
-                  reserved, booked and
-                  blocked interview times.
-                  Each slot has its own price.
+                  Browse upcoming dates,
+                  choose your preferred
+                  interview session and book
+                  without creating an account.
                 </p>
               </div>
 
@@ -2447,25 +2470,17 @@ export default function InterviewBookingPage({
 
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-3">
               {days.map(
-                (
-                  { key, date },
-                  index
-                ) => {
+                ({ key, date }, index) => {
                   const active =
-                    selectedDay ===
-                    key;
+                    selectedDay === key;
 
                   return (
                     <button
                       key={key}
                       type="button"
-                      aria-pressed={
-                        active
-                      }
+                      aria-pressed={active}
                       onClick={() => {
-                        setSelectedDay(
-                          key
-                        );
+                        setSelectedDay(key);
 
                         setViewFilter(
                           "all"
@@ -2528,12 +2543,12 @@ export default function InterviewBookingPage({
               )}
             </div>
 
-            {/* DATE TITLE AND STATUS FILTERS */}
+            {/* FILTER HEADER */}
 
             <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-extrabold">
-                  {formatSelectedDate(
+                  {selectedDateLabel(
                     selectedDay
                   )}
                 </h3>
@@ -2559,31 +2574,27 @@ export default function InterviewBookingPage({
                     key: "unavailable",
                     label: "Unavailable",
                   },
-                ].map(
-                  (filter) => (
-                    <button
-                      key={
+                ].map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={() =>
+                      setViewFilter(
                         filter.key
-                      }
-                      type="button"
-                      onClick={() =>
-                        setViewFilter(
-                          filter.key
-                        )
-                      }
-                      className={
-                        `rounded-lg px-3 py-2 text-xs font-bold ${
-                          viewFilter ===
-                          filter.key
-                            ? "ib-selected"
-                            : "ib-muted"
-                        }`
-                      }
-                    >
-                      {filter.label}
-                    </button>
-                  )
-                )}
+                      )
+                    }
+                    className={
+                      `rounded-lg px-3 py-2 text-xs font-bold ${
+                        viewFilter ===
+                        filter.key
+                          ? "ib-selected"
+                          : "ib-muted"
+                      }`
+                    }
+                  >
+                    {filter.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -2593,12 +2604,10 @@ export default function InterviewBookingPage({
               <button
                 type="button"
                 onClick={() =>
-                  setTopicFilter(
-                    "all"
-                  )
+                  setTopicFilter("all")
                 }
                 className={
-                  `ib-outline !px-3 !py-2 !text-xs ${
+                  `ib-outline !px-3 !py-2 ${
                     topicFilter === "all"
                       ? "ib-selected"
                       : ""
@@ -2608,265 +2617,259 @@ export default function InterviewBookingPage({
                 All Topics
               </button>
 
-              {ALL_TOPICS.map(
-                (topic) => (
-                  <button
-                    key={topic}
-                    type="button"
-                    onClick={() =>
-                      setTopicFilter(
-                        topic
-                      )
-                    }
-                    className={
-                      `ib-outline !px-3 !py-2 !text-xs ${
-                        topicFilter ===
-                        topic
-                          ? "ib-selected"
-                          : ""
-                      }`
-                    }
-                  >
-                    {topic === "GENAI"
-                      ? "GenAI"
-                      : topic === "PROJECTS"
-                        ? "Projects"
-                        : topic}
-                  </button>
-                )
-              )}
+              {ALL_TOPICS.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() =>
+                    setTopicFilter(topic)
+                  }
+                  className={
+                    `ib-outline !px-3 !py-2 ${
+                      topicFilter === topic
+                        ? "ib-selected"
+                        : ""
+                    }`
+                  }
+                >
+                  {TOPIC_INFO[topic].title}
+                </button>
+              ))}
             </div>
 
             {/* ERROR */}
 
             {loadError && (
-              <div
-                role="alert"
-                className="ib-error mt-5 flex items-start gap-2 rounded-xl p-4 text-sm"
-              >
+              <div className="ib-error mt-6 flex items-start gap-3 rounded-xl p-4 text-sm">
                 <AlertCircle
-                  size={18}
+                  size={19}
                   className="shrink-0"
                 />
 
-                <span>
+                <div className="flex-1">
                   {loadError}
-                </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    fetchSlots()
+                  }
+                  className="font-bold underline"
+                >
+                  Retry
+                </button>
               </div>
             )}
 
             {/* LOADING */}
 
             {loading ? (
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3].map(
-                  (number) => (
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3, 4, 5, 6].map(
+                  (index) => (
                     <div
-                      key={number}
-                      className="ib-card h-44 animate-pulse rounded-2xl"
-                    />
+                      key={index}
+                      className="ib-card animate-pulse rounded-2xl p-5"
+                    >
+                      <div className="ib-panel h-5 w-1/2 rounded-lg" />
+
+                      <div className="ib-panel mt-4 h-12 rounded-xl" />
+
+                      <div className="ib-panel mt-4 h-10 rounded-xl" />
+                    </div>
                   )
                 )}
               </div>
-            ) : shownSlots.length ? (
-              /* SLOT CARDS */
+            ) : shownSlots.length === 0 ? (
+              <div className="ib-card mt-8 rounded-3xl px-5 py-14 text-center">
+                <CalendarDays
+                  size={36}
+                  className="ib-orange mx-auto"
+                />
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <h3 className="mt-4 text-lg font-extrabold">
+                  No matching interview slots
+                </h3>
+
+                <p className="ib-muted mx-auto mt-2 max-w-md text-sm leading-7">
+                  Try a different date or
+                  clear the selected filters
+                  to explore more sessions.
+                </p>
+
+                <button
+                  type="button"
+                  className="ib-outline mt-5"
+                  onClick={() => {
+                    setViewFilter("all");
+                    setTopicFilter("all");
+                  }}
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {shownSlots.map(
                   (slot) => {
                     const available =
                       slot.status ===
                       "AVAILABLE";
 
+                    const topics =
+                      Array.isArray(
+                        slot.allowedTopics
+                      ) &&
+                      slot.allowedTopics.length
+                        ? slot.allowedTopics
+                        : ALL_TOPICS;
+
+                    const hasDiscount =
+                      Number(slot.mrp) >
+                      Number(slot.price);
+
                     return (
-                      <motion.article
-                        layout
+                      <article
                         key={
                           slot._id
                         }
-                        className={
-                          `ib-card ib-slot rounded-2xl p-5 ${
-                            available
-                              ? ""
-                              : "opacity-75"
-                          }`
-                        }
+                        className="ib-card ib-slot flex flex-col rounded-2xl p-5 shadow-sm"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="ib-panel rounded-xl p-3">
+                            <Video
+                              size={20}
+                              className="ib-orange"
+                            />
+                          </div>
+
                           <StatusPill
                             slot={slot}
                           />
-
-                          <span className="ib-muted flex items-center gap-1.5 text-xs">
-                            <Clock3
-                              size={13}
-                            />
-
-                            {slot.durationMinutes} min
-                          </span>
                         </div>
 
-                        <h4 className="mt-4 text-lg font-extrabold">
+                        <h3 className="mt-4 text-lg font-black">
+                          {slot.title ||
+                            "Technical Mock Interview"}
+                        </h3>
+
+                        <div className="ib-muted mt-3 flex items-center gap-2 text-sm">
+                          <Clock3
+                            size={16}
+                            className="ib-orange"
+                          />
+
                           {fmtTime(
                             slot.startTime
                           )}
-                        </h4>
 
-                        <p className="ib-muted mt-1 text-sm">
-                          Until{" "}
+                          {" – "}
+
                           {fmtTime(
                             slot.endTime
-                          )}{" "}
-                          · IST
-                        </p>
+                          )}
+                        </div>
 
-                        <p className="ib-muted mt-3 line-clamp-2 min-h-[38px] text-xs leading-5">
-                          {slot.description ||
-                            slot.title ||
-                            "Live online technical mock interview"}
+                        <p className="ib-muted mt-2 text-xs">
+                          {slot.durationMinutes ||
+                            45}{" "}
+                          minutes · IST
                         </p>
 
                         <div className="mt-4 flex flex-wrap gap-1.5">
-                          {(
-                            slot.allowedTopics ||
-                            []
-                          )
-                            .slice(
-                              0,
-                              5
-                            )
+                          {topics
+                            .slice(0, 4)
                             .map(
-                              (
-                                topic
-                              ) => (
+                              (topic) => (
                                 <span
-                                  key={
-                                    topic
-                                  }
-                                  className="ib-panel rounded-md px-2 py-1 text-[10px] font-bold"
+                                  key={topic}
+                                  className="ib-panel rounded-lg px-2.5 py-1 text-[11px] font-bold"
                                 >
-                                  {
-                                    topic
-                                  }
+                                  {topic}
                                 </span>
                               )
                             )}
                         </div>
 
                         <div
-                          className="mt-5 flex items-end justify-between gap-2 border-t pt-4"
-                          style={{
-                            borderColor:
-                              "var(--ib-border)",
-                          }}
+                          className="mt-auto pt-5"
                         >
-                          <div>
-                            {Number(
-                              slot.mrp
-                            ) >
-                              Number(
-                                slot.price
-                              ) && (
-                              <div className="ib-muted text-xs line-through">
-                                {fmtMoney(
-                                  slot.mrp,
-                                  slot.currency
-                                )}
-                              </div>
-                            )}
-
-                            <div className="ib-orange text-xl font-black">
-                              {fmtMoney(
-                                slot.price,
-                                slot.currency
-                              )}
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            disabled={
-                              !available
-                            }
-                            onClick={() =>
-                              handleBook(
-                                slot
-                              )
-                            }
-                            className={
-                              available
-                                ? "ib-primary"
-                                : "ib-outline"
-                            }
+                          <div
+                            className="border-t pt-4"
+                            style={{
+                              borderColor:
+                                "var(--ib-border)",
+                            }}
                           >
-                            {available
-                              ? "Book Slot"
-                              : slot.status ===
-                                  "BOOKED"
-                                ? "Booked"
-                                : slot.status ===
-                                    "HELD"
-                                  ? "Reserved"
-                                  : "Unavailable"}
+                            <div className="flex items-center justify-between gap-2">
+                              <div>
+                                <p className="ib-muted text-[11px]">
+                                  Session price
+                                </p>
 
-                            {available && (
-                              <ArrowRight
-                                size={15}
-                              />
-                            )}
-                          </button>
+                                <div className="mt-1 flex items-center gap-2">
+                                  <span className="ib-orange text-2xl font-black">
+                                    {fmtMoney(
+                                      slot.price,
+                                      slot.currency
+                                    )}
+                                  </span>
+
+                                  {hasDiscount && (
+                                    <span className="ib-muted text-xs line-through">
+                                      {fmtMoney(
+                                        slot.mrp,
+                                        slot.currency
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={!available}
+                              onClick={() =>
+                                handleBook(slot)
+                              }
+                              className={
+                                available
+                                  ? "ib-primary mt-4 w-full"
+                                  : "ib-outline mt-4 w-full"
+                              }
+                            >
+                              {available ? (
+                                <>
+                                  Book This Slot
+
+                                  <ArrowRight
+                                    size={16}
+                                  />
+                                </>
+                              ) : (
+                                "Not Available"
+                              )}
+                            </button>
+                          </div>
                         </div>
-                      </motion.article>
+                      </article>
                     );
                   }
                 )}
-              </div>
-            ) : (
-              /* EMPTY STATE */
-
-              <div className="ib-card mt-6 rounded-2xl px-6 py-16 text-center">
-                <CalendarDays
-                  size={34}
-                  className="ib-orange mx-auto"
-                />
-
-                <h4 className="mt-4 text-lg font-extrabold">
-                  No slots for this selection
-                </h4>
-
-                <p className="ib-muted mx-auto mt-2 max-w-md text-sm leading-6">
-                  Try another date, choose
-                  a different topic or
-                  view all statuses.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewFilter(
-                      "all"
-                    );
-
-                    setTopicFilter(
-                      "all"
-                    );
-                  }}
-                  className="ib-outline mt-4"
-                >
-                  Clear Filters
-                </button>
               </div>
             )}
           </div>
         </section>
 
-        {/* =================================================
-           HOW IT WORKS
-        ================================================= */}
+        {/* ==========================================
+            HOW IT WORKS
+        ========================================== */}
 
         <section
           id="how-it-works"
-          className="px-4 py-14 sm:px-6 lg:px-8"
+          className="scroll-mt-36 px-4 py-14 sm:px-6 lg:px-8"
           style={{
             background:
               "var(--ib-alt)",
@@ -2878,17 +2881,15 @@ export default function InterviewBookingPage({
                 Simple Booking Process
               </span>
 
-              <h2 className="mt-2 text-3xl font-black">
-                From preparation to
-                confident answers.
+              <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                How your mock interview works
               </h2>
 
               <p className="ib-muted mt-3 text-sm leading-7">
-                Choose a suitable interview
-                time, tell us what you'd
-                like to practice, complete
-                payment and receive your
-                confirmed booking details.
+                Book your technical mock
+                interview in a few simple
+                steps. No account registration
+                is required.
               </p>
             </div>
 
@@ -2897,302 +2898,126 @@ export default function InterviewBookingPage({
                 {
                   number: "01",
                   title:
-                    "Choose Your Slot",
+                    "Choose your session",
                   description:
-                    "Browse dates, durations, topics, availability and the price of each session.",
-                  Icon:
-                    CalendarDays,
+                    "Select an available date and time, then choose the topics you want to practice.",
+                  Icon: CalendarDays,
                 },
                 {
                   number: "02",
                   title:
-                    "Personalize Your Interview",
+                    "Enter details and pay",
                   description:
-                    "Select interview topics and share your goals, experience and resume.",
-                  Icon: Users,
+                    "Provide your name, email, experience and interview goals. Complete payment securely through Cashfree.",
+                  Icon: CreditCard,
                 },
                 {
                   number: "03",
                   title:
-                    "Pay and Attend",
+                    "Attend your interview",
                   description:
-                    "Complete Cashfree checkout, verify your booking and join at your scheduled time.",
+                    "After payment verification, receive your booking confirmation. Meeting details are shared by email.",
                   Icon: Video,
                 },
               ].map(
-                (item) => {
-                  const Icon =
-                    item.Icon;
-
-                  return (
-                    <div
-                      key={
-                        item.number
-                      }
-                      className="ib-card rounded-2xl p-6"
-                    >
-                      <span className="ib-orange text-sm font-black">
-                        {
-                          item.number
-                        }
+                ({
+                  number,
+                  title,
+                  description,
+                  Icon,
+                }) => (
+                  <div
+                    key={number}
+                    className="ib-card rounded-2xl p-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="ib-orange text-3xl font-black">
+                        {number}
                       </span>
 
-                      <div className="ib-panel mt-4 inline-flex rounded-xl p-3">
-                        <Icon
-                          size={24}
-                          className="ib-orange"
-                        />
-                      </div>
-
-                      <h3 className="mt-4 text-lg font-extrabold">
-                        {
-                          item.title
-                        }
-                      </h3>
-
-                      <p className="ib-muted mt-2 text-sm leading-7">
-                        {
-                          item.description
-                        }
-                      </p>
+                      <Icon
+                        size={24}
+                        className="ib-orange"
+                      />
                     </div>
-                  );
-                }
+
+                    <h3 className="mt-5 text-lg font-extrabold">
+                      {title}
+                    </h3>
+
+                    <p className="ib-muted mt-3 text-sm leading-7">
+                      {description}
+                    </p>
+                  </div>
+                )
               )}
             </div>
           </div>
         </section>
 
-        {/* =================================================
-           ENGINEERING BENEFITS
-        ================================================= */}
+        {/* ==========================================
+            SUPPORT AND CANCELLATIONS
+        ========================================== */}
 
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-2">
-            <div>
-              <span className="ib-orange text-xs font-black uppercase tracking-widest">
-                Learn Through Realistic Practice
-              </span>
+        <section className="px-4 py-14 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="ib-card grid gap-6 rounded-3xl p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <div className="ib-orange flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                  <HelpCircle size={17} />
 
-              <h2 className="mt-2 text-3xl font-black">
-                More than just
-                answering questions.
-              </h2>
+                  Support
+                </div>
 
-              <p className="ib-muted mt-4 text-sm leading-8">
-                Technical interviews
-                evaluate how you think,
-                communicate and make
-                decisions. Practice
-                discussing architecture,
-                data structures, performance,
-                concurrency and trade-offs
-                with engineers experienced
-                in real-world backend
-                systems.
-              </p>
+                <h2 className="mt-3 text-xl font-black sm:text-2xl">
+                  Need to cancel or reschedule?
+                </h2>
 
-              <div className="mt-7 space-y-4">
-                {[
-                  "Explain complexity, trade-offs and edge cases",
-                  "Discuss high-impact projects and technical decisions",
-                  "Explore scalability, concurrency and distributed systems",
-                  "Identify practical areas for improvement",
-                ].map(
-                  (item) => (
-                    <div
-                      key={
-                        item
-                      }
-                      className="flex items-start gap-3"
-                    >
-                      <span className="ib-panel rounded-lg p-1.5">
-                        <Check
-                          size={16}
-                          className="ib-orange"
-                        />
-                      </span>
+                <p className="ib-muted mt-3 max-w-2xl text-sm leading-7">
+                  Contact our support team
+                  using the same email
+                  address you entered during
+                  booking. Include your
+                  booking ID and request.
 
-                      <span className="text-sm leading-7">
-                        {
-                          item
-                        }
-                      </span>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* FEEDBACK CARD */}
-
-            <div className="ib-card rounded-3xl p-6 sm:p-8">
-              <div className="ib-orange flex items-center gap-2 text-sm font-extrabold">
-                <Star
-                  size={17}
-                />
-                Feedback-Focused Practice
+                  Cancellation fees may apply
+                  depending on who requests
+                  cancellation and the
+                  applicable policy.
+                </p>
               </div>
 
-              <h3 className="mt-4 text-2xl font-black">
-                What your feedback can cover
-              </h3>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+                  "Mock Interview Booking Support"
+                )}`}
+                className="ib-primary w-full md:w-auto"
+              >
+                <Mail size={17} />
 
-              <div className="mt-5 space-y-4">
-                {[
-                  {
-                    title:
-                      "Problem-solving approach",
-                    description:
-                      "How you clarify requirements, explore solutions and handle edge cases.",
-                  },
-                  {
-                    title:
-                      "Technical depth",
-                    description:
-                      "Data structures, object-oriented design, architecture and engineering trade-offs.",
-                  },
-                  {
-                    title:
-                      "Communication",
-                    description:
-                      "How clearly you explain decisions, complexity and past projects.",
-                  },
-                  {
-                    title:
-                      "Areas for improvement",
-                    description:
-                      "Concrete topics to revise and practical suggestions for interview preparation.",
-                  },
-                ].map(
-                  (
-                    item,
-                    index
-                  ) => (
-                    <div
-                      key={
-                        item.title
-                      }
-                      className="flex gap-3"
-                    >
-                      <span className="ib-panel ib-orange flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black">
-                        {
-                          index + 1
-                        }
-                      </span>
-
-                      <div>
-                        <div className="text-sm font-bold">
-                          {
-                            item.title
-                          }
-                        </div>
-
-                        <p className="ib-muted mt-1 text-xs leading-6">
-                          {
-                            item.description
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-
-              <p className="ib-muted mt-6 text-xs">
-                Feedback depends on
-                the session's duration,
-                selected topics and
-                interview discussion.
-              </p>
+                Contact Support
+              </a>
             </div>
-          </div>
-        </section>
-
-        {/* =================================================
-           CALL TO ACTION
-        ================================================= */}
-
-        <section className="px-4 pb-20 sm:px-6 lg:px-8">
-          <div
-            className="mx-auto max-w-6xl rounded-3xl p-7 text-center sm:p-12"
-            style={{
-              background:
-                "linear-gradient(130deg,#c2410c,#ea580c)",
-              color: "#ffffff",
-            }}
-          >
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-              <Code2
-                size={25}
-              />
-            </div>
-
-            <h2 className="mt-4 text-2xl font-black sm:text-3xl">
-              Ready for a realistic
-              technical mock interview?
-            </h2>
-
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-orange-50">
-              Prepare for DSA, LLD,
-              HLD, GenAI and project
-              discussions with
-              personalized interview practice.
-            </p>
-
-            <a
-              href="#interview-slots"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-black text-orange-700"
-            >
-              Find Your Interview Slot
-
-              <ArrowRight
-                size={17}
-              />
-            </a>
           </div>
         </section>
       </main>
 
-      {/* =================================================
-         BOOKING MODAL
-
-         No payment-result modal here.
-
-         Payment result lives in the three
-         dedicated routes.
-      ================================================= */}
+      {/* ==========================================
+          BOOKING MODAL
+      ========================================== */}
 
       <AnimatePresence>
         {selectedSlot && (
           <BookingModal
-            key={
-              selectedSlot._id
-            }
-            slot={
-              selectedSlot
-            }
-            token={
-              token
-            }
+            key={selectedSlot._id}
+            slot={selectedSlot}
+            theme={theme}
             cashfreeMode={
               cashfreeMode
             }
-            theme={
-              theme
+            onClose={() =>
+              setSelectedSlot(null)
             }
-            onClose={() => {
-              setSelectedSlot(
-                null
-              );
-
-              /*
-                Fetch fresh availability
-                after the booking modal closes.
-              */
-
-              fetchSlots();
-            }}
           />
         )}
       </AnimatePresence>

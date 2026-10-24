@@ -45,6 +45,7 @@ const candidateSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
       default: null,
+       required: false,
     },
 
     name: {
