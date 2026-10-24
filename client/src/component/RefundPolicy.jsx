@@ -15,6 +15,9 @@ import {
   ReceiptText,
   RefreshCcw,
   ShieldCheck,
+  CalendarClock,
+  CalendarX2,
+  Video,
 } from "lucide-react";
 
 /* ======================================================
@@ -28,6 +31,10 @@ const CANONICAL_URL = `${SITE_URL}/refund-policy`;
 
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 const GENERAL_EMAIL = "enquiry@targettrek.in";
+// Interview cancellation requests: address supplied for this policy.
+const INTERVIEW_CANCELLATION_EMAIL = "supporttqrgeterek@gmail.com";
+const INTERVIEW_CANCELLATION_FEE = 199;
+const INTERVIEW_NOTICE_HOURS = 24;
 
 const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
@@ -36,10 +43,10 @@ const LAST_UPDATED = "October 3, 2026";
 const DATE_MODIFIED = "2026-10-03";
 
 const SEO_TITLE =
-  "Refund Policy for Ebooks & Digital Products | Target Trek";
+  "Refund & Cancellation Policy for Ebooks and Mock Interviews | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Read Target Trek's refund policy for ebooks and digital products. Purchases are non-refundable except for verified duplicate payments. Learn how to submit proof and request a duplicate-payment refund.";
+  "Read the Target Trek refund policy for digital ebooks and mock interviews, including duplicate-payment refunds, the ₹199 interview cancellation fee and the 24-hour email notice requirement.";
 
 const SEO_KEYWORDS = [
   "Target Trek refund policy",
@@ -50,6 +57,9 @@ const SEO_KEYWORDS = [
   "double payment refund",
   "ebook purchase support",
   "Target Trek books",
+  "Target Trek mock interview cancellation",
+  "mock interview cancellation fee 199",
+  "mock interview 24 hour cancellation",
 ].join(", ");
 
 /* ======================================================
@@ -108,6 +118,29 @@ const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
   SUPPORT_EMAIL_SUBJECT
 )}&body=${encodeURIComponent(SUPPORT_EMAIL_BODY)}`;
 
+const INTERVIEW_CANCELLATION_SUBJECT =
+  "Mock Interview Cancellation Request - Target Trek";
+
+const INTERVIEW_CANCELLATION_BODY = `Hello Target Trek Support,
+
+I request cancellation of my booked mock interview.
+
+Candidate Name:
+Email Used to Book:
+Booking ID:
+Scheduled Interview Date and Time (IST):
+Payment / Order Reference:
+Reason for Cancellation:
+
+I understand that cancellation requests must reach support at least 24 hours before the scheduled interview start time and that a ₹199 cancellation fee applies to an eligible candidate-requested cancellation. Any eligible refund is the amount paid less the fee, subject to the policy and applicable law.
+
+Thank you.`;
+
+const INTERVIEW_CANCELLATION_MAILTO = `mailto:${INTERVIEW_CANCELLATION_EMAIL}?subject=${encodeURIComponent(
+  INTERVIEW_CANCELLATION_SUBJECT
+)}&body=${encodeURIComponent(INTERVIEW_CANCELLATION_BODY)}`;
+
+
 /* ======================================================
    THEME
 ====================================================== */
@@ -164,8 +197,12 @@ const quickLinks = [
     label: "Failed & pending payments",
   },
   {
+    id: "mock-interview-cancellation",
+    label: "Mock interview cancellation",
+  },
+  {
     id: "cancellation",
-    label: "Cancellation policy",
+    label: "Ebook cancellation policy",
   },
   {
     id: "support",
@@ -179,10 +216,20 @@ const quickLinks = [
 
 const faqs = [
   {
+    question: "Can I cancel my Target Trek mock interview?",
+    answer:
+      "You may request cancellation by emailing supporttqrgeterek@gmail.com at least 24 hours before your scheduled mock interview start time. A ₹199 cancellation fee applies to eligible candidate-requested cancellations. If less than 24 hours remain, no refund is initiated under this cancellation policy, except where required by applicable law.",
+  },
+  {
+    question: "How much will I receive if I cancel a mock interview in time?",
+    answer:
+      "For an eligible cancellation requested at least 24 hours before the scheduled start, the refund is the amount paid minus the ₹199 cancellation fee, with no negative refund balance. Requests received later are not eligible for a refund under the standard candidate cancellation policy.",
+  },
+  {
     question:
       "Are Target Trek ebook purchases refundable?",
     answer:
-      "Target Trek digital ebooks and downloadable products are generally non-refundable. Under our standard commercial refund policy, a refund is available only when a verified duplicate payment has been successfully received for the same intended purchase, except where another remedy is required by applicable law.",
+      "Target Trek digital ebooks and downloadable products are generally non-refundable. Verified duplicate charges for the same intended ebook purchase may be refunded, subject to applicable law. Mock interview bookings have a separate candidate-requested cancellation policy, including a ₹199 fee and a 24-hour advance email requirement.",
   },
   {
     question:
@@ -229,16 +276,16 @@ const Section = ({
       aria-labelledby={headingId}
       className={`scroll-mt-28 border-b pb-10 last:border-b-0 ${
         isDark
-          ? "border-slate-800"
-          : "border-slate-100"
+          ? "border-[#403027]"
+          : "border-[#f5e7db]"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black sm:flex ${
             isDark
-              ? "bg-blue-500/10 text-blue-400"
-              : "bg-blue-50 text-blue-700"
+              ? "bg-orange-500/10 text-orange-400"
+              : "bg-orange-50 text-orange-700"
           }`}
         >
           {number}
@@ -250,10 +297,10 @@ const Section = ({
             className={`text-xl font-black tracking-tight sm:text-2xl ${
               isDark
                 ? "text-white"
-                : "text-slate-950"
+                : "text-[#29201a]"
             }`}
           >
-            <span className="mr-2 text-blue-600 sm:hidden">
+            <span className="mr-2 text-orange-600 sm:hidden">
               {number}.
             </span>
 
@@ -263,8 +310,8 @@ const Section = ({
           <div
             className={`mt-5 space-y-4 text-[15px] leading-7 sm:text-base sm:leading-8 ${
               isDark
-                ? "text-slate-400"
-                : "text-slate-600"
+                ? "text-[#bca99b]"
+                : "text-[#77665b]"
             }`}
           >
             {children}
@@ -288,14 +335,14 @@ const BulletList = ({
         >
           <CheckCircle2
             size={17}
-            className="mt-1.5 shrink-0 text-blue-500"
+            className="mt-1.5 shrink-0 text-orange-500"
           />
 
           <div
             className={`min-w-0 flex-1 ${
               isDark
-                ? "text-slate-400"
-                : "text-slate-600"
+                ? "text-[#bca99b]"
+                : "text-[#77665b]"
             }`}
           >
             {item}
@@ -478,8 +525,8 @@ const RefundPolicy = () => {
     <div
       className={`min-h-screen pt-16 transition-colors duration-300 md:pt-20 ${
         isDark
-          ? "bg-slate-950 text-slate-100"
-          : "bg-slate-50 text-slate-900"
+          ? "bg-[#15110e] text-slate-100"
+          : "bg-[#fffaf5] text-[#34271f]"
       }`}
     >
       {/* =================================================
@@ -601,23 +648,23 @@ const RefundPolicy = () => {
         <section
           className={`relative overflow-hidden border-b ${
             isDark
-              ? "border-slate-800 bg-slate-950"
-              : "border-slate-200 bg-white"
+              ? "border-[#403027] bg-[#15110e]"
+              : "border-[#f1dfd1] bg-white"
           }`}
         >
           <div
             className={`pointer-events-none absolute -right-48 -top-48 h-[500px] w-[500px] rounded-full blur-3xl ${
               isDark
-                ? "bg-blue-500/10"
-                : "bg-blue-100/70"
+                ? "bg-orange-500/10"
+                : "bg-orange-100/70"
             }`}
           />
 
           <div
             className={`pointer-events-none absolute -left-32 bottom-0 h-[320px] w-[320px] rounded-full blur-3xl ${
               isDark
-                ? "bg-indigo-500/5"
-                : "bg-slate-100"
+                ? "bg-orange-500/5"
+                : "bg-[#fff3e8]"
             }`}
           />
 
@@ -628,13 +675,13 @@ const RefundPolicy = () => {
               aria-label="Breadcrumb"
               className={`mb-8 flex items-center gap-2 text-xs font-semibold ${
                 isDark
-                  ? "text-slate-500"
-                  : "text-slate-400"
+                  ? "text-[#9e8b7e]"
+                  : "text-[#bca99b]"
               }`}
             >
               <a
                 href="/"
-                className="transition hover:text-blue-600"
+                className="transition hover:text-orange-600"
               >
                 Home
               </a>
@@ -646,8 +693,8 @@ const RefundPolicy = () => {
               <span
                 className={
                   isDark
-                    ? "text-slate-300"
-                    : "text-slate-600"
+                    ? "text-[#ddcfc3]"
+                    : "text-[#77665b]"
                 }
               >
                 Refund Policy
@@ -658,8 +705,8 @@ const RefundPolicy = () => {
               <div
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.16em] ${
                   isDark
-                    ? "border-blue-500/20 bg-blue-500/10 text-blue-300"
-                    : "border-blue-100 bg-blue-50 text-blue-700"
+                    ? "border-orange-500/20 bg-orange-500/10 text-orange-300"
+                    : "border-orange-100 bg-orange-50 text-orange-700"
                 }`}
               >
                 <ShieldCheck size={15} />
@@ -671,7 +718,7 @@ const RefundPolicy = () => {
                 className={`mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl ${
                   isDark
                     ? "text-white"
-                    : "text-slate-950"
+                    : "text-[#29201a]"
                 }`}
               >
                 Refund & Cancellation Policy
@@ -680,17 +727,19 @@ const RefundPolicy = () => {
               <p
                 className={`mt-6 max-w-3xl text-base leading-8 sm:text-lg ${
                   isDark
-                    ? "text-slate-400"
-                    : "text-slate-600"
+                    ? "text-[#bca99b]"
+                    : "text-[#77665b]"
                 }`}
               >
-                Target Trek sells digital ebooks
-                and educational resources that may
+                Target Trek offers digital ebooks,
+                educational resources and mock
+                interviews. Ebooks may
                 be delivered immediately after a
                 successful payment. Because of the
                 digital nature of these products,
-                purchases are generally final and
-                non-refundable.
+                ebook purchases are generally final
+                and non-refundable. Mock interviews
+                follow the separate cancellation terms below.
               </p>
 
               <div
@@ -713,14 +762,13 @@ const RefundPolicy = () => {
                         : "text-emerald-900"
                     }`}
                   >
-                    Under our standard refund
-                    policy, a refund is available
-                    only when a verified duplicate
-                    or double payment has been
-                    successfully received for the
-                    same intended purchase, except
-                    where another remedy is required
-                    by applicable law.
+                    For ebooks, a verified duplicate
+                    payment may qualify for a refund.
+                    For mock interviews, candidate-requested
+                    cancellations must be emailed at least
+                    24 hours in advance and incur a ₹199
+                    cancellation fee. Exceptions required
+                    by applicable law still apply.
                   </p>
                 </div>
               </div>
@@ -729,8 +777,8 @@ const RefundPolicy = () => {
                 <span
                   className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
                     isDark
-                      ? "border-slate-800 bg-slate-900 text-slate-400"
-                      : "border-slate-200 bg-white text-slate-600 shadow-sm"
+                      ? "border-[#403027] bg-[#211a15] text-[#bca99b]"
+                      : "border-[#f1dfd1] bg-white text-[#77665b] shadow-sm"
                   }`}
                 >
                   Last updated: {LAST_UPDATED}
@@ -739,8 +787,8 @@ const RefundPolicy = () => {
                 <span
                   className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
                     isDark
-                      ? "border-slate-800 bg-slate-900 text-slate-400"
-                      : "border-slate-200 bg-white text-slate-600 shadow-sm"
+                      ? "border-[#403027] bg-[#211a15] text-[#bca99b]"
+                      : "border-[#f1dfd1] bg-white text-[#77665b] shadow-sm"
                   }`}
                 >
                   Digital Products
@@ -749,11 +797,11 @@ const RefundPolicy = () => {
                 <span
                   className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
                     isDark
-                      ? "border-slate-800 bg-slate-900 text-slate-400"
-                      : "border-slate-200 bg-white text-slate-600 shadow-sm"
+                      ? "border-[#403027] bg-[#211a15] text-[#bca99b]"
+                      : "border-[#f1dfd1] bg-white text-[#77665b] shadow-sm"
                   }`}
                 >
-                  Ebook Purchases
+                  Ebooks & Mock Interviews
                 </span>
               </div>
             </div>
@@ -767,8 +815,8 @@ const RefundPolicy = () => {
         <section
           className={`border-b ${
             isDark
-              ? "border-slate-800 bg-slate-900"
-              : "border-slate-200 bg-white"
+              ? "border-[#403027] bg-[#211a15]"
+              : "border-[#f1dfd1] bg-white"
           }`}
         >
           <div className="mx-auto grid max-w-6xl gap-4 px-4 py-7 sm:grid-cols-3 sm:px-6 lg:px-8">
@@ -778,24 +826,24 @@ const RefundPolicy = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-slate-800 bg-slate-950"
-                  : "border-slate-200 bg-slate-50"
+                  ? "border-[#403027] bg-[#15110e]"
+                  : "border-[#f1dfd1] bg-[#fffaf5]"
               }`}
             >
               <BookOpen
                 size={21}
-                className="text-blue-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 Digital Products
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-[#f3e7dd]"
+                    : "text-[#4d3b30]"
                 }`}
               >
                 Ebook and digital-product
@@ -826,8 +874,8 @@ const RefundPolicy = () => {
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-[#f3e7dd]"
+                    : "text-[#4d3b30]"
                 }`}
               >
                 A verified duplicate payment for
@@ -842,24 +890,24 @@ const RefundPolicy = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-violet-500/20 bg-violet-500/5"
-                  : "border-violet-200 bg-violet-50"
+                  ? "border-orange-500/20 bg-orange-500/5"
+                  : "border-orange-200 bg-orange-50"
               }`}
             >
               <Clock3
                 size={21}
-                className="text-violet-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-violet-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 Refund Timeline
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-[#f3e7dd]"
+                    : "text-[#4d3b30]"
                 }`}
               >
                 Verified duplicate-payment refunds
@@ -885,15 +933,15 @@ const RefundPolicy = () => {
             <div
               className={`sticky top-28 rounded-2xl border p-5 shadow-sm ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
               <p
                 className={`text-xs font-black uppercase tracking-[0.16em] ${
                   isDark
-                    ? "text-slate-500"
-                    : "text-slate-400"
+                    ? "text-[#9e8b7e]"
+                    : "text-[#bca99b]"
                 }`}
               >
                 Quick Navigation
@@ -909,8 +957,8 @@ const RefundPolicy = () => {
                     href={`#${item.id}`}
                     className={`block rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                       isDark
-                        ? "text-slate-400 hover:bg-blue-500/10 hover:text-blue-400"
-                        : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                        ? "text-[#bca99b] hover:bg-orange-500/10 hover:text-orange-400"
+                        : "text-[#77665b] hover:bg-orange-50 hover:text-orange-700"
                     }`}
                   >
                     {item.label}
@@ -921,15 +969,15 @@ const RefundPolicy = () => {
               <div
                 className={`mt-6 border-t pt-5 ${
                   isDark
-                    ? "border-slate-800"
-                    : "border-slate-100"
+                    ? "border-[#403027]"
+                    : "border-[#f5e7db]"
                 }`}
               >
                 <p
                   className={`text-xs leading-5 ${
                     isDark
-                      ? "text-slate-500"
-                      : "text-slate-500"
+                      ? "text-[#9e8b7e]"
+                      : "text-[#9e8b7e]"
                   }`}
                 >
                   Refund & purchase support
@@ -937,7 +985,7 @@ const RefundPolicy = () => {
 
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
-                  className="mt-2 block break-all text-xs font-bold text-blue-500 hover:text-blue-600"
+                  className="mt-2 block break-all text-xs font-bold text-orange-500 hover:text-orange-600"
                 >
                   {SUPPORT_EMAIL}
                 </a>
@@ -976,18 +1024,18 @@ const RefundPolicy = () => {
                     className={`text-xl font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-950"
+                        : "text-[#29201a]"
                     }`}
                   >
                     Digital Ebook Purchases Are
-                    Non-Refundable
+                    Generally Non-Refundable
                   </h2>
 
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-700"
+                        ? "text-[#bca99b]"
+                        : "text-[#665246]"
                     }`}
                   >
                     Target Trek primarily sells
@@ -1002,8 +1050,8 @@ const RefundPolicy = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-700"
+                        ? "text-[#bca99b]"
+                        : "text-[#665246]"
                     }`}
                   >
                     Because a digital product can
@@ -1021,13 +1069,12 @@ const RefundPolicy = () => {
                         : "text-red-800"
                     }`}
                   >
-                    The only refund offered under
-                    Target Trek's standard refund
-                    policy is for a verified
-                    duplicate payment for the same
-                    intended purchase, subject to
-                    any mandatory rights available
-                    under applicable law.
+                    For ebook purchases, our standard
+                    exception is a verified duplicate
+                    payment. Mock interview cancellations
+                    are governed by the separate terms
+                    below, and mandatory rights under
+                    applicable law remain unaffected.
                   </p>
                 </div>
               </div>
@@ -1038,8 +1085,8 @@ const RefundPolicy = () => {
             <div
               className={`mt-10 space-y-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
 
@@ -1053,7 +1100,8 @@ const RefundPolicy = () => {
               >
                 <p>
                   This Refund & Cancellation Policy
-                  applies to digital products
+                  applies to digital products and
+                  paid mock interview bookings
                   purchased directly through the
                   Target Trek website.
                 </p>
@@ -1062,6 +1110,7 @@ const RefundPolicy = () => {
                   isDark={isDark}
                   items={[
                     "Digital ebooks.",
+                    "Paid mock interview bookings (under the separate session-cancellation terms).",
                     "PDF books and guides.",
                     "System Design learning material.",
                     "GenAI and software engineering resources.",
@@ -1129,7 +1178,7 @@ const RefundPolicy = () => {
                     className={`font-bold leading-7 ${
                       isDark
                         ? "text-amber-200"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }`}
                   >
                     All Target Trek ebook and
@@ -1264,14 +1313,14 @@ const RefundPolicy = () => {
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <Mail
                       size={24}
-                      className="mt-1 shrink-0 text-blue-500"
+                      className="mt-1 shrink-0 text-orange-500"
                     />
 
                     <div>
@@ -1279,7 +1328,7 @@ const RefundPolicy = () => {
                         className={`text-lg font-black ${
                           isDark
                             ? "text-white"
-                            : "text-slate-950"
+                            : "text-[#29201a]"
                         }`}
                       >
                         Target Trek Ebook Support
@@ -1287,7 +1336,7 @@ const RefundPolicy = () => {
 
                       <a
                         href={REFUND_MAILTO}
-                        className="mt-2 block break-all font-bold text-blue-500 underline decoration-blue-300 underline-offset-4"
+                        className="mt-2 block break-all font-bold text-orange-500 underline decoration-orange-300 underline-offset-4"
                       >
                         {SUPPORT_EMAIL}
                       </a>
@@ -1295,8 +1344,8 @@ const RefundPolicy = () => {
                       <p
                         className={`mt-3 text-sm ${
                           isDark
-                            ? "text-slate-400"
-                            : "text-slate-600"
+                            ? "text-[#bca99b]"
+                            : "text-[#77665b]"
                         }`}
                       >
                         Recommended subject:
@@ -1305,8 +1354,8 @@ const RefundPolicy = () => {
                       <p
                         className={`mt-1 text-sm font-bold ${
                           isDark
-                            ? "text-slate-200"
-                            : "text-slate-800"
+                            ? "text-[#f3e7dd]"
+                            : "text-[#4d3b30]"
                         }`}
                       >
                         {REFUND_EMAIL_SUBJECT}
@@ -1316,7 +1365,7 @@ const RefundPolicy = () => {
 
                   <a
                     href={REFUND_MAILTO}
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
                   >
                     <Mail size={17} />
 
@@ -1370,21 +1419,21 @@ const RefundPolicy = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex gap-3">
                     <FileCheck2
                       size={21}
-                      className="mt-0.5 shrink-0 text-blue-500"
+                      className="mt-0.5 shrink-0 text-orange-500"
                     />
 
                     <p
                       className={`font-bold leading-7 ${
                         isDark
-                          ? "text-blue-200"
-                          : "text-slate-900"
+                          ? "text-orange-200"
+                          : "text-[#34271f]"
                       }`}
                     >
                       If you send a bank statement
@@ -1410,22 +1459,22 @@ const RefundPolicy = () => {
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-violet-500/20 bg-violet-500/10"
-                      : "border-violet-200 bg-violet-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex gap-4">
                     <Clock3
                       size={25}
-                      className="mt-0.5 shrink-0 text-violet-500"
+                      className="mt-0.5 shrink-0 text-orange-500"
                     />
 
                     <div>
                       <h3
                         className={`font-black ${
                           isDark
-                            ? "text-violet-200"
-                            : "text-violet-900"
+                            ? "text-orange-200"
+                            : "text-orange-900"
                         }`}
                       >
                         Refund processing: within 7
@@ -1435,8 +1484,8 @@ const RefundPolicy = () => {
                       <p
                         className={`mt-2 text-sm leading-7 ${
                           isDark
-                            ? "text-violet-200/80"
-                            : "text-violet-800"
+                            ? "text-orange-200/80"
+                            : "text-orange-800"
                         }`}
                       >
                         Once we confirm that an
@@ -1457,7 +1506,7 @@ const RefundPolicy = () => {
                     className={
                       isDark
                         ? "text-white"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }
                   >
                     original payment method
@@ -1533,7 +1582,7 @@ const RefundPolicy = () => {
 
                 <a
                   href={SUPPORT_MAILTO}
-                  className="inline-flex items-center gap-2 font-bold text-blue-500 hover:text-blue-600"
+                  className="inline-flex items-center gap-2 font-bold text-orange-500 hover:text-orange-600"
                 >
                   Contact ebook support
                   <ArrowRight size={16} />
@@ -1647,7 +1696,7 @@ const RefundPolicy = () => {
                       className={`font-bold leading-7 ${
                         isDark
                           ? "text-red-200"
-                          : "text-slate-900"
+                          : "text-[#34271f]"
                       }`}
                     >
                       Never send Target Trek your
@@ -1677,15 +1726,109 @@ const RefundPolicy = () => {
 
               {/* 12 */}
 
+              {/* MOCK INTERVIEW CANCELLATION — SEPARATE FROM EBOOKS */}
               <Section
-                id="cancellation"
+                id="mock-interview-cancellation"
                 number="12"
-                title="Cancellation Policy"
+                title="Mock Interview Cancellation & Refunds"
                 isDark={isDark}
               >
                 <p>
-                  Target Trek products are digital
-                  products that may be processed and
+                  The following terms apply when a candidate requests
+                  cancellation of a paid Target Trek mock interview booking.
+                  They are separate from our ebook refund rules.
+                </p>
+                <div className={`grid gap-4 sm:grid-cols-2`}>
+                  <div className={`rounded-2xl border p-5 ${
+                    isDark
+                      ? "border-orange-900/60 bg-orange-950/20"
+                      : "border-orange-200 bg-orange-50"
+                  }`}>
+                    <CircleDollarSign size={24} className="text-orange-500" />
+                    <p className="mt-3 text-xs font-bold uppercase tracking-wider text-orange-500">
+                      Candidate cancellation fee
+                    </p>
+                    <p className={`mt-1 text-3xl font-black ${isDark ? "text-orange-200" : "text-orange-800"}`}>
+                      ₹{INTERVIEW_CANCELLATION_FEE}
+                    </p>
+                    <p className="mt-2 text-sm leading-6">
+                      Deducted from an eligible candidate-requested cancellation refund.
+                    </p>
+                  </div>
+                  <div className={`rounded-2xl border p-5 ${
+                    isDark
+                      ? "border-orange-900/60 bg-orange-950/20"
+                      : "border-orange-200 bg-orange-50"
+                  }`}>
+                    <CalendarClock size={24} className="text-orange-500" />
+                    <p className="mt-3 text-xs font-bold uppercase tracking-wider text-orange-500">
+                      Required advance notice
+                    </p>
+                    <p className={`mt-1 text-3xl font-black ${isDark ? "text-orange-200" : "text-orange-800"}`}>
+                      {INTERVIEW_NOTICE_HOURS} hours
+                    </p>
+                    <p className="mt-2 text-sm leading-6">
+                      Email must be received at least 24 hours before the scheduled start time.
+                    </p>
+                  </div>
+                </div>
+                <BulletList
+                  isDark={isDark}
+                  items={[
+                    "Send the cancellation request from your booking email address, if possible.",
+                    "Email the request at least 24 hours before the scheduled mock interview begins (using the scheduled time in IST).",
+                    "Include your booking ID, candidate name, registered email, scheduled date and time, and payment reference.",
+                    "For eligible advance cancellations, the refundable amount is the amount actually paid minus ₹199, with a minimum refund of ₹0.",
+                    "If your cancellation email arrives less than 24 hours before the scheduled start, no refund will be initiated under this candidate-requested cancellation policy.",
+                    "Failing to attend the session without timely cancellation is not eligible for a refund under this policy.",
+                  ]}
+                />
+                <div className={`rounded-2xl border p-5 ${
+                  isDark
+                    ? "border-orange-900/60 bg-[#302016]"
+                    : "border-orange-200 bg-[#fff4e9]"
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <Mail size={22} className="mt-1 shrink-0 text-orange-500" />
+                    <div className="min-w-0">
+                      <h3 className={`font-black ${isDark ? "text-orange-200" : "text-orange-900"}`}>
+                        Send your cancellation request by email
+                      </h3>
+                      <p className="mt-2 text-sm">Required cancellation address:</p>
+                      <a
+                        className="mt-1 block break-all font-bold text-orange-500 underline underline-offset-4"
+                        href={INTERVIEW_CANCELLATION_MAILTO}
+                      >
+                        {INTERVIEW_CANCELLATION_EMAIL}
+                      </a>
+                      <a
+                        href={INTERVIEW_CANCELLATION_MAILTO}
+                        className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+                      >
+                        <Mail size={17} /> Email Mock Interview Cancellation <ArrowRight size={16} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <p>
+                  Cancellation requests are assessed using the time the email is
+                  received and the scheduled interview start time. Approved refunds
+                  are returned to the original payment method when supported by
+                  the payment provider. These terms do not limit refunds or other
+                  remedies required by applicable law, including situations where
+                  Target Trek fails to provide the booked service.
+                </p>
+              </Section>
+
+              <Section
+                id="cancellation"
+                number="13"
+                title="Ebook Cancellation Policy"
+                isDark={isDark}
+              >
+                <p>
+                  Target Trek ebooks and downloadable
+                  digital products may be processed and
                   delivered automatically
                   immediately after successful
                   payment.
@@ -1698,10 +1841,10 @@ const RefundPolicy = () => {
                 </p>
 
                 <p>
-                  A cancellation request does not
-                  create an entitlement to a refund
-                  under the standard Target Trek
-                  refund policy.
+                  An ebook cancellation request does not
+                  itself create a refund entitlement.
+                  Mock interview cancellations follow
+                  the separate rules above.
                 </p>
               </Section>
 
@@ -1709,7 +1852,7 @@ const RefundPolicy = () => {
 
               <Section
                 id="promotions"
-                number="13"
+                number="14"
                 title="Sale, Coupon, and Discounted Purchases"
                 isDark={isDark}
               >
@@ -1734,7 +1877,7 @@ const RefundPolicy = () => {
 
               <Section
                 id="updates"
-                number="14"
+                number="15"
                 title="Book Updates and New Editions"
                 isDark={isDark}
               >
@@ -1757,7 +1900,7 @@ const RefundPolicy = () => {
 
               <Section
                 id="learning-outcomes"
-                number="15"
+                number="16"
                 title="Interview and Learning Outcomes"
                 isDark={isDark}
               >
@@ -1792,7 +1935,7 @@ const RefundPolicy = () => {
 
               <Section
                 id="sharing"
-                number="16"
+                number="17"
                 title="Unauthorized Sharing and Redistribution"
                 isDark={isDark}
               >
@@ -1823,7 +1966,7 @@ const RefundPolicy = () => {
 
               <Section
                 id="consumer-rights"
-                number="17"
+                number="18"
                 title="Applicable Consumer Rights"
                 isDark={isDark}
               >
@@ -1837,15 +1980,15 @@ const RefundPolicy = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <p
                     className={`font-bold leading-7 ${
                       isDark
-                        ? "text-blue-200"
-                        : "text-slate-900"
+                        ? "text-orange-200"
+                        : "text-[#34271f]"
                     }`}
                   >
                     Nothing in this policy is
@@ -1871,7 +2014,7 @@ const RefundPolicy = () => {
 
               <Section
                 id="policy-changes"
-                number="18"
+                number="19"
                 title="Changes to This Policy"
                 isDark={isDark}
               >
@@ -1896,27 +2039,27 @@ const RefundPolicy = () => {
 
               <Section
                 id="support"
-                number="19"
+                number="20"
                 title="Contact Target Trek Support"
                 isDark={isDark}
               >
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <Mail
                     size={28}
-                    className="text-blue-500"
+                    className="text-orange-500"
                   />
 
                   <h3
                     className={`mt-4 text-xl font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-950"
+                        : "text-[#29201a]"
                     }`}
                   >
                     Ebook & Payment Support
@@ -1925,8 +2068,8 @@ const RefundPolicy = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-600"
+                        ? "text-[#bca99b]"
+                        : "text-[#77665b]"
                     }`}
                   >
                     For duplicate payments, payment
@@ -1939,8 +2082,8 @@ const RefundPolicy = () => {
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-[#ddcfc3]"
+                          : "text-[#665246]"
                       }`}
                     >
                       Support Email
@@ -1948,7 +2091,7 @@ const RefundPolicy = () => {
 
                     <a
                       href={`mailto:${SUPPORT_EMAIL}`}
-                      className="mt-1 block break-all font-black text-blue-500 underline decoration-blue-300 underline-offset-4"
+                      className="mt-1 block break-all font-black text-orange-500 underline decoration-orange-300 underline-offset-4"
                     >
                       {SUPPORT_EMAIL}
                     </a>
@@ -1958,8 +2101,8 @@ const RefundPolicy = () => {
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-[#ddcfc3]"
+                          : "text-[#665246]"
                       }`}
                     >
                       General Enquiries
@@ -1967,7 +2110,7 @@ const RefundPolicy = () => {
 
                     <a
                       href={`mailto:${GENERAL_EMAIL}`}
-                      className="mt-1 block break-all font-bold text-blue-500"
+                      className="mt-1 block break-all font-bold text-orange-500"
                     >
                       {GENERAL_EMAIL}
                     </a>
@@ -1976,7 +2119,7 @@ const RefundPolicy = () => {
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                     <a
                       href={REFUND_MAILTO}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
                     >
                       <ReceiptText size={17} />
 
@@ -1987,8 +2130,8 @@ const RefundPolicy = () => {
                       href={SUPPORT_MAILTO}
                       className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition ${
                         isDark
-                          ? "border-slate-700 bg-slate-900 text-white hover:bg-slate-800"
-                          : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                          ? "border-[#584336] bg-[#211a15] text-white hover:bg-[#342820]"
+                          : "border-[#f1dfd1] bg-white text-[#4d3b30] hover:bg-[#fffaf5]"
                       }`}
                     >
                       <HelpCircle size={17} />
@@ -2007,12 +2150,12 @@ const RefundPolicy = () => {
             <section
               className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
               <div className="max-w-2xl">
-                <span className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-orange-600">
                   Frequently Asked Questions
                 </span>
 
@@ -2020,21 +2163,21 @@ const RefundPolicy = () => {
                   className={`mt-3 text-2xl font-black tracking-tight sm:text-3xl ${
                     isDark
                       ? "text-white"
-                      : "text-slate-950"
+                      : "text-[#29201a]"
                   }`}
                 >
-                  Refund Policy FAQs
+                  Refund & Cancellation FAQs
                 </h2>
 
                 <p
                   className={`mt-3 leading-7 ${
                     isDark
-                      ? "text-slate-400"
-                      : "text-slate-600"
+                      ? "text-[#bca99b]"
+                      : "text-[#77665b]"
                   }`}
                 >
                   Common questions about Target Trek
-                  ebook payments and refunds.
+                  ebook refunds and mock interview cancellations.
                 </p>
               </div>
 
@@ -2045,16 +2188,16 @@ const RefundPolicy = () => {
                       key={item.question}
                       className={`rounded-2xl border p-5 ${
                         isDark
-                          ? "border-slate-800 bg-slate-950"
-                          : "border-slate-200 bg-slate-50"
+                          ? "border-[#403027] bg-[#15110e]"
+                          : "border-[#f1dfd1] bg-[#fffaf5]"
                       }`}
                     >
                       <div className="flex items-start gap-4">
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
                             isDark
-                              ? "bg-blue-500/10 text-blue-400"
-                              : "bg-blue-50 text-blue-700"
+                              ? "bg-orange-500/10 text-orange-400"
+                              : "bg-orange-50 text-orange-700"
                           }`}
                         >
                           {index + 1}
@@ -2065,7 +2208,7 @@ const RefundPolicy = () => {
                             className={`font-black ${
                               isDark
                                 ? "text-white"
-                                : "text-slate-900"
+                                : "text-[#34271f]"
                             }`}
                           >
                             {item.question}
@@ -2074,8 +2217,8 @@ const RefundPolicy = () => {
                           <p
                             className={`mt-2 text-sm leading-7 ${
                               isDark
-                                ? "text-slate-400"
-                                : "text-slate-600"
+                                ? "text-[#bca99b]"
+                                : "text-[#77665b]"
                             }`}
                           >
                             {item.answer}
@@ -2095,22 +2238,22 @@ const RefundPolicy = () => {
             <footer
               className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-8 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
               <div className="flex items-start gap-4">
                 <CreditCard
                   size={22}
-                  className="mt-1 shrink-0 text-blue-500"
+                  className="mt-1 shrink-0 text-orange-500"
                 />
 
                 <div>
                   <p
                     className={`text-sm leading-7 ${
                       isDark
-                        ? "text-slate-500"
-                        : "text-slate-500"
+                        ? "text-[#9e8b7e]"
+                        : "text-[#9e8b7e]"
                     }`}
                   >
                     This Refund & Cancellation
@@ -2118,27 +2261,26 @@ const RefundPolicy = () => {
                     with Target Trek's{" "}
                     <a
                       href="/terms-of-service"
-                      className="font-semibold text-blue-500 hover:text-blue-600"
+                      className="font-semibold text-orange-500 hover:text-orange-600"
                     >
                       Terms & Conditions
                     </a>
                     ,{" "}
                     <a
                       href="/privacy-policy"
-                      className="font-semibold text-blue-500 hover:text-blue-600"
+                      className="font-semibold text-orange-500 hover:text-orange-600"
                     >
                       Privacy Policy
                     </a>{" "}
-                    and the product information
-                    displayed on the relevant ebook
-                    page.
+                    and the product or mock interview information
+                    shown at the time of booking or purchase.
                   </p>
 
                   <p
                     className={`mt-3 text-xs ${
                       isDark
-                        ? "text-slate-600"
-                        : "text-slate-400"
+                        ? "text-[#77665b]"
+                        : "text-[#bca99b]"
                     }`}
                   >
                     Last updated: {LAST_UPDATED}

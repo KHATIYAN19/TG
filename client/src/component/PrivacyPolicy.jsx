@@ -38,10 +38,10 @@ const DATE_MODIFIED = "2026-10-03";
 ====================================================== */
 
 const SEO_TITLE =
-  "Privacy Policy for Ebooks & Digital Products | Target Trek";
+  "Privacy Policy for Ebooks, Mock Interviews & Digital Products | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Read Target Trek's Privacy Policy. Learn how we collect and use your name, email address, mobile number and purchase information, how payments are processed, and how we protect your privacy. We do not sell your personal data.";
+  "Read Target Trek's Privacy Policy for ebook purchases and mock interview bookings, including candidate details, payment processing, session scheduling and how personal information is protected.";
 
 const SEO_KEYWORDS = [
   "Target Trek privacy policy",
@@ -53,6 +53,7 @@ const SEO_KEYWORDS = [
   "payment gateway privacy",
   "ebook customer privacy",
   "Target Trek ebooks",
+  "Target Trek mock interview privacy",
 ].join(", ");
 
 /* ======================================================
@@ -118,6 +119,10 @@ const quickLinks = [
   {
     id: "payments",
     label: "Payment processing",
+  },
+  {
+    id: "mock-interviews",
+    label: "Mock interview bookings",
   },
   {
     id: "sharing",
@@ -187,6 +192,14 @@ const privacyFaqs = [
   },
 
   {
+    question: "What information is collected for mock interview bookings?",
+    answer: "When you request a mock interview, we may process your name, contact details, selected interview topics, experience, current or target role, company, optional resume link, notes, chosen slot and payment or booking references to arrange and support the session.",
+  },
+  {
+    question: "Will Target Trek use my mock interview information for session preparation?",
+    answer: "Details you provide may be used to plan the interview, communicate booking and joining information, conduct the session, handle cancellations or support requests and maintain relevant transaction records.",
+  },
+  {
     question:
       "Why does Target Trek need my email address?",
 
@@ -238,16 +251,16 @@ const Section = ({
       aria-labelledby={headingId}
       className={`scroll-mt-28 border-b pb-10 last:border-b-0 ${
         isDark
-          ? "border-slate-800"
-          : "border-slate-100"
+          ? "border-stone-800"
+          : "border-stone-100"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black sm:flex ${
             isDark
-              ? "bg-blue-500/10 text-blue-400"
-              : "bg-blue-50 text-blue-700"
+              ? "bg-orange-500/10 text-orange-400"
+              : "bg-orange-50 text-orange-700"
           }`}
         >
           {number}
@@ -259,10 +272,10 @@ const Section = ({
             className={`text-xl font-black tracking-tight sm:text-2xl ${
               isDark
                 ? "text-white"
-                : "text-slate-950"
+                : "text-stone-950"
             }`}
           >
-            <span className="mr-2 text-blue-600 sm:hidden">
+            <span className="mr-2 text-orange-600 sm:hidden">
               {number}.
             </span>
 
@@ -272,8 +285,8 @@ const Section = ({
           <div
             className={`mt-5 space-y-4 text-[15px] leading-7 sm:text-base sm:leading-8 ${
               isDark
-                ? "text-slate-400"
-                : "text-slate-600"
+                ? "text-stone-400"
+                : "text-stone-600"
             }`}
           >
             {children}
@@ -296,14 +309,14 @@ const BulletList = ({
       >
         <CheckCircle2
           size={17}
-          className="mt-1.5 shrink-0 text-blue-500"
+          className="mt-1.5 shrink-0 text-orange-500"
         />
 
         <span
           className={
             isDark
-              ? "text-slate-400"
-              : "text-slate-600"
+              ? "text-stone-400"
+              : "text-stone-600"
           }
         >
           {item}
@@ -527,8 +540,8 @@ const PrivacyPolicy = () => {
       exit="exit"
       className={`min-h-screen pt-16 transition-colors duration-300 md:pt-20 ${
         isDark
-          ? "bg-slate-950 text-slate-100"
-          : "bg-slate-50 text-slate-900"
+          ? "bg-stone-950 text-stone-100"
+          : "bg-stone-50 text-stone-900"
       }`}
     >
       {/* =================================================
@@ -574,8 +587,8 @@ const PrivacyPolicy = () => {
           name="theme-color"
           content={
             isDark
-              ? "#020617"
-              : "#ffffff"
+              ? "#15110e"
+              : "#fffaf5"
           }
         />
 
@@ -652,23 +665,23 @@ const PrivacyPolicy = () => {
         <section
           className={`relative overflow-hidden border-b ${
             isDark
-              ? "border-slate-800 bg-slate-950"
-              : "border-slate-200 bg-white"
+              ? "border-stone-800 bg-stone-950"
+              : "border-stone-200 bg-white"
           }`}
         >
           <div
             className={`pointer-events-none absolute -right-52 -top-52 h-[520px] w-[520px] rounded-full blur-3xl ${
               isDark
-                ? "bg-blue-500/10"
-                : "bg-blue-100/70"
+                ? "bg-orange-500/10"
+                : "bg-orange-100/70"
             }`}
           />
 
           <div
             className={`pointer-events-none absolute -left-36 bottom-0 h-[340px] w-[340px] rounded-full blur-3xl ${
               isDark
-                ? "bg-cyan-500/5"
-                : "bg-cyan-100/40"
+                ? "bg-amber-500/5"
+                : "bg-amber-100/40"
             }`}
           />
 
@@ -680,13 +693,13 @@ const PrivacyPolicy = () => {
               aria-label="Breadcrumb"
               className={`mb-8 flex items-center gap-2 text-xs font-semibold ${
                 isDark
-                  ? "text-slate-500"
-                  : "text-slate-400"
+                  ? "text-stone-500"
+                  : "text-stone-400"
               }`}
             >
               <a
                 href="/"
-                className="transition hover:text-blue-500"
+                className="transition hover:text-orange-500"
               >
                 Home
               </a>
@@ -698,8 +711,8 @@ const PrivacyPolicy = () => {
               <span
                 className={
                   isDark
-                    ? "text-slate-300"
-                    : "text-slate-600"
+                    ? "text-stone-300"
+                    : "text-stone-600"
                 }
               >
                 Privacy Policy
@@ -710,8 +723,8 @@ const PrivacyPolicy = () => {
               <div
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.16em] ${
                   isDark
-                    ? "border-blue-500/20 bg-blue-500/10 text-blue-300"
-                    : "border-blue-100 bg-blue-50 text-blue-700"
+                    ? "border-orange-500/20 bg-orange-500/10 text-orange-300"
+                    : "border-orange-100 bg-orange-50 text-orange-700"
                 }`}
               >
                 <ShieldCheck
@@ -725,7 +738,7 @@ const PrivacyPolicy = () => {
                 className={`mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl ${
                   isDark
                     ? "text-white"
-                    : "text-slate-950"
+                    : "text-stone-950"
                 }`}
               >
                 Privacy Policy
@@ -734,8 +747,8 @@ const PrivacyPolicy = () => {
               <p
                 className={`mt-6 max-w-3xl text-base leading-8 sm:text-lg ${
                   isDark
-                    ? "text-slate-400"
-                    : "text-slate-600"
+                    ? "text-stone-400"
+                    : "text-stone-600"
                 }`}
               >
                 This Privacy Policy
@@ -753,8 +766,8 @@ const PrivacyPolicy = () => {
               <p
                 className={`mt-4 max-w-3xl text-base leading-8 ${
                   isDark
-                    ? "text-slate-400"
-                    : "text-slate-600"
+                    ? "text-stone-400"
+                    : "text-stone-600"
                 }`}
               >
                 We primarily collect
@@ -774,22 +787,22 @@ const PrivacyPolicy = () => {
               <div
                 className={`mt-6 max-w-3xl rounded-2xl border p-5 ${
                   isDark
-                    ? "border-emerald-500/20 bg-emerald-500/10"
-                    : "border-emerald-200 bg-emerald-50"
+                    ? "border-orange-500/20 bg-orange-500/10"
+                    : "border-orange-200 bg-orange-50"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <ShieldCheck
                     size={23}
-                    className="mt-0.5 shrink-0 text-emerald-500"
+                    className="mt-0.5 shrink-0 text-orange-500"
                   />
 
                   <div>
                     <p
                       className={`font-black ${
                         isDark
-                          ? "text-emerald-200"
-                          : "text-emerald-900"
+                          ? "text-orange-200"
+                          : "text-orange-900"
                       }`}
                     >
                       We do not sell
@@ -800,8 +813,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-1 text-sm leading-6 ${
                         isDark
-                          ? "text-emerald-200/80"
-                          : "text-emerald-800"
+                          ? "text-orange-200/80"
+                          : "text-orange-800"
                       }`}
                     >
                       Target Trek
@@ -828,6 +841,7 @@ const PrivacyPolicy = () => {
                 {[
                   `Last updated: ${LAST_UPDATED}`,
                   "Ebook Purchases",
+                  "Mock Interviews",
                   "Payment Privacy",
                   "No Data Selling",
                 ].map((item) => (
@@ -835,8 +849,8 @@ const PrivacyPolicy = () => {
                     key={item}
                     className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
                       isDark
-                        ? "border-slate-800 bg-slate-900 text-slate-400"
-                        : "border-slate-200 bg-white text-slate-600 shadow-sm"
+                        ? "border-stone-800 bg-stone-900 text-stone-400"
+                        : "border-stone-200 bg-white text-stone-600 shadow-sm"
                     }`}
                   >
                     {item}
@@ -854,8 +868,8 @@ const PrivacyPolicy = () => {
         <section
           className={`border-b ${
             isDark
-              ? "border-slate-800 bg-slate-900"
-              : "border-slate-200 bg-white"
+              ? "border-stone-800 bg-stone-900"
+              : "border-stone-200 bg-white"
           }`}
         >
           <div className="mx-auto grid max-w-6xl gap-4 px-4 py-7 sm:grid-cols-3 sm:px-6 lg:px-8">
@@ -865,24 +879,24 @@ const PrivacyPolicy = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-slate-800 bg-slate-950"
-                  : "border-slate-200 bg-slate-50"
+                  ? "border-stone-800 bg-stone-950"
+                  : "border-stone-200 bg-stone-50"
               }`}
             >
               <UserRound
                 size={22}
-                className="text-blue-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 Basic Information
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-stone-200"
+                    : "text-stone-800"
                 }`}
               >
                 We primarily collect
@@ -899,24 +913,24 @@ const PrivacyPolicy = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-blue-500/20 bg-blue-500/5"
-                  : "border-blue-200 bg-blue-50"
+                  ? "border-orange-500/20 bg-orange-500/5"
+                  : "border-orange-200 bg-orange-50"
               }`}
             >
               <CreditCard
                 size={22}
-                className="text-blue-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 Payment Processing
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-stone-200"
+                    : "text-stone-800"
                 }`}
               >
                 Limited customer and
@@ -933,24 +947,24 @@ const PrivacyPolicy = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-emerald-500/20 bg-emerald-500/5"
-                  : "border-emerald-200 bg-emerald-50"
+                  ? "border-orange-500/20 bg-orange-500/5"
+                  : "border-orange-200 bg-orange-50"
               }`}
             >
               <LockKeyhole
                 size={22}
-                className="text-emerald-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-emerald-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 No Data Selling
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-stone-200"
+                    : "text-stone-800"
                 }`}
               >
                 We do not sell, rent
@@ -975,15 +989,15 @@ const PrivacyPolicy = () => {
             <div
               className={`sticky top-28 rounded-2xl border p-5 shadow-sm ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-stone-800 bg-stone-900"
+                  : "border-stone-200 bg-white"
               }`}
             >
               <p
                 className={`text-xs font-black uppercase tracking-[0.16em] ${
                   isDark
-                    ? "text-slate-500"
-                    : "text-slate-400"
+                    ? "text-stone-500"
+                    : "text-stone-400"
                 }`}
               >
                 Quick Navigation
@@ -1002,8 +1016,8 @@ const PrivacyPolicy = () => {
                       href={`#${item.id}`}
                       className={`block rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                         isDark
-                          ? "text-slate-400 hover:bg-blue-500/10 hover:text-blue-400"
-                          : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                          ? "text-stone-400 hover:bg-orange-500/10 hover:text-orange-400"
+                          : "text-stone-600 hover:bg-orange-50 hover:text-orange-700"
                       }`}
                     >
                       {
@@ -1017,11 +1031,11 @@ const PrivacyPolicy = () => {
               <div
                 className={`mt-6 border-t pt-5 ${
                   isDark
-                    ? "border-slate-800"
-                    : "border-slate-100"
+                    ? "border-stone-800"
+                    : "border-stone-100"
                 }`}
               >
-                <p className="text-xs leading-5 text-slate-500">
+                <p className="text-xs leading-5 text-stone-500">
                   Privacy question?
                 </p>
 
@@ -1029,7 +1043,7 @@ const PrivacyPolicy = () => {
                   href={
                     PRIVACY_MAILTO
                   }
-                  className="mt-2 block break-all text-xs font-bold text-blue-500 hover:text-blue-600"
+                  className="mt-2 block break-all text-xs font-bold text-orange-500 hover:text-orange-600"
                 >
                   {SUPPORT_EMAIL}
                 </a>
@@ -1048,16 +1062,16 @@ const PrivacyPolicy = () => {
             <section
               className={`rounded-3xl border p-6 sm:p-8 ${
                 isDark
-                  ? "border-blue-500/20 bg-blue-500/5"
-                  : "border-blue-200 bg-blue-50"
+                  ? "border-orange-500/20 bg-orange-500/5"
+                  : "border-orange-200 bg-orange-50"
               }`}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
                     isDark
-                      ? "bg-blue-500/10 text-blue-400"
-                      : "bg-white text-blue-600"
+                      ? "bg-orange-500/10 text-orange-400"
+                      : "bg-white text-orange-600"
                   }`}
                 >
                   <Eye
@@ -1070,7 +1084,7 @@ const PrivacyPolicy = () => {
                     className={`text-xl font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-950"
+                        : "text-stone-950"
                     }`}
                   >
                     Privacy in Simple
@@ -1080,8 +1094,8 @@ const PrivacyPolicy = () => {
                   <div
                     className={`mt-4 space-y-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-700"
+                        ? "text-stone-400"
+                        : "text-stone-700"
                     }`}
                   >
                     <p>
@@ -1122,8 +1136,8 @@ const PrivacyPolicy = () => {
                       <strong
                         className={
                           isDark
-                            ? "text-emerald-300"
-                            : "text-emerald-800"
+                            ? "text-orange-300"
+                            : "text-orange-800"
                         }
                       >
                         We do not sell
@@ -1143,8 +1157,8 @@ const PrivacyPolicy = () => {
             <div
               className={`mt-10 space-y-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-stone-800 bg-stone-900"
+                  : "border-stone-200 bg-white"
               }`}
             >
 
@@ -1162,7 +1176,7 @@ const PrivacyPolicy = () => {
                     className={
                       isDark
                         ? "text-white"
-                        : "text-slate-900"
+                        : "text-stone-900"
                     }
                   >
                     Target Trek
@@ -1216,20 +1230,20 @@ const PrivacyPolicy = () => {
                   <div
                     className={`rounded-2xl border p-5 ${
                       isDark
-                        ? "border-slate-800 bg-slate-950"
-                        : "border-slate-200 bg-slate-50"
+                        ? "border-stone-800 bg-stone-950"
+                        : "border-stone-200 bg-stone-50"
                     }`}
                   >
                     <UserRound
                       size={21}
-                      className="text-blue-500"
+                      className="text-orange-500"
                     />
 
                     <h3
                       className={`mt-4 font-black ${
                         isDark
                           ? "text-white"
-                          : "text-slate-900"
+                          : "text-stone-900"
                       }`}
                     >
                       Name
@@ -1238,8 +1252,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-2 text-sm leading-6 ${
                         isDark
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-stone-400"
+                          : "text-stone-600"
                       }`}
                     >
                       The name you
@@ -1257,20 +1271,20 @@ const PrivacyPolicy = () => {
                   <div
                     className={`rounded-2xl border p-5 ${
                       isDark
-                        ? "border-slate-800 bg-slate-950"
-                        : "border-slate-200 bg-slate-50"
+                        ? "border-stone-800 bg-stone-950"
+                        : "border-stone-200 bg-stone-50"
                     }`}
                   >
                     <Mail
                       size={21}
-                      className="text-blue-500"
+                      className="text-orange-500"
                     />
 
                     <h3
                       className={`mt-4 font-black ${
                         isDark
                           ? "text-white"
-                          : "text-slate-900"
+                          : "text-stone-900"
                       }`}
                     >
                       Email Address
@@ -1279,8 +1293,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-2 text-sm leading-6 ${
                         isDark
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-stone-400"
+                          : "text-stone-600"
                       }`}
                     >
                       Used to identify
@@ -1299,20 +1313,20 @@ const PrivacyPolicy = () => {
                   <div
                     className={`rounded-2xl border p-5 ${
                       isDark
-                        ? "border-slate-800 bg-slate-950"
-                        : "border-slate-200 bg-slate-50"
+                        ? "border-stone-800 bg-stone-950"
+                        : "border-stone-200 bg-stone-50"
                     }`}
                   >
                     <Phone
                       size={21}
-                      className="text-blue-500"
+                      className="text-orange-500"
                     />
 
                     <h3
                       className={`mt-4 font-black ${
                         isDark
                           ? "text-white"
-                          : "text-slate-900"
+                          : "text-stone-900"
                       }`}
                     >
                       Mobile Number
@@ -1321,8 +1335,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-2 text-sm leading-6 ${
                         isDark
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-stone-400"
+                          : "text-stone-600"
                       }`}
                     >
                       The mobile number
@@ -1337,8 +1351,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-2 text-sm leading-6 ${
                         isDark
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-stone-400"
+                          : "text-stone-600"
                       }`}
                     >
                       It may be used
@@ -1359,20 +1373,20 @@ const PrivacyPolicy = () => {
                   <div
                     className={`rounded-2xl border p-5 ${
                       isDark
-                        ? "border-slate-800 bg-slate-950"
-                        : "border-slate-200 bg-slate-50"
+                        ? "border-stone-800 bg-stone-950"
+                        : "border-stone-200 bg-stone-50"
                     }`}
                   >
                     <ReceiptText
                       size={21}
-                      className="text-blue-500"
+                      className="text-orange-500"
                     />
 
                     <h3
                       className={`mt-4 font-black ${
                         isDark
                           ? "text-white"
-                          : "text-slate-900"
+                          : "text-stone-900"
                       }`}
                     >
                       Purchase
@@ -1382,8 +1396,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-2 text-sm leading-6 ${
                         isDark
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-stone-400"
+                          : "text-stone-600"
                       }`}
                     >
                       The ebook
@@ -1403,20 +1417,20 @@ const PrivacyPolicy = () => {
                   <div
                     className={`rounded-2xl border p-5 sm:col-span-2 ${
                       isDark
-                        ? "border-slate-800 bg-slate-950"
-                        : "border-slate-200 bg-slate-50"
+                        ? "border-stone-800 bg-stone-950"
+                        : "border-stone-200 bg-stone-50"
                     }`}
                   >
                     <HelpCircle
                       size={21}
-                      className="text-blue-500"
+                      className="text-orange-500"
                     />
 
                     <h3
                       className={`mt-4 font-black ${
                         isDark
                           ? "text-white"
-                          : "text-slate-900"
+                          : "text-stone-900"
                       }`}
                     >
                       Support
@@ -1426,8 +1440,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`mt-2 text-sm leading-6 ${
                         isDark
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-stone-400"
+                          : "text-stone-600"
                       }`}
                     >
                       Messages,
@@ -1448,21 +1462,21 @@ const PrivacyPolicy = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-emerald-500/20 bg-emerald-500/10"
-                      : "border-emerald-200 bg-emerald-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <LockKeyhole
                       size={20}
-                      className="mt-1 shrink-0 text-emerald-500"
+                      className="mt-1 shrink-0 text-orange-500"
                     />
 
                     <p
                       className={`font-bold leading-7 ${
                         isDark
-                          ? "text-emerald-200"
-                          : "text-slate-900"
+                          ? "text-orange-200"
+                          : "text-stone-900"
                       }`}
                     >
                       Target Trek does
@@ -1574,22 +1588,22 @@ const PrivacyPolicy = () => {
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <CreditCard
                       size={25}
-                      className="mt-0.5 shrink-0 text-blue-500"
+                      className="mt-0.5 shrink-0 text-orange-500"
                     />
 
                     <div>
                       <h3
                         className={`font-black ${
                           isDark
-                            ? "text-blue-200"
-                            : "text-blue-900"
+                            ? "text-orange-200"
+                            : "text-orange-900"
                         }`}
                       >
                         Payments are
@@ -1602,8 +1616,8 @@ const PrivacyPolicy = () => {
                       <p
                         className={`mt-2 text-sm leading-7 ${
                           isDark
-                            ? "text-blue-200/80"
-                            : "text-blue-800"
+                            ? "text-orange-200/80"
+                            : "text-orange-800"
                         }`}
                       >
                         Limited customer,
@@ -1659,7 +1673,7 @@ const PrivacyPolicy = () => {
                     className={`font-bold leading-7 ${
                       isDark
                         ? "text-red-200"
-                        : "text-slate-900"
+                        : "text-stone-900"
                     }`}
                   >
                     We do not ask you
@@ -1708,15 +1722,15 @@ const PrivacyPolicy = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <h3
                     className={`font-black ${
                       isDark
-                        ? "text-blue-200"
-                        : "text-blue-900"
+                        ? "text-orange-200"
+                        : "text-orange-900"
                     }`}
                   >
                     Payment Providers
@@ -1725,8 +1739,8 @@ const PrivacyPolicy = () => {
                   <p
                     className={`mt-2 text-sm leading-7 ${
                       isDark
-                        ? "text-blue-200/80"
-                        : "text-blue-800"
+                        ? "text-orange-200/80"
+                        : "text-orange-800"
                     }`}
                   >
                     Limited information
@@ -1753,15 +1767,15 @@ const PrivacyPolicy = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-slate-800 bg-slate-950"
-                      : "border-slate-200 bg-slate-50"
+                      ? "border-stone-800 bg-stone-950"
+                      : "border-stone-200 bg-stone-50"
                   }`}
                 >
                   <h3
                     className={`font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-900"
+                        : "text-stone-900"
                     }`}
                   >
                     Website,
@@ -1773,8 +1787,8 @@ const PrivacyPolicy = () => {
                   <p
                     className={`mt-2 text-sm leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-600"
+                        ? "text-stone-400"
+                        : "text-stone-600"
                     }`}
                   >
                     Service providers
@@ -1818,20 +1832,20 @@ const PrivacyPolicy = () => {
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-emerald-500/20 bg-emerald-500/10"
-                      : "border-emerald-200 bg-emerald-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <ShieldCheck
                     size={28}
-                    className="text-emerald-500"
+                    className="text-orange-500"
                   />
 
                   <h3
                     className={`mt-4 text-xl font-black ${
                       isDark
-                        ? "text-emerald-200"
-                        : "text-emerald-900"
+                        ? "text-orange-200"
+                        : "text-orange-900"
                     }`}
                   >
                     Your personal
@@ -1842,8 +1856,8 @@ const PrivacyPolicy = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-emerald-200/80"
-                        : "text-emerald-800"
+                        ? "text-orange-200/80"
+                        : "text-orange-800"
                     }`}
                   >
                     Target Trek does
@@ -1981,7 +1995,7 @@ const PrivacyPolicy = () => {
                     className={`font-bold leading-7 ${
                       isDark
                         ? "text-amber-200"
-                        : "text-slate-900"
+                        : "text-stone-900"
                     }`}
                   >
                     No website,
@@ -2169,11 +2183,53 @@ const PrivacyPolicy = () => {
                 </p>
               </Section>
 
-              {/* 14 */}
+              {/* Mock Interview Privacy */}
+
+              <Section
+                id="mock-interviews"
+                number="14"
+                title="Mock Interview Bookings and Candidate Data"
+                isDark={isDark}
+              >
+                <p>
+                  When you book a live mock interview, we may collect your name,
+                  email address, phone number, selected topics, interview slot,
+                  experience, current or target role, company, and any optional
+                  resume URL or preparation notes you choose to provide.
+                </p>
+                <BulletList
+                  isDark={isDark}
+                  items={[
+                    "Use booking information to reserve a session and confirm payment.",
+                    "Use candidate-provided topics and experience to prepare a relevant interview.",
+                    "Communicate scheduling, joining details, cancellation requests, and session-related support.",
+                    "Maintain necessary booking, payment, and support records for operational and legal purposes.",
+                    "Share relevant session-preparation details with the interviewer or service providers only as needed to deliver the session.",
+                  ]}
+                />
+                <p>
+                  Please avoid including passwords, financial credentials, confidential
+                  employer information, or unnecessary sensitive personal information
+                  in your resume link or preparation notes.
+                </p>
+                <p>
+                  If you request cancellation, your booking details and email
+                  correspondence may be used to assess the request under the
+                  published Refund &amp; Cancellation Policy.
+                </p>
+                <a
+                  href="/mock-interviews"
+                  className="inline-flex items-center gap-2 font-bold text-orange-500 transition hover:text-orange-600"
+                >
+                  Explore Mock Interviews <span aria-hidden="true">→</span>
+                </a>
+              </Section>
+
+              {/* 15 */}
 
               <Section
                 id="refund-policy"
-                number="14"
+                number="15"
                 title="Refund and Payment Support"
                 isDark={isDark}
               >
@@ -2198,7 +2254,7 @@ const PrivacyPolicy = () => {
 
                 <a
                   href="/refund-policy"
-                  className="inline-flex font-bold text-blue-500 transition hover:text-blue-600"
+                  className="inline-flex font-bold text-orange-500 transition hover:text-orange-600"
                 >
                   Read our Refund &
                   Cancellation Policy
@@ -2206,11 +2262,11 @@ const PrivacyPolicy = () => {
                 </a>
               </Section>
 
-              {/* 15 */}
+              {/* 16 */}
 
               <Section
                 id="policy-changes"
-                number="15"
+                number="16"
                 title="Changes to This Privacy Policy"
                 isDark={isDark}
               >
@@ -2239,31 +2295,31 @@ const PrivacyPolicy = () => {
                 </p>
               </Section>
 
-              {/* 16 */}
+              {/* 17 */}
 
               <Section
                 id="privacy-contact"
-                number="16"
+                number="17"
                 title="Privacy & Ebook Support"
                 isDark={isDark}
               >
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <Mail
                     size={27}
-                    className="text-blue-500"
+                    className="text-orange-500"
                   />
 
                   <h3
                     className={`mt-4 text-xl font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-950"
+                        : "text-stone-950"
                     }`}
                   >
                     Target Trek
@@ -2273,8 +2329,8 @@ const PrivacyPolicy = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-600"
+                        ? "text-stone-400"
+                        : "text-stone-600"
                     }`}
                   >
                     Contact us if you
@@ -2292,8 +2348,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-stone-300"
+                          : "text-stone-700"
                       }`}
                     >
                       Privacy &
@@ -2304,7 +2360,7 @@ const PrivacyPolicy = () => {
                       href={
                         PRIVACY_MAILTO
                       }
-                      className="mt-1 block break-all font-black text-blue-500 underline decoration-blue-300 underline-offset-4"
+                      className="mt-1 block break-all font-black text-orange-500 underline decoration-orange-300 underline-offset-4"
                     >
                       {
                         SUPPORT_EMAIL
@@ -2316,8 +2372,8 @@ const PrivacyPolicy = () => {
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-stone-300"
+                          : "text-stone-700"
                       }`}
                     >
                       General
@@ -2326,7 +2382,7 @@ const PrivacyPolicy = () => {
 
                     <a
                       href={`mailto:${GENERAL_EMAIL}`}
-                      className="mt-1 block break-all font-bold text-blue-500"
+                      className="mt-1 block break-all font-bold text-orange-500"
                     >
                       {
                         GENERAL_EMAIL
@@ -2338,7 +2394,7 @@ const PrivacyPolicy = () => {
                     href={
                       PRIVACY_MAILTO
                     }
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
                   >
                     <Mail
                       size={17}
@@ -2351,15 +2407,15 @@ const PrivacyPolicy = () => {
                   <div
                     className={`mt-5 rounded-xl border p-4 ${
                       isDark
-                        ? "border-slate-700 bg-slate-900"
-                        : "border-blue-100 bg-white"
+                        ? "border-stone-700 bg-stone-900"
+                        : "border-orange-100 bg-white"
                     }`}
                   >
                     <p
                       className={`text-sm font-bold leading-6 ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-stone-300"
+                          : "text-stone-700"
                       }`}
                     >
                       Never email us
@@ -2382,11 +2438,11 @@ const PrivacyPolicy = () => {
             <section
               className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-stone-800 bg-stone-900"
+                  : "border-stone-200 bg-white"
               }`}
             >
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-orange-600">
                 Privacy FAQs
               </span>
 
@@ -2394,7 +2450,7 @@ const PrivacyPolicy = () => {
                 className={`mt-3 text-2xl font-black tracking-tight sm:text-3xl ${
                   isDark
                     ? "text-white"
-                    : "text-slate-950"
+                    : "text-stone-950"
                 }`}
               >
                 Common Privacy
@@ -2404,8 +2460,8 @@ const PrivacyPolicy = () => {
               <p
                 className={`mt-3 max-w-2xl leading-7 ${
                   isDark
-                    ? "text-slate-400"
-                    : "text-slate-600"
+                    ? "text-stone-400"
+                    : "text-stone-600"
                 }`}
               >
                 Quick answers about
@@ -2426,16 +2482,16 @@ const PrivacyPolicy = () => {
                       }
                       className={`rounded-2xl border p-5 ${
                         isDark
-                          ? "border-slate-800 bg-slate-950"
-                          : "border-slate-200 bg-slate-50"
+                          ? "border-stone-800 bg-stone-950"
+                          : "border-stone-200 bg-stone-50"
                       }`}
                     >
                       <div className="flex items-start gap-4">
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
                             isDark
-                              ? "bg-blue-500/10 text-blue-400"
-                              : "bg-blue-50 text-blue-700"
+                              ? "bg-orange-500/10 text-orange-400"
+                              : "bg-orange-50 text-orange-700"
                           }`}
                         >
                           {index + 1}
@@ -2446,7 +2502,7 @@ const PrivacyPolicy = () => {
                             className={`font-black ${
                               isDark
                                 ? "text-white"
-                                : "text-slate-900"
+                                : "text-stone-900"
                             }`}
                           >
                             {
@@ -2457,8 +2513,8 @@ const PrivacyPolicy = () => {
                           <p
                             className={`mt-2 text-sm leading-7 ${
                               isDark
-                                ? "text-slate-400"
-                                : "text-slate-600"
+                                ? "text-stone-400"
+                                : "text-stone-600"
                             }`}
                           >
                             {
@@ -2480,15 +2536,15 @@ const PrivacyPolicy = () => {
             <footer
               className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-8 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-stone-800 bg-stone-900"
+                  : "border-stone-200 bg-white"
               }`}
             >
               <p
                 className={`text-sm leading-7 ${
                   isDark
-                    ? "text-slate-500"
-                    : "text-slate-500"
+                    ? "text-stone-500"
+                    : "text-stone-500"
                 }`}
               >
                 This Privacy Policy
@@ -2497,14 +2553,14 @@ const PrivacyPolicy = () => {
                 Trek's{" "}
                 <a
                   href="/terms-of-service"
-                  className="font-semibold text-blue-500 transition hover:text-blue-600"
+                  className="font-semibold text-orange-500 transition hover:text-orange-600"
                 >
                   Terms & Conditions
                 </a>
                 ,{" "}
                 <a
                   href="/refund-policy"
-                  className="font-semibold text-blue-500 transition hover:text-blue-600"
+                  className="font-semibold text-orange-500 transition hover:text-orange-600"
                 >
                   Refund &
                   Cancellation
@@ -2518,8 +2574,8 @@ const PrivacyPolicy = () => {
               <div
                 className={`mt-6 flex flex-col gap-3 border-t pt-6 text-sm sm:flex-row sm:items-center sm:justify-between ${
                   isDark
-                    ? "border-slate-800 text-slate-600"
-                    : "border-slate-100 text-slate-400"
+                    ? "border-stone-800 text-stone-600"
+                    : "border-stone-100 text-stone-400"
                 }`}
               >
                 <p>
@@ -2528,8 +2584,8 @@ const PrivacyPolicy = () => {
                   <strong
                     className={
                       isDark
-                        ? "font-semibold text-slate-400"
-                        : "font-semibold text-slate-600"
+                        ? "font-semibold text-stone-400"
+                        : "font-semibold text-stone-600"
                     }
                   >
                     Target Trek
@@ -2542,7 +2598,7 @@ const PrivacyPolicy = () => {
                   href={
                     PRIVACY_MAILTO
                   }
-                  className="font-semibold text-blue-500 transition hover:text-blue-600"
+                  className="font-semibold text-orange-500 transition hover:text-orange-600"
                 >
                   Privacy & Support
                   Contact

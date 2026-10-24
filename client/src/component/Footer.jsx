@@ -1,172 +1,188 @@
+
 import React, {
   useEffect,
   useState,
 } from "react";
 
 import {
+  ArrowRight,
   ArrowUpRight,
   BookOpen,
+  CalendarDays,
+  Code2,
   Headphones,
   Mail,
   Rocket,
   ShieldCheck,
+  Video,
 } from "lucide-react";
-
-import {
-  FaFacebook,
-  FaInstagram,
-  FaLinkedin,
-} from "react-icons/fa";
 
 import { Link } from "react-router-dom";
 
-/*
-|--------------------------------------------------------------------------
-| CONSTANTS
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   CONFIGURATION
+========================================================= */
 
 const THEME_KEY = "theme";
 
 const THEME_EVENT =
   "targettrek-theme-change";
 
-/*
-|--------------------------------------------------------------------------
-| READ THEME
-|--------------------------------------------------------------------------
-*/
+const GENERAL_EMAIL =
+  "enquiry@targettrek.in";
 
-const readTheme = () => {
-  if (
-    typeof window ===
-    "undefined"
-  ) {
+const SUPPORT_EMAIL =
+  "supporttargettrek@gmail.com";
+
+const MOCK_INTERVIEW_ROUTE =
+  "/mock-interviews";
+
+/* =========================================================
+   NAVIGATION DATA
+========================================================= */
+
+const QUICK_LINKS = [
+  { name: "Home", href: "/" },
+  { name: "Learn", href: "/learn" },
+  { name: "Books", href: "/books" },
+  {
+    name: "Mock Interviews",
+    href: "/mock-interviews",
+  },
+  {
+    name: "Interview Experiences",
+    href: "/interviews",
+  },
+  {
+    name: "Resources",
+    href: "/resources",
+  },
+  { name: "Blogs", href: "/blogs" },
+  {
+    name: "Services",
+    href: "/services",
+  },
+  {
+    name: "About Us",
+    href: "/about",
+  },
+  {
+    name: "Portfolio",
+    href: "/portfolio",
+  },
+  {
+    name: "Contact",
+    href: "/contact",
+  },
+];
+
+const BOOK_LINKS = [
+  {
+    name: "All Books",
+    href: "/books",
+  },
+  {
+    name: "Mastering System Design — HLD",
+    href: "/book/system-design/hld",
+  },
+  {
+    name: "Mastering System Design — LLD (Java)",
+    href: "/book/system-design/lld",
+  },
+];
+
+const LEGAL_LINKS = [
+  {
+    name: "Privacy Policy",
+    href: "/privacy-policy",
+  },
+  {
+    name: "Terms of Service",
+    href: "/terms-of-service",
+  },
+  {
+    name: "Refund Policy",
+    href: "/refund-policy",
+  },
+];
+
+/* =========================================================
+   THEME HELPERS
+========================================================= */
+
+function readTheme() {
+  if (typeof window === "undefined") {
     return "light";
   }
 
-  const saved =
-    window.localStorage.getItem(
-      THEME_KEY
-    );
+  try {
+    const stored =
+      window.localStorage.getItem(
+        THEME_KEY
+      );
 
-  return saved === "dark"
-    ? "dark"
-    : "light";
-};
+    if (
+      stored === "dark" ||
+      stored === "light"
+    ) {
+      return stored;
+    }
 
-/*
-|--------------------------------------------------------------------------
-| FOOTER
-|--------------------------------------------------------------------------
-*/
+    return document.documentElement.classList
+      .contains("dark")
+      ? "dark"
+      : "light";
+  } catch {
+    return "light";
+  }
+}
 
-const Footer = () => {
-  const currentYear =
-    new Date().getFullYear();
-
-  /*
-  |--------------------------------------------------------------------------
-  | THEME
-  |--------------------------------------------------------------------------
-  |
-  | Footer DOES NOT change theme.
-  |
-  | Navbar is the controller.
-  |
-  | Footer only:
-  |
-  | 1. reads localStorage
-  | 2. listens for navbar theme event
-  | 3. updates automatically
-  |
-  */
-
-  const [
-    theme,
-    setTheme,
-  ] = useState(
-    readTheme
-  );
-
-  const isDark =
-    theme === "dark";
-
-  /*
-  |--------------------------------------------------------------------------
-  | LISTEN FOR GLOBAL THEME CHANGES
-  |--------------------------------------------------------------------------
-  */
+function useFooterTheme() {
+  const [theme, setTheme] =
+    useState(readTheme);
 
   useEffect(() => {
-    /*
-    |--------------------------------------------------------------------------
-    | Sync when component mounts
-    |--------------------------------------------------------------------------
-    */
+    const syncTheme = () => {
+      setTheme(readTheme());
+    };
 
-    setTheme(
-      readTheme()
-    );
+    const handleThemeEvent = (event) => {
+      const next =
+        event?.detail?.theme;
 
-    /*
-    |--------------------------------------------------------------------------
-    | SAME TAB
-    |--------------------------------------------------------------------------
-    |
-    | Navbar dispatches:
-    |
-    | targettrek-theme-change
-    |
-    */
+      if (
+        next === "dark" ||
+        next === "light"
+      ) {
+        setTheme(next);
+      } else {
+        syncTheme();
+      }
+    };
 
-    const handleThemeChange =
-      (event) => {
-        const newTheme =
-          event?.detail
-            ?.theme;
+    const handleStorageChange = (event) => {
+      if (
+        event.key === THEME_KEY ||
+        event.key === null
+      ) {
+        syncTheme();
+      }
+    };
 
-        if (
-          newTheme === "dark" ||
-          newTheme === "light"
-        ) {
-          setTheme(
-            newTheme
-          );
-        }
-      };
-
-    /*
-    |--------------------------------------------------------------------------
-    | DIFFERENT TAB / WINDOW
-    |--------------------------------------------------------------------------
-    */
-
-    const handleStorageChange =
-      (event) => {
-        if (
-          event.key !==
-          THEME_KEY
-        ) {
-          return;
-        }
-
-        const newTheme =
-          event.newValue;
-
-        if (
-          newTheme === "dark" ||
-          newTheme === "light"
-        ) {
-          setTheme(
-            newTheme
-          );
-        }
-      };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        syncTheme();
+      }
+    };
 
     window.addEventListener(
       THEME_EVENT,
-      handleThemeChange
+      handleThemeEvent
+    );
+
+    window.addEventListener(
+      "themechange",
+      handleThemeEvent
     );
 
     window.addEventListener(
@@ -174,924 +190,602 @@ const Footer = () => {
       handleStorageChange
     );
 
+    window.addEventListener(
+      "focus",
+      syncTheme
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    const observer =
+      new MutationObserver(syncTheme);
+
+    observer.observe(
+      document.documentElement,
+      {
+        attributes: true,
+        attributeFilter: [
+          "class",
+          "data-theme",
+        ],
+      }
+    );
+
+    syncTheme();
+
     return () => {
       window.removeEventListener(
         THEME_EVENT,
-        handleThemeChange
+        handleThemeEvent
+      );
+
+      window.removeEventListener(
+        "themechange",
+        handleThemeEvent
       );
 
       window.removeEventListener(
         "storage",
         handleStorageChange
       );
+
+      window.removeEventListener(
+        "focus",
+        syncTheme
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+
+      observer.disconnect();
     };
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | EXPLORE LINKS
-  |--------------------------------------------------------------------------
-  */
+  return theme;
+}
 
-  const quickLinks = [
-    {
-      name:
-        "Home",
-      href:
-        "/",
-    },
+/* =========================================================
+   CONTACT CARD
+========================================================= */
 
-    {
-      name:
-        "Learn",
-      href:
-        "/learn",
-    },
+function ContactCard({
+  href,
+  label,
+  email,
+  Icon,
+  isDark,
+}) {
+  return (
+    <a
+      href={href}
+      className={`
+        group flex items-center
+        gap-3 rounded-2xl
+        border p-4
+        transition-all duration-300
+        hover:-translate-y-0.5
+        ${
+          isDark
+            ? "border-[#49372c] bg-[#241b15] hover:border-orange-800 hover:bg-[#302219]"
+            : "border-[#f0ded0] bg-[#fffaf5] hover:border-orange-300 hover:bg-white hover:shadow-[0_12px_30px_rgba(194,65,12,.07)]"
+        }
+      `}
+    >
+      <div
+        className={`
+          flex h-11 w-11
+          shrink-0 items-center
+          justify-center
+          rounded-xl
+          ${
+            isDark
+              ? "bg-orange-500/15 text-orange-400"
+              : "bg-orange-100 text-orange-600"
+          }
+        `}
+      >
+        <Icon size={20} />
+      </div>
 
-    {
-      name:
-        "Books",
-      href:
-        "/books",
-    },
+      <div className="min-w-0 flex-1">
+        <p
+          className={`
+            text-[11px] font-bold
+            ${
+              isDark
+                ? "text-[#ad9889]"
+                : "text-[#927c6e]"
+            }
+          `}
+        >
+          {label}
+        </p>
 
-    {
-      name:
-        "Interviews",
-      href:
-        "/interviews",
-    },
+        <p
+          className={`
+            mt-1 break-all
+            text-sm font-semibold
+            ${
+              isDark
+                ? "text-[#fff8f0]"
+                : "text-[#34271f]"
+            }
+          `}
+        >
+          {email}
+        </p>
+      </div>
 
-    {
-      name:
-        "Resources",
-      href:
-        "/resources",
-    },
+      <ArrowUpRight
+        size={17}
+        className={`
+          hidden shrink-0
+          transition-transform
+          group-hover:-translate-y-0.5
+          group-hover:translate-x-0.5
+          sm:block
+          ${
+            isDark
+              ? "text-orange-400"
+              : "text-orange-600"
+          }
+        `}
+      />
+    </a>
+  );
+}
 
-    {
-      name:
-        "Blogs",
-      href:
-        "/blogs",
-    },
+/* =========================================================
+   FOOTER COMPONENT
+========================================================= */
 
-    {
-      name:
-        "Services",
-      href:
-        "/services",
-    },
+export default function Footer() {
+  const theme = useFooterTheme();
 
-    {
-      name:
-        "About Us",
-      href:
-        "/about",
-    },
+  const isDark =
+    theme === "dark";
 
-    {
-      name:
-        "Portfolio",
-      href:
-        "/portfolio",
-    },
+  const currentYear =
+    new Date().getFullYear();
 
-    {
-      name:
-        "Contact",
-      href:
-        "/contact",
-    },
-  ];
+  /* ======================================================
+     LOCAL DESIGN VARIABLES
+  ====================================================== */
 
-  /*
-  |--------------------------------------------------------------------------
-  | BOOK LINKS
-  |--------------------------------------------------------------------------
-  */
+  const footerBg = isDark
+    ? "bg-[#15110e]"
+    : "bg-[#fff8f2]";
 
-  const bookLinks = [
-    {
-      name:
-        "All Books",
+  const primaryBg = isDark
+    ? "bg-[#1c1612]"
+    : "bg-[#fffdfb]";
 
-      href:
-        "/books",
-    },
+  const cardBg = isDark
+    ? "bg-[#241b15]"
+    : "bg-[#fff4e9]";
 
-    {
-      name:
-        "Mastering System Design — HLD",
+  const border = isDark
+    ? "border-[#403128]"
+    : "border-[#f0ded0]";
 
-      href:
-        "/book/system-design/hld",
-    },
+  const primaryText = isDark
+    ? "text-[#fff8f0]"
+    : "text-[#2b211b]";
 
-    {
-      name:
-        "Mastering System Design — LLD (Java)",
+  const secondaryText = isDark
+    ? "text-[#bba89b]"
+    : "text-[#79695e]";
 
-      href:
-        "/book/system-design/lld",
-    },
-  ];
+  const mutedText = isDark
+    ? "text-[#998578]"
+    : "text-[#9b8779]";
 
-  /*
-  |--------------------------------------------------------------------------
-  | LEGAL LINKS
-  |--------------------------------------------------------------------------
-  */
+  const accentText = isDark
+    ? "text-orange-400"
+    : "text-orange-600";
 
-  const legalLinks = [
-    {
-      name:
-        "Privacy Policy",
+  const linkStyle = `
+    group inline-flex
+    items-center gap-2
+    text-sm leading-6
+    transition-all duration-200
+    hover:translate-x-1
+    ${
+      isDark
+        ? "text-[#bba89b] hover:text-orange-400"
+        : "text-[#79695e] hover:text-orange-600"
+    }
+  `;
 
-      href:
-        "/privacy-policy",
-    },
-
-    {
-      name:
-        "Terms of Service",
-
-      href:
-        "/terms-of-service",
-    },
-
-    {
-      name:
-        "Refund Policy",
-
-      href:
-        "/refund-policy",
-    },
-  ];
-
-  /*
-  |--------------------------------------------------------------------------
-  | SOCIAL LINKS
-  |--------------------------------------------------------------------------
-  */
-
-  // const socialLinks = [
-  //   {
-  //     label:
-  //       "Instagram",
-
-  //     href:
-  //       "https://www.instagram.com/target_trek",
-
-  //     icon:
-  //       FaInstagram,
-  //   },
-
-  //   {
-  //     label:
-  //       "Facebook",
-
-  //     href:
-  //       "https://www.facebook.com/targettreks/",
-
-  //     icon:
-  //       FaFacebook,
-  //   },
-
-  //   {
-  //     label:
-  //       "LinkedIn",
-
-  //     href:
-  //       "https://www.linkedin.com/company/target-trek/",
-
-  //     icon:
-  //       FaLinkedin,
-  //   },
-  // ];
-
-  // /*
-  // |--------------------------------------------------------------------------
-  // | THEME CLASSES
-  // |--------------------------------------------------------------------------
-  // */
-
-  const footerBg =
-    isDark
-      ? "bg-[#080D14]"
-      : "bg-[#F5F9FC]";
-
-  const primaryBg =
-    isDark
-      ? "bg-[#0C131D]"
-      : "bg-white";
-
-  const cardBg =
-    isDark
-      ? "bg-[#101924]"
-      : "bg-[#F5F9FC]";
-
-  const borderColor =
-    isDark
-      ? "border-[#1E2C3D]"
-      : "border-[#E1E9F1]";
-
-  const primaryText =
-    isDark
-      ? "text-[#F4F7FA]"
-      : "text-[#0B1524]";
-
-  const secondaryText =
-    isDark
-      ? "text-[#9AA9BA]"
-      : "text-[#5B6B82]";
-
-  const mutedText =
-    isDark
-      ? "text-[#708196]"
-      : "text-[#7C8CA3]";
-
-  const blueText =
-    isDark
-      ? "text-[#66B8EA]"
-      : "text-[#1D5C86]";
-
-  /*
-  |--------------------------------------------------------------------------
-  | RENDER
-  |--------------------------------------------------------------------------
-  */
+  const headingStyle = `
+    mb-5 text-[11px]
+    font-extrabold uppercase
+    tracking-[0.18em]
+    ${primaryText}
+  `;
 
   return (
     <footer
+      data-theme={theme}
       className={`
-        tt-sans
-        relative
-        overflow-hidden
+        relative overflow-hidden
+        font-sans
         transition-colors
         duration-300
         ${footerBg}
         ${primaryText}
       `}
     >
-      {/* ============================================================ */}
-      {/* SUBTLE BACKGROUND */}
-      {/* ============================================================ */}
+      {/* ===============================================
+          DECORATIVE BACKGROUND
+      =============================================== */}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* LEFT GLOW */}
-
         <div
           className={`
-            absolute
-            left-[-130px]
-            top-[-120px]
-            h-[330px]
-            w-[330px]
-            rounded-full
-            blur-[120px]
+            absolute -left-28 -top-32
+            h-[350px] w-[350px]
+            rounded-full blur-[110px]
             ${
               isDark
-                ? "bg-blue-900/10"
-                : "bg-[#E4F1FB]/70"
+                ? "bg-orange-700/10"
+                : "bg-orange-200/50"
             }
           `}
         />
 
-        {/* RIGHT GLOW */}
-
         <div
           className={`
-            absolute
-            right-[-180px]
-            top-[25%]
-            h-[420px]
-            w-[420px]
-            rounded-full
-            blur-[130px]
+            absolute -right-32 top-[20%]
+            h-[420px] w-[420px]
+            rounded-full blur-[125px]
             ${
               isDark
-                ? "bg-cyan-900/10"
-                : "bg-[#EAF4FC]/70"
+                ? "bg-amber-700/10"
+                : "bg-amber-100/70"
             }
           `}
         />
-
-        {/* EDITORIAL GRID */}
 
         <div
           className="absolute inset-0 opacity-40"
           style={{
             backgroundImage:
               isDark
-                ? "repeating-linear-gradient(90deg, rgba(110,180,220,0.025) 0px, rgba(110,180,220,0.025) 1px, transparent 1px, transparent 42px)"
-                : "repeating-linear-gradient(90deg, rgba(29,92,134,0.035) 0px, rgba(29,92,134,0.035) 1px, transparent 1px, transparent 42px)",
+                ? "repeating-linear-gradient(90deg,rgba(251,146,60,.025) 0px,rgba(251,146,60,.025) 1px,transparent 1px,transparent 44px)"
+                : "repeating-linear-gradient(90deg,rgba(234,88,12,.035) 0px,rgba(234,88,12,.035) 1px,transparent 1px,transparent 44px)",
           }}
         />
       </div>
 
-      {/* ============================================================ */}
-      {/* MAIN FOOTER */}
-      {/* ============================================================ */}
+      {/* ===============================================
+          MOCK INTERVIEW CTA STRIP
+      =============================================== */}
 
       <div
         className={`
-          relative
+          relative border-t
+          ${border}
+        `}
+      >
+        <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+          <div
+            className={`
+              relative overflow-hidden
+              rounded-[24px] border
+              p-6 sm:p-8
+              ${
+                isDark
+                  ? "border-orange-900/60 bg-gradient-to-r from-[#382114] to-[#241a14]"
+                  : "border-orange-200 bg-gradient-to-r from-[#ffedd5] to-[#fff6ed]"
+              }
+            `}
+          >
+            <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-orange-400/15 blur-3xl" />
+
+            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-600 text-white">
+                  <Video size={23} />
+                </div>
+
+                <div>
+                  <p className={`text-[11px] font-extrabold uppercase tracking-[0.15em] ${accentText}`}>
+                    Target Trek Mock Interviews
+                  </p>
+
+                  <h2 className="mt-2 text-xl font-black tracking-tight sm:text-2xl">
+                    Turn preparation into interview confidence.
+                  </h2>
+
+                  <p className={`mt-2 max-w-2xl text-sm leading-7 ${secondaryText}`}>
+                    Practice DSA, LLD, HLD, GenAI
+                    and project discussions in a
+                    live, personalized technical
+                    mock interview.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to={MOCK_INTERVIEW_ROUTE}
+                className="
+                  inline-flex min-h-[48px]
+                  shrink-0 items-center
+                  justify-center gap-2
+                  rounded-xl bg-orange-600
+                  px-6 py-3 text-sm
+                  font-extrabold text-white
+                  transition hover:bg-orange-700
+                "
+              >
+                <CalendarDays size={18} />
+                Book Mock Interview
+                <ArrowRight size={17} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===============================================
+          MAIN FOOTER CONTENT
+      =============================================== */}
+
+      <div
+        className={`
+          relative mt-10
           border-t
-          transition-colors
-          duration-300
-          ${borderColor}
+          ${border}
           ${primaryBg}
         `}
       >
-        <div
-          className="
-            mx-auto
-            max-w-7xl
-            px-4
-            py-12
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-9">
 
-            sm:px-6
-            sm:py-14
-
-            lg:px-8
-            lg:py-16
-          "
-        >
-          <div
-            className="
-              grid
-              gap-10
-
-              sm:grid-cols-2
-
-              lg:grid-cols-12
-              lg:gap-10
-            "
-          >
-            {/* ====================================================== */}
-            {/* BRAND */}
-            {/* ====================================================== */}
+            {/* ======================================
+                BRAND
+            ====================================== */}
 
             <div className="sm:col-span-2 lg:col-span-4">
-              {/* LOGO / BRAND */}
-
               <Link
                 to="/"
                 className="group inline-flex items-center gap-3"
               >
                 <div
-                  className={`
-                    relative
-                    flex
-                    h-12
-                    w-12
-                    items-center
-                    justify-center
-                    overflow-hidden
+                  className="
+                    flex h-12 w-12
+                    items-center justify-center
                     rounded-2xl
+                    bg-orange-600
                     text-white
-                    shadow-[0_8px_18px_rgba(11,21,36,0.14)]
-                    transition-all
-                    duration-300
-                    group-hover:-translate-y-0.5
-                    ${
-                      isDark
-                        ? "bg-[#172333] group-hover:bg-[#1D5C86]"
-                        : "bg-[#0B1524] group-hover:bg-[#1D5C86]"
-                    }
-                  `}
+                    shadow-lg shadow-orange-600/15
+                    transition-transform
+                    group-hover:-translate-y-1
+                  "
                 >
                   <Rocket
-                    size={22}
-                    strokeWidth={
-                      2.1
-                    }
+                    size={23}
+                    strokeWidth={2.1}
                   />
                 </div>
 
-                <div className="text-2xl font-extrabold tracking-tight">
-                  <span
-                    className={
-                      primaryText
-                    }
-                  >
+                <div className="text-2xl font-black tracking-tight">
+                  <span className={primaryText}>
                     Target
                   </span>
 
-                  <span
-                    className={
-                      blueText
-                    }
-                  >
+                  <span className={accentText}>
                     Trek
                   </span>
                 </div>
               </Link>
 
-              {/* DESCRIPTION */}
-
               <p
                 className={`
-                  mt-6
-                  max-w-sm
-                  text-sm
-                  leading-7
+                  mt-6 max-w-sm
+                  text-sm leading-8
                   ${secondaryText}
                 `}
               >
-                Practical software
-                engineering
-                resources,
-                interview
-                experiences,
-                technical books and
-                learning content for
-                developers.
+                Practical software engineering
+                books, interview experiences,
+                system design resources and
+                technical learning content
+                built for developers preparing
+                for their next career opportunity.
               </p>
 
-              {/* SMALL DIVIDER */}
+              <div className="mt-7 h-1 w-16 rounded-full bg-orange-600" />
 
-              <div className="mt-7 h-px w-16 bg-[#2E86C1]" />
-
-              {/* SOCIAL LINKS */}
-
-              {/* <div className="mt-6 flex items-center gap-2.5">
-                {socialLinks.map(
-                  (social) => {
-                    const Icon =
-                      social.icon;
-
-                    return (
-                      <a
-                        key={
-                          social.label
-                        }
-                        href={
-                          social.href
-                        }
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={
-                          social.label
-                        }
-                        className={`
-                          flex
-                          h-10
-                          w-10
-                          items-center
-                          justify-center
-                          rounded-xl
-                          border
-                          transition-all
-                          duration-300
-                          hover:-translate-y-1
-                          ${borderColor}
-                          ${
-                            isDark
-                              ? "bg-[#101924] text-[#8798AA] hover:border-blue-900 hover:bg-blue-950/20 hover:text-blue-400"
-                              : "bg-[#F5F9FC] text-[#5B6B82] hover:border-[#D9E7F2] hover:bg-[#EAF4FC] hover:text-[#1D5C86]"
-                          }
-                        `}
-                      >
-                        <Icon
-                          size={
-                            17
-                          }
-                        />
-                      </a>
-                    );
-                  }
-                )}
-              </div> */}
+              <div className="mt-6 flex flex-wrap gap-2">
+                {[
+                  "Backend Engineering",
+                  "System Design",
+                  "GenAI",
+                ].map((topic) => (
+                  <span
+                    key={topic}
+                    className={`
+                      rounded-full border
+                      px-3 py-1.5
+                      text-[11px] font-semibold
+                      ${border}
+                      ${cardBg}
+                      ${secondaryText}
+                    `}
+                  >
+                    {topic}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* ====================================================== */}
-            {/* EXPLORE */}
-            {/* ====================================================== */}
+            {/* ======================================
+                EXPLORE
+            ====================================== */}
 
             <div className="lg:col-span-2">
-              <h3
-                className={`
-                  mb-5
-                  text-[11px]
-                  font-bold
-                  uppercase
-                  tracking-[0.18em]
-                  ${primaryText}
-                `}
-              >
+              <h3 className={headingStyle}>
                 Explore
               </h3>
 
               <ul className="space-y-3">
-                {quickLinks.map(
-                  (link) => (
-                    <li
-                      key={
-                        link.name
-                      }
+                {QUICK_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      to={link.href}
+                      className={linkStyle}
                     >
-                      <Link
-                        to={
-                          link.href
-                        }
-                        className={`
-                          group
-                          inline-flex
-                          items-center
-                          gap-2
-                          text-sm
-                          transition-all
-                          duration-200
-                          hover:translate-x-1
-                          ${
-                            isDark
-                              ? "text-[#9AA9BA] hover:text-[#66B8EA]"
-                              : "text-[#5B6B82] hover:text-[#1D5C86]"
-                          }
-                        `}
-                      >
-                        <span
-                          className="
-                            h-1
-                            w-1
-                            rounded-full
-                            bg-[#2E86C1]
-                            opacity-0
-                            transition
-                            group-hover:opacity-100
-                          "
-                        />
+                      <span className="h-1 w-1 rounded-full bg-orange-500 opacity-0 transition group-hover:opacity-100" />
 
-                        {link.name}
-                      </Link>
-                    </li>
-                  )
-                )}
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
-            {/* ====================================================== */}
-            {/* BOOKS */}
-            {/* ====================================================== */}
+            {/* ======================================
+                BOOKS
+            ====================================== */}
 
             <div className="lg:col-span-3">
               <div className="mb-5 flex items-center gap-2">
                 <BookOpen
-                  size={15}
-                  className={
-                    blueText
-                  }
+                  size={17}
+                  className={accentText}
                 />
 
-                <h3
-                  className={`
-                    text-[11px]
-                    font-bold
-                    uppercase
-                    tracking-[0.18em]
-                    ${primaryText}
-                  `}
-                >
+                <h3 className={headingStyle.replace("mb-5", "mb-0")}>
                   Books
                 </h3>
               </div>
 
               <ul className="space-y-3.5">
-                {bookLinks.map(
-                  (book) => (
-                    <li
-                      key={
-                        book.name
-                      }
-                    >
-                      <Link
-                        to={
-                          book.href
+                {BOOK_LINKS.map((book) => (
+                  <li key={book.href}>
+                    <Link
+                      to={book.href}
+                      className={`
+                        group flex items-start
+                        gap-2.5 text-sm
+                        leading-6 transition
+                        ${
+                          isDark
+                            ? "text-[#bba89b] hover:text-orange-400"
+                            : "text-[#79695e] hover:text-orange-600"
                         }
-                        className={`
-                          group
-                          flex
-                          items-start
-                          gap-2.5
-                          text-sm
-                          leading-6
-                          transition
-                          duration-200
-                          ${
-                            isDark
-                              ? "text-[#9AA9BA] hover:text-[#66B8EA]"
-                              : "text-[#5B6B82] hover:text-[#1D5C86]"
-                          }
-                        `}
-                      >
-                        <ArrowUpRight
-                          size={14}
-                          className="
-                            mt-1
-                            shrink-0
-                            opacity-50
-                            transition
-                            group-hover:-translate-y-0.5
-                            group-hover:translate-x-0.5
-                            group-hover:opacity-100
-                          "
-                        />
+                      `}
+                    >
+                      <ArrowUpRight
+                        size={15}
+                        className="mt-1 shrink-0 opacity-60 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                      />
 
-                        <span>
-                          {book.name}
-                        </span>
-                      </Link>
-                    </li>
-                  )
-                )}
+                      <span>
+                        {book.name}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
               </ul>
 
               <Link
                 to="/books"
                 className={`
-                  mt-6
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  border
-                  px-4
-                  py-2.5
-                  text-xs
-                  font-bold
+                  mt-6 inline-flex
+                  items-center gap-2
+                  rounded-xl border
+                  px-4 py-2.5
+                  text-xs font-extrabold
                   transition
-                  ${borderColor}
+                  ${border}
                   ${
                     isDark
-                      ? "bg-[#101924] text-blue-300 hover:border-blue-800 hover:bg-blue-950/20"
-                      : "bg-[#F5F9FC] text-[#1D5C86] hover:border-[#BFDDF2] hover:bg-[#EAF4FC]"
+                      ? "bg-[#2c211a] text-orange-300 hover:border-orange-800"
+                      : "bg-orange-50 text-orange-700 hover:border-orange-300"
                   }
                 `}
               >
                 View all books
-
-                <ArrowUpRight
-                  size={14}
-                />
+                <ArrowUpRight size={15} />
               </Link>
             </div>
 
-            {/* ====================================================== */}
-            {/* CONTACT / SUPPORT */}
-            {/* ====================================================== */}
+            {/* ======================================
+                CONTACT AND SUPPORT
+            ====================================== */}
 
             <div className="sm:col-span-2 lg:col-span-3">
-              <h3
-                className={`
-                  mb-5
-                  text-[11px]
-                  font-bold
-                  uppercase
-                  tracking-[0.18em]
-                  ${primaryText}
-                `}
-              >
+              <h3 className={headingStyle}>
                 Get in Touch
               </h3>
 
               <div className="space-y-3">
-                {/* ================================================== */}
-                {/* GENERAL ENQUIRY */}
-                {/* ================================================== */}
+                <ContactCard
+                  href={`mailto:${GENERAL_EMAIL}`}
+                  label="General Enquiry"
+                  email={GENERAL_EMAIL}
+                  Icon={Mail}
+                  isDark={isDark}
+                />
 
-                <a
-                  href="mailto:enquiry@targettrek.in"
-                  className={`
-                    group
-                    flex
-                    items-center
-                    gap-3
-                    rounded-2xl
-                    border
-                    p-4
-                    transition-all
-                    duration-300
-                    hover:-translate-y-0.5
-                    ${borderColor}
-                    ${cardBg}
-                    ${
-                      isDark
-                        ? "hover:border-blue-900 hover:bg-[#131E2A]"
-                        : "hover:border-[#BFDDF2] hover:bg-white hover:shadow-[0_10px_25px_rgba(15,35,58,0.06)]"
-                    }
-                  `}
-                >
-                  <div
-                    className={`
-                      flex
-                      h-10
-                      w-10
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      ${
-                        isDark
-                          ? "bg-blue-950/30 text-blue-300"
-                          : "bg-[#E4F1FB] text-[#1D5C86]"
-                      }
-                    `}
-                  >
-                    <Mail
-                      size={18}
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`
-                        text-[11px]
-                        font-semibold
-                        ${mutedText}
-                      `}
-                    >
-                      General Enquiry
-                    </p>
-
-                    <p
-                      className={`
-                        mt-1
-                        break-all
-                        text-sm
-                        font-semibold
-                        ${primaryText}
-                      `}
-                    >
-                      enquiry@targettrek.in
-                    </p>
-                  </div>
-
-                  <ArrowUpRight
-                    size={16}
-                    className={`
-                      ml-auto
-                      hidden
-                      shrink-0
-                      transition
-                      group-hover:-translate-y-0.5
-                      group-hover:translate-x-0.5
-                      sm:block
-                      ${mutedText}
-                    `}
-                  />
-                </a>
-
-                {/* ================================================== */}
-                {/* BOOKS / SUPPORT */}
-                {/* ================================================== */}
-
-                <a
-                  href="mailto:supporttargettrek@gmail.com"
-                  className={`
-                    group
-                    flex
-                    items-center
-                    gap-3
-                    rounded-2xl
-                    border
-                    p-4
-                    transition-all
-                    duration-300
-                    hover:-translate-y-0.5
-                    ${borderColor}
-                    ${cardBg}
-                    ${
-                      isDark
-                        ? "hover:border-blue-900 hover:bg-[#131E2A]"
-                        : "hover:border-[#BFDDF2] hover:bg-white hover:shadow-[0_10px_25px_rgba(15,35,58,0.06)]"
-                    }
-                  `}
-                >
-                  <div
-                    className={`
-                      flex
-                      h-10
-                      w-10
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      ${
-                        isDark
-                          ? "bg-emerald-950/30 text-emerald-300"
-                          : "bg-emerald-50 text-emerald-700"
-                      }
-                    `}
-                  >
-                    <Headphones
-                      size={18}
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`
-                        text-[11px]
-                        font-semibold
-                        ${mutedText}
-                      `}
-                    >
-                      Books & Support
-                    </p>
-
-                    <p
-                      className={`
-                        mt-1
-                        break-all
-                        text-sm
-                        font-semibold
-                        ${primaryText}
-                      `}
-                    >
-                      supporttargettrek@gmail.com
-                    </p>
-                  </div>
-
-                  <ArrowUpRight
-                    size={16}
-                    className={`
-                      ml-auto
-                      hidden
-                      shrink-0
-                      transition
-                      group-hover:-translate-y-0.5
-                      group-hover:translate-x-0.5
-                      sm:block
-                      ${mutedText}
-                    `}
-                  />
-                </a>
+                <ContactCard
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  label="Books & Support"
+                  email={SUPPORT_EMAIL}
+                  Icon={Headphones}
+                  isDark={isDark}
+                />
               </div>
-
-              {/* ==================================================== */}
-              {/* SUPPORT NOTE */}
-              {/* ==================================================== */}
 
               <div
                 className={`
-                  mt-4
-                  rounded-2xl
-                  border
-                  p-4
-                  ${borderColor}
-                  ${primaryBg}
+                  mt-4 rounded-2xl
+                  border p-4
+                  ${border}
+                  ${cardBg}
                 `}
               >
                 <div className="flex items-start gap-3">
                   <div
                     className={`
-                      flex
-                      h-9
-                      w-9
-                      shrink-0
-                      items-center
+                      flex h-10 w-10
+                      shrink-0 items-center
                       justify-center
                       rounded-xl
                       ${
                         isDark
-                          ? "bg-blue-950/30 text-blue-300"
-                          : "bg-[#EAF4FC] text-[#1D5C86]"
+                          ? "bg-orange-500/15 text-orange-400"
+                          : "bg-orange-100 text-orange-600"
                       }
                     `}
                   >
-                    <ShieldCheck
-                      size={17}
-                    />
+                    <ShieldCheck size={19} />
                   </div>
 
                   <div>
-                    <p
-                      className={`
-                        text-sm
-                        font-semibold
-                        ${primaryText}
-                      `}
-                    >
-                      Need help with a
-                      book?
-                    </p>
+                    <h4 className="text-sm font-bold">
+                      Need help with a book?
+                    </h4>
 
                     <p
                       className={`
-                        mt-1
-                        text-xs
-                        leading-5
-                        ${mutedText}
+                        mt-2 text-xs
+                        leading-6
+                        ${secondaryText}
                       `}
                     >
-                      For payment,
-                      download, access
-                      or book-related
-                      issues, contact
-                      our support
-                      email.
+                      For payment, ebook
+                      downloads, access or
+                      purchase-related questions,
+                      contact our support team.
                     </p>
                   </div>
                 </div>
@@ -1101,107 +795,57 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* BOTTOM BAR */}
-      {/* ============================================================ */}
+      {/* ===============================================
+          COPYRIGHT AND LEGAL LINKS
+      =============================================== */}
 
       <div
         className={`
-          relative
-          border-t
-          transition-colors
-          duration-300
-          ${borderColor}
+          relative border-t
+          ${border}
           ${footerBg}
         `}
       >
-        <div
-          className="
-            mx-auto
-            flex
-            max-w-7xl
-            flex-col
-            gap-5
-            px-4
-            py-6
-
-            sm:px-6
-
-            md:flex-row
-            md:items-center
-            md:justify-between
-
-            lg:px-8
-          "
-        >
-          {/* COPYRIGHT */}
-
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div
             className={`
-              flex
-              flex-wrap
-              items-center
-              gap-2
+              flex flex-wrap
+              items-center gap-2
               text-xs
               ${mutedText}
             `}
           >
             <span>
-              © {currentYear} Target
-              Trek.
+              © {currentYear} Target Trek.
             </span>
 
-            <span
-              className={`
-                hidden
-                h-1
-                w-1
-                rounded-full
-                sm:block
-                ${
-                  isDark
-                    ? "bg-slate-700"
-                    : "bg-[#CBD5E1]"
-                }
-              `}
-            />
+            <span className="hidden h-1 w-1 rounded-full bg-orange-400/40 sm:block" />
 
             <span>
               All rights reserved.
             </span>
           </div>
 
-          {/* LEGAL */}
-
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            {legalLinks.map(
-              (link) => (
-                <Link
-                  key={
-                    link.name
+            {LEGAL_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`
+                  text-xs transition
+                  ${
+                    isDark
+                      ? "text-[#998578] hover:text-orange-400"
+                      : "text-[#9b8779] hover:text-orange-600"
                   }
-                  to={
-                    link.href
-                  }
-                  className={`
-                    text-xs
-                    transition
-                    ${
-                      isDark
-                        ? "text-[#708196] hover:text-[#66B8EA]"
-                        : "text-[#7C8CA3] hover:text-[#1D5C86]"
-                    }
-                  `}
-                >
-                  {link.name}
-                </Link>
-              )
-            )}
+                `}
+              >
+                {link.name}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

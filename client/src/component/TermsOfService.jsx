@@ -43,10 +43,10 @@ const DATE_MODIFIED = "2026-10-03";
 ====================================================== */
 
 const SEO_TITLE =
-  "Terms & Conditions for Ebooks & Digital Products | Target Trek";
+  "Terms & Conditions for Ebooks & Mock Interviews | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Read Target Trek's Terms & Conditions for ebooks and digital products, including digital delivery, payments, duplicate-payment refunds, personal-use licences, privacy, intellectual property and customer support.";
+  "Read Target Trek terms for ebooks and mock interviews, including payments, booking responsibilities, 24-hour interview cancellation notice, ₹199 cancellation fee, and ebook refunds.";
 
 const SEO_KEYWORDS = [
   "Target Trek terms",
@@ -60,6 +60,9 @@ const SEO_KEYWORDS = [
   "digital product licence",
   "Target Trek privacy",
   "Target Trek payment terms",
+  "mock interview cancellation",
+  "mock interview cancellation fee 199",
+  "mock interview 24 hour cancellation",
 ].join(", ");
 
 /* ======================================================
@@ -71,7 +74,12 @@ const getStoredTheme = () => {
     return "light";
   }
 
-  const storedTheme = localStorage.getItem(THEME_KEY);
+  let storedTheme;
+  try {
+    storedTheme = window.localStorage.getItem(THEME_KEY);
+  } catch {
+    return "light";
+  }
 
   if (storedTheme === "dark" || storedTheme === "light") {
     return storedTheme;
@@ -114,6 +122,8 @@ const pageVariants = {
 ====================================================== */
 
 const quickLinks = [
+  { id: "mock-interviews", label: "Mock interview bookings" },
+  { id: "mock-cancellation", label: "Mock interview cancellation" },
   {
     id: "digital-products",
     label: "Digital products",
@@ -161,6 +171,14 @@ const quickLinks = [
 ====================================================== */
 
 const termsFaqs = [
+  {
+    question: "What are the cancellation terms for a mock interview?",
+    answer: "For a candidate-requested cancellation, email supporttargettrek@gmail.com at least 24 hours before the scheduled interview start time. If approved, a cancellation fee of ₹199 is deducted from the amount paid and the balance is refunded. Requests received less than 24 hours before the session and no-shows are not eligible for refunds under the standard policy, subject to applicable law.",
+  },
+  {
+    question: "Can I cancel my mock interview through chat or by not attending?",
+    answer: "No. To request cancellation, email supporttargettrek@gmail.com with your booking reference and registered email at least 24 hours before the scheduled interview. Simply not attending is treated as a no-show and is not a cancellation request.",
+  },
   {
     question:
       "Are Target Trek ebook purchases refundable?",
@@ -247,16 +265,16 @@ const Section = ({
       aria-labelledby={headingId}
       className={`scroll-mt-28 border-b pb-10 last:border-b-0 ${
         isDark
-          ? "border-slate-800"
-          : "border-slate-100"
+          ? "border-[#403027]"
+          : "border-[#f7e9df]"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black sm:flex ${
             isDark
-              ? "bg-blue-500/10 text-blue-400"
-              : "bg-blue-50 text-blue-700"
+              ? "bg-orange-500/10 text-orange-400"
+              : "bg-orange-50 text-orange-700"
           }`}
         >
           {number}
@@ -268,10 +286,10 @@ const Section = ({
             className={`text-xl font-black tracking-tight sm:text-2xl ${
               isDark
                 ? "text-white"
-                : "text-slate-950"
+                : "text-[#29201a]"
             }`}
           >
-            <span className="mr-2 text-blue-600 sm:hidden">
+            <span className="mr-2 text-orange-600 sm:hidden">
               {number}.
             </span>
 
@@ -281,8 +299,8 @@ const Section = ({
           <div
             className={`mt-5 space-y-4 text-[15px] leading-7 sm:text-base sm:leading-8 ${
               isDark
-                ? "text-slate-400"
-                : "text-slate-600"
+                ? "text-[#bca99b]"
+                : "text-[#76665a]"
             }`}
           >
             {children}
@@ -305,14 +323,14 @@ const BulletList = ({
       >
         <CheckCircle2
           size={17}
-          className="mt-1.5 shrink-0 text-blue-500"
+          className="mt-1.5 shrink-0 text-orange-500"
         />
 
         <span
           className={
             isDark
-              ? "text-slate-400"
-              : "text-slate-600"
+              ? "text-[#bca99b]"
+              : "text-[#76665a]"
           }
         >
           {item}
@@ -529,8 +547,8 @@ const TermsOfService = () => {
       exit="exit"
       className={`min-h-screen pt-16 transition-colors duration-300 md:pt-20 ${
         isDark
-          ? "bg-slate-950 text-slate-100"
-          : "bg-slate-50 text-slate-900"
+          ? "bg-[#110e0c] text-[#fff8f0]"
+          : "bg-[#fffaf5] text-[#34271f]"
       }`}
     >
       {/* =================================================
@@ -576,8 +594,8 @@ const TermsOfService = () => {
           name="theme-color"
           content={
             isDark
-              ? "#020617"
-              : "#ffffff"
+              ? "#110e0c"
+              : "#fffaf5"
           }
         />
 
@@ -654,23 +672,23 @@ const TermsOfService = () => {
         <section
           className={`relative overflow-hidden border-b ${
             isDark
-              ? "border-slate-800 bg-slate-950"
-              : "border-slate-200 bg-white"
+              ? "border-[#403027] bg-[#110e0c]"
+              : "border-[#f1dfd1] bg-white"
           }`}
         >
           <div
             className={`pointer-events-none absolute -right-48 -top-48 h-[500px] w-[500px] rounded-full blur-3xl ${
               isDark
-                ? "bg-blue-500/10"
-                : "bg-blue-100/70"
+                ? "bg-orange-500/10"
+                : "bg-orange-100/70"
             }`}
           />
 
           <div
             className={`pointer-events-none absolute -left-32 bottom-0 h-[330px] w-[330px] rounded-full blur-3xl ${
               isDark
-                ? "bg-indigo-500/5"
-                : "bg-indigo-100/50"
+                ? "bg-orange-500/5"
+                : "bg-orange-100/50"
             }`}
           />
 
@@ -680,13 +698,13 @@ const TermsOfService = () => {
               aria-label="Breadcrumb"
               className={`mb-8 flex items-center gap-2 text-xs font-semibold ${
                 isDark
-                  ? "text-slate-500"
-                  : "text-slate-400"
+                  ? "text-[#927d6c]"
+                  : "text-[#bca99b]"
               }`}
             >
               <a
                 href="/"
-                className="transition hover:text-blue-500"
+                className="transition hover:text-orange-500"
               >
                 Home
               </a>
@@ -696,8 +714,8 @@ const TermsOfService = () => {
               <span
                 className={
                   isDark
-                    ? "text-slate-300"
-                    : "text-slate-600"
+                    ? "text-[#ddcfc3]"
+                    : "text-[#76665a]"
                 }
               >
                 Terms & Conditions
@@ -708,8 +726,8 @@ const TermsOfService = () => {
               <div
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.16em] ${
                   isDark
-                    ? "border-blue-500/20 bg-blue-500/10 text-blue-300"
-                    : "border-blue-100 bg-blue-50 text-blue-700"
+                    ? "border-orange-500/20 bg-orange-500/10 text-orange-300"
+                    : "border-orange-100 bg-orange-50 text-orange-700"
                 }`}
               >
                 <Scale size={15} />
@@ -721,7 +739,7 @@ const TermsOfService = () => {
                 className={`mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl ${
                   isDark
                     ? "text-white"
-                    : "text-slate-950"
+                    : "text-[#29201a]"
                 }`}
               >
                 Terms & Conditions
@@ -730,8 +748,8 @@ const TermsOfService = () => {
               <p
                 className={`mt-6 max-w-3xl text-base leading-8 sm:text-lg ${
                   isDark
-                    ? "text-slate-400"
-                    : "text-slate-600"
+                    ? "text-[#bca99b]"
+                    : "text-[#76665a]"
                 }`}
               >
                 These Terms & Conditions
@@ -746,15 +764,15 @@ const TermsOfService = () => {
               <div
                 className={`mt-6 max-w-3xl rounded-2xl border p-5 ${
                   isDark
-                    ? "border-blue-500/20 bg-blue-500/10"
-                    : "border-blue-200 bg-blue-50"
+                    ? "border-orange-500/20 bg-orange-500/10"
+                    : "border-orange-200 bg-orange-50"
                 }`}
               >
                 <p
                   className={`font-bold leading-7 ${
                     isDark
-                      ? "text-blue-200"
-                      : "text-blue-900"
+                      ? "text-orange-200"
+                      : "text-orange-900"
                   }`}
                 >
                   Target Trek primarily sells
@@ -770,6 +788,7 @@ const TermsOfService = () => {
                 {[
                   `Last updated: ${LAST_UPDATED}`,
                   "Digital Products",
+                  "Mock Interviews",
                   "Personal Use",
                   "Indian Law",
                 ].map((item) => (
@@ -777,8 +796,8 @@ const TermsOfService = () => {
                     key={item}
                     className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
                       isDark
-                        ? "border-slate-800 bg-slate-900 text-slate-400"
-                        : "border-slate-200 bg-white text-slate-600 shadow-sm"
+                        ? "border-[#403027] bg-[#211a15] text-[#bca99b]"
+                        : "border-[#f1dfd1] bg-white text-[#76665a] shadow-sm"
                     }`}
                   >
                     {item}
@@ -796,8 +815,8 @@ const TermsOfService = () => {
         <section
           className={`border-b ${
             isDark
-              ? "border-slate-800 bg-slate-900"
-              : "border-slate-200 bg-white"
+              ? "border-[#403027] bg-[#211a15]"
+              : "border-[#f1dfd1] bg-white"
           }`}
         >
           <div className="mx-auto grid max-w-6xl gap-4 px-4 py-7 sm:grid-cols-3 sm:px-6 lg:px-8">
@@ -805,24 +824,24 @@ const TermsOfService = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-slate-800 bg-slate-950"
-                  : "border-slate-200 bg-slate-50"
+                  ? "border-[#403027] bg-[#110e0c]"
+                  : "border-[#f1dfd1] bg-[#fffaf5]"
               }`}
             >
               <BookOpen
                 size={22}
-                className="text-blue-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 Digital Products
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-[#f1dfd1]"
+                    : "text-[#49392e]"
                 }`}
               >
                 Target Trek products are
@@ -850,8 +869,8 @@ const TermsOfService = () => {
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-[#f1dfd1]"
+                    : "text-[#49392e]"
                 }`}
               >
                 Standard refunds apply only
@@ -863,24 +882,24 @@ const TermsOfService = () => {
             <div
               className={`rounded-2xl border p-5 ${
                 isDark
-                  ? "border-violet-500/20 bg-violet-500/5"
-                  : "border-violet-200 bg-violet-50"
+                  ? "border-orange-500/20 bg-orange-500/5"
+                  : "border-orange-200 bg-orange-50"
               }`}
             >
               <ShieldCheck
                 size={22}
-                className="text-violet-500"
+                className="text-orange-500"
               />
 
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-violet-600">
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
                 Personal Use
               </p>
 
               <p
                 className={`mt-2 text-sm font-bold leading-6 ${
                   isDark
-                    ? "text-slate-200"
-                    : "text-slate-800"
+                    ? "text-[#f1dfd1]"
+                    : "text-[#49392e]"
                 }`}
               >
                 Paid ebooks are generally
@@ -903,15 +922,15 @@ const TermsOfService = () => {
             <div
               className={`sticky top-28 rounded-2xl border p-5 shadow-sm ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
               <p
                 className={`text-xs font-black uppercase tracking-[0.16em] ${
                   isDark
-                    ? "text-slate-500"
-                    : "text-slate-400"
+                    ? "text-[#927d6c]"
+                    : "text-[#bca99b]"
                 }`}
               >
                 Quick Navigation
@@ -927,8 +946,8 @@ const TermsOfService = () => {
                     href={`#${item.id}`}
                     className={`block rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                       isDark
-                        ? "text-slate-400 hover:bg-blue-500/10 hover:text-blue-400"
-                        : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                        ? "text-[#bca99b] hover:bg-orange-500/10 hover:text-orange-400"
+                        : "text-[#76665a] hover:bg-orange-50 hover:text-orange-700"
                     }`}
                   >
                     {item.label}
@@ -939,17 +958,17 @@ const TermsOfService = () => {
               <div
                 className={`mt-6 border-t pt-5 ${
                   isDark
-                    ? "border-slate-800"
-                    : "border-slate-100"
+                    ? "border-[#403027]"
+                    : "border-[#f7e9df]"
                 }`}
               >
-                <p className="text-xs leading-5 text-slate-500">
+                <p className="text-xs leading-5 text-[#927d6c]">
                   Need purchase support?
                 </p>
 
                 <a
                   href={SUPPORT_MAILTO}
-                  className="mt-2 block break-all text-xs font-bold text-blue-500 hover:text-blue-600"
+                  className="mt-2 block break-all text-xs font-bold text-orange-500 hover:text-orange-600"
                 >
                   {SUPPORT_EMAIL}
                 </a>
@@ -987,7 +1006,7 @@ const TermsOfService = () => {
                     className={`text-xl font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-950"
+                        : "text-[#29201a]"
                     }`}
                   >
                     Important Digital Product Notice
@@ -996,8 +1015,8 @@ const TermsOfService = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-700"
+                        ? "text-[#bca99b]"
+                        : "text-[#594a40]"
                     }`}
                   >
                     Target Trek primarily sells
@@ -1010,8 +1029,8 @@ const TermsOfService = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-700"
+                        ? "text-[#bca99b]"
+                        : "text-[#594a40]"
                     }`}
                   >
                     Digital products cannot
@@ -1047,8 +1066,8 @@ const TermsOfService = () => {
             <div
               className={`mt-10 space-y-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
 
@@ -1081,14 +1100,14 @@ const TermsOfService = () => {
                   together with our{" "}
                   <a
                     href="/privacy-policy"
-                    className="font-bold text-blue-500 hover:text-blue-600"
+                    className="font-bold text-orange-500 hover:text-orange-600"
                   >
                     Privacy Policy
                   </a>
                   ,{" "}
                   <a
                     href="/refund-policy"
-                    className="font-bold text-blue-500 hover:text-blue-600"
+                    className="font-bold text-orange-500 hover:text-orange-600"
                   >
                     Refund & Cancellation Policy
                   </a>{" "}
@@ -1201,21 +1220,21 @@ const TermsOfService = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <CreditCard
                       size={21}
-                      className="mt-1 shrink-0 text-blue-500"
+                      className="mt-1 shrink-0 text-orange-500"
                     />
 
                     <p
                       className={`font-bold leading-7 ${
                         isDark
-                          ? "text-blue-200"
-                          : "text-slate-900"
+                          ? "text-orange-200"
+                          : "text-[#34271f]"
                       }`}
                     >
                       Payments may be processed
@@ -1258,7 +1277,7 @@ const TermsOfService = () => {
                     className={`font-bold ${
                       isDark
                         ? "text-red-200"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }`}
                   >
                     Never send Target Trek your
@@ -1288,7 +1307,7 @@ const TermsOfService = () => {
                     className={`font-bold leading-7 ${
                       isDark
                         ? "text-red-200"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }`}
                   >
                     Ebook and digital-product
@@ -1326,21 +1345,21 @@ const TermsOfService = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-violet-500/20 bg-violet-500/10"
-                      : "border-violet-200 bg-violet-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <Clock3
                       size={21}
-                      className="mt-1 shrink-0 text-violet-500"
+                      className="mt-1 shrink-0 text-orange-500"
                     />
 
                     <p
                       className={`font-bold leading-7 ${
                         isDark
-                          ? "text-violet-200"
-                          : "text-violet-900"
+                          ? "text-orange-200"
+                          : "text-orange-900"
                       }`}
                     >
                       Target Trek will initiate a
@@ -1373,9 +1392,100 @@ const TermsOfService = () => {
 
                 <a
                   href="/refund-policy"
-                  className="inline-flex font-bold text-blue-500 transition hover:text-blue-600"
+                  className="inline-flex font-bold text-orange-500 transition hover:text-orange-600"
                 >
                   Read Refund & Cancellation Policy →
+                </a>
+              </Section>
+
+              {/* MOCK INTERVIEWS — separate from ebook refund terms */}
+
+              <Section
+                id="mock-interviews"
+                number="5A"
+                title="Mock Interview Bookings and Candidate Responsibilities"
+                isDark={isDark}
+              >
+                <p>
+                  Target Trek also offers bookable live technical mock interview
+                  sessions. Unlike ebooks, these services are provided at a
+                  selected date and time. The candidate must review the session
+                  date, time zone, duration, selected topics and total price
+                  before completing payment.
+                </p>
+                <BulletList
+                  isDark={isDark}
+                  items={[
+                    "Provide accurate name, email address and contact details when booking.",
+                    "Select the correct available interview slot and review its scheduled start time.",
+                    "Attend on time and ensure a suitable device, internet connection and quiet environment.",
+                    "Treat interview meeting links and other session access information as private.",
+                    "Use the support email if you need assistance with a booking or session access.",
+                  ]}
+                />
+                <p>
+                  A mock interview is a practice and learning service. Booking
+                  one does not guarantee a job offer, interview selection,
+                  salary increase or any particular career outcome.
+                </p>
+              </Section>
+
+              <Section
+                id="mock-cancellation"
+                number="5B"
+                title="Mock Interview Cancellation and Refund Terms"
+                isDark={isDark}
+              >
+                <div className={`rounded-2xl border p-5 ${
+                  isDark
+                    ? "border-orange-800/60 bg-orange-950/20"
+                    : "border-orange-200 bg-orange-50"
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <Clock3 size={22} className="mt-1 shrink-0 text-orange-500" />
+                    <div>
+                      <h3 className="font-black text-orange-600">
+                        24-hour notice • ₹199 cancellation fee
+                      </h3>
+                      <p className="mt-2 text-sm leading-7">
+                        If a candidate wishes to cancel a paid mock interview,
+                        the candidate must email <strong>supporttargettrek@gmail.com</strong>
+                        at least <strong>24 hours before</strong> the scheduled
+                        session start time. For an eligible, approved
+                        candidate-requested cancellation, <strong>₹199 is
+                        deducted as a cancellation fee</strong> from the amount
+                        paid; the remaining amount is refundable.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p>
+                  Cancellation requests received fewer than 24 hours before
+                  the scheduled interview start time are not eligible for a
+                  refund under the standard cancellation policy. A candidate
+                  who does not attend the interview without an eligible
+                  cancellation request is treated as a no-show and is not
+                  eligible for a refund under the standard policy.
+                </p>
+                <p>
+                  The notice period is measured from the scheduled interview
+                  start time. Include your full name, booking ID, registered
+                  email address, session date and time, and the reason for
+                  cancellation. Merely leaving a message elsewhere or not
+                  attending does not constitute a cancellation by email.
+                </p>
+                <p>
+                  The cancellation deduction cannot exceed the amount paid.
+                  Cancellations or failures attributable to Target Trek,
+                  duplicate charges and statutory entitlements are reviewed
+                  separately; this standard candidate-cancellation rule does
+                  not override remedies required by applicable law.
+                </p>
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Mock Interview Cancellation Request - Target Trek")}&body=${encodeURIComponent("Hello Target Trek Support,\n\nI request cancellation of my mock interview.\n\nFull Name:\nRegistered Email:\nBooking ID:\nScheduled Interview Date and Time (IST):\nAmount Paid:\nReason:\n\nThank you.")}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-700"
+                >
+                  <Mail size={17} /> Email Cancellation Request
                 </a>
               </Section>
 
@@ -1466,20 +1576,20 @@ const TermsOfService = () => {
                         key={item.title}
                         className={`rounded-2xl border p-5 ${
                           isDark
-                            ? "border-slate-800 bg-slate-950"
-                            : "border-slate-200 bg-slate-50"
+                            ? "border-[#403027] bg-[#110e0c]"
+                            : "border-[#f1dfd1] bg-[#fffaf5]"
                         }`}
                       >
                         <Icon
                           size={21}
-                          className="text-blue-500"
+                          className="text-orange-500"
                         />
 
                         <h3
                           className={`mt-4 font-black ${
                             isDark
                               ? "text-white"
-                              : "text-slate-900"
+                              : "text-[#34271f]"
                           }`}
                         >
                           {item.title}
@@ -1488,8 +1598,8 @@ const TermsOfService = () => {
                         <p
                           className={`mt-2 text-sm leading-6 ${
                             isDark
-                              ? "text-slate-400"
-                              : "text-slate-600"
+                              ? "text-[#bca99b]"
+                              : "text-[#76665a]"
                           }`}
                         >
                           {item.text}
@@ -1539,7 +1649,7 @@ const TermsOfService = () => {
                     className={
                       isDark
                         ? "text-white"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }
                   >
                     limited, non-exclusive,
@@ -1716,21 +1826,21 @@ const TermsOfService = () => {
                 <div
                   className={`rounded-2xl border p-5 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <FileCode2
                       size={21}
-                      className="mt-1 shrink-0 text-blue-500"
+                      className="mt-1 shrink-0 text-orange-500"
                     />
 
                     <p
                       className={`font-bold leading-7 ${
                         isDark
-                          ? "text-blue-200"
-                          : "text-blue-900"
+                          ? "text-orange-200"
+                          : "text-orange-900"
                       }`}
                     >
                       Code snippets, architecture
@@ -1904,7 +2014,7 @@ const TermsOfService = () => {
                     className={
                       isDark
                         ? "text-white"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }
                   >
                     "as available"
@@ -2009,7 +2119,7 @@ const TermsOfService = () => {
                   with our{" "}
                   <a
                     href="/privacy-policy"
-                    className="font-bold text-blue-500 hover:text-blue-600"
+                    className="font-bold text-orange-500 hover:text-orange-600"
                   >
                     Privacy Policy
                   </a>
@@ -2130,7 +2240,7 @@ const TermsOfService = () => {
                     className={
                       isDark
                         ? "text-white"
-                        : "text-slate-900"
+                        : "text-[#34271f]"
                     }
                   >
                     India
@@ -2178,20 +2288,20 @@ const TermsOfService = () => {
                 <div
                   className={`rounded-2xl border p-6 ${
                     isDark
-                      ? "border-blue-500/20 bg-blue-500/10"
-                      : "border-blue-200 bg-blue-50"
+                      ? "border-orange-500/20 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
                   }`}
                 >
                   <Mail
                     size={28}
-                    className="text-blue-500"
+                    className="text-orange-500"
                   />
 
                   <h3
                     className={`mt-4 text-xl font-black ${
                       isDark
                         ? "text-white"
-                        : "text-slate-950"
+                        : "text-[#29201a]"
                     }`}
                   >
                     Need Help With Your Purchase?
@@ -2200,8 +2310,8 @@ const TermsOfService = () => {
                   <p
                     className={`mt-3 leading-7 ${
                       isDark
-                        ? "text-slate-400"
-                        : "text-slate-600"
+                        ? "text-[#bca99b]"
+                        : "text-[#76665a]"
                     }`}
                   >
                     Contact Target Trek for ebook
@@ -2215,8 +2325,8 @@ const TermsOfService = () => {
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-[#ddcfc3]"
+                          : "text-[#594a40]"
                       }`}
                     >
                       Ebook & Payment Support
@@ -2224,7 +2334,7 @@ const TermsOfService = () => {
 
                     <a
                       href={SUPPORT_MAILTO}
-                      className="mt-1 block break-all font-black text-blue-500 underline decoration-blue-300 underline-offset-4"
+                      className="mt-1 block break-all font-black text-orange-500 underline decoration-orange-300 underline-offset-4"
                     >
                       {SUPPORT_EMAIL}
                     </a>
@@ -2234,8 +2344,8 @@ const TermsOfService = () => {
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-[#ddcfc3]"
+                          : "text-[#594a40]"
                       }`}
                     >
                       General Enquiries
@@ -2243,7 +2353,7 @@ const TermsOfService = () => {
 
                     <a
                       href={`mailto:${GENERAL_EMAIL}`}
-                      className="mt-1 block break-all font-bold text-blue-500"
+                      className="mt-1 block break-all font-bold text-orange-500"
                     >
                       {GENERAL_EMAIL}
                     </a>
@@ -2252,15 +2362,15 @@ const TermsOfService = () => {
                   <div
                     className={`mt-6 rounded-2xl border p-5 ${
                       isDark
-                        ? "border-slate-700 bg-slate-900"
-                        : "border-blue-100 bg-white"
+                        ? "border-[#5a4132] bg-[#211a15]"
+                        : "border-orange-100 bg-white"
                     }`}
                   >
                     <p
                       className={`text-sm font-bold ${
                         isDark
-                          ? "text-slate-300"
-                          : "text-slate-700"
+                          ? "text-[#ddcfc3]"
+                          : "text-[#594a40]"
                       }`}
                     >
                       When contacting us about a
@@ -2315,11 +2425,11 @@ const TermsOfService = () => {
             <section
               className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-orange-600">
                 Terms FAQs
               </span>
 
@@ -2327,7 +2437,7 @@ const TermsOfService = () => {
                 className={`mt-3 text-2xl font-black tracking-tight sm:text-3xl ${
                   isDark
                     ? "text-white"
-                    : "text-slate-950"
+                    : "text-[#29201a]"
                 }`}
               >
                 Common Questions
@@ -2340,16 +2450,16 @@ const TermsOfService = () => {
                       key={item.question}
                       className={`rounded-2xl border p-5 ${
                         isDark
-                          ? "border-slate-800 bg-slate-950"
-                          : "border-slate-200 bg-slate-50"
+                          ? "border-[#403027] bg-[#110e0c]"
+                          : "border-[#f1dfd1] bg-[#fffaf5]"
                       }`}
                     >
                       <div className="flex items-start gap-4">
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
                             isDark
-                              ? "bg-blue-500/10 text-blue-400"
-                              : "bg-blue-50 text-blue-700"
+                              ? "bg-orange-500/10 text-orange-400"
+                              : "bg-orange-50 text-orange-700"
                           }`}
                         >
                           {index + 1}
@@ -2360,7 +2470,7 @@ const TermsOfService = () => {
                             className={`font-black ${
                               isDark
                                 ? "text-white"
-                                : "text-slate-900"
+                                : "text-[#34271f]"
                             }`}
                           >
                             {item.question}
@@ -2369,8 +2479,8 @@ const TermsOfService = () => {
                           <p
                             className={`mt-2 text-sm leading-7 ${
                               isDark
-                                ? "text-slate-400"
-                                : "text-slate-600"
+                                ? "text-[#bca99b]"
+                                : "text-[#76665a]"
                             }`}
                           >
                             {item.answer}
@@ -2390,22 +2500,22 @@ const TermsOfService = () => {
             <footer
               className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-8 ${
                 isDark
-                  ? "border-slate-800 bg-slate-900"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#403027] bg-[#211a15]"
+                  : "border-[#f1dfd1] bg-white"
               }`}
             >
               <div className="flex items-start gap-4">
                 <ReceiptText
                   size={21}
-                  className="mt-1 shrink-0 text-blue-500"
+                  className="mt-1 shrink-0 text-orange-500"
                 />
 
                 <div>
                   <p
                     className={`text-sm leading-7 ${
                       isDark
-                        ? "text-slate-500"
-                        : "text-slate-500"
+                        ? "text-[#927d6c]"
+                        : "text-[#927d6c]"
                     }`}
                   >
                     By purchasing or accessing a
@@ -2415,14 +2525,14 @@ const TermsOfService = () => {
                     Terms & Conditions, the{" "}
                     <a
                       href="/privacy-policy"
-                      className="font-semibold text-blue-500 hover:text-blue-600"
+                      className="font-semibold text-orange-500 hover:text-orange-600"
                     >
                       Privacy Policy
                     </a>
                     , the{" "}
                     <a
                       href="/refund-policy"
-                      className="font-semibold text-blue-500 hover:text-blue-600"
+                      className="font-semibold text-orange-500 hover:text-orange-600"
                     >
                       Refund & Cancellation Policy
                     </a>{" "}
@@ -2434,8 +2544,8 @@ const TermsOfService = () => {
                   <div
                     className={`mt-6 flex flex-col gap-3 border-t pt-6 text-sm sm:flex-row sm:items-center sm:justify-between ${
                       isDark
-                        ? "border-slate-800 text-slate-600"
-                        : "border-slate-100 text-slate-400"
+                        ? "border-[#403027] text-[#76665a]"
+                        : "border-[#f7e9df] text-[#bca99b]"
                     }`}
                   >
                     <p>
@@ -2444,8 +2554,8 @@ const TermsOfService = () => {
                       <strong
                         className={
                           isDark
-                            ? "font-semibold text-slate-400"
-                            : "font-semibold text-slate-600"
+                            ? "font-semibold text-[#bca99b]"
+                            : "font-semibold text-[#76665a]"
                         }
                       >
                         Target Trek
@@ -2455,7 +2565,7 @@ const TermsOfService = () => {
 
                     <a
                       href={SUPPORT_MAILTO}
-                      className="font-semibold text-blue-500 hover:text-blue-600"
+                      className="font-semibold text-orange-500 hover:text-orange-600"
                     >
                       Contact Support
                     </a>
