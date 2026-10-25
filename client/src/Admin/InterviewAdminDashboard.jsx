@@ -1,14 +1,254 @@
+// import React, { useCallback, useEffect, useMemo, useState } from "react";
+// import { AnimatePresence, motion } from "framer-motion";
+// import {
+//   CalendarDays, Plus, Search, Edit3, Trash2, Ban, CheckCircle2,
+//   Clock3, Wallet, Users, X, ChevronLeft, ChevronRight, ExternalLink,
+//   Filter, Eye, Video, Mail, Phone, BriefcaseBusiness,
+//   AlertTriangle, LoaderCircle, ArrowUpRight, IndianRupee, ShieldCheck,
+//   CalendarPlus2, ListChecks, FileText, Copy, CircleCheck, RotateCcw, SlidersHorizontal, CalendarRange, XCircle,
+// } from "lucide-react";
+
+// const BASE_URL = (import.meta.env.VITE_BASE_URL || "http://localhost:5001").replace(/\/$/, "");
+// const API = `${BASE_URL}/api/interviews/admin`;
+// const TOPICS = ["DSA", "LLD", "HLD", "GENAI", "PROJECTS"];
+// const EMPTY_ROW = () => ({ start: "10:00", end: "11:00", price: "599", mrp: "999" });
+// const STATUS = { AVAILABLE: "green", CONFIRMED: "green", SUCCESS: "green", COMPLETED: "green", BOOKED: "blue", HELD: "amber", PENDING_PAYMENT: "amber", PENDING: "amber", PROCESSING: "amber", BLOCKED: "red", CANCELLED_BY_ADMIN: "red", CANCELLED_BY_USER: "red", PAYMENT_FAILED: "red", FAILED: "red", EXPIRED: "slate", NO_SHOW: "slate", REFUNDED: "green" };
+// const inr = (n) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(n || 0));
+// const dateText = (d) => d ? new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium" }).format(new Date(d)) : "—";
+// const dateTime = (d) => d ? new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }).format(new Date(d)) : "—";
+// const timeText = (d) => d ? new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" }).format(new Date(d)) : "—";
+// const pad = (v) => String(v).padStart(2, "0");
+// const istDay = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+// const localDate = (d) => d ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(d)) : "";
+// const localTime = (d) => d ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d)) : "";
+// const isoFromIST = (day, hhmm) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !/^\d{2}:\d{2}$/.test(hhmm)) throw new Error("Enter a valid date and time"); const [h, m] = hhmm.split(":").map(Number); if (h > 23 || m > 59) throw new Error("Invalid time"); const d = new Date(`${day}T${hhmm}:00+05:30`); if (Number.isNaN(+d)) throw new Error("Invalid date/time"); return d.toISOString(); };
+// const cleanUrl = (v) => { if (!v) return ""; try { const u = new URL(v); return u.protocol === "https:" ? u.href : ""; } catch { return ""; } };
+// const dateRangeIST = (day) => ({ from: `${day}T00:00:00+05:30`, to: `${day}T23:59:59.999+05:30` });
+// const datesBetween = (a,b) => (!a || !b || a <= b);
+// const dayHeading = (day) => new Intl.DateTimeFormat("en-IN", {timeZone:"UTC",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date(`${day}T12:00:00Z`));
+// const initialSlot = () => ({ title: "1:1 Technical Mock Interview", description: "", day: istDay(), start: "10:00", end: "11:00", price: "599", mrp: "999", allowedTopics: [...TOPICS], maxTopics: 3, meetingUrl: "", active: true });
+
+// const css = `
+// .tt-interview-admin{--bg:#fffcf8;--surface:#ffffff;--soft:#fff4e8;--soft2:#fff8f0;--ink:#2c211c;--muted:#807168;--line:#efdfd1;--accent:#ea580c;--accentHover:#c2410c;--shadow:0 14px 42px rgba(90,51,24,.06);background:var(--bg);color:var(--ink);font-family:'DM Sans',Inter,system-ui,sans-serif;color-scheme:light;min-height:calc(100vh - 64px)}
+// .tt-interview-admin[data-theme=dark]{--bg:#17120f;--surface:#261e19;--soft:#35251b;--soft2:#211914;--ink:#fff4eb;--muted:#c6b4a8;--line:#46382e;--accent:#fb923c;--accentHover:#ea580c;--shadow:0 14px 42px rgba(0,0,0,.16);color-scheme:dark}
+// .tt-interview-admin .ia-card{background:var(--surface);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}
+// .tt-interview-admin .ia-muted{color:var(--muted)}.tt-interview-admin .ia-accent{color:var(--accent)}
+// .tt-interview-admin .ia-input,.tt-interview-admin .ia-select,.tt-interview-admin .ia-textarea{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;outline:none;font-size:13px;min-width:0}
+// .tt-interview-admin .ia-input:focus,.tt-interview-admin .ia-select:focus,.tt-interview-admin .ia-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(234,88,12,.09)}
+// .tt-interview-admin .ia-label{display:block;color:var(--muted);font-size:11px;font-weight:800;margin-bottom:6px;letter-spacing:.02em}
+// .tt-interview-admin .ia-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:800;transition:all .2s;cursor:pointer;white-space:nowrap}
+// .tt-interview-admin .ia-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}.tt-interview-admin .ia-btn:disabled{opacity:.45;cursor:not-allowed}
+// .tt-interview-admin .ia-btn-primary{background:#ea580c;color:#fff;border-color:#ea580c}.tt-interview-admin .ia-btn-primary:hover:not(:disabled){background:#c2410c;color:#fff;border-color:#c2410c}
+// .tt-interview-admin .ia-btn-danger{color:#b91c1c;border-color:rgba(239,68,68,.3)}.tt-interview-admin .ia-btn-danger:hover:not(:disabled){background:rgba(239,68,68,.08);border-color:#ef4444;color:#dc2626}
+// .tt-interview-admin .ia-chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:750;cursor:pointer}
+// .tt-interview-admin .ia-chip[data-active=true]{background:var(--soft);color:var(--accent);border-color:var(--accent)}
+// .tt-interview-admin .ia-tag{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}
+// .tt-interview-admin .ia-tag[data-tone=green]{background:#dcfce7;color:#166534}.tt-interview-admin .ia-tag[data-tone=amber]{background:#fef3c7;color:#92400e}.tt-interview-admin .ia-tag[data-tone=red]{background:#fee2e2;color:#991b1b}.tt-interview-admin .ia-tag[data-tone=blue]{background:#dbeafe;color:#1e40af}.tt-interview-admin .ia-tag[data-tone=slate]{background:#e2e8f0;color:#475569}
+// .tt-interview-admin .ia-table-wrap{overflow-x:auto}.tt-interview-admin .ia-table{border-collapse:collapse;width:100%;min-width:800px;font-size:12px}.tt-interview-admin .ia-table th{text-align:left;background:var(--soft2);color:var(--muted);padding:14px 15px;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.tt-interview-admin .ia-table td{border-top:1px solid var(--line);padding:14px 15px;vertical-align:middle}.tt-interview-admin .ia-table tbody tr:hover{background:var(--soft2)}
+// .tt-interview-admin .ia-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(14,10,8,.62);display:flex;align-items:center;justify-content:center;padding:16px}.tt-interview-admin .ia-dialog{width:100%;max-height:92dvh;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.2)}
+// .tt-interview-admin .ia-separator{border-color:var(--line)}.tt-interview-admin .ia-orange{background:linear-gradient(118deg,#ea580c,#fb923c);color:white}.tt-interview-admin .ia-scroll::-webkit-scrollbar{width:7px;height:7px}.tt-interview-admin .ia-scroll::-webkit-scrollbar-thumb{background:#bda08c;border-radius:8px}
+// `;
+
+// function Pill({ value }) { return <span className="ia-tag" data-tone={STATUS[String(value || "").toUpperCase()] || "slate"}>{String(value || "UNKNOWN").replaceAll("_", " ")}</span>; }
+// function IconButton({ title, onClick, children, danger = false, disabled }) { return <button type="button" title={title} aria-label={title} onClick={onClick} disabled={disabled} className={`ia-btn !p-2 ${danger ? "ia-btn-danger" : ""}`}>{children}</button>; }
+// function Field({ title, children, className = "" }) { return <label className={`block min-w-0 ${className}`}><span className="ia-label">{title}</span>{children}</label>; }
+// function Dialog({ title, sub, onClose, children, width = "max-w-2xl", busy = false }) { return <motion.div className="ia-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}><motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 15, opacity: 0 }} className={`ia-dialog ia-scroll ${width}`}><div className="flex items-start justify-between gap-3 px-5 py-4 border-b ia-separator sticky top-0 z-10" style={{ background: "var(--bg)" }}><div><h2 className="text-lg font-extrabold">{title}</h2>{sub && <p className="ia-muted text-xs mt-1">{sub}</p>}</div><IconButton title="Close" onClick={onClose} disabled={busy}><X size={16}/></IconButton></div><div className="p-5 sm:p-6">{children}</div></motion.div></motion.div>; }
+// function Empty({ children }) { return <div className="flex flex-col gap-2 items-center text-center py-16 px-5 ia-muted"><CalendarDays size={28}/><p className="text-sm">{children}</p></div>; }
+
+// export default function InterviewAdminDashboard({ authToken, token: tokenProp }) {
+//   const [theme, setTheme] = useState(() => { try { return localStorage.getItem("theme") === "dark" ? "dark" : "light"; } catch { return "light"; } });
+//   const [tab, setTab] = useState("slots");
+//   const [slots, setSlots] = useState([]);
+//   const [bookings, setBookings] = useState([]);
+//   const [slotPage, setSlotPage] = useState(1);
+//   const [bookingPage, setBookingPage] = useState(1);
+//   const [slotTotal, setSlotTotal] = useState(0);
+//   const [bookingTotal, setBookingTotal] = useState(0);
+//   const [slotStatus, setSlotStatus] = useState("");
+//   const [slotDay, setSlotDay] = useState("");
+//   const [slotFrom, setSlotFrom] = useState("");
+//   const [slotTo, setSlotTo] = useState("");
+//   const [slotTopic, setSlotTopic] = useState("");
+//   const [slotSearch, setSlotSearch] = useState("");
+//   const [slotActive, setSlotActive] = useState("all");
+//   const [showDeleted, setShowDeleted] = useState(false);
+//   const [slotView, setSlotView] = useState("grouped");
+//   const [expandedDays, setExpandedDays] = useState({});
+//   const [slotPageSize, setSlotPageSize] = useState(100);
+//   const [bookingStatus, setBookingStatus] = useState("");
+//   const [search, setSearch] = useState("");
+//   const [searchCommitted, setSearchCommitted] = useState("");
+//   const [loading, setLoading] = useState(false);
+//   const [working, setWorking] = useState(false);
+//   const [notice, setNotice] = useState(null);
+//   const [modal, setModal] = useState(null);
+//   const [selected, setSelected] = useState(null);
+//   const [slotForm, setSlotForm] = useState(initialSlot);
+//   const [bulkDate, setBulkDate] = useState(istDay());
+//   const [bulkCommon, setBulkCommon] = useState({ title: "1:1 Technical Mock Interview", description: "", allowedTopics: [...TOPICS], maxTopics: 3, meetingUrl: "" });
+//   const [bulkRows, setBulkRows] = useState([EMPTY_ROW(), { ...EMPTY_ROW(), start: "11:15", end: "12:15" }]);
+//   const [actionReason, setActionReason] = useState("");
+//   const [reopen, setReopen] = useState(true);
+//   const [meetingUrl, setMeetingUrl] = useState("");
+//   const [editCandidate, setEditCandidate] = useState({});
+//   const [adminNotes, setAdminNotes] = useState("");
+//   const [detail, setDetail] = useState(null);
+
+//   const jwt = useMemo(() => {
+//     if (authToken || tokenProp) return authToken || tokenProp;
+//     try { return localStorage.getItem("token") || localStorage.getItem("authToken") || ""; } catch { return ""; }
+//   }, [authToken, tokenProp]);
+
+//   const request = useCallback(async (path, { method = "GET", body, signal } = {}) => {
+//     const headers = { Accept: "application/json" };
+//     if (body !== undefined) headers["Content-Type"] = "application/json";
+//     if (jwt) headers.Authorization = `Bearer ${jwt}`;
+//     const response = await fetch(`${API}${path}`, { method, headers, credentials: "include", signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+//     const result = await response.json().catch(() => ({}));
+//     if (!response.ok || result.success === false) throw new Error(result.message || `Request failed (${response.status})`);
+//     return result;
+//   }, [jwt]);
+
+//   const flash = (message, type = "success") => setNotice({ message, type });
+//   const close = () => { if (!working) { setModal(null); setSelected(null); setDetail(null); } };
+//   const load = useCallback(async (kind = tab) => {
+//     setLoading(true);
+//     try {
+//       const q = new URLSearchParams({ page: String(kind === "slots" ? slotPage : bookingPage), limit: String(kind === "slots" ? slotPageSize : 15) });
+//       if (kind === "slots") {
+//         if (slotStatus) q.set("status", slotStatus);
+//         if (showDeleted) q.set("includeDeleted", "true");
+//         const range = slotDay ? dateRangeIST(slotDay) : null;
+//         if (range) { q.set("from",range.from);q.set("to",range.to); }
+//         else {
+//           if (slotFrom) q.set("from", `${slotFrom}T00:00:00+05:30`);
+//           if (slotTo) q.set("to", `${slotTo}T23:59:59.999+05:30`);
+//         }
+//         const result = await request(`/slots?${q}`);
+//         setSlots(result.data || []); setSlotTotal(result.pagination?.total || 0);
+//       } else {
+//         if (bookingStatus) q.set("status", bookingStatus);
+//         if (searchCommitted.includes("@")) q.set("email", searchCommitted);
+//         else if (searchCommitted) q.set("bookingId", searchCommitted);
+//         const result = await request(`/bookings?${q}`);
+//         setBookings(result.data || []); setBookingTotal(result.pagination?.total || 0);
+//       }
+//     } catch (e) { flash(e.message, "error"); }
+//     finally { setLoading(false); }
+//   }, [tab, slotPage, slotPageSize, bookingPage, slotStatus, bookingStatus, searchCommitted, slotDay, slotFrom, slotTo, showDeleted, request]);
+//   useEffect(() => { load(); }, [load]);
+//   // The navbar owns the theme. This page only follows the saved theme value.
+//   useEffect(() => {
+//     const syncTheme = () => { try { const next = localStorage.getItem("theme") === "dark" ? "dark" : "light"; setTheme(old => old === next ? old : next); } catch { setTheme("light"); } };
+//     syncTheme();
+//     window.addEventListener("storage", syncTheme);
+//     window.addEventListener("targettrek-theme-change", syncTheme);
+//     window.addEventListener("focus", syncTheme);
+//     window.addEventListener("pageshow", syncTheme);
+//     // Native storage events don't fire for same-tab changes.
+//     const poll = window.setInterval(syncTheme, 350);
+//     return () => { window.removeEventListener("storage", syncTheme); window.removeEventListener("targettrek-theme-change", syncTheme); window.removeEventListener("focus", syncTheme); window.removeEventListener("pageshow", syncTheme); window.clearInterval(poll); };
+//   }, []);
+//   const run = async (job, successMessage) => { setWorking(true); try { await job(); flash(successMessage); setModal(null); setDetail(null); setSelected(null); await load(); } catch (e) { flash(e.message, "error"); } finally { setWorking(false); } };
+
+//   const slotPayload = (f) => ({ title: f.title.trim(), description: f.description.trim(), startTime: isoFromIST(f.day, f.start), endTime: isoFromIST(f.day, f.end), price: Number(f.price), mrp: Number(f.mrp), allowedTopics: f.allowedTopics, maxTopics: Number(f.maxTopics), meetingUrl: f.meetingUrl.trim() });
+//   const openSlot = (s) => { setSlotForm(s ? { title: s.title || "", description: s.description || "", day: localDate(s.startTime), start: localTime(s.startTime), end: localTime(s.endTime), price: String(s.price), mrp: String(s.mrp), allowedTopics: [...(s.allowedTopics || TOPICS)], maxTopics: s.maxTopics || 3, meetingUrl: s.meetingUrl || "", active: s.active !== false } : initialSlot()); setSelected(s); setModal("slot"); };
+//   const toggleTopic = (list, setList, value) => setList((prev) => ({ ...prev, allowedTopics: prev.allowedTopics.includes(value) ? prev.allowedTopics.filter(x => x !== value) : [...prev.allowedTopics, value] }));
+//   const saveSlot = () => run(async () => { const payload = slotPayload(slotForm); if (!payload.allowedTopics.length || payload.maxTopics > payload.allowedTopics.length) throw new Error("Please select enough allowed topics"); if (new Date(payload.startTime) >= new Date(payload.endTime)) throw new Error("End time must be after start time"); if (selected) await request(`/slots/${selected._id}`, { method: "PATCH", body: { ...payload, active: slotForm.active } }); else await request("/slots", { method: "POST", body: payload }); }, selected ? "Slot updated" : "Slot created");
+//   const saveBulk = () => run(async () => { const rows = bulkRows.map(r => ({ title: bulkCommon.title.trim(), description: bulkCommon.description.trim(), startTime: isoFromIST(bulkDate, r.start), endTime: isoFromIST(bulkDate, r.end), price: Number(r.price), mrp: Number(r.mrp), allowedTopics: bulkCommon.allowedTopics, maxTopics: Number(bulkCommon.maxTopics), meetingUrl: bulkCommon.meetingUrl.trim() })); if (!rows.length || rows.some(r => r.price <= 0 || r.mrp < r.price || new Date(r.startTime) >= new Date(r.endTime))) throw new Error("Check time ranges and prices"); if (!bulkCommon.allowedTopics.length || bulkCommon.maxTopics > bulkCommon.allowedTopics.length) throw new Error("Choose valid topics"); await request("/slots/bulk", { method: "POST", body: { slots: rows } }); }, `${bulkRows.length} slots created`);
+//   const startAction = (kind, record) => { setSelected(record); setActionReason(""); setReopen(true); setModal(kind); };
+//   const executeSlotAction = () => run(async () => { const id = selected._id; if (modal === "block") await request(`/slots/${id}/block`, { method: "PATCH", body: { reason: actionReason } }); if (modal === "unblock") await request(`/slots/${id}/unblock`, { method: "PATCH" }); if (modal === "deleteSlot") await request(`/slots/${id}`, { method: "DELETE", body: { reason: actionReason || "Removed by administrator" } }); }, "Slot updated successfully");
+//   const executeBookingAction = () => run(async () => { const id = selected.bookingId; if (modal === "cancel") await request(`/bookings/${encodeURIComponent(id)}/cancel`, { method: "POST", body: { reason: actionReason, reopenSlot: reopen } }); if (modal === "complete") await request(`/bookings/${encodeURIComponent(id)}/complete`, { method: "PATCH" }); if (modal === "deleteBooking") await request(`/bookings/${encodeURIComponent(id)}`, { method: "DELETE", body: { reason: actionReason } }); if (modal === "refund") await request(`/bookings/${encodeURIComponent(id)}/refund`, { method: "POST" }); }, modal === "cancel" ? "Booking cancelled. Refund may need initiation." : "Booking updated");
+//   const openDetail = async (b) => { setSelected(b); setDetail(b); setModal("detail"); try { const r = await request(`/bookings/${encodeURIComponent(b.bookingId)}`); setDetail(r.data || b); } catch (e) { flash(e.message, "error"); } };
+//   const openEditBooking = (b) => { setSelected(b); setEditCandidate({ ...(b.candidate || {}) }); setAdminNotes(b.adminNotes || ""); setModal("editBooking"); };
+//   const updateBooking = () => run(() => request(`/bookings/${encodeURIComponent(selected.bookingId)}`, { method: "PATCH", body: { candidate: { name: editCandidate.name, email: editCandidate.email, phone: editCandidate.phone, experienceYears: Number(editCandidate.experienceYears || 0), currentRole: editCandidate.currentRole, targetRole: editCandidate.targetRole, currentCompany: editCandidate.currentCompany, resumeUrl: editCandidate.resumeUrl, notes: editCandidate.notes }, adminNotes } }), "Candidate details updated");
+//   const openMeeting = (b) => { setSelected(b); setMeetingUrl(b.meeting?.url || ""); setModal("meeting"); };
+//   const saveMeeting = () => run(async () => { if (!cleanUrl(meetingUrl)) throw new Error("Provide a valid HTTPS meeting URL"); await request(`/bookings/${encodeURIComponent(selected.bookingId)}/meeting`, { method: "PATCH", body: { meetingUrl } }); }, "Meeting link saved. Confirmation email attempted.");
+//   const syncRefund = (b) => run(async () => { const r = await request(`/bookings/${encodeURIComponent(b.bookingId)}/refund`); flash(`Refund: ${r.data?.refundStatus || "Unknown"}`); }, "Refund status checked");
+//   const totals = useMemo(() => ({ available: slots.filter(s => s.status === "AVAILABLE").length, booked: slots.filter(s => s.status === "BOOKED").length, blocked: slots.filter(s => s.status === "BLOCKED").length, revenue: bookings.filter(b => b.payment?.status === "SUCCESS").reduce((s, b) => s + Number(b.slotSnapshot?.price || 0), 0) }), [slots, bookings]);
+//   const filteredSlots = useMemo(() => slots.filter(s => {
+//     if (slotTopic && !(s.allowedTopics || []).includes(slotTopic)) return false;
+//     if (slotActive === "active" && (!s.active || s.isDeleted)) return false;
+//     if (slotActive === "inactive" && s.active && !s.isDeleted) return false;
+//     const term = slotSearch.trim().toLowerCase();
+//     if (term && ![s.title,s.description,s._id,s.meetingUrl,...(s.allowedTopics||[])].some(x => String(x||"").toLowerCase().includes(term))) return false;
+//     return true;
+//   }), [slots,slotTopic,slotActive,slotSearch]);
+//   const groupedSlots = useMemo(() => Object.entries(filteredSlots.reduce((groups,slot) => {
+//     const key=localDate(slot.startTime);(groups[key] ||= []).push(slot);return groups;
+//   },{})).sort(([a],[b])=>a.localeCompare(b)).map(([date,items])=>({date,items:items.sort((a,b)=>new Date(a.startTime)-new Date(b.startTime)), available:items.filter(s=>s.status==="AVAILABLE" && s.active && !s.isDeleted).length, booked:items.filter(s=>s.status==="BOOKED").length})), [filteredSlots]);
+//   const page = tab === "slots" ? slotPage : bookingPage;
+//   const total = tab === "slots" ? slotTotal : bookingTotal;
+//   const maxPage = Math.max(1, Math.ceil(total / (tab === "slots" ? slotPageSize : 15)));
+//   const setPage = tab === "slots" ? setSlotPage : setBookingPage;
+//   const statusOptions = tab === "slots" ? ["AVAILABLE", "HELD", "BOOKED", "BLOCKED"] : ["PENDING_PAYMENT", "CONFIRMED", "COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER", "EXPIRED", "PAYMENT_FAILED", "NO_SHOW"];
+
+//   return <div className="tt-interview-admin mt-16" data-theme={theme}>
+//     <style>{css}</style>
+//     <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+//       <div className="ia-orange rounded-[22px] p-5 sm:p-7 mb-7 relative overflow-hidden"><div className="absolute -right-12 -top-16 w-72 h-72 rounded-full border-[40px] border-white/10 pointer-events-none"/><div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"><div><p className="text-white/80 text-[11px] font-black uppercase tracking-[.18em] mb-2">Target Trek / Admin workspace</p><h1 className="text-2xl sm:text-3xl font-black tracking-tight">Interview Management</h1><p className="mt-2 text-sm text-white/85 max-w-xl">Manage your interview availability, pricing, candidate bookings, meeting links and refunds in one place.</p></div><div className="text-xs text-white/90 rounded-xl border border-white/25 bg-white/10 px-4 py-3">Theme follows your website navbar</div></div></div>
+//       <AnimatePresence>{notice && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`flex items-center justify-between gap-3 p-3 rounded-xl mb-5 text-sm border ${notice.type === "error" ? "border-red-400/40 text-red-600" : "border-emerald-400/40 text-emerald-600"}`} style={{ background: "var(--surface)" }}><div className="flex items-center gap-2">{notice.type === "error" ? <AlertTriangle size={16}/> : <CheckCircle2 size={16}/>} {notice.message}</div><button onClick={() => setNotice(null)}><X size={16}/></button></motion.div>}</AnimatePresence>
+//       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-7">{[{ title: "Slots in current page", value: slots.length, icon: CalendarDays }, { title: "Available slots", value: totals.available, icon: CalendarPlus2 }, { title: "Booked slots", value: totals.booked, icon: Users }, { title: "Bookings in current page", value: bookings.length, icon: ListChecks }].map((s, i) => <div key={s.title} className="ia-card p-4 sm:p-5 flex items-center justify-between gap-2"><div><p className="text-[11px] ia-muted font-semibold mb-2">{s.title}</p><p className="text-2xl font-black">{s.value}</p></div><div className="rounded-xl p-3" style={{ background: "var(--soft)", color: "var(--accent)" }}><s.icon size={20}/></div></div>)}</div>
+//       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5"><div className="flex gap-2 p-1 w-fit rounded-xl" style={{ background: "var(--soft)" }}>{[{ id: "slots", label: "Interview Slots", icon: CalendarDays }, { id: "bookings", label: "Bookings", icon: Users }].map(t => <button key={t.id} onClick={() => { setTab(t.id); setNotice(null); }} className={`flex gap-2 items-center rounded-lg px-4 py-2.5 text-xs sm:text-sm font-bold ${tab === t.id ? "shadow-sm" : "ia-muted"}`} style={tab === t.id ? { background: "var(--surface)", color: "var(--accent)" } : {}}><t.icon size={16}/>{t.label}</button>)}</div>{tab === "slots" && <div className="flex flex-wrap gap-2"><button className="ia-btn" onClick={() => { setBulkRows([EMPTY_ROW()]); setBulkDate(istDay()); setModal("bulk"); }}><CalendarPlus2 size={16}/> Bulk create slots</button><button className="ia-btn ia-btn-primary" onClick={() => openSlot(null)}><Plus size={16}/> Add slot</button></div>}</div>
+//       <div className="ia-card overflow-hidden"><div className="p-4 sm:p-5 flex flex-wrap gap-3 justify-between items-center border-b ia-separator"><div><h2 className="text-base font-extrabold">{tab === "slots" ? "Slot schedule" : "Candidate bookings"}</h2><p className="ia-muted text-xs mt-1">{total} records · Times displayed in IST</p></div><div className="flex flex-wrap items-center gap-2">{tab === "bookings" && <form onSubmit={e => { e.preventDefault(); setBookingPage(1); setSearchCommitted(search.trim()); }} className="flex items-center gap-1"><input className="ia-input !w-48" value={search} onChange={e => setSearch(e.target.value)} placeholder="Booking ID or email"/><button className="ia-btn !p-2.5" title="Search"><Search size={16}/></button></form>}<select className="ia-select !w-auto min-w-[135px]" value={tab === "slots" ? slotStatus : bookingStatus} onChange={e => { if (tab === "slots") { setSlotStatus(e.target.value); setSlotPage(1); } else { setBookingStatus(e.target.value); setBookingPage(1); } }}><option value="">All statuses</option>{statusOptions.map(s => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}</select></div></div>
+//       {tab === "slots" && <div className="px-4 sm:px-5 py-4 border-b ia-separator" style={{background:"var(--soft2)"}}>
+//         <div className="flex flex-wrap items-end gap-3">
+//           <Field title="Exact date"><input type="date" className="ia-input !w-[165px]" value={slotDay} onChange={e=>{setSlotDay(e.target.value);setSlotPage(1);}}/></Field>
+//           <Field title="From date"><input type="date" className="ia-input !w-[165px]" value={slotFrom} disabled={!!slotDay} onChange={e=>{setSlotFrom(e.target.value);setSlotPage(1);}}/></Field>
+//           <Field title="To date"><input type="date" className="ia-input !w-[165px]" value={slotTo} disabled={!!slotDay} min={slotFrom||undefined} onChange={e=>{setSlotTo(e.target.value);setSlotPage(1);}}/></Field>
+//           <Field title="Interview topic"><select className="ia-select !w-[150px]" value={slotTopic} onChange={e=>setSlotTopic(e.target.value)}><option value="">All topics</option>{TOPICS.map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
+//           <Field title="Visibility"><select className="ia-select !w-[145px]" value={slotActive} onChange={e=>setSlotActive(e.target.value)}><option value="all">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select></Field>
+//           <Field title="Search slot"><div className="relative"><Search size={14} className="absolute left-3 top-3.5 ia-muted"/><input className="ia-input !pl-9 !w-[210px]" placeholder="Title, topic, ID..." value={slotSearch} onChange={e=>setSlotSearch(e.target.value)}/></div></Field>
+//         </div>
+//         <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+//           <div className="flex flex-wrap gap-2 items-center">
+//             {[{name:"Today",value:istDay()},{name:"All dates",value:""}].map(x=><button key={x.name} type="button" className="ia-chip" data-active={slotDay===x.value && !slotFrom && !slotTo} onClick={()=>{setSlotDay(x.value);setSlotFrom("");setSlotTo("");setSlotPage(1);}}>{x.name}</button>)}
+//             <label className="text-xs font-bold flex gap-2 items-center cursor-pointer ia-muted"><input type="checkbox" checked={showDeleted} onChange={e=>{setShowDeleted(e.target.checked);setSlotPage(1);}}/> Include deleted</label>
+//             <button className="ia-btn" onClick={()=>{setSlotDay("");setSlotFrom("");setSlotTo("");setSlotTopic("");setSlotSearch("");setSlotStatus("");setSlotActive("all");setShowDeleted(false);setSlotPage(1);}}><XCircle size={14}/> Clear filters</button>
+//           </div>
+//           <div className="flex flex-wrap gap-2 items-center">
+//             <span className="ia-muted text-xs">{filteredSlots.length} shown of {slots.length} loaded</span>
+//             <select className="ia-select !w-auto" value={slotPageSize} onChange={e=>{setSlotPageSize(Number(e.target.value));setSlotPage(1);}}><option value={25}>25/page</option><option value={50}>50/page</option><option value={100}>100/page</option></select>
+//             <button className="ia-chip" data-active={slotView==="grouped"} onClick={()=>setSlotView("grouped")}><CalendarRange size={13} className="inline mr-1"/>Date groups</button>
+//             <button className="ia-chip" data-active={slotView==="table"} onClick={()=>setSlotView("table")}><ListChecks size={13} className="inline mr-1"/>Table</button>
+//           </div>
+//         </div>
+//         {!!slotDay && <p className="ia-muted mt-3 text-xs">Showing {dayHeading(slotDay)} (IST)</p>}
+//         {(slotFrom && slotTo && !datesBetween(slotFrom,slotTo)) && <p className="text-red-500 text-xs mt-2">End date should be on or after start date.</p>}
+//       </div>}
+//       {tab === "slots" && !loading && slotView === "grouped" && <div className="p-3 sm:p-5 space-y-3">
+//         {groupedSlots.length === 0 ? <Empty>No slots match your selected filters.</Empty> : groupedSlots.map(group=><section key={group.date} className="rounded-2xl border ia-separator overflow-hidden">
+//           <button className="w-full flex flex-wrap justify-between items-center gap-2 p-4 text-left" style={{background:"var(--soft)"}} onClick={()=>setExpandedDays(p=>({...p,[group.date]:p[group.date] === false ? true : false}))}>
+//             <div className="flex items-center gap-3"><CalendarDays size={20} className="ia-accent"/><div><p className="font-black text-sm">{dayHeading(group.date)}</p><p className="ia-muted text-xs mt-1">{group.items.length} slot(s) · {group.available} available · {group.booked} booked</p></div></div>
+//             <ChevronRight size={18} className={`ia-muted transition-transform ${expandedDays[group.date]===false?'':'rotate-90'}`}/>
+//           </button>
+//           {expandedDays[group.date]!==false && <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 p-3 sm:p-4">{group.items.map(s=><div key={s._id} className="rounded-xl p-4 border ia-separator flex flex-col gap-3" style={{background:"var(--surface)"}}>
+//             <div className="flex items-start justify-between gap-2"><div><div className="text-sm font-black">{timeText(s.startTime)} – {timeText(s.endTime)}</div><p className="ia-muted text-xs mt-1">{s.durationMinutes} min · {s.title}</p></div><Pill value={s.isDeleted?'DELETED':s.status}/></div>
+//             <div className="flex items-center justify-between"><div className="ia-accent font-black text-lg">{inr(s.price)} <span className="ia-muted text-xs line-through font-normal">{inr(s.mrp)}</span></div><span className="ia-muted text-xs">{s.active?'Active':'Inactive'}</span></div>
+//             <div className="flex flex-wrap gap-1">{(s.allowedTopics||[]).map(t=><span key={t} className="rounded px-2 py-1 text-[10px] font-bold" style={{background:"var(--soft)",color:"var(--accent)"}}>{t}</span>)}</div>
+//             {!s.isDeleted && <div className="flex flex-wrap gap-2 border-t ia-separator pt-3 mt-auto"><button className="ia-btn !py-2" disabled={['HELD','BOOKED'].includes(s.status)} onClick={()=>openSlot(s)}><Edit3 size={13}/>Edit</button>{s.status==='AVAILABLE' && <button className="ia-btn !py-2" onClick={()=>startAction('block',s)}><Ban size={13}/>Block</button>}{s.status==='BLOCKED' && <button className="ia-btn !py-2" onClick={()=>startAction('unblock',s)}><RotateCcw size={13}/>Unblock</button>}<button className="ia-btn ia-btn-danger !py-2" disabled={['HELD','BOOKED'].includes(s.status)} onClick={()=>startAction('deleteSlot',s)}><Trash2 size={13}/>Delete</button></div>}
+//           </div>)}</div>}
+//         </section>)}
+//       </div>}
+//       {loading ? <div className="flex justify-center items-center gap-2 py-20 ia-muted"><LoaderCircle className="animate-spin" size={19}/> Loading records...</div> : tab === "slots" ? (slotView === "grouped" ? null : (filteredSlots.length ? <div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Date & time</th><th>Session</th><th>Price</th><th>Topics</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filteredSlots.map(s => <tr key={s._id}><td><div className="font-extrabold">{dateText(s.startTime)}</div><div className="ia-muted mt-1">{timeText(s.startTime)} – {timeText(s.endTime)} · {s.durationMinutes}m</div></td><td><div className="font-bold max-w-[200px] truncate">{s.title}</div><div className="ia-muted mt-1 text-[11px]">{s.isDeleted ? "Deleted" : s.active ? "Active" : "Inactive"}</div></td><td><div className="font-black ia-accent">{inr(s.price)}</div><div className="ia-muted line-through mt-1">{inr(s.mrp)}</div></td><td><div className="flex flex-wrap gap-1 max-w-[210px]">{(s.allowedTopics || []).map(t => <span key={t} className="rounded-md px-1.5 py-1 text-[10px] font-bold" style={{ background: "var(--soft)", color: "var(--accent)" }}>{t}</span>)}</div></td><td><Pill value={s.isDeleted ? "DELETED" : s.status}/></td><td><div className="flex gap-1">{!s.isDeleted && <><IconButton title="Edit slot" onClick={() => openSlot(s)} disabled={["HELD", "BOOKED"].includes(s.status)}><Edit3 size={15}/></IconButton>{s.status === "AVAILABLE" && <IconButton title="Block slot" onClick={() => startAction("block", s)}><Ban size={15}/></IconButton>}{s.status === "BLOCKED" && <IconButton title="Unblock slot" onClick={() => startAction("unblock", s)}><RotateCcw size={15}/></IconButton>}<IconButton title="Delete slot" danger disabled={["HELD", "BOOKED"].includes(s.status)} onClick={() => startAction("deleteSlot", s)}><Trash2 size={15}/></IconButton></>}</div></td></tr>)}</tbody></table></div> : <Empty>No slots found. Create your first available interview slot.</Empty>)) : (bookings.length ? <div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Booking</th><th>Candidate</th><th>Interview</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody>{bookings.map(b => <tr key={b._id || b.bookingId}><td><button onClick={() => openDetail(b)} className="font-extrabold ia-accent hover:underline">{b.bookingId}</button><div className="ia-muted mt-1">{dateText(b.createdAt)}</div></td><td><div className="font-bold">{b.candidate?.name || "—"}</div><div className="ia-muted mt-1 max-w-[175px] truncate">{b.candidate?.email}</div></td><td><div className="font-semibold">{dateTime(b.slotSnapshot?.startTime)}</div><div className="ia-muted mt-1">{(b.selectedTopics || []).join(" · ")}</div></td><td><div className="font-bold">{inr(b.slotSnapshot?.price)}</div><div className="mt-1"><Pill value={b.payment?.status || "NOT_STARTED"}/></div></td><td><Pill value={b.status}/></td><td><div className="flex gap-1"><IconButton title="View booking" onClick={() => openDetail(b)}><Eye size={15}/></IconButton>{!["COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER", "EXPIRED"].includes(b.status) && <IconButton title="Edit candidate" onClick={() => openEditBooking(b)}><Edit3 size={15}/></IconButton>}{b.status === "CONFIRMED" && <IconButton title="Meeting link" onClick={() => openMeeting(b)}><Video size={15}/></IconButton>}{["PENDING_PAYMENT", "CONFIRMED"].includes(b.status) && <IconButton title="Cancel booking" danger onClick={() => startAction("cancel", b)}><Ban size={15}/></IconButton>}</div></td></tr>)}</tbody></table></div> : <Empty>No bookings match your filters.</Empty>)}
+//       <div className="flex items-center justify-between px-5 py-4 border-t ia-separator"><p className="ia-muted text-xs">Page {page} of {maxPage} · {total} total</p><div className="flex gap-2"><button className="ia-btn !p-2" disabled={page <= 1 || loading} onClick={() => setPage(p => p - 1)}><ChevronLeft size={17}/></button><button className="ia-btn !p-2" disabled={page >= maxPage || loading} onClick={() => setPage(p => p + 1)}><ChevronRight size={17}/></button></div></div></div>
+//     </div>
+
+//     <AnimatePresence>
+//       {modal === "slot" && <Dialog title={selected ? "Update interview slot" : "Create interview slot"} sub="Slot price and allowed topics are saved individually." busy={working} onClose={close}><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><Field title="Slot title" className="sm:col-span-2"><input className="ia-input" value={slotForm.title} onChange={e => setSlotForm(p => ({ ...p, title: e.target.value }))}/></Field><Field title="Date (IST)"><input type="date" className="ia-input" value={slotForm.day} onChange={e => setSlotForm(p => ({ ...p, day: e.target.value }))}/></Field><div className="grid grid-cols-2 gap-2"><Field title="Start"><input type="time" className="ia-input" value={slotForm.start} onChange={e => setSlotForm(p => ({ ...p, start: e.target.value }))}/></Field><Field title="End"><input type="time" className="ia-input" value={slotForm.end} onChange={e => setSlotForm(p => ({ ...p, end: e.target.value }))}/></Field></div><Field title="Selling price (₹)"><input type="number" min="1" className="ia-input" value={slotForm.price} onChange={e => setSlotForm(p => ({ ...p, price: e.target.value }))}/></Field><Field title="MRP (₹)"><input type="number" min="1" className="ia-input" value={slotForm.mrp} onChange={e => setSlotForm(p => ({ ...p, mrp: e.target.value }))}/></Field><Field title="Description" className="sm:col-span-2"><textarea rows={2} className="ia-textarea" value={slotForm.description} onChange={e => setSlotForm(p => ({ ...p, description: e.target.value }))}/></Field><div className="sm:col-span-2"><p className="ia-label">Allowed interview topics</p><div className="flex gap-2 flex-wrap">{TOPICS.map(t => <button type="button" key={t} className="ia-chip" data-active={slotForm.allowedTopics.includes(t)} onClick={() => toggleTopic(slotForm, setSlotForm, t)}>{t}</button>)}</div></div><Field title="Maximum topics user can select"><select className="ia-select" value={slotForm.maxTopics} onChange={e => setSlotForm(p => ({ ...p, maxTopics: Number(e.target.value) }))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}</select></Field><Field title="Visibility"><select className="ia-select" value={slotForm.active ? "true" : "false"} onChange={e => setSlotForm(p => ({ ...p, active: e.target.value === "true" }))}><option value="true">Active</option><option value="false">Inactive</option></select></Field><Field title="Meeting URL (optional)" className="sm:col-span-2"><input className="ia-input" placeholder="https://meet.google.com/..." value={slotForm.meetingUrl} onChange={e => setSlotForm(p => ({ ...p, meetingUrl: e.target.value }))}/></Field></div><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working} onClick={saveSlot}>{working && <LoaderCircle size={15} className="animate-spin"/>}{selected ? "Save changes" : "Create slot"}</button></div></Dialog>}
+//       {modal === "bulk" && <Dialog title="Bulk create interview slots" sub="Create multiple slots on one day, each with its own price." onClose={close} busy={working} width="max-w-4xl"><div className="grid sm:grid-cols-2 gap-3 mb-5"><Field title="Date (IST)"><input type="date" className="ia-input" value={bulkDate} onChange={e => setBulkDate(e.target.value)}/></Field><Field title="Default title"><input className="ia-input" value={bulkCommon.title} onChange={e => setBulkCommon(p => ({ ...p, title: e.target.value }))}/></Field></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{bulkRows.map((r, i) => <div key={i} className="rounded-xl p-3 border ia-separator" style={{ background: "var(--surface)" }}><div className="flex justify-between items-center mb-3"><span className="text-sm font-extrabold">Slot {i + 1}</span><IconButton title="Remove row" danger onClick={() => setBulkRows(p => p.filter((_, j) => i !== j))}><Trash2 size={14}/></IconButton></div><div className="grid grid-cols-2 gap-2">{[["start","Start time","time"],["end","End time","time"],["price","Price (₹)","number"],["mrp","MRP (₹)","number"]].map(([key,title,type]) => <Field key={key} title={title}><input className="ia-input" type={type} value={r[key]} onChange={e => setBulkRows(p => p.map((x,j) => j === i ? { ...x, [key]: e.target.value } : x))}/></Field>)}</div></div>)}</div><button className="ia-btn mt-3" onClick={() => setBulkRows(p => [...p, { ...EMPTY_ROW(), start: "", end: "" }])}><Plus size={15}/> Add another slot</button><div className="mt-5 border-t ia-separator pt-4"><p className="ia-label">Topics allowed in all slots</p><div className="flex flex-wrap gap-2">{TOPICS.map(t => <button key={t} className="ia-chip" data-active={bulkCommon.allowedTopics.includes(t)} onClick={() => toggleTopic(bulkCommon, setBulkCommon, t)}>{t}</button>)}</div><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field title="Max topics per slot"><select className="ia-select" value={bulkCommon.maxTopics} onChange={e => setBulkCommon(p => ({ ...p, maxTopics: Number(e.target.value) }))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}</select></Field><Field title="Meeting URL (optional)"><input className="ia-input" value={bulkCommon.meetingUrl} onChange={e => setBulkCommon(p => ({ ...p, meetingUrl: e.target.value }))}/></Field></div></div><div className="mt-6 flex justify-end gap-2"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working || !bulkRows.length} onClick={saveBulk}>{working && <LoaderCircle size={15} className="animate-spin"/>}Create {bulkRows.length} slots</button></div></Dialog>}
+//       {["block","unblock","deleteSlot","cancel","complete","deleteBooking","refund"].includes(modal) && <Dialog title={{ block: "Block this slot?", unblock: "Reopen this slot?", deleteSlot: "Delete this slot?", cancel: "Cancel this booking?", complete: "Mark interview completed?", deleteBooking: "Delete booking from dashboard?", refund: "Initiate Cashfree refund?" }[modal]} sub={selected?.bookingId || selected?.title || ""} onClose={close} busy={working} width="max-w-lg"><div className="flex gap-3 rounded-xl p-3 mb-4" style={{ background: "var(--soft)" }}><AlertTriangle size={20} style={{ color: "var(--accent)" }} className="shrink-0"/><p className="ia-muted text-xs leading-5">{modal === "cancel" ? "A cancellation reason is mandatory. Paid bookings are marked refund-pending; a separate refund initiation is required." : modal === "deleteBooking" ? "This is a soft delete; financial and audit history are retained." : modal === "refund" ? "This sends a refund request to Cashfree, and does not mean the refund has completed." : "This action will update the live admin schedule."}</p></div>{["block","cancel","deleteBooking"].includes(modal) && <Field title="Reason (minimum 10 characters)"><textarea className="ia-textarea" rows={3} placeholder="Explain the reason..." value={actionReason} onChange={e => setActionReason(e.target.value)}/></Field>}{modal === "deleteSlot" && <Field title="Reason (optional)"><textarea rows={2} className="ia-textarea" value={actionReason} onChange={e => setActionReason(e.target.value)} placeholder="Why are you removing this slot?"/></Field>}{modal === "cancel" && <label className="flex items-start gap-3 mt-4 p-3 rounded-xl" style={{ background: "var(--surface)" }}><input type="checkbox" className="mt-1 accent-orange-600" checked={reopen} onChange={e => setReopen(e.target.checked)}/><span className="text-sm">Reopen this slot for other candidates after cancellation</span></label>}<div className="flex gap-2 justify-end mt-6"><button className="ia-btn" onClick={close}>Keep unchanged</button><button className={`ia-btn ${["cancel","deleteBooking","deleteSlot","block"].includes(modal) ? "ia-btn-danger" : "ia-btn-primary"}`} disabled={working || (["block","cancel","deleteBooking"].includes(modal) && actionReason.trim().length < 10)} onClick={["block","unblock","deleteSlot"].includes(modal) ? executeSlotAction : executeBookingAction}>{working && <LoaderCircle size={15} className="animate-spin"/>}Confirm</button></div></Dialog>}
+//       {modal === "meeting" && <Dialog title="Assign meeting link" sub={selected?.bookingId} onClose={close} busy={working} width="max-w-lg"><Field title="HTTPS meeting URL"><input className="ia-input" placeholder="https://meet.google.com/..." value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)}/></Field><p className="ia-muted text-xs mt-3">A confirmation email is attempted after the meeting link is saved.</p><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working || !cleanUrl(meetingUrl)} onClick={saveMeeting}>Save meeting link</button></div></Dialog>}
+//       {modal === "editBooking" && <Dialog title="Edit candidate details" sub={selected?.bookingId} onClose={close} busy={working}><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{[["name","Full name"],["email","Email"],["phone","Phone"],["experienceYears","Experience (years)"],["currentRole","Current role"],["targetRole","Target role"],["currentCompany","Company"],["resumeUrl","Resume URL"]].map(([key,title]) => <Field key={key} title={title}><input className="ia-input" type={key === "experienceYears" ? "number" : "text"} value={editCandidate[key] ?? ""} onChange={e => setEditCandidate(p => ({ ...p, [key]: e.target.value }))}/></Field>)}<Field className="sm:col-span-2" title="Interview notes"><textarea rows={3} className="ia-textarea" value={editCandidate.notes || ""} onChange={e => setEditCandidate(p => ({ ...p, notes: e.target.value }))}/></Field><Field className="sm:col-span-2" title="Private admin notes"><textarea rows={2} className="ia-textarea" value={adminNotes} onChange={e => setAdminNotes(e.target.value)}/></Field></div><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working} onClick={updateBooking}>Save details</button></div></Dialog>}
+//       {modal === "detail" && detail && <Dialog title="Booking details" sub={detail.bookingId} width="max-w-3xl" onClose={close}><div className="flex items-center justify-between gap-2 flex-wrap mb-5"><Pill value={detail.status}/><Pill value={detail.payment?.status}/><span className="font-black ia-accent text-lg">{inr(detail.slotSnapshot?.price)}</span></div><div className="grid sm:grid-cols-2 gap-3">{[["Candidate", detail.candidate?.name],["Email",detail.candidate?.email],["Phone",detail.candidate?.phone],["Experience",`${detail.candidate?.experienceYears ?? 0} years`],["Date & time",dateTime(detail.slotSnapshot?.startTime)],["Duration",`${detail.slotSnapshot?.durationMinutes || 0} minutes`],["Topics",(detail.selectedTopics || []).join(", ")],["Resume URL",detail.candidate?.resumeUrl],["Meeting link",detail.meeting?.url],["Refund status",detail.refund?.status || "NOT_REQUIRED"]].map(([title,value]) => <div key={title} className="p-3 rounded-xl" style={{ background: "var(--surface)" }}><p className="ia-label">{title}</p>{["Meeting link","Resume URL"].includes(title) && cleanUrl(value) ? <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm ia-accent underline break-all">Open link <ExternalLink className="inline" size={12}/></a> : <p className="text-sm font-semibold break-words">{value || "—"}</p>}</div>)}</div><div className="mt-4 p-4 rounded-xl" style={{ background: "var(--surface)" }}><p className="ia-label">Candidate notes</p><p className="text-sm whitespace-pre-wrap">{detail.candidate?.notes || "No notes"}</p>{detail.cancellation?.reason && <><p className="ia-label mt-4">Cancellation reason</p><p className="text-sm text-red-600">{detail.cancellation.reason}</p></>}</div><div className="mt-4 flex flex-wrap gap-2">{detail.status === "CONFIRMED" && <><button className="ia-btn" onClick={() => openMeeting(detail)}><Video size={14}/> Meeting</button><button className="ia-btn" onClick={() => startAction("complete", detail)}><CircleCheck size={14}/> Complete</button></>}{["PENDING_PAYMENT","CONFIRMED"].includes(detail.status) && <button className="ia-btn ia-btn-danger" onClick={() => startAction("cancel", detail)}><Ban size={14}/> Cancel booking</button>}{detail.refund?.status === "PENDING" && <button className="ia-btn" onClick={() => startAction("refund", detail)}><Wallet size={14}/> Initiate refund</button>}{detail.refund?.gatewayRefundId && <button className="ia-btn" onClick={() => syncRefund(detail)}><RotateCcw size={14}/> Sync refund</button>}{["COMPLETED","CANCELLED_BY_ADMIN","CANCELLED_BY_USER","EXPIRED","PAYMENT_FAILED","NO_SHOW"].includes(detail.status) && <button className="ia-btn ia-btn-danger" onClick={() => startAction("deleteBooking", detail)}><Trash2 size={14}/> Delete booking</button>}</div><div className="mt-5"><p className="ia-label">Payment attempts</p>{detail.paymentAttempts?.length ? <div className="space-y-2">{detail.paymentAttempts.map((a,i) => <div key={a.attemptId || i} className="rounded-lg border ia-separator p-3 flex flex-wrap gap-3 items-center justify-between text-xs"><span className="break-all">{a.gatewayOrderId}</span><Pill value={a.status}/><span>{inr(a.amount)}</span></div>)}</div> : <p className="ia-muted text-xs">No gateway attempts.</p>}</div></Dialog>}
+//     </AnimatePresence>
+//   </div>;
+// }
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CalendarDays, Plus, Search, Edit3, Trash2, Ban, CheckCircle2,
-  Clock3, Wallet, Users, X, ChevronLeft, ChevronRight, ExternalLink,
-  Filter, Eye, Video, Mail, Phone, BriefcaseBusiness,
-  AlertTriangle, LoaderCircle, ArrowUpRight, IndianRupee, ShieldCheck,
-  CalendarPlus2, ListChecks, FileText, Copy, CircleCheck, RotateCcw, SlidersHorizontal, CalendarRange, XCircle,
-} from "lucide-react";
-
-const BASE_URL = (import.meta.env.VITE_BASE_URL || "http://localhost:5001").replace(/\/$/, "");
+import { toast } from "react-hot-toast";
+import { CalendarDays, Plus, Search, Edit3, Trash2, Ban, CheckCircle2, Clock3, Wallet, Users, X, ChevronLeft, ChevronRight, ExternalLink, Filter, Eye, Video, Mail, Phone, BriefcaseBusiness, AlertTriangle, LoaderCircle, ArrowUpRight, IndianRupee, ShieldCheck, CalendarPlus2, ListChecks, FileText, Copy, CircleCheck, RotateCcw, SlidersHorizontal, CalendarRange, XCircle, } from "lucide-react";
+const BASE_URL = (import.meta.env.VITE_BASE_URL || "http://localhost:5001").replace(/\/+$/, "");
 const API = `${BASE_URL}/api/interviews/admin`;
 const TOPICS = ["DSA", "LLD", "HLD", "GENAI", "PROJECTS"];
 const EMPTY_ROW = () => ({ start: "10:00", end: "11:00", price: "599", mrp: "999" });
@@ -21,226 +261,405 @@ const pad = (v) => String(v).padStart(2, "0");
 const istDay = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 const localDate = (d) => d ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(d)) : "";
 const localTime = (d) => d ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d)) : "";
-const isoFromIST = (day, hhmm) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !/^\d{2}:\d{2}$/.test(hhmm)) throw new Error("Enter a valid date and time"); const [h, m] = hhmm.split(":").map(Number); if (h > 23 || m > 59) throw new Error("Invalid time"); const d = new Date(`${day}T${hhmm}:00+05:30`); if (Number.isNaN(+d)) throw new Error("Invalid date/time"); return d.toISOString(); };
-const cleanUrl = (v) => { if (!v) return ""; try { const u = new URL(v); return u.protocol === "https:" ? u.href : ""; } catch { return ""; } };
+const isoFromIST = (day, hhmm) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !/^\d{2}:\d{2}$/.test(hhmm))
+    throw new Error("Enter a valid date and time"); const [h, m] = hhmm.split(":").map(Number); if (h > 23 || m > 59)
+    throw new Error("Invalid time"); const d = new Date(`${day}T${hhmm}:00+05:30`); if (Number.isNaN(+d))
+    throw new Error("Invalid date/time"); return d.toISOString(); };
+const cleanUrl = (v) => { if (!v)
+    return ""; try {
+    const u = new URL(v);
+    return u.protocol === "https:" ? u.href : "";
+}
+catch {
+    return "";
+} };
 const dateRangeIST = (day) => ({ from: `${day}T00:00:00+05:30`, to: `${day}T23:59:59.999+05:30` });
-const datesBetween = (a,b) => (!a || !b || a <= b);
-const dayHeading = (day) => new Intl.DateTimeFormat("en-IN", {timeZone:"UTC",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date(`${day}T12:00:00Z`));
+const datesBetween = (a, b) => (!a || !b || a <= b);
+const dayHeading = (day) => new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${day}T12:00:00Z`));
 const initialSlot = () => ({ title: "1:1 Technical Mock Interview", description: "", day: istDay(), start: "10:00", end: "11:00", price: "599", mrp: "999", allowedTopics: [...TOPICS], maxTopics: 3, meetingUrl: "", active: true });
-
 const css = `
-.tt-interview-admin{--bg:#fffcf8;--surface:#ffffff;--soft:#fff4e8;--soft2:#fff8f0;--ink:#2c211c;--muted:#807168;--line:#efdfd1;--accent:#ea580c;--accentHover:#c2410c;--shadow:0 14px 42px rgba(90,51,24,.06);background:var(--bg);color:var(--ink);font-family:'DM Sans',Inter,system-ui,sans-serif;color-scheme:light;min-height:calc(100vh - 64px)}
-.tt-interview-admin[data-theme=dark]{--bg:#17120f;--surface:#261e19;--soft:#35251b;--soft2:#211914;--ink:#fff4eb;--muted:#c6b4a8;--line:#46382e;--accent:#fb923c;--accentHover:#ea580c;--shadow:0 14px 42px rgba(0,0,0,.16);color-scheme:dark}
-.tt-interview-admin .ia-card{background:var(--surface);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}
-.tt-interview-admin .ia-muted{color:var(--muted)}.tt-interview-admin .ia-accent{color:var(--accent)}
-.tt-interview-admin .ia-input,.tt-interview-admin .ia-select,.tt-interview-admin .ia-textarea{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;outline:none;font-size:13px;min-width:0}
-.tt-interview-admin .ia-input:focus,.tt-interview-admin .ia-select:focus,.tt-interview-admin .ia-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(234,88,12,.09)}
-.tt-interview-admin .ia-label{display:block;color:var(--muted);font-size:11px;font-weight:800;margin-bottom:6px;letter-spacing:.02em}
-.tt-interview-admin .ia-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:800;transition:all .2s;cursor:pointer;white-space:nowrap}
-.tt-interview-admin .ia-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}.tt-interview-admin .ia-btn:disabled{opacity:.45;cursor:not-allowed}
-.tt-interview-admin .ia-btn-primary{background:#ea580c;color:#fff;border-color:#ea580c}.tt-interview-admin .ia-btn-primary:hover:not(:disabled){background:#c2410c;color:#fff;border-color:#c2410c}
-.tt-interview-admin .ia-btn-danger{color:#b91c1c;border-color:rgba(239,68,68,.3)}.tt-interview-admin .ia-btn-danger:hover:not(:disabled){background:rgba(239,68,68,.08);border-color:#ef4444;color:#dc2626}
-.tt-interview-admin .ia-chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:750;cursor:pointer}
-.tt-interview-admin .ia-chip[data-active=true]{background:var(--soft);color:var(--accent);border-color:var(--accent)}
-.tt-interview-admin .ia-tag{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}
-.tt-interview-admin .ia-tag[data-tone=green]{background:#dcfce7;color:#166534}.tt-interview-admin .ia-tag[data-tone=amber]{background:#fef3c7;color:#92400e}.tt-interview-admin .ia-tag[data-tone=red]{background:#fee2e2;color:#991b1b}.tt-interview-admin .ia-tag[data-tone=blue]{background:#dbeafe;color:#1e40af}.tt-interview-admin .ia-tag[data-tone=slate]{background:#e2e8f0;color:#475569}
-.tt-interview-admin .ia-table-wrap{overflow-x:auto}.tt-interview-admin .ia-table{border-collapse:collapse;width:100%;min-width:800px;font-size:12px}.tt-interview-admin .ia-table th{text-align:left;background:var(--soft2);color:var(--muted);padding:14px 15px;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.tt-interview-admin .ia-table td{border-top:1px solid var(--line);padding:14px 15px;vertical-align:middle}.tt-interview-admin .ia-table tbody tr:hover{background:var(--soft2)}
-.tt-interview-admin .ia-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(14,10,8,.62);display:flex;align-items:center;justify-content:center;padding:16px}.tt-interview-admin .ia-dialog{width:100%;max-height:92dvh;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.2)}
-.tt-interview-admin .ia-separator{border-color:var(--line)}.tt-interview-admin .ia-orange{background:linear-gradient(118deg,#ea580c,#fb923c);color:white}.tt-interview-admin .ia-scroll::-webkit-scrollbar{width:7px;height:7px}.tt-interview-admin .ia-scroll::-webkit-scrollbar-thumb{background:#bda08c;border-radius:8px}
-`;
 
+.tt-interview-admin{--bg:#fffcf8;--surface:#ffffff;--soft:#fff4e8;--soft2:#fff8f0;--ink:#2c211c;--muted:#807168;--line:#efdfd1;--accent:#ea580c;--accentHover:#c2410c;--shadow:0 14px 42px rgba(90,51,24,.06);background:var(--bg);color:var(--ink);font-family:'DM Sans',Inter,system-ui,sans-serif;color-scheme:light;min-height:calc(100vh - 64px)}
+
+.tt-interview-admin[data-theme=dark]{--bg:#17120f;--surface:#261e19;--soft:#35251b;--soft2:#211914;--ink:#fff4eb;--muted:#c6b4a8;--line:#46382e;--accent:#fb923c;--accentHover:#ea580c;--shadow:0 14px 42px rgba(0,0,0,.16);color-scheme:dark}
+
+.tt-interview-admin .ia-card{background:var(--surface);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}
+
+.tt-interview-admin .ia-muted{color:var(--muted)}.tt-interview-admin .ia-accent{color:var(--accent)}
+
+.tt-interview-admin .ia-input,.tt-interview-admin .ia-select,.tt-interview-admin .ia-textarea{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;outline:none;font-size:13px;min-width:0}
+
+.tt-interview-admin .ia-input:focus,.tt-interview-admin .ia-select:focus,.tt-interview-admin .ia-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(234,88,12,.09)}
+
+.tt-interview-admin .ia-label{display:block;color:var(--muted);font-size:11px;font-weight:800;margin-bottom:6px;letter-spacing:.02em}
+
+.tt-interview-admin .ia-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:800;transition:all .2s;cursor:pointer;white-space:nowrap}
+
+.tt-interview-admin .ia-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}.tt-interview-admin .ia-btn:disabled{opacity:.45;cursor:not-allowed}
+
+.tt-interview-admin .ia-btn-primary{background:#ea580c;color:#fff;border-color:#ea580c}.tt-interview-admin .ia-btn-primary:hover:not(:disabled){background:#c2410c;color:#fff;border-color:#c2410c}
+
+.tt-interview-admin .ia-btn-danger{color:#b91c1c;border-color:rgba(239,68,68,.3)}.tt-interview-admin .ia-btn-danger:hover:not(:disabled){background:rgba(239,68,68,.08);border-color:#ef4444;color:#dc2626}
+
+.tt-interview-admin .ia-chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:750;cursor:pointer}
+
+.tt-interview-admin .ia-chip[data-active=true]{background:var(--soft);color:var(--accent);border-color:var(--accent)}
+
+.tt-interview-admin .ia-tag{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}
+
+.tt-interview-admin .ia-tag[data-tone=green]{background:#dcfce7;color:#166534}.tt-interview-admin .ia-tag[data-tone=amber]{background:#fef3c7;color:#92400e}.tt-interview-admin .ia-tag[data-tone=red]{background:#fee2e2;color:#991b1b}.tt-interview-admin .ia-tag[data-tone=blue]{background:#dbeafe;color:#1e40af}.tt-interview-admin .ia-tag[data-tone=slate]{background:#e2e8f0;color:#475569}
+
+.tt-interview-admin .ia-table-wrap{overflow-x:auto}.tt-interview-admin .ia-table{border-collapse:collapse;width:100%;min-width:800px;font-size:12px}.tt-interview-admin .ia-table th{text-align:left;background:var(--soft2);color:var(--muted);padding:14px 15px;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.tt-interview-admin .ia-table td{border-top:1px solid var(--line);padding:14px 15px;vertical-align:middle}.tt-interview-admin .ia-table tbody tr:hover{background:var(--soft2)}
+
+.tt-interview-admin .ia-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(14,10,8,.62);display:flex;align-items:center;justify-content:center;padding:16px}.tt-interview-admin .ia-dialog{width:100%;max-height:92dvh;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.2)}
+
+.tt-interview-admin .ia-separator{border-color:var(--line)}.tt-interview-admin .ia-orange{background:linear-gradient(118deg,#ea580c,#fb923c);color:white}.tt-interview-admin .ia-scroll::-webkit-scrollbar{width:7px;height:7px}.tt-interview-admin .ia-scroll::-webkit-scrollbar-thumb{background:#bda08c;border-radius:8px}
+
+`;
 function Pill({ value }) { return <span className="ia-tag" data-tone={STATUS[String(value || "").toUpperCase()] || "slate"}>{String(value || "UNKNOWN").replaceAll("_", " ")}</span>; }
 function IconButton({ title, onClick, children, danger = false, disabled }) { return <button type="button" title={title} aria-label={title} onClick={onClick} disabled={disabled} className={`ia-btn !p-2 ${danger ? "ia-btn-danger" : ""}`}>{children}</button>; }
 function Field({ title, children, className = "" }) { return <label className={`block min-w-0 ${className}`}><span className="ia-label">{title}</span>{children}</label>; }
-function Dialog({ title, sub, onClose, children, width = "max-w-2xl", busy = false }) { return <motion.div className="ia-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}><motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 15, opacity: 0 }} className={`ia-dialog ia-scroll ${width}`}><div className="flex items-start justify-between gap-3 px-5 py-4 border-b ia-separator sticky top-0 z-10" style={{ background: "var(--bg)" }}><div><h2 className="text-lg font-extrabold">{title}</h2>{sub && <p className="ia-muted text-xs mt-1">{sub}</p>}</div><IconButton title="Close" onClick={onClose} disabled={busy}><X size={16}/></IconButton></div><div className="p-5 sm:p-6">{children}</div></motion.div></motion.div>; }
+function Dialog({ title, sub, onClose, children, width = "max-w-2xl", busy = false }) { return <motion.div className="ia-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy)
+    onClose(); }}><motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 15, opacity: 0 }} className={`ia-dialog ia-scroll ${width}`}><div className="flex items-start justify-between gap-3 px-5 py-4 border-b ia-separator sticky top-0 z-10" style={{ background: "var(--bg)" }}><div><h2 className="text-lg font-extrabold">{title}</h2>{sub && <p className="ia-muted text-xs mt-1">{sub}</p>}</div><IconButton title="Close" onClick={onClose} disabled={busy}><X size={16}/></IconButton></div><div className="p-5 sm:p-6">{children}</div></motion.div></motion.div>; }
 function Empty({ children }) { return <div className="flex flex-col gap-2 items-center text-center py-16 px-5 ia-muted"><CalendarDays size={28}/><p className="text-sm">{children}</p></div>; }
-
 export default function InterviewAdminDashboard({ authToken, token: tokenProp }) {
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("theme") === "dark" ? "dark" : "light"; } catch { return "light"; } });
-  const [tab, setTab] = useState("slots");
-  const [slots, setSlots] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [slotPage, setSlotPage] = useState(1);
-  const [bookingPage, setBookingPage] = useState(1);
-  const [slotTotal, setSlotTotal] = useState(0);
-  const [bookingTotal, setBookingTotal] = useState(0);
-  const [slotStatus, setSlotStatus] = useState("");
-  const [slotDay, setSlotDay] = useState("");
-  const [slotFrom, setSlotFrom] = useState("");
-  const [slotTo, setSlotTo] = useState("");
-  const [slotTopic, setSlotTopic] = useState("");
-  const [slotSearch, setSlotSearch] = useState("");
-  const [slotActive, setSlotActive] = useState("all");
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [slotView, setSlotView] = useState("grouped");
-  const [expandedDays, setExpandedDays] = useState({});
-  const [slotPageSize, setSlotPageSize] = useState(100);
-  const [bookingStatus, setBookingStatus] = useState("");
-  const [search, setSearch] = useState("");
-  const [searchCommitted, setSearchCommitted] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [working, setWorking] = useState(false);
-  const [notice, setNotice] = useState(null);
-  const [modal, setModal] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [slotForm, setSlotForm] = useState(initialSlot);
-  const [bulkDate, setBulkDate] = useState(istDay());
-  const [bulkCommon, setBulkCommon] = useState({ title: "1:1 Technical Mock Interview", description: "", allowedTopics: [...TOPICS], maxTopics: 3, meetingUrl: "" });
-  const [bulkRows, setBulkRows] = useState([EMPTY_ROW(), { ...EMPTY_ROW(), start: "11:15", end: "12:15" }]);
-  const [actionReason, setActionReason] = useState("");
-  const [reopen, setReopen] = useState(true);
-  const [meetingUrl, setMeetingUrl] = useState("");
-  const [editCandidate, setEditCandidate] = useState({});
-  const [adminNotes, setAdminNotes] = useState("");
-  const [detail, setDetail] = useState(null);
-
-  const jwt = useMemo(() => {
-    if (authToken || tokenProp) return authToken || tokenProp;
-    try { return localStorage.getItem("token") || localStorage.getItem("authToken") || ""; } catch { return ""; }
-  }, [authToken, tokenProp]);
-
-  const request = useCallback(async (path, { method = "GET", body, signal } = {}) => {
-    const headers = { Accept: "application/json" };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    if (jwt) headers.Authorization = `Bearer ${jwt}`;
-    const response = await fetch(`${API}${path}`, { method, headers, credentials: "include", signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.success === false) throw new Error(result.message || `Request failed (${response.status})`);
-    return result;
-  }, [jwt]);
-
-  const flash = (message, type = "success") => setNotice({ message, type });
-  const close = () => { if (!working) { setModal(null); setSelected(null); setDetail(null); } };
-  const load = useCallback(async (kind = tab) => {
-    setLoading(true);
-    try {
-      const q = new URLSearchParams({ page: String(kind === "slots" ? slotPage : bookingPage), limit: String(kind === "slots" ? slotPageSize : 15) });
-      if (kind === "slots") {
-        if (slotStatus) q.set("status", slotStatus);
-        if (showDeleted) q.set("includeDeleted", "true");
-        const range = slotDay ? dateRangeIST(slotDay) : null;
-        if (range) { q.set("from",range.from);q.set("to",range.to); }
-        else {
-          if (slotFrom) q.set("from", `${slotFrom}T00:00:00+05:30`);
-          if (slotTo) q.set("to", `${slotTo}T23:59:59.999+05:30`);
+    const [theme, setTheme] = useState(() => { try {
+        return localStorage.getItem("theme") === "dark" ? "dark" : "light";
+    }
+    catch {
+        return "light";
+    } });
+    const [tab, setTab] = useState("slots");
+    const [slots, setSlots] = useState([]);
+    const [bookings, setBookings] = useState([]);
+    const [slotPage, setSlotPage] = useState(1);
+    const [bookingPage, setBookingPage] = useState(1);
+    const [slotTotal, setSlotTotal] = useState(0);
+    const [bookingTotal, setBookingTotal] = useState(0);
+    const [slotStatus, setSlotStatus] = useState("");
+    const [slotDay, setSlotDay] = useState("");
+    const [slotFrom, setSlotFrom] = useState("");
+    const [slotTo, setSlotTo] = useState("");
+    const [slotTopic, setSlotTopic] = useState("");
+    const [slotSearch, setSlotSearch] = useState("");
+    const [slotActive, setSlotActive] = useState("all");
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [slotView, setSlotView] = useState("grouped");
+    const [expandedDays, setExpandedDays] = useState({});
+    const [slotPageSize, setSlotPageSize] = useState(100);
+    const [bookingStatus, setBookingStatus] = useState("");
+    const [search, setSearch] = useState("");
+    const [searchCommitted, setSearchCommitted] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [working, setWorking] = useState(false);
+    const [modal, setModal] = useState(null);
+    const [selected, setSelected] = useState(null);
+    const [slotForm, setSlotForm] = useState(initialSlot);
+    const [bulkDate, setBulkDate] = useState(istDay());
+    const [bulkCommon, setBulkCommon] = useState({ title: "1:1 Technical Mock Interview", description: "", allowedTopics: [...TOPICS], maxTopics: 3, meetingUrl: "" });
+    const [bulkRows, setBulkRows] = useState([EMPTY_ROW(), { ...EMPTY_ROW(), start: "11:15", end: "12:15" }]);
+    const [actionReason, setActionReason] = useState("");
+    const [reopen, setReopen] = useState(true);
+    const [meetingUrl, setMeetingUrl] = useState("");
+    const [editCandidate, setEditCandidate] = useState({});
+    const [adminNotes, setAdminNotes] = useState("");
+    const [detail, setDetail] = useState(null);
+    const jwt = useMemo(() => {
+        if (authToken || tokenProp)
+            return authToken || tokenProp;
+        try {
+            return localStorage.getItem("token") || localStorage.getItem("authToken") || "";
         }
-        const result = await request(`/slots?${q}`);
-        setSlots(result.data || []); setSlotTotal(result.pagination?.total || 0);
-      } else {
-        if (bookingStatus) q.set("status", bookingStatus);
-        if (searchCommitted.includes("@")) q.set("email", searchCommitted);
-        else if (searchCommitted) q.set("bookingId", searchCommitted);
-        const result = await request(`/bookings?${q}`);
-        setBookings(result.data || []); setBookingTotal(result.pagination?.total || 0);
-      }
-    } catch (e) { flash(e.message, "error"); }
-    finally { setLoading(false); }
-  }, [tab, slotPage, slotPageSize, bookingPage, slotStatus, bookingStatus, searchCommitted, slotDay, slotFrom, slotTo, showDeleted, request]);
-  useEffect(() => { load(); }, [load]);
-  // The navbar owns the theme. This page only follows the saved theme value.
-  useEffect(() => {
-    const syncTheme = () => { try { const next = localStorage.getItem("theme") === "dark" ? "dark" : "light"; setTheme(old => old === next ? old : next); } catch { setTheme("light"); } };
-    syncTheme();
-    window.addEventListener("storage", syncTheme);
-    window.addEventListener("targettrek-theme-change", syncTheme);
-    window.addEventListener("focus", syncTheme);
-    window.addEventListener("pageshow", syncTheme);
-    // Native storage events don't fire for same-tab changes.
-    const poll = window.setInterval(syncTheme, 350);
-    return () => { window.removeEventListener("storage", syncTheme); window.removeEventListener("targettrek-theme-change", syncTheme); window.removeEventListener("focus", syncTheme); window.removeEventListener("pageshow", syncTheme); window.clearInterval(poll); };
-  }, []);
-  const run = async (job, successMessage) => { setWorking(true); try { await job(); flash(successMessage); setModal(null); setDetail(null); setSelected(null); await load(); } catch (e) { flash(e.message, "error"); } finally { setWorking(false); } };
+        catch {
+            return "";
+        }
+    }, [authToken, tokenProp]);
+    const request = useCallback(async (path, { method = "GET", body, signal } = {}) => {
+        const headers = { Accept: "application/json" };
+        if (body !== undefined)
+            headers["Content-Type"] = "application/json";
+        if (jwt)
+            headers.Authorization = `Bearer ${jwt}`;
+        const response = await fetch(`${API}${path}`, { method, headers, credentials: "include", signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.success === false)
+            throw new Error(result.message || `Request failed (${response.status})`);
+        return result;
+    }, [jwt]);
+    const flash = (message, type = "success") => {
+        if (type === "error")
+            toast.error(message);
+        else if (type === "info")
+            toast.info(message);
+        else
+            toast.success(message);
+    };
+    const close = () => { if (!working) {
+        setModal(null);
+        setSelected(null);
+        setDetail(null);
+    } };
+    const load = useCallback(async (kind = tab) => {
+        setLoading(true);
+        try {
+            const q = new URLSearchParams({ page: String(kind === "slots" ? slotPage : bookingPage), limit: String(kind === "slots" ? slotPageSize : 15) });
+            if (kind === "slots") {
+                if (slotStatus)
+                    q.set("status", slotStatus);
+                if (showDeleted)
+                    q.set("includeDeleted", "true");
+                const range = slotDay ? dateRangeIST(slotDay) : null;
+                if (range) {
+                    q.set("from", range.from);
+                    q.set("to", range.to);
+                }
+                else {
+                    if (slotFrom)
+                        q.set("from", `${slotFrom}T00:00:00+05:30`);
+                    if (slotTo)
+                        q.set("to", `${slotTo}T23:59:59.999+05:30`);
+                }
+                const result = await request(`/slots?${q}`);
+                setSlots(result.data || []);
+                setSlotTotal(result.pagination?.total || 0);
+            }
+            else {
+                if (bookingStatus)
+                    q.set("status", bookingStatus);
+                if (searchCommitted.includes("@"))
+                    q.set("email", searchCommitted);
+                else if (searchCommitted)
+                    q.set("bookingId", searchCommitted);
+                const result = await request(`/bookings?${q}`);
+                setBookings(result.data || []);
+                setBookingTotal(result.pagination?.total || 0);
+            }
+        }
+        catch (e) {
+            flash(e.message, "error");
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [tab, slotPage, slotPageSize, bookingPage, slotStatus, bookingStatus, searchCommitted, slotDay, slotFrom, slotTo, showDeleted, request]);
+    useEffect(() => { load(); }, [load]);
+    // The navbar owns the theme. This page only follows the saved theme value.
+    useEffect(() => {
+        const syncTheme = () => { try {
+            const next = localStorage.getItem("theme") === "dark" ? "dark" : "light";
+            setTheme(old => old === next ? old : next);
+        }
+        catch {
+            setTheme("light");
+        } };
+        syncTheme();
+        window.addEventListener("storage", syncTheme);
+        window.addEventListener("targettrek-theme-change", syncTheme);
+        window.addEventListener("focus", syncTheme);
+        window.addEventListener("pageshow", syncTheme);
+        // Native storage events don't fire for same-tab changes.
+        const poll = window.setInterval(syncTheme, 350);
+        return () => { window.removeEventListener("storage", syncTheme); window.removeEventListener("targettrek-theme-change", syncTheme); window.removeEventListener("focus", syncTheme); window.removeEventListener("pageshow", syncTheme); window.clearInterval(poll); };
+    }, []);
+    const run = async (job, successMessage) => {
+        if (working)
+            return;
+        setWorking(true);
+        try {
+            await job();
+            flash(successMessage);
+            setModal(null);
+            setDetail(null);
+            setSelected(null);
+            await load();
+        }
+        catch (e) {
+            flash(e.message || "Request failed", "error");
+        }
+        finally {
+            setWorking(false);
+        }
+    };
+    const slotPayload = (f) => ({ title: f.title.trim(), description: f.description.trim(), startTime: isoFromIST(f.day, f.start), endTime: isoFromIST(f.day, f.end), durationMinutes: (new Date(isoFromIST(f.day, f.end)) - new Date(isoFromIST(f.day, f.start))) / 60000, price: Number(f.price), mrp: Number(f.mrp), allowedTopics: f.allowedTopics, maxTopics: Number(f.maxTopics), meetingUrl: f.meetingUrl.trim() });
+    const openSlot = (s) => { setSlotForm(s ? { title: s.title || "", description: s.description || "", day: localDate(s.startTime), start: localTime(s.startTime), end: localTime(s.endTime), price: String(s.price), mrp: String(s.mrp), allowedTopics: [...(s.allowedTopics || TOPICS)], maxTopics: s.maxTopics || 3, meetingUrl: s.meetingUrl || "", active: s.active !== false } : initialSlot()); setSelected(s); setModal("slot"); };
+    const toggleTopic = (list, setList, value) => setList((prev) => ({ ...prev, allowedTopics: prev.allowedTopics.includes(value) ? prev.allowedTopics.filter(x => x !== value) : [...prev.allowedTopics, value] }));
+    const saveSlot = () => run(async () => { const payload = slotPayload(slotForm); if (!payload.allowedTopics.length || payload.maxTopics > payload.allowedTopics.length)
+        throw new Error("Please select enough allowed topics"); if (!Number.isInteger(payload.durationMinutes) || payload.durationMinutes < 15 || payload.durationMinutes > 240)
+        throw new Error("Duration must be between 15 and 240 minutes"); if (selected)
+        await request(`/slots/${selected._id}`, { method: "PATCH", body: { ...payload, active: slotForm.active } });
+    else
+        await request("/slots", { method: "POST", body: payload }); }, selected ? "Slot updated" : "Slot created");
+    const saveBulk = () => run(async () => { const rows = bulkRows.map(r => ({ title: bulkCommon.title.trim(), description: bulkCommon.description.trim(), startTime: isoFromIST(bulkDate, r.start), endTime: isoFromIST(bulkDate, r.end), durationMinutes: (new Date(isoFromIST(bulkDate, r.end)) - new Date(isoFromIST(bulkDate, r.start))) / 60000, price: Number(r.price), mrp: Number(r.mrp), allowedTopics: bulkCommon.allowedTopics, maxTopics: Number(bulkCommon.maxTopics), meetingUrl: bulkCommon.meetingUrl.trim() })); if (!rows.length || rows.some(r => r.price <= 0 || r.mrp < r.price || !Number.isInteger(r.durationMinutes) || r.durationMinutes < 15 || r.durationMinutes > 240))
+        throw new Error("Each slot needs a duration of 15–240 minutes and valid prices"); if (!bulkCommon.allowedTopics.length || bulkCommon.maxTopics > bulkCommon.allowedTopics.length)
+        throw new Error("Choose valid topics"); await request("/slots/bulk", { method: "POST", body: { slots: rows } }); }, `${bulkRows.length} slots created`);
+    const startAction = (kind, record) => { setSelected(record); setActionReason(""); setReopen(true); setModal(kind); };
+    const executeSlotAction = () => run(async () => { const id = selected._id; if (modal === "block")
+        await request(`/slots/${id}/block`, { method: "PATCH", body: { reason: actionReason } }); if (modal === "unblock")
+        await request(`/slots/${id}/unblock`, { method: "PATCH" }); if (modal === "deleteSlot")
+        await request(`/slots/${id}`, { method: "DELETE", body: { reason: actionReason || "Removed by administrator" } }); }, "Slot updated successfully");
+    const executeBookingAction = () => run(async () => { const id = selected.bookingId; if (modal === "cancel")
+        await request(`/bookings/${encodeURIComponent(id)}/cancel`, { method: "POST", body: { reason: actionReason, reopenSlot: reopen } }); if (modal === "complete")
+        await request(`/bookings/${encodeURIComponent(id)}/complete`, { method: "PATCH" }); if (modal === "deleteBooking")
+        await request(`/bookings/${encodeURIComponent(id)}`, { method: "DELETE", body: { reason: actionReason } }); if (modal === "refund")
+        await request(`/bookings/${encodeURIComponent(id)}/refund`, { method: "POST" }); }, modal === "cancel" ? "Booking cancelled. Refund may need initiation." : "Booking updated");
+    const openDetail = async (b) => { setSelected(b); setDetail(b); setModal("detail"); try {
+        const r = await request(`/bookings/${encodeURIComponent(b.bookingId)}`);
+        setDetail(r.data || b);
+    }
+    catch (e) {
+        flash(e.message, "error");
+    } };
+    const openEditBooking = (b) => { setSelected(b); setEditCandidate({ ...(b.candidate || {}) }); setAdminNotes(b.adminNotes || ""); setModal("editBooking"); };
+    const updateBooking = () => run(() => request(`/bookings/${encodeURIComponent(selected.bookingId)}`, { method: "PATCH", body: { candidate: { name: editCandidate.name, email: editCandidate.email, phone: editCandidate.phone, experienceYears: Number(editCandidate.experienceYears || 0), currentRole: editCandidate.currentRole, targetRole: editCandidate.targetRole, currentCompany: editCandidate.currentCompany, resumeUrl: editCandidate.resumeUrl, notes: editCandidate.notes }, adminNotes } }), "Candidate details updated");
+    const openMeeting = (b) => { setSelected(b); setMeetingUrl(b.meeting?.url || ""); setModal("meeting"); };
+    const saveMeeting = () => run(async () => { if (!cleanUrl(meetingUrl))
+        throw new Error("Provide a valid HTTPS meeting URL"); await request(`/bookings/${encodeURIComponent(selected.bookingId)}/meeting`, { method: "PATCH", body: { meetingUrl } }); }, "Meeting link saved. Confirmation email attempted.");
+    const syncRefund = (b) => run(async () => { const r = await request(`/bookings/${encodeURIComponent(b.bookingId)}/refund`); flash(`Refund: ${r.data?.refundStatus || "Unknown"}`); }, "Refund status checked");
+    const totals = useMemo(() => ({ available: slots.filter(s => s.status === "AVAILABLE").length, booked: slots.filter(s => s.status === "BOOKED").length, blocked: slots.filter(s => s.status === "BLOCKED").length, revenue: bookings.filter(b => b.payment?.status === "SUCCESS").reduce((s, b) => s + Number(b.slotSnapshot?.price || 0), 0) }), [slots, bookings]);
+    const filteredSlots = useMemo(() => slots.filter(s => {
+        if (slotTopic && !(s.allowedTopics || []).includes(slotTopic))
+            return false;
+        if (slotActive === "active" && (!s.active || s.isDeleted))
+            return false;
+        if (slotActive === "inactive" && s.active && !s.isDeleted)
+            return false;
+        const term = slotSearch.trim().toLowerCase();
+        if (term && ![s.title, s.description, s._id, s.meetingUrl, ...(s.allowedTopics || [])].some(x => String(x || "").toLowerCase().includes(term)))
+            return false;
+        return true;
+    }), [slots, slotTopic, slotActive, slotSearch]);
+    const groupedSlots = useMemo(() => Object.entries(filteredSlots.reduce((groups, slot) => {
+        const key = localDate(slot.startTime);
+        (groups[key] ||= []).push(slot);
+        return groups;
+    }, {})).sort(([a], [b]) => a.localeCompare(b)).map(([date, items]) => ({ date, items: items.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)), available: items.filter(s => s.status === "AVAILABLE" && s.active && !s.isDeleted).length, booked: items.filter(s => s.status === "BOOKED").length })), [filteredSlots]);
+    const page = tab === "slots" ? slotPage : bookingPage;
+    const total = tab === "slots" ? slotTotal : bookingTotal;
+    const maxPage = Math.max(1, Math.ceil(total / (tab === "slots" ? slotPageSize : 15)));
+    const setPage = tab === "slots" ? setSlotPage : setBookingPage;
+    const statusOptions = tab === "slots" ? ["AVAILABLE", "HELD", "BOOKED", "BLOCKED"] : ["PENDING_PAYMENT", "CONFIRMED", "COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER", "EXPIRED", "PAYMENT_FAILED", "NO_SHOW"];
+    return <div className="tt-interview-admin mt-16" data-theme={theme}>
 
-  const slotPayload = (f) => ({ title: f.title.trim(), description: f.description.trim(), startTime: isoFromIST(f.day, f.start), endTime: isoFromIST(f.day, f.end), price: Number(f.price), mrp: Number(f.mrp), allowedTopics: f.allowedTopics, maxTopics: Number(f.maxTopics), meetingUrl: f.meetingUrl.trim() });
-  const openSlot = (s) => { setSlotForm(s ? { title: s.title || "", description: s.description || "", day: localDate(s.startTime), start: localTime(s.startTime), end: localTime(s.endTime), price: String(s.price), mrp: String(s.mrp), allowedTopics: [...(s.allowedTopics || TOPICS)], maxTopics: s.maxTopics || 3, meetingUrl: s.meetingUrl || "", active: s.active !== false } : initialSlot()); setSelected(s); setModal("slot"); };
-  const toggleTopic = (list, setList, value) => setList((prev) => ({ ...prev, allowedTopics: prev.allowedTopics.includes(value) ? prev.allowedTopics.filter(x => x !== value) : [...prev.allowedTopics, value] }));
-  const saveSlot = () => run(async () => { const payload = slotPayload(slotForm); if (!payload.allowedTopics.length || payload.maxTopics > payload.allowedTopics.length) throw new Error("Please select enough allowed topics"); if (new Date(payload.startTime) >= new Date(payload.endTime)) throw new Error("End time must be after start time"); if (selected) await request(`/slots/${selected._id}`, { method: "PATCH", body: { ...payload, active: slotForm.active } }); else await request("/slots", { method: "POST", body: payload }); }, selected ? "Slot updated" : "Slot created");
-  const saveBulk = () => run(async () => { const rows = bulkRows.map(r => ({ title: bulkCommon.title.trim(), description: bulkCommon.description.trim(), startTime: isoFromIST(bulkDate, r.start), endTime: isoFromIST(bulkDate, r.end), price: Number(r.price), mrp: Number(r.mrp), allowedTopics: bulkCommon.allowedTopics, maxTopics: Number(bulkCommon.maxTopics), meetingUrl: bulkCommon.meetingUrl.trim() })); if (!rows.length || rows.some(r => r.price <= 0 || r.mrp < r.price || new Date(r.startTime) >= new Date(r.endTime))) throw new Error("Check time ranges and prices"); if (!bulkCommon.allowedTopics.length || bulkCommon.maxTopics > bulkCommon.allowedTopics.length) throw new Error("Choose valid topics"); await request("/slots/bulk", { method: "POST", body: { slots: rows } }); }, `${bulkRows.length} slots created`);
-  const startAction = (kind, record) => { setSelected(record); setActionReason(""); setReopen(true); setModal(kind); };
-  const executeSlotAction = () => run(async () => { const id = selected._id; if (modal === "block") await request(`/slots/${id}/block`, { method: "PATCH", body: { reason: actionReason } }); if (modal === "unblock") await request(`/slots/${id}/unblock`, { method: "PATCH" }); if (modal === "deleteSlot") await request(`/slots/${id}`, { method: "DELETE", body: { reason: actionReason || "Removed by administrator" } }); }, "Slot updated successfully");
-  const executeBookingAction = () => run(async () => { const id = selected.bookingId; if (modal === "cancel") await request(`/bookings/${encodeURIComponent(id)}/cancel`, { method: "POST", body: { reason: actionReason, reopenSlot: reopen } }); if (modal === "complete") await request(`/bookings/${encodeURIComponent(id)}/complete`, { method: "PATCH" }); if (modal === "deleteBooking") await request(`/bookings/${encodeURIComponent(id)}`, { method: "DELETE", body: { reason: actionReason } }); if (modal === "refund") await request(`/bookings/${encodeURIComponent(id)}/refund`, { method: "POST" }); }, modal === "cancel" ? "Booking cancelled. Refund may need initiation." : "Booking updated");
-  const openDetail = async (b) => { setSelected(b); setDetail(b); setModal("detail"); try { const r = await request(`/bookings/${encodeURIComponent(b.bookingId)}`); setDetail(r.data || b); } catch (e) { flash(e.message, "error"); } };
-  const openEditBooking = (b) => { setSelected(b); setEditCandidate({ ...(b.candidate || {}) }); setAdminNotes(b.adminNotes || ""); setModal("editBooking"); };
-  const updateBooking = () => run(() => request(`/bookings/${encodeURIComponent(selected.bookingId)}`, { method: "PATCH", body: { candidate: { name: editCandidate.name, email: editCandidate.email, phone: editCandidate.phone, experienceYears: Number(editCandidate.experienceYears || 0), currentRole: editCandidate.currentRole, targetRole: editCandidate.targetRole, currentCompany: editCandidate.currentCompany, resumeUrl: editCandidate.resumeUrl, notes: editCandidate.notes }, adminNotes } }), "Candidate details updated");
-  const openMeeting = (b) => { setSelected(b); setMeetingUrl(b.meeting?.url || ""); setModal("meeting"); };
-  const saveMeeting = () => run(async () => { if (!cleanUrl(meetingUrl)) throw new Error("Provide a valid HTTPS meeting URL"); await request(`/bookings/${encodeURIComponent(selected.bookingId)}/meeting`, { method: "PATCH", body: { meetingUrl } }); }, "Meeting link saved. Confirmation email attempted.");
-  const syncRefund = (b) => run(async () => { const r = await request(`/bookings/${encodeURIComponent(b.bookingId)}/refund`); flash(`Refund: ${r.data?.refundStatus || "Unknown"}`); }, "Refund status checked");
-  const totals = useMemo(() => ({ available: slots.filter(s => s.status === "AVAILABLE").length, booked: slots.filter(s => s.status === "BOOKED").length, blocked: slots.filter(s => s.status === "BLOCKED").length, revenue: bookings.filter(b => b.payment?.status === "SUCCESS").reduce((s, b) => s + Number(b.slotSnapshot?.price || 0), 0) }), [slots, bookings]);
-  const filteredSlots = useMemo(() => slots.filter(s => {
-    if (slotTopic && !(s.allowedTopics || []).includes(slotTopic)) return false;
-    if (slotActive === "active" && (!s.active || s.isDeleted)) return false;
-    if (slotActive === "inactive" && s.active && !s.isDeleted) return false;
-    const term = slotSearch.trim().toLowerCase();
-    if (term && ![s.title,s.description,s._id,s.meetingUrl,...(s.allowedTopics||[])].some(x => String(x||"").toLowerCase().includes(term))) return false;
-    return true;
-  }), [slots,slotTopic,slotActive,slotSearch]);
-  const groupedSlots = useMemo(() => Object.entries(filteredSlots.reduce((groups,slot) => {
-    const key=localDate(slot.startTime);(groups[key] ||= []).push(slot);return groups;
-  },{})).sort(([a],[b])=>a.localeCompare(b)).map(([date,items])=>({date,items:items.sort((a,b)=>new Date(a.startTime)-new Date(b.startTime)), available:items.filter(s=>s.status==="AVAILABLE" && s.active && !s.isDeleted).length, booked:items.filter(s=>s.status==="BOOKED").length})), [filteredSlots]);
-  const page = tab === "slots" ? slotPage : bookingPage;
-  const total = tab === "slots" ? slotTotal : bookingTotal;
-  const maxPage = Math.max(1, Math.ceil(total / (tab === "slots" ? slotPageSize : 15)));
-  const setPage = tab === "slots" ? setSlotPage : setBookingPage;
-  const statusOptions = tab === "slots" ? ["AVAILABLE", "HELD", "BOOKED", "BLOCKED"] : ["PENDING_PAYMENT", "CONFIRMED", "COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER", "EXPIRED", "PAYMENT_FAILED", "NO_SHOW"];
-
-  return <div className="tt-interview-admin mt-16" data-theme={theme}>
     <style>{css}</style>
+
     <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+
       <div className="ia-orange rounded-[22px] p-5 sm:p-7 mb-7 relative overflow-hidden"><div className="absolute -right-12 -top-16 w-72 h-72 rounded-full border-[40px] border-white/10 pointer-events-none"/><div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"><div><p className="text-white/80 text-[11px] font-black uppercase tracking-[.18em] mb-2">Target Trek / Admin workspace</p><h1 className="text-2xl sm:text-3xl font-black tracking-tight">Interview Management</h1><p className="mt-2 text-sm text-white/85 max-w-xl">Manage your interview availability, pricing, candidate bookings, meeting links and refunds in one place.</p></div><div className="text-xs text-white/90 rounded-xl border border-white/25 bg-white/10 px-4 py-3">Theme follows your website navbar</div></div></div>
-      <AnimatePresence>{notice && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`flex items-center justify-between gap-3 p-3 rounded-xl mb-5 text-sm border ${notice.type === "error" ? "border-red-400/40 text-red-600" : "border-emerald-400/40 text-emerald-600"}`} style={{ background: "var(--surface)" }}><div className="flex items-center gap-2">{notice.type === "error" ? <AlertTriangle size={16}/> : <CheckCircle2 size={16}/>} {notice.message}</div><button onClick={() => setNotice(null)}><X size={16}/></button></motion.div>}</AnimatePresence>
+
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-7">{[{ title: "Slots in current page", value: slots.length, icon: CalendarDays }, { title: "Available slots", value: totals.available, icon: CalendarPlus2 }, { title: "Booked slots", value: totals.booked, icon: Users }, { title: "Bookings in current page", value: bookings.length, icon: ListChecks }].map((s, i) => <div key={s.title} className="ia-card p-4 sm:p-5 flex items-center justify-between gap-2"><div><p className="text-[11px] ia-muted font-semibold mb-2">{s.title}</p><p className="text-2xl font-black">{s.value}</p></div><div className="rounded-xl p-3" style={{ background: "var(--soft)", color: "var(--accent)" }}><s.icon size={20}/></div></div>)}</div>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5"><div className="flex gap-2 p-1 w-fit rounded-xl" style={{ background: "var(--soft)" }}>{[{ id: "slots", label: "Interview Slots", icon: CalendarDays }, { id: "bookings", label: "Bookings", icon: Users }].map(t => <button key={t.id} onClick={() => { setTab(t.id); setNotice(null); }} className={`flex gap-2 items-center rounded-lg px-4 py-2.5 text-xs sm:text-sm font-bold ${tab === t.id ? "shadow-sm" : "ia-muted"}`} style={tab === t.id ? { background: "var(--surface)", color: "var(--accent)" } : {}}><t.icon size={16}/>{t.label}</button>)}</div>{tab === "slots" && <div className="flex flex-wrap gap-2"><button className="ia-btn" onClick={() => { setBulkRows([EMPTY_ROW()]); setBulkDate(istDay()); setModal("bulk"); }}><CalendarPlus2 size={16}/> Bulk create slots</button><button className="ia-btn ia-btn-primary" onClick={() => openSlot(null)}><Plus size={16}/> Add slot</button></div>}</div>
-      <div className="ia-card overflow-hidden"><div className="p-4 sm:p-5 flex flex-wrap gap-3 justify-between items-center border-b ia-separator"><div><h2 className="text-base font-extrabold">{tab === "slots" ? "Slot schedule" : "Candidate bookings"}</h2><p className="ia-muted text-xs mt-1">{total} records · Times displayed in IST</p></div><div className="flex flex-wrap items-center gap-2">{tab === "bookings" && <form onSubmit={e => { e.preventDefault(); setBookingPage(1); setSearchCommitted(search.trim()); }} className="flex items-center gap-1"><input className="ia-input !w-48" value={search} onChange={e => setSearch(e.target.value)} placeholder="Booking ID or email"/><button className="ia-btn !p-2.5" title="Search"><Search size={16}/></button></form>}<select className="ia-select !w-auto min-w-[135px]" value={tab === "slots" ? slotStatus : bookingStatus} onChange={e => { if (tab === "slots") { setSlotStatus(e.target.value); setSlotPage(1); } else { setBookingStatus(e.target.value); setBookingPage(1); } }}><option value="">All statuses</option>{statusOptions.map(s => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}</select></div></div>
-      {tab === "slots" && <div className="px-4 sm:px-5 py-4 border-b ia-separator" style={{background:"var(--soft2)"}}>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5"><div className="flex gap-2 p-1 w-fit rounded-xl" style={{ background: "var(--soft)" }}>{[{ id: "slots", label: "Interview Slots", icon: CalendarDays }, { id: "bookings", label: "Bookings", icon: Users }].map(t => <button key={t.id} onClick={() => { setTab(t.id); }} className={`flex gap-2 items-center rounded-lg px-4 py-2.5 text-xs sm:text-sm font-bold ${tab === t.id ? "shadow-sm" : "ia-muted"}`} style={tab === t.id ? { background: "var(--surface)", color: "var(--accent)" } : {}}><t.icon size={16}/>{t.label}</button>)}</div>{tab === "slots" && <div className="flex flex-wrap gap-2"><button className="ia-btn" onClick={() => { setBulkRows([EMPTY_ROW()]); setBulkDate(istDay()); setModal("bulk"); }}><CalendarPlus2 size={16}/> Bulk create slots</button><button className="ia-btn ia-btn-primary" onClick={() => openSlot(null)}><Plus size={16}/> Add slot</button></div>}</div>
+
+      <div className="ia-card overflow-hidden"><div className="p-4 sm:p-5 flex flex-wrap gap-3 justify-between items-center border-b ia-separator"><div><h2 className="text-base font-extrabold">{tab === "slots" ? "Slot schedule" : "Candidate bookings"}</h2><p className="ia-muted text-xs mt-1">{total} records · Times displayed in IST</p></div><div className="flex flex-wrap items-center gap-2">{tab === "bookings" && <form onSubmit={e => { e.preventDefault(); setBookingPage(1); setSearchCommitted(search.trim()); }} className="flex items-center gap-1"><input className="ia-input !w-48" value={search} onChange={e => setSearch(e.target.value)} placeholder="Booking ID or email"/><button className="ia-btn !p-2.5" title="Search"><Search size={16}/></button></form>}<select className="ia-select !w-auto min-w-[135px]" value={tab === "slots" ? slotStatus : bookingStatus} onChange={e => { if (tab === "slots") {
+        setSlotStatus(e.target.value);
+        setSlotPage(1);
+    }
+    else {
+        setBookingStatus(e.target.value);
+        setBookingPage(1);
+    } }}><option value="">All statuses</option>{statusOptions.map(s => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}</select></div></div>
+
+      {tab === "slots" && <div className="px-4 sm:px-5 py-4 border-b ia-separator" style={{ background: "var(--soft2)" }}>
+
         <div className="flex flex-wrap items-end gap-3">
-          <Field title="Exact date"><input type="date" className="ia-input !w-[165px]" value={slotDay} onChange={e=>{setSlotDay(e.target.value);setSlotPage(1);}}/></Field>
-          <Field title="From date"><input type="date" className="ia-input !w-[165px]" value={slotFrom} disabled={!!slotDay} onChange={e=>{setSlotFrom(e.target.value);setSlotPage(1);}}/></Field>
-          <Field title="To date"><input type="date" className="ia-input !w-[165px]" value={slotTo} disabled={!!slotDay} min={slotFrom||undefined} onChange={e=>{setSlotTo(e.target.value);setSlotPage(1);}}/></Field>
-          <Field title="Interview topic"><select className="ia-select !w-[150px]" value={slotTopic} onChange={e=>setSlotTopic(e.target.value)}><option value="">All topics</option>{TOPICS.map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
-          <Field title="Visibility"><select className="ia-select !w-[145px]" value={slotActive} onChange={e=>setSlotActive(e.target.value)}><option value="all">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select></Field>
-          <Field title="Search slot"><div className="relative"><Search size={14} className="absolute left-3 top-3.5 ia-muted"/><input className="ia-input !pl-9 !w-[210px]" placeholder="Title, topic, ID..." value={slotSearch} onChange={e=>setSlotSearch(e.target.value)}/></div></Field>
+
+          <Field title="Exact date"><input type="date" className="ia-input !w-[165px]" value={slotDay} onChange={e => { setSlotDay(e.target.value); setSlotPage(1); }}/></Field>
+
+          <Field title="From date"><input type="date" className="ia-input !w-[165px]" value={slotFrom} disabled={!!slotDay} onChange={e => { setSlotFrom(e.target.value); setSlotPage(1); }}/></Field>
+
+          <Field title="To date"><input type="date" className="ia-input !w-[165px]" value={slotTo} disabled={!!slotDay} min={slotFrom || undefined} onChange={e => { setSlotTo(e.target.value); setSlotPage(1); }}/></Field>
+
+          <Field title="Interview topic"><select className="ia-select !w-[150px]" value={slotTopic} onChange={e => setSlotTopic(e.target.value)}><option value="">All topics</option>{TOPICS.map(t => <option key={t} value={t}>{t}</option>)}</select></Field>
+
+          <Field title="Visibility"><select className="ia-select !w-[145px]" value={slotActive} onChange={e => setSlotActive(e.target.value)}><option value="all">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select></Field>
+
+          <Field title="Search slot"><div className="relative"><Search size={14} className="absolute left-3 top-3.5 ia-muted"/><input className="ia-input !pl-9 !w-[210px]" placeholder="Title, topic, ID..." value={slotSearch} onChange={e => setSlotSearch(e.target.value)}/></div></Field>
+
         </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+
           <div className="flex flex-wrap gap-2 items-center">
-            {[{name:"Today",value:istDay()},{name:"All dates",value:""}].map(x=><button key={x.name} type="button" className="ia-chip" data-active={slotDay===x.value && !slotFrom && !slotTo} onClick={()=>{setSlotDay(x.value);setSlotFrom("");setSlotTo("");setSlotPage(1);}}>{x.name}</button>)}
-            <label className="text-xs font-bold flex gap-2 items-center cursor-pointer ia-muted"><input type="checkbox" checked={showDeleted} onChange={e=>{setShowDeleted(e.target.checked);setSlotPage(1);}}/> Include deleted</label>
-            <button className="ia-btn" onClick={()=>{setSlotDay("");setSlotFrom("");setSlotTo("");setSlotTopic("");setSlotSearch("");setSlotStatus("");setSlotActive("all");setShowDeleted(false);setSlotPage(1);}}><XCircle size={14}/> Clear filters</button>
+
+            {[{ name: "Today", value: istDay() }, { name: "All dates", value: "" }].map(x => <button key={x.name} type="button" className="ia-chip" data-active={slotDay === x.value && !slotFrom && !slotTo} onClick={() => { setSlotDay(x.value); setSlotFrom(""); setSlotTo(""); setSlotPage(1); }}>{x.name}</button>)}
+
+            <label className="text-xs font-bold flex gap-2 items-center cursor-pointer ia-muted"><input type="checkbox" checked={showDeleted} onChange={e => { setShowDeleted(e.target.checked); setSlotPage(1); }}/> Include deleted</label>
+
+            <button className="ia-btn" onClick={() => { setSlotDay(""); setSlotFrom(""); setSlotTo(""); setSlotTopic(""); setSlotSearch(""); setSlotStatus(""); setSlotActive("all"); setShowDeleted(false); setSlotPage(1); }}><XCircle size={14}/> Clear filters</button>
+
           </div>
+
           <div className="flex flex-wrap gap-2 items-center">
+
             <span className="ia-muted text-xs">{filteredSlots.length} shown of {slots.length} loaded</span>
-            <select className="ia-select !w-auto" value={slotPageSize} onChange={e=>{setSlotPageSize(Number(e.target.value));setSlotPage(1);}}><option value={25}>25/page</option><option value={50}>50/page</option><option value={100}>100/page</option></select>
-            <button className="ia-chip" data-active={slotView==="grouped"} onClick={()=>setSlotView("grouped")}><CalendarRange size={13} className="inline mr-1"/>Date groups</button>
-            <button className="ia-chip" data-active={slotView==="table"} onClick={()=>setSlotView("table")}><ListChecks size={13} className="inline mr-1"/>Table</button>
+
+            <select className="ia-select !w-auto" value={slotPageSize} onChange={e => { setSlotPageSize(Number(e.target.value)); setSlotPage(1); }}><option value={25}>25/page</option><option value={50}>50/page</option><option value={100}>100/page</option></select>
+
+            <button className="ia-chip" data-active={slotView === "grouped"} onClick={() => setSlotView("grouped")}><CalendarRange size={13} className="inline mr-1"/>Date groups</button>
+
+            <button className="ia-chip" data-active={slotView === "table"} onClick={() => setSlotView("table")}><ListChecks size={13} className="inline mr-1"/>Table</button>
+
           </div>
+
         </div>
+
         {!!slotDay && <p className="ia-muted mt-3 text-xs">Showing {dayHeading(slotDay)} (IST)</p>}
-        {(slotFrom && slotTo && !datesBetween(slotFrom,slotTo)) && <p className="text-red-500 text-xs mt-2">End date should be on or after start date.</p>}
+
+        {(slotFrom && slotTo && !datesBetween(slotFrom, slotTo)) && <p className="text-red-500 text-xs mt-2">End date should be on or after start date.</p>}
+
       </div>}
+
       {tab === "slots" && !loading && slotView === "grouped" && <div className="p-3 sm:p-5 space-y-3">
-        {groupedSlots.length === 0 ? <Empty>No slots match your selected filters.</Empty> : groupedSlots.map(group=><section key={group.date} className="rounded-2xl border ia-separator overflow-hidden">
-          <button className="w-full flex flex-wrap justify-between items-center gap-2 p-4 text-left" style={{background:"var(--soft)"}} onClick={()=>setExpandedDays(p=>({...p,[group.date]:p[group.date] === false ? true : false}))}>
+
+        {groupedSlots.length === 0 ? <Empty>No slots match your selected filters.</Empty> : groupedSlots.map(group => <section key={group.date} className="rounded-2xl border ia-separator overflow-hidden">
+
+          <button className="w-full flex flex-wrap justify-between items-center gap-2 p-4 text-left" style={{ background: "var(--soft)" }} onClick={() => setExpandedDays(p => ({ ...p, [group.date]: p[group.date] === false ? true : false }))}>
+
             <div className="flex items-center gap-3"><CalendarDays size={20} className="ia-accent"/><div><p className="font-black text-sm">{dayHeading(group.date)}</p><p className="ia-muted text-xs mt-1">{group.items.length} slot(s) · {group.available} available · {group.booked} booked</p></div></div>
-            <ChevronRight size={18} className={`ia-muted transition-transform ${expandedDays[group.date]===false?'':'rotate-90'}`}/>
+
+            <ChevronRight size={18} className={`ia-muted transition-transform ${expandedDays[group.date] === false ? '' : 'rotate-90'}`}/>
+
           </button>
-          {expandedDays[group.date]!==false && <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 p-3 sm:p-4">{group.items.map(s=><div key={s._id} className="rounded-xl p-4 border ia-separator flex flex-col gap-3" style={{background:"var(--surface)"}}>
-            <div className="flex items-start justify-between gap-2"><div><div className="text-sm font-black">{timeText(s.startTime)} – {timeText(s.endTime)}</div><p className="ia-muted text-xs mt-1">{s.durationMinutes} min · {s.title}</p></div><Pill value={s.isDeleted?'DELETED':s.status}/></div>
-            <div className="flex items-center justify-between"><div className="ia-accent font-black text-lg">{inr(s.price)} <span className="ia-muted text-xs line-through font-normal">{inr(s.mrp)}</span></div><span className="ia-muted text-xs">{s.active?'Active':'Inactive'}</span></div>
-            <div className="flex flex-wrap gap-1">{(s.allowedTopics||[]).map(t=><span key={t} className="rounded px-2 py-1 text-[10px] font-bold" style={{background:"var(--soft)",color:"var(--accent)"}}>{t}</span>)}</div>
-            {!s.isDeleted && <div className="flex flex-wrap gap-2 border-t ia-separator pt-3 mt-auto"><button className="ia-btn !py-2" disabled={['HELD','BOOKED'].includes(s.status)} onClick={()=>openSlot(s)}><Edit3 size={13}/>Edit</button>{s.status==='AVAILABLE' && <button className="ia-btn !py-2" onClick={()=>startAction('block',s)}><Ban size={13}/>Block</button>}{s.status==='BLOCKED' && <button className="ia-btn !py-2" onClick={()=>startAction('unblock',s)}><RotateCcw size={13}/>Unblock</button>}<button className="ia-btn ia-btn-danger !py-2" disabled={['HELD','BOOKED'].includes(s.status)} onClick={()=>startAction('deleteSlot',s)}><Trash2 size={13}/>Delete</button></div>}
+
+          {expandedDays[group.date] !== false && <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 p-3 sm:p-4">{group.items.map(s => <div key={s._id} className="rounded-xl p-4 border ia-separator flex flex-col gap-3" style={{ background: "var(--surface)" }}>
+
+            <div className="flex items-start justify-between gap-2"><div><div className="text-sm font-black">{timeText(s.startTime)} – {timeText(s.endTime)}</div><p className="ia-muted text-xs mt-1">{s.durationMinutes} min · {s.title}</p></div><Pill value={s.isDeleted ? 'DELETED' : s.status}/></div>
+
+            <div className="flex items-center justify-between"><div className="ia-accent font-black text-lg">{inr(s.price)} <span className="ia-muted text-xs line-through font-normal">{inr(s.mrp)}</span></div><span className="ia-muted text-xs">{s.active ? 'Active' : 'Inactive'}</span></div>
+
+            <div className="flex flex-wrap gap-1">{(s.allowedTopics || []).map(t => <span key={t} className="rounded px-2 py-1 text-[10px] font-bold" style={{ background: "var(--soft)", color: "var(--accent)" }}>{t}</span>)}</div>
+
+            {!s.isDeleted && <div className="flex flex-wrap gap-2 border-t ia-separator pt-3 mt-auto"><button className="ia-btn !py-2" disabled={['HELD', 'BOOKED'].includes(s.status)} onClick={() => openSlot(s)}><Edit3 size={13}/>Edit</button>{s.status === 'AVAILABLE' && <button className="ia-btn !py-2" onClick={() => startAction('block', s)}><Ban size={13}/>Block</button>}{s.status === 'BLOCKED' && <button className="ia-btn !py-2" onClick={() => startAction('unblock', s)}><RotateCcw size={13}/>Unblock</button>}<button className="ia-btn ia-btn-danger !py-2" disabled={['HELD', 'BOOKED'].includes(s.status)} onClick={() => startAction('deleteSlot', s)}><Trash2 size={13}/>Delete</button></div>}
+
           </div>)}</div>}
+
         </section>)}
+
       </div>}
+
       {loading ? <div className="flex justify-center items-center gap-2 py-20 ia-muted"><LoaderCircle className="animate-spin" size={19}/> Loading records...</div> : tab === "slots" ? (slotView === "grouped" ? null : (filteredSlots.length ? <div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Date & time</th><th>Session</th><th>Price</th><th>Topics</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filteredSlots.map(s => <tr key={s._id}><td><div className="font-extrabold">{dateText(s.startTime)}</div><div className="ia-muted mt-1">{timeText(s.startTime)} – {timeText(s.endTime)} · {s.durationMinutes}m</div></td><td><div className="font-bold max-w-[200px] truncate">{s.title}</div><div className="ia-muted mt-1 text-[11px]">{s.isDeleted ? "Deleted" : s.active ? "Active" : "Inactive"}</div></td><td><div className="font-black ia-accent">{inr(s.price)}</div><div className="ia-muted line-through mt-1">{inr(s.mrp)}</div></td><td><div className="flex flex-wrap gap-1 max-w-[210px]">{(s.allowedTopics || []).map(t => <span key={t} className="rounded-md px-1.5 py-1 text-[10px] font-bold" style={{ background: "var(--soft)", color: "var(--accent)" }}>{t}</span>)}</div></td><td><Pill value={s.isDeleted ? "DELETED" : s.status}/></td><td><div className="flex gap-1">{!s.isDeleted && <><IconButton title="Edit slot" onClick={() => openSlot(s)} disabled={["HELD", "BOOKED"].includes(s.status)}><Edit3 size={15}/></IconButton>{s.status === "AVAILABLE" && <IconButton title="Block slot" onClick={() => startAction("block", s)}><Ban size={15}/></IconButton>}{s.status === "BLOCKED" && <IconButton title="Unblock slot" onClick={() => startAction("unblock", s)}><RotateCcw size={15}/></IconButton>}<IconButton title="Delete slot" danger disabled={["HELD", "BOOKED"].includes(s.status)} onClick={() => startAction("deleteSlot", s)}><Trash2 size={15}/></IconButton></>}</div></td></tr>)}</tbody></table></div> : <Empty>No slots found. Create your first available interview slot.</Empty>)) : (bookings.length ? <div className="ia-table-wrap"><table className="ia-table"><thead><tr><th>Booking</th><th>Candidate</th><th>Interview</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody>{bookings.map(b => <tr key={b._id || b.bookingId}><td><button onClick={() => openDetail(b)} className="font-extrabold ia-accent hover:underline">{b.bookingId}</button><div className="ia-muted mt-1">{dateText(b.createdAt)}</div></td><td><div className="font-bold">{b.candidate?.name || "—"}</div><div className="ia-muted mt-1 max-w-[175px] truncate">{b.candidate?.email}</div></td><td><div className="font-semibold">{dateTime(b.slotSnapshot?.startTime)}</div><div className="ia-muted mt-1">{(b.selectedTopics || []).join(" · ")}</div></td><td><div className="font-bold">{inr(b.slotSnapshot?.price)}</div><div className="mt-1"><Pill value={b.payment?.status || "NOT_STARTED"}/></div></td><td><Pill value={b.status}/></td><td><div className="flex gap-1"><IconButton title="View booking" onClick={() => openDetail(b)}><Eye size={15}/></IconButton>{!["COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER", "EXPIRED"].includes(b.status) && <IconButton title="Edit candidate" onClick={() => openEditBooking(b)}><Edit3 size={15}/></IconButton>}{b.status === "CONFIRMED" && <IconButton title="Meeting link" onClick={() => openMeeting(b)}><Video size={15}/></IconButton>}{["PENDING_PAYMENT", "CONFIRMED"].includes(b.status) && <IconButton title="Cancel booking" danger onClick={() => startAction("cancel", b)}><Ban size={15}/></IconButton>}</div></td></tr>)}</tbody></table></div> : <Empty>No bookings match your filters.</Empty>)}
+
       <div className="flex items-center justify-between px-5 py-4 border-t ia-separator"><p className="ia-muted text-xs">Page {page} of {maxPage} · {total} total</p><div className="flex gap-2"><button className="ia-btn !p-2" disabled={page <= 1 || loading} onClick={() => setPage(p => p - 1)}><ChevronLeft size={17}/></button><button className="ia-btn !p-2" disabled={page >= maxPage || loading} onClick={() => setPage(p => p + 1)}><ChevronRight size={17}/></button></div></div></div>
+
     </div>
 
+
+
     <AnimatePresence>
-      {modal === "slot" && <Dialog title={selected ? "Update interview slot" : "Create interview slot"} sub="Slot price and allowed topics are saved individually." busy={working} onClose={close}><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><Field title="Slot title" className="sm:col-span-2"><input className="ia-input" value={slotForm.title} onChange={e => setSlotForm(p => ({ ...p, title: e.target.value }))}/></Field><Field title="Date (IST)"><input type="date" className="ia-input" value={slotForm.day} onChange={e => setSlotForm(p => ({ ...p, day: e.target.value }))}/></Field><div className="grid grid-cols-2 gap-2"><Field title="Start"><input type="time" className="ia-input" value={slotForm.start} onChange={e => setSlotForm(p => ({ ...p, start: e.target.value }))}/></Field><Field title="End"><input type="time" className="ia-input" value={slotForm.end} onChange={e => setSlotForm(p => ({ ...p, end: e.target.value }))}/></Field></div><Field title="Selling price (₹)"><input type="number" min="1" className="ia-input" value={slotForm.price} onChange={e => setSlotForm(p => ({ ...p, price: e.target.value }))}/></Field><Field title="MRP (₹)"><input type="number" min="1" className="ia-input" value={slotForm.mrp} onChange={e => setSlotForm(p => ({ ...p, mrp: e.target.value }))}/></Field><Field title="Description" className="sm:col-span-2"><textarea rows={2} className="ia-textarea" value={slotForm.description} onChange={e => setSlotForm(p => ({ ...p, description: e.target.value }))}/></Field><div className="sm:col-span-2"><p className="ia-label">Allowed interview topics</p><div className="flex gap-2 flex-wrap">{TOPICS.map(t => <button type="button" key={t} className="ia-chip" data-active={slotForm.allowedTopics.includes(t)} onClick={() => toggleTopic(slotForm, setSlotForm, t)}>{t}</button>)}</div></div><Field title="Maximum topics user can select"><select className="ia-select" value={slotForm.maxTopics} onChange={e => setSlotForm(p => ({ ...p, maxTopics: Number(e.target.value) }))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}</select></Field><Field title="Visibility"><select className="ia-select" value={slotForm.active ? "true" : "false"} onChange={e => setSlotForm(p => ({ ...p, active: e.target.value === "true" }))}><option value="true">Active</option><option value="false">Inactive</option></select></Field><Field title="Meeting URL (optional)" className="sm:col-span-2"><input className="ia-input" placeholder="https://meet.google.com/..." value={slotForm.meetingUrl} onChange={e => setSlotForm(p => ({ ...p, meetingUrl: e.target.value }))}/></Field></div><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working} onClick={saveSlot}>{working && <LoaderCircle size={15} className="animate-spin"/>}{selected ? "Save changes" : "Create slot"}</button></div></Dialog>}
-      {modal === "bulk" && <Dialog title="Bulk create interview slots" sub="Create multiple slots on one day, each with its own price." onClose={close} busy={working} width="max-w-4xl"><div className="grid sm:grid-cols-2 gap-3 mb-5"><Field title="Date (IST)"><input type="date" className="ia-input" value={bulkDate} onChange={e => setBulkDate(e.target.value)}/></Field><Field title="Default title"><input className="ia-input" value={bulkCommon.title} onChange={e => setBulkCommon(p => ({ ...p, title: e.target.value }))}/></Field></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{bulkRows.map((r, i) => <div key={i} className="rounded-xl p-3 border ia-separator" style={{ background: "var(--surface)" }}><div className="flex justify-between items-center mb-3"><span className="text-sm font-extrabold">Slot {i + 1}</span><IconButton title="Remove row" danger onClick={() => setBulkRows(p => p.filter((_, j) => i !== j))}><Trash2 size={14}/></IconButton></div><div className="grid grid-cols-2 gap-2">{[["start","Start time","time"],["end","End time","time"],["price","Price (₹)","number"],["mrp","MRP (₹)","number"]].map(([key,title,type]) => <Field key={key} title={title}><input className="ia-input" type={type} value={r[key]} onChange={e => setBulkRows(p => p.map((x,j) => j === i ? { ...x, [key]: e.target.value } : x))}/></Field>)}</div></div>)}</div><button className="ia-btn mt-3" onClick={() => setBulkRows(p => [...p, { ...EMPTY_ROW(), start: "", end: "" }])}><Plus size={15}/> Add another slot</button><div className="mt-5 border-t ia-separator pt-4"><p className="ia-label">Topics allowed in all slots</p><div className="flex flex-wrap gap-2">{TOPICS.map(t => <button key={t} className="ia-chip" data-active={bulkCommon.allowedTopics.includes(t)} onClick={() => toggleTopic(bulkCommon, setBulkCommon, t)}>{t}</button>)}</div><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field title="Max topics per slot"><select className="ia-select" value={bulkCommon.maxTopics} onChange={e => setBulkCommon(p => ({ ...p, maxTopics: Number(e.target.value) }))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}</select></Field><Field title="Meeting URL (optional)"><input className="ia-input" value={bulkCommon.meetingUrl} onChange={e => setBulkCommon(p => ({ ...p, meetingUrl: e.target.value }))}/></Field></div></div><div className="mt-6 flex justify-end gap-2"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working || !bulkRows.length} onClick={saveBulk}>{working && <LoaderCircle size={15} className="animate-spin"/>}Create {bulkRows.length} slots</button></div></Dialog>}
-      {["block","unblock","deleteSlot","cancel","complete","deleteBooking","refund"].includes(modal) && <Dialog title={{ block: "Block this slot?", unblock: "Reopen this slot?", deleteSlot: "Delete this slot?", cancel: "Cancel this booking?", complete: "Mark interview completed?", deleteBooking: "Delete booking from dashboard?", refund: "Initiate Cashfree refund?" }[modal]} sub={selected?.bookingId || selected?.title || ""} onClose={close} busy={working} width="max-w-lg"><div className="flex gap-3 rounded-xl p-3 mb-4" style={{ background: "var(--soft)" }}><AlertTriangle size={20} style={{ color: "var(--accent)" }} className="shrink-0"/><p className="ia-muted text-xs leading-5">{modal === "cancel" ? "A cancellation reason is mandatory. Paid bookings are marked refund-pending; a separate refund initiation is required." : modal === "deleteBooking" ? "This is a soft delete; financial and audit history are retained." : modal === "refund" ? "This sends a refund request to Cashfree, and does not mean the refund has completed." : "This action will update the live admin schedule."}</p></div>{["block","cancel","deleteBooking"].includes(modal) && <Field title="Reason (minimum 10 characters)"><textarea className="ia-textarea" rows={3} placeholder="Explain the reason..." value={actionReason} onChange={e => setActionReason(e.target.value)}/></Field>}{modal === "deleteSlot" && <Field title="Reason (optional)"><textarea rows={2} className="ia-textarea" value={actionReason} onChange={e => setActionReason(e.target.value)} placeholder="Why are you removing this slot?"/></Field>}{modal === "cancel" && <label className="flex items-start gap-3 mt-4 p-3 rounded-xl" style={{ background: "var(--surface)" }}><input type="checkbox" className="mt-1 accent-orange-600" checked={reopen} onChange={e => setReopen(e.target.checked)}/><span className="text-sm">Reopen this slot for other candidates after cancellation</span></label>}<div className="flex gap-2 justify-end mt-6"><button className="ia-btn" onClick={close}>Keep unchanged</button><button className={`ia-btn ${["cancel","deleteBooking","deleteSlot","block"].includes(modal) ? "ia-btn-danger" : "ia-btn-primary"}`} disabled={working || (["block","cancel","deleteBooking"].includes(modal) && actionReason.trim().length < 10)} onClick={["block","unblock","deleteSlot"].includes(modal) ? executeSlotAction : executeBookingAction}>{working && <LoaderCircle size={15} className="animate-spin"/>}Confirm</button></div></Dialog>}
+
+      {modal === "slot" && <Dialog title={selected ? "Update interview slot" : "Create interview slot"} sub="Slot price and allowed topics are saved individually." busy={working} onClose={close}><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><Field title="Slot title" className="sm:col-span-2"><input className="ia-input" value={slotForm.title} onChange={e => setSlotForm(p => ({ ...p, title: e.target.value }))}/></Field><Field title="Date (IST)"><input type="date" className="ia-input" value={slotForm.day} onChange={e => setSlotForm(p => ({ ...p, day: e.target.value }))}/></Field><div className="grid grid-cols-2 gap-2"><Field title="Start"><input type="time" className="ia-input" value={slotForm.start} onChange={e => setSlotForm(p => ({ ...p, start: e.target.value }))}/></Field><Field title="End"><input type="time" className="ia-input" value={slotForm.end} onChange={e => setSlotForm(p => ({ ...p, end: e.target.value }))}/></Field></div><Field title="Selling price (₹)"><input type="number" min="1" className="ia-input" value={slotForm.price} onChange={e => setSlotForm(p => ({ ...p, price: e.target.value }))}/></Field><Field title="MRP (₹)"><input type="number" min="1" className="ia-input" value={slotForm.mrp} onChange={e => setSlotForm(p => ({ ...p, mrp: e.target.value }))}/></Field><Field title="Description" className="sm:col-span-2"><textarea rows={2} className="ia-textarea" value={slotForm.description} onChange={e => setSlotForm(p => ({ ...p, description: e.target.value }))}/></Field><div className="sm:col-span-2"><p className="ia-label">Allowed interview topics</p><div className="flex gap-2 flex-wrap">{TOPICS.map(t => <button type="button" key={t} className="ia-chip" data-active={slotForm.allowedTopics.includes(t)} onClick={() => toggleTopic(slotForm, setSlotForm, t)}>{t}</button>)}</div></div><Field title="Maximum topics user can select"><select className="ia-select" value={slotForm.maxTopics} onChange={e => setSlotForm(p => ({ ...p, maxTopics: Number(e.target.value) }))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></Field><Field title="Visibility"><select className="ia-select" value={slotForm.active ? "true" : "false"} onChange={e => setSlotForm(p => ({ ...p, active: e.target.value === "true" }))}><option value="true">Active</option><option value="false">Inactive</option></select></Field><Field title="Meeting URL (optional)" className="sm:col-span-2"><input className="ia-input" placeholder="https://meet.google.com/..." value={slotForm.meetingUrl} onChange={e => setSlotForm(p => ({ ...p, meetingUrl: e.target.value }))}/></Field></div><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working} onClick={saveSlot}>{working && <LoaderCircle size={15} className="animate-spin"/>}{selected ? "Save changes" : "Create slot"}</button></div></Dialog>}
+
+      {modal === "bulk" && <Dialog title="Bulk create interview slots" sub="Create multiple slots on one day, each with its own price." onClose={close} busy={working} width="max-w-4xl"><div className="grid sm:grid-cols-2 gap-3 mb-5"><Field title="Date (IST)"><input type="date" className="ia-input" value={bulkDate} onChange={e => setBulkDate(e.target.value)}/></Field><Field title="Default title"><input className="ia-input" value={bulkCommon.title} onChange={e => setBulkCommon(p => ({ ...p, title: e.target.value }))}/></Field></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{bulkRows.map((r, i) => <div key={i} className="rounded-xl p-3 border ia-separator" style={{ background: "var(--surface)" }}><div className="flex justify-between items-center mb-3"><span className="text-sm font-extrabold">Slot {i + 1}</span><IconButton title="Remove row" danger onClick={() => setBulkRows(p => p.filter((_, j) => i !== j))}><Trash2 size={14}/></IconButton></div><div className="grid grid-cols-2 gap-2">{[["start", "Start time", "time"], ["end", "End time", "time"], ["price", "Price (₹)", "number"], ["mrp", "MRP (₹)", "number"]].map(([key, title, type]) => <Field key={key} title={title}><input className="ia-input" type={type} value={r[key]} onChange={e => setBulkRows(p => p.map((x, j) => j === i ? { ...x, [key]: e.target.value } : x))}/></Field>)}</div></div>)}</div><button className="ia-btn mt-3" onClick={() => setBulkRows(p => [...p, { ...EMPTY_ROW(), start: "", end: "" }])}><Plus size={15}/> Add another slot</button><div className="mt-5 border-t ia-separator pt-4"><p className="ia-label">Topics allowed in all slots</p><div className="flex flex-wrap gap-2">{TOPICS.map(t => <button key={t} className="ia-chip" data-active={bulkCommon.allowedTopics.includes(t)} onClick={() => toggleTopic(bulkCommon, setBulkCommon, t)}>{t}</button>)}</div><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field title="Max topics per slot"><select className="ia-select" value={bulkCommon.maxTopics} onChange={e => setBulkCommon(p => ({ ...p, maxTopics: Number(e.target.value) }))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></Field><Field title="Meeting URL (optional)"><input className="ia-input" value={bulkCommon.meetingUrl} onChange={e => setBulkCommon(p => ({ ...p, meetingUrl: e.target.value }))}/></Field></div></div><div className="mt-6 flex justify-end gap-2"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working || !bulkRows.length} onClick={saveBulk}>{working && <LoaderCircle size={15} className="animate-spin"/>}Create {bulkRows.length} slots</button></div></Dialog>}
+
+      {["block", "unblock", "deleteSlot", "cancel", "complete", "deleteBooking", "refund"].includes(modal) && <Dialog title={{ block: "Block this slot?", unblock: "Reopen this slot?", deleteSlot: "Delete this slot?", cancel: "Cancel this booking?", complete: "Mark interview completed?", deleteBooking: "Delete booking from dashboard?", refund: "Initiate Cashfree refund?" }[modal]} sub={selected?.bookingId || selected?.title || ""} onClose={close} busy={working} width="max-w-lg"><div className="flex gap-3 rounded-xl p-3 mb-4" style={{ background: "var(--soft)" }}><AlertTriangle size={20} style={{ color: "var(--accent)" }} className="shrink-0"/><p className="ia-muted text-xs leading-5">{modal === "cancel" ? "A cancellation reason is mandatory. Paid bookings are marked refund-pending; a separate refund initiation is required." : modal === "deleteBooking" ? "This is a soft delete; financial and audit history are retained." : modal === "refund" ? "This sends a refund request to Cashfree, and does not mean the refund has completed." : "This action will update the live admin schedule."}</p></div>{["block", "cancel", "deleteBooking"].includes(modal) && <Field title="Reason (minimum 10 characters)"><textarea className="ia-textarea" rows={3} placeholder="Explain the reason..." value={actionReason} onChange={e => setActionReason(e.target.value)}/></Field>}{modal === "deleteSlot" && <Field title="Reason (optional)"><textarea rows={2} className="ia-textarea" value={actionReason} onChange={e => setActionReason(e.target.value)} placeholder="Why are you removing this slot?"/></Field>}{modal === "cancel" && <label className="flex items-start gap-3 mt-4 p-3 rounded-xl" style={{ background: "var(--surface)" }}><input type="checkbox" className="mt-1 accent-orange-600" checked={reopen} onChange={e => setReopen(e.target.checked)}/><span className="text-sm">Reopen this slot for other candidates after cancellation</span></label>}<div className="flex gap-2 justify-end mt-6"><button className="ia-btn" onClick={close}>Keep unchanged</button><button className={`ia-btn ${["cancel", "deleteBooking", "deleteSlot", "block"].includes(modal) ? "ia-btn-danger" : "ia-btn-primary"}`} disabled={working || (["block", "cancel", "deleteBooking"].includes(modal) && actionReason.trim().length < 10)} onClick={["block", "unblock", "deleteSlot"].includes(modal) ? executeSlotAction : executeBookingAction}>{working && <LoaderCircle size={15} className="animate-spin"/>}Confirm</button></div></Dialog>}
+
       {modal === "meeting" && <Dialog title="Assign meeting link" sub={selected?.bookingId} onClose={close} busy={working} width="max-w-lg"><Field title="HTTPS meeting URL"><input className="ia-input" placeholder="https://meet.google.com/..." value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)}/></Field><p className="ia-muted text-xs mt-3">A confirmation email is attempted after the meeting link is saved.</p><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working || !cleanUrl(meetingUrl)} onClick={saveMeeting}>Save meeting link</button></div></Dialog>}
-      {modal === "editBooking" && <Dialog title="Edit candidate details" sub={selected?.bookingId} onClose={close} busy={working}><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{[["name","Full name"],["email","Email"],["phone","Phone"],["experienceYears","Experience (years)"],["currentRole","Current role"],["targetRole","Target role"],["currentCompany","Company"],["resumeUrl","Resume URL"]].map(([key,title]) => <Field key={key} title={title}><input className="ia-input" type={key === "experienceYears" ? "number" : "text"} value={editCandidate[key] ?? ""} onChange={e => setEditCandidate(p => ({ ...p, [key]: e.target.value }))}/></Field>)}<Field className="sm:col-span-2" title="Interview notes"><textarea rows={3} className="ia-textarea" value={editCandidate.notes || ""} onChange={e => setEditCandidate(p => ({ ...p, notes: e.target.value }))}/></Field><Field className="sm:col-span-2" title="Private admin notes"><textarea rows={2} className="ia-textarea" value={adminNotes} onChange={e => setAdminNotes(e.target.value)}/></Field></div><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working} onClick={updateBooking}>Save details</button></div></Dialog>}
-      {modal === "detail" && detail && <Dialog title="Booking details" sub={detail.bookingId} width="max-w-3xl" onClose={close}><div className="flex items-center justify-between gap-2 flex-wrap mb-5"><Pill value={detail.status}/><Pill value={detail.payment?.status}/><span className="font-black ia-accent text-lg">{inr(detail.slotSnapshot?.price)}</span></div><div className="grid sm:grid-cols-2 gap-3">{[["Candidate", detail.candidate?.name],["Email",detail.candidate?.email],["Phone",detail.candidate?.phone],["Experience",`${detail.candidate?.experienceYears ?? 0} years`],["Date & time",dateTime(detail.slotSnapshot?.startTime)],["Duration",`${detail.slotSnapshot?.durationMinutes || 0} minutes`],["Topics",(detail.selectedTopics || []).join(", ")],["Resume URL",detail.candidate?.resumeUrl],["Meeting link",detail.meeting?.url],["Refund status",detail.refund?.status || "NOT_REQUIRED"]].map(([title,value]) => <div key={title} className="p-3 rounded-xl" style={{ background: "var(--surface)" }}><p className="ia-label">{title}</p>{["Meeting link","Resume URL"].includes(title) && cleanUrl(value) ? <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm ia-accent underline break-all">Open link <ExternalLink className="inline" size={12}/></a> : <p className="text-sm font-semibold break-words">{value || "—"}</p>}</div>)}</div><div className="mt-4 p-4 rounded-xl" style={{ background: "var(--surface)" }}><p className="ia-label">Candidate notes</p><p className="text-sm whitespace-pre-wrap">{detail.candidate?.notes || "No notes"}</p>{detail.cancellation?.reason && <><p className="ia-label mt-4">Cancellation reason</p><p className="text-sm text-red-600">{detail.cancellation.reason}</p></>}</div><div className="mt-4 flex flex-wrap gap-2">{detail.status === "CONFIRMED" && <><button className="ia-btn" onClick={() => openMeeting(detail)}><Video size={14}/> Meeting</button><button className="ia-btn" onClick={() => startAction("complete", detail)}><CircleCheck size={14}/> Complete</button></>}{["PENDING_PAYMENT","CONFIRMED"].includes(detail.status) && <button className="ia-btn ia-btn-danger" onClick={() => startAction("cancel", detail)}><Ban size={14}/> Cancel booking</button>}{detail.refund?.status === "PENDING" && <button className="ia-btn" onClick={() => startAction("refund", detail)}><Wallet size={14}/> Initiate refund</button>}{detail.refund?.gatewayRefundId && <button className="ia-btn" onClick={() => syncRefund(detail)}><RotateCcw size={14}/> Sync refund</button>}{["COMPLETED","CANCELLED_BY_ADMIN","CANCELLED_BY_USER","EXPIRED","PAYMENT_FAILED","NO_SHOW"].includes(detail.status) && <button className="ia-btn ia-btn-danger" onClick={() => startAction("deleteBooking", detail)}><Trash2 size={14}/> Delete booking</button>}</div><div className="mt-5"><p className="ia-label">Payment attempts</p>{detail.paymentAttempts?.length ? <div className="space-y-2">{detail.paymentAttempts.map((a,i) => <div key={a.attemptId || i} className="rounded-lg border ia-separator p-3 flex flex-wrap gap-3 items-center justify-between text-xs"><span className="break-all">{a.gatewayOrderId}</span><Pill value={a.status}/><span>{inr(a.amount)}</span></div>)}</div> : <p className="ia-muted text-xs">No gateway attempts.</p>}</div></Dialog>}
+
+      {modal === "editBooking" && <Dialog title="Edit candidate details" sub={selected?.bookingId} onClose={close} busy={working}><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{[["name", "Full name"], ["email", "Email"], ["phone", "Phone"], ["experienceYears", "Experience (years)"], ["currentRole", "Current role"], ["targetRole", "Target role"], ["currentCompany", "Company"], ["resumeUrl", "Resume URL"]].map(([key, title]) => <Field key={key} title={title}><input className="ia-input" type={key === "experienceYears" ? "number" : "text"} value={editCandidate[key] ?? ""} onChange={e => setEditCandidate(p => ({ ...p, [key]: e.target.value }))}/></Field>)}<Field className="sm:col-span-2" title="Interview notes"><textarea rows={3} className="ia-textarea" value={editCandidate.notes || ""} onChange={e => setEditCandidate(p => ({ ...p, notes: e.target.value }))}/></Field><Field className="sm:col-span-2" title="Private admin notes"><textarea rows={2} className="ia-textarea" value={adminNotes} onChange={e => setAdminNotes(e.target.value)}/></Field></div><div className="flex justify-end gap-2 mt-6"><button className="ia-btn" onClick={close}>Cancel</button><button className="ia-btn ia-btn-primary" disabled={working} onClick={updateBooking}>Save details</button></div></Dialog>}
+
+      {modal === "detail" && detail && <Dialog title="Booking details" sub={detail.bookingId} width="max-w-3xl" onClose={close}><div className="flex items-center justify-between gap-2 flex-wrap mb-5"><Pill value={detail.status}/><Pill value={detail.payment?.status}/><span className="font-black ia-accent text-lg">{inr(detail.slotSnapshot?.price)}</span></div><div className="grid sm:grid-cols-2 gap-3">{[["Candidate", detail.candidate?.name], ["Email", detail.candidate?.email], ["Phone", detail.candidate?.phone], ["Experience", `${detail.candidate?.experienceYears ?? 0} years`], ["Date & time", dateTime(detail.slotSnapshot?.startTime)], ["Duration", `${detail.slotSnapshot?.durationMinutes || 0} minutes`], ["Topics", (detail.selectedTopics || []).join(", ")], ["Resume URL", detail.candidate?.resumeUrl], ["Meeting link", detail.meeting?.url], ["Refund status", detail.refund?.status || "NOT_REQUIRED"]].map(([title, value]) => <div key={title} className="p-3 rounded-xl" style={{ background: "var(--surface)" }}><p className="ia-label">{title}</p>{["Meeting link", "Resume URL"].includes(title) && cleanUrl(value) ? <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm ia-accent underline break-all">Open link <ExternalLink className="inline" size={12}/></a> : <p className="text-sm font-semibold break-words">{value || "—"}</p>}</div>)}</div><div className="mt-4 p-4 rounded-xl" style={{ background: "var(--surface)" }}><p className="ia-label">Candidate notes</p><p className="text-sm whitespace-pre-wrap">{detail.candidate?.notes || "No notes"}</p>{detail.cancellation?.reason && <><p className="ia-label mt-4">Cancellation reason</p><p className="text-sm text-red-600">{detail.cancellation.reason}</p></>}</div><div className="mt-4 flex flex-wrap gap-2">{detail.status === "CONFIRMED" && <><button className="ia-btn" onClick={() => openMeeting(detail)}><Video size={14}/> Meeting</button><button className="ia-btn" onClick={() => startAction("complete", detail)}><CircleCheck size={14}/> Complete</button></>}{["PENDING_PAYMENT", "CONFIRMED"].includes(detail.status) && <button className="ia-btn ia-btn-danger" onClick={() => startAction("cancel", detail)}><Ban size={14}/> Cancel booking</button>}{detail.refund?.status === "PENDING" && <button className="ia-btn" onClick={() => startAction("refund", detail)}><Wallet size={14}/> Initiate refund</button>}{detail.refund?.gatewayRefundId && <button className="ia-btn" onClick={() => syncRefund(detail)}><RotateCcw size={14}/> Sync refund</button>}{["COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER", "EXPIRED", "PAYMENT_FAILED", "NO_SHOW"].includes(detail.status) && <button className="ia-btn ia-btn-danger" onClick={() => startAction("deleteBooking", detail)}><Trash2 size={14}/> Delete booking</button>}</div><div className="mt-5"><p className="ia-label">Payment attempts</p>{detail.paymentAttempts?.length ? <div className="space-y-2">{detail.paymentAttempts.map((a, i) => <div key={a.attemptId || i} className="rounded-lg border ia-separator p-3 flex flex-wrap gap-3 items-center justify-between text-xs"><span className="break-all">{a.gatewayOrderId}</span><Pill value={a.status}/><span>{inr(a.amount)}</span></div>)}</div> : <p className="ia-muted text-xs">No gateway attempts.</p>}</div></Dialog>}
+
     </AnimatePresence>
+
   </div>;
 }

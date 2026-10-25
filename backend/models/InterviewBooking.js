@@ -341,7 +341,6 @@ const interviewBookingSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "InterviewSlot",
       required: true,
-      index: true,
       immutable: true,
     },
 

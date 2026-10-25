@@ -378,25 +378,25 @@ export const bulkCreateSlots = wrap(
           });
         }
 
-        created =
-          await InterviewSlot.create(
-            payloads.map(
-              (payload) => ({
-                ...payload,
+       created = await InterviewSlot.create(
+  payloads.map((payload) => ({
+    ...payload,
 
-                interviewerId,
+    interviewerId,
 
-                status: "AVAILABLE",
+    status: "AVAILABLE",
 
-                active: true,
-                isDeleted: false,
+    active: true,
+    isDeleted: false,
 
-                createdBy: adminId,
-                updatedBy: adminId,
-              })
-            ),
-            { session }
-          );
+    createdBy: adminId,
+    updatedBy: adminId,
+  })),
+  {
+    session,
+    ordered: true, // Fix for multiple documents in a transaction
+  }
+);
       }
     );
 
