@@ -2485,6 +2485,7 @@ const SystemDesignHLD = lazy(() =>
   import("./component/SystemDesignHLD.jsx")
 );
 
+
 const SystemDesignCombo = lazy(() =>
   import("./component/SystemDesignCombo.jsx")
 );
@@ -2505,8 +2506,8 @@ const GenaiRAG = lazy(() =>
   import("./component/GenaiRAG.jsx")
 );
 
-const JavaBook = lazy(() =>
-  import("./component/JavaBook.jsx")
+const JavaInterviewHandbook = lazy(() =>
+  import("./component/JavaInterviewHandbook.jsx")
 );
 
 /* ============================================================
@@ -3356,6 +3357,10 @@ function App() {
             path="/book/system-design/hld"
             element={<SystemDesignHLD />}
           />
+          <Route 
+          path="/book/java-interview-handbook"
+          element={<JavaInterviewHandbook />}
+          />
 
           <Route
             path="/book/system-design/hld-lld/combo"
@@ -3382,10 +3387,10 @@ function App() {
             element={<GenaiRAG />}
           />
 
-          <Route
+          {/* <Route
             path="/book/language/java"
             element={<JavaBook />}
-          />
+          /> */}
 
           {/* ========================================
               BOOK PAYMENTS — PUBLIC
@@ -3460,7 +3465,7 @@ function App() {
           ======================================== */}
 
           <Route
-            path="/admin/interviews"
+            path="/admin/mock-interviews"
             element={requireUser(
               <InterviewAdminDashboard
                 authToken={token}
@@ -3483,11 +3488,26 @@ function App() {
           />
 
           <Route
-            path="/admin/interview-experiences/:id"
+            path="/admin/interviews"
+            element={requireUser(
+              <AdminInterviewDashboard />
+            )}
+          />
+
+          <Route
+            path="/admin/interviews/:id"
             element={requireUser(
               <AdminInterviewEdit />
             )}
           />
+
+
+          {/* <Route
+            path="/admin/interview-experiences/:id"
+            element={requireUser(
+              <AdminInterviewEdit />
+            )}
+          /> */}
 
           {/* ========================================
               ADMIN BOOKS
