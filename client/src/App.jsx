@@ -2509,6 +2509,12 @@ const GenaiRAG = lazy(() =>
 const JavaInterviewHandbook = lazy(() =>
   import("./component/JavaInterviewHandbook.jsx")
 );
+const SpringBootInterviewHandbook = lazy(() =>
+  import("./component/SpringBootInterviewHandbook.jsx")
+);
+const JavaBook = lazy(() =>
+  import("./component/JavaBook.jsx")
+);
 
 /* ============================================================
    MOCK INTERVIEW — PUBLIC COMPONENTS
@@ -3363,6 +3369,11 @@ function App() {
           />
 
           <Route
+            path="/book/springboot-interview-handbook"
+            element={<SpringBootInterviewHandbook />}
+          />
+
+          <Route
             path="/book/system-design/hld-lld/combo"
             element={<SystemDesignCombo />}
           />
@@ -3386,6 +3397,7 @@ function App() {
             path="/book/genai/rag"
             element={<GenaiRAG />}
           />
+
 
           {/* <Route
             path="/book/language/java"
