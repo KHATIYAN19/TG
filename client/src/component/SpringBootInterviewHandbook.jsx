@@ -57,9 +57,8 @@ const BASE_URL = (
 const BOOK_PATH =
   "/book/springboot-interview-handbook";
 
-// Uses the exact endpoint requested.
 const BOOK_ENDPOINT =
-  `${BASE_URL}/book?redirecturl=${encodeURIComponent(
+  `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(
     BOOK_PATH
   )}`;
 
