@@ -55,13 +55,13 @@ export const createContactMessage = asyncHandler(async (req, res) => {
 
     const userPlainText = `Hi ${name.split(' ')[0]},\n\nThanks for contacting Target Trek! We've received your message regarding "${service}" and our team will get back to you as soon as possible.\n\nBest regards,\nTeam Target Trek`;
 
-    try {
-        await sendMail(email, userSubject, userPlainText, userHtmlTemplate);
-        console.log(`Confirmation email sent to user: ${email}`);
-    } catch (error) {
-        console.error('Error sending confirmation email to user:', error);
-        // Log the error but still send success response to frontend
-    }
+    // try {
+    //     await sendMail(email, userSubject, userPlainText, userHtmlTemplate);
+    //     console.log(`Confirmation email sent to user: ${email}`);
+    // } catch (error) {
+    //     console.error('Error sending confirmation email to user:', error);
+    //     // Log the error but still send success response to frontend
+    // }
 
     res.status(201).json({
         message: 'Your message has been received successfully! We will get back to you soon.',
