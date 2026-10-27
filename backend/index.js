@@ -837,7 +837,7 @@ import connectDB from "./utils/dbConnection.js";
 /* =====================================================
    EXISTING ROUTES
 ===================================================== */
-
+import financeRoutes from "./routes/financeRoutes.js";
 import BookingRoute from "./routes/Booking.js";
 import TimeSlotRoute from "./routes/TimeSlot.js";
 import userRoute from "./routes/User.js";
@@ -1281,6 +1281,7 @@ app.use(
   BookRoute
 );
 
+app.use("/api/admin/finance", financeRoutes);
 app.use(
   "/api/book/review",
   BookReviewRoute
