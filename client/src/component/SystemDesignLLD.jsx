@@ -4492,7 +4492,7 @@ class NotificationDispatcher {
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2">
             <div>
-              <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
+              <div className="text-sm font-bold uppercase tracking-wider text-black">
                 Concurrency & Thread Safety
               </div>
 
@@ -4533,8 +4533,16 @@ class NotificationDispatcher {
 
               </div>
 
-              <pre className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-700 sm:p-5 sm:text-sm sm:leading-7">
-                {`class Inventory {
+         
+<pre
+  className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 sm:p-5 sm:text-sm sm:leading-7"
+  style={{
+    color: "#000000",
+    WebkitTextFillColor: "#000000",
+    backgroundColor: "#f8fafc",
+  }}
+>
+  {`class Inventory {
 
     private final Object lock = new Object();
     private int stock = 10;
@@ -4552,9 +4560,10 @@ class NotificationDispatcher {
         }
     }
 }`}
-              </pre>
+</pre>
 
-              <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-slate-600">
+
+              <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-black">
                 The book explains why the critical section exists, what race condition can occur
                 without it, and how different locking approaches affect the design.
               </div>
