@@ -1960,6 +1960,11 @@ const ClientServices = lazy(() =>
 
 );
 
+
+const AdminDailyPayments= lazy(() =>
+  import("./Admin/AdminDailyPayments.jsx")    
+);
+
 const ServiceDetails = lazy(() =>
 
   import("./Admin/ServiceDetails.jsx")
@@ -3297,6 +3302,22 @@ function App() {
 
           />
 
+            <Route
+
+            path="/admin/daily-payments"
+
+            element={requireUser(
+
+              <AdminDailyPayments
+
+                authToken={token}
+
+              />
+
+            )}
+
+          />
+
           {/* ========================================
 
               INTERVIEW EXPERIENCE ADMIN — PRIVATE
@@ -3621,7 +3642,7 @@ function App() {
 
           ======================================== */}
 
-          <Route
+          {/* <Route
 
             path="/admin/booking"
 
@@ -3631,9 +3652,9 @@ function App() {
 
             )}
 
-          />
+          /> */}
 
-          <Route
+          {/* <Route
 
             path="/admin/slots"
 
@@ -3643,7 +3664,7 @@ function App() {
 
             )}
 
-          />
+          /> */}
 
           {/* ========================================
 

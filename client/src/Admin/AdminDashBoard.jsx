@@ -1,1151 +1,3 @@
-// import React, { useEffect, useMemo, useState } from "react";
-
-// import { Link } from "react-router-dom";
-
-// import { motion } from "framer-motion";
-
-// import { Helmet } from "react-helmet";
-
-// import { useSelector } from "react-redux";
-
-// import {
-
-//   Activity,
-
-//   ArrowRight,
-
-//   BarChart3,
-
-//   BookOpen,
-
-//   BriefcaseBusiness,
-
-//   CheckCircle2,
-
-//   CircleUserRound,
-
-//   FileText,
-
-//   Gift,
-
-//   Handshake,
-
-//   Image,
-
-//   LayoutDashboard,
-
-//   LockKeyhole,
-
-//   Mail,
-
-//   MessageSquareHeart,
-
-//   PlusCircle,
-
-//   Search,
-
-//   Send,
-
-//   ShieldCheck,
-
-//   Sparkles,
-
-//   Tag,
-
-//   TicketPercent,
-
-//   UserCog,
-
-//   UserPlus,
-
-// } from "lucide-react";
-
-
-
-// const adminRoutes = [
-//   {
-//     path: "/admin/books",
-//     name: "Books",
-//     icon: BookOpen,
-//     description:
-//       "Manage books, pricing, visibility, payment links, covers and publishing settings.",
-//     category: "Books & Sales",
-//     tone: "blue",
-//   },
-//   {
-//     path: "/admin/book/create",
-//     name: "Add Book",
-//     icon: PlusCircle,
-//     description:
-//       "Create a new book with pricing, cover, payment, publishing and resource details.",
-//     category: "Books & Sales",
-//     tone: "sky",
-//   },
-//   {
-//     path: "/admin/book/analytics",
-//     name: "Book Analytics",
-//     icon: BarChart3,
-//     description:
-//       "Track book performance, orders, revenue, payments and sales activity.",
-//     category: "Books & Sales",
-//     tone: "emerald",
-//   },
-//   {
-//     path: "/admin/coupon/dashboard",
-//     name: "Coupons Dashboard",
-//     icon: TicketPercent,
-//     description:
-//       "Create and monitor coupon codes, discounts, usage and promotional campaigns.",
-//     category: "Books & Sales",
-//     tone: "violet",
-//   },
-//   {
-//     path: "/admin/dashboard",
-//     name: "Sales Dashboard",
-//     icon: LayoutDashboard,
-//     description:
-//       "Monitor sales, payment performance, revenue trends and important business metrics.",
-//     category: "Books & Sales",
-//     tone: "amber",
-//   },
-//   {
-//     path: "/campaign",
-//     name: "Campaign Email",
-//     icon: Send,
-//     description:
-//       "Create and send promotional emails, book notifications, coupon campaigns and customer updates.",
-//     category: "Marketing & Notifications",
-//     tone: "rose",
-//   },
-//   {
-//     path: "/admin/interviews",
-//     name: "Interview Experiences",
-//     icon: BriefcaseBusiness,
-//     description:
-//       "Review, edit and manage submitted interview experiences, publishing status and interview content.",
-//     category: "Content",
-//     tone: "indigo",
-//   },
-//   {
-//     path: "/admin/add-blog",
-//     name: "Add Blog",
-//     icon: PlusCircle,
-//     description:
-//       "Write and publish a new article, interview experience or learning resource.",
-//     category: "Content",
-//     tone: "blue",
-//   },
-//   {
-//     path: "/blog-manage",
-//     name: "Manage Blogs",
-//     icon: FileText,
-//     description:
-//       "Edit, review, organize or remove existing blog posts and published articles.",
-//     category: "Content",
-//     tone: "emerald",
-//   },
-//   {
-//     path: "/profile",
-//     name: "Profile",
-//     icon: CircleUserRound,
-//     description:
-//       "View your account information and update your personal profile settings.",
-//     category: "Users & Access",
-//     tone: "slate",
-//   },
-//   {
-//     path: "/admin/users",
-//     name: "User Management",
-//     icon: UserCog,
-//     description:
-//       "View, manage and maintain all registered user and employee accounts.",
-//     category: "Users & Access",
-//     tone: "indigo",
-//   },
-//   {
-//     path: "/admin/signup",
-//     name: "Add a User",
-//     icon: UserPlus,
-//     description:
-//       "Create a new admin, employee or authorized user account for the platform.",
-//     category: "Users & Access",
-//     tone: "sky",
-//   },
-//   {
-//     path: "/admin/generate-review-link",
-//     name: "Generate Review Link",
-//     icon: Gift,
-//     description:
-//       "Generate dedicated links that allow customers and users to submit reviews.",
-//     category: "Reviews & Support",
-//     tone: "violet",
-//   },
-//   {
-//     path: "/admin/manage-reviews",
-//     name: "Manage Reviews",
-//     icon: CheckCircle2,
-//     description:
-//       "Review, approve, edit or remove customer reviews submitted to Target Trek.",
-//     category: "Reviews & Support",
-//     tone: "emerald",
-//   },
-//   {
-//     path: "/contact-query",
-//     name: "Contact Queries",
-//     icon: Mail,
-//     description:
-//       "Review customer questions, support requests and contact form submissions.",
-//     category: "Reviews & Support",
-//     tone: "amber",
-//   },
-//   {
-//     path: "/admin/add-portfolio",
-//     name: "Add Portfolio",
-//     icon: PlusCircle,
-//     description:
-//       "Create a new portfolio entry and showcase projects or professional work.",
-//     category: "Portfolio",
-//     tone: "blue",
-//   },
-//   {
-//     path: "/portfolio-manage",
-//     name: "Manage Portfolio",
-//     icon: Image,
-//     description:
-//       "Edit, organize or remove existing portfolio projects and portfolio assets.",
-//     category: "Portfolio",
-//     tone: "sky",
-//   },
-//   {
-//     path: "/admin/booking",
-//     name: "Bookings",
-//     icon: BriefcaseBusiness,
-//     description:
-//       "View and manage booking requests, scheduled sessions and booking-related activity.",
-//     category: "Operations",
-//     tone: "blue",
-//   },
-//   {
-//     path: "/admin/slots",
-//     name: "Booking Slots",
-//     icon: Activity,
-//     description:
-//       "Manage available booking slots, schedules and availability for customer sessions.",
-//     category: "Operations",
-//     tone: "emerald",
-//   },
-//   {
-//     path: "/admin/affiliate-manage",
-//     name: "Affiliate Management",
-//     icon: Handshake,
-//     description:
-//       "Manage affiliates, referral relationships and affiliate sales activity.",
-//     category: "Business",
-//     tone: "violet",
-//   },
-//   {
-//     path: "/interest",
-//     name: "Interested Users",
-//     icon: MessageSquareHeart,
-//     description:
-//       "Review users who expressed interest in products, services or opportunities.",
-//     category: "Business",
-//     tone: "rose",
-//   },
-//   {
-//     path: "/clients",
-//     name: "Clients",
-//     icon: BriefcaseBusiness,
-//     description:
-//       "View and manage all customers and clients currently onboarded with Target Trek.",
-//     category: "Business",
-//     tone: "slate",
-//   },
-// ];
-
-// const employeeRoutes = [
-//   {
-//     path: "/profile",
-//     name: "Profile",
-//     icon: CircleUserRound,
-//     description:
-//       "View your account information and update your personal profile settings.",
-//     category: "Account",
-//     tone: "slate",
-//   },
-//   {
-//     path: "/campaign",
-//     name: "Campaign Email",
-//     icon: Send,
-//     description:
-//       "Create and send promotional emails, book notifications, coupon campaigns and customer updates.",
-//     category: "Marketing & Notifications",
-//     tone: "rose",
-//   },
-//   {
-//     path: "/admin/interviews",
-//     name: "Interview Experiences",
-//     icon: BriefcaseBusiness,
-//     description:
-//       "Review, edit and manage submitted interview experiences, publishing status and interview content.",
-//     category: "Content",
-//     tone: "indigo",
-//   },
-//   {
-//     path: "/admin/add-blog",
-//     name: "Add Blog",
-//     icon: PlusCircle,
-//     description:
-//       "Write and publish a new article, interview experience or learning resource.",
-//     category: "Content",
-//     tone: "blue",
-//   },
-//   {
-//     path: "/blog-manage",
-//     name: "Manage Blogs",
-//     icon: FileText,
-//     description:
-//       "Edit, review, organize or remove existing blog posts and published articles.",
-//     category: "Content",
-//     tone: "emerald",
-//   },
-//   {
-//     path: "/admin/generate-review-link",
-//     name: "Generate Review Link",
-//     icon: Gift,
-//     description:
-//       "Generate dedicated links that allow customers and users to submit reviews.",
-//     category: "Reviews & Support",
-//     tone: "violet",
-//   },
-//   {
-//     path: "/admin/manage-reviews",
-//     name: "Manage Reviews",
-//     icon: CheckCircle2,
-//     description:
-//       "Review, approve, edit or remove customer reviews submitted to Target Trek.",
-//     category: "Reviews & Support",
-//     tone: "emerald",
-//   },
-//   {
-//     path: "/contact-query",
-//     name: "Contact Queries",
-//     icon: Mail,
-//     description:
-//       "Review customer questions, support requests and contact form submissions.",
-//     category: "Reviews & Support",
-//     tone: "amber",
-//   },
-//   {
-//     path: "/admin/add-portfolio",
-//     name: "Add Portfolio",
-//     icon: PlusCircle,
-//     description:
-//       "Create a new portfolio entry and showcase projects or professional work.",
-//     category: "Portfolio",
-//     tone: "blue",
-//   },
-//   {
-//     path: "/portfolio-manage",
-//     name: "Manage Portfolio",
-//     icon: Image,
-//     description:
-//       "Edit, organize or remove existing portfolio projects and portfolio assets.",
-//     category: "Portfolio",
-//     tone: "sky",
-//   },
-//   {
-//     path: "/admin/affiliate-manage",
-//     name: "Affiliate Management",
-//     icon: Handshake,
-//     description:
-//       "Manage affiliates, referral relationships and affiliate sales activity.",
-//     category: "Business",
-//     tone: "violet",
-//   },
-// ];
-
-// const toneStyles = {
-
-//   blue: {
-
-//     icon: "bg-blue-50 text-blue-600 ring-blue-100",
-
-//     hover: "group-hover:border-blue-200",
-
-//   },
-
-//   emerald: {
-
-//     icon: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-
-//     hover: "group-hover:border-emerald-200",
-
-//   },
-
-//   violet: {
-
-//     icon: "bg-violet-50 text-violet-600 ring-violet-100",
-
-//     hover: "group-hover:border-violet-200",
-
-//   },
-
-//   amber: {
-
-//     icon: "bg-amber-50 text-amber-600 ring-amber-100",
-
-//     hover: "group-hover:border-amber-200",
-
-//   },
-
-//   indigo: {
-
-//     icon: "bg-indigo-50 text-indigo-600 ring-indigo-100",
-
-//     hover: "group-hover:border-indigo-200",
-
-//   },
-
-//   sky: {
-
-//     icon: "bg-sky-50 text-sky-600 ring-sky-100",
-
-//     hover: "group-hover:border-sky-200",
-
-//   },
-
-//   rose: {
-
-//     icon: "bg-rose-50 text-rose-600 ring-rose-100",
-
-//     hover: "group-hover:border-rose-200",
-
-//   },
-
-//   slate: {
-
-//     icon: "bg-slate-100 text-slate-600 ring-slate-200",
-
-//     hover: "group-hover:border-slate-300",
-
-//   },
-
-// };
-
-
-
-// function DashboardCard({ route, index }) {
-
-//   const Icon = route.icon;
-
-//   const styles = toneStyles[route.tone] || toneStyles.blue;
-
-
-
-//   return (
-
-//     <motion.div
-
-//       initial={{
-
-//         opacity: 0,
-
-//         y: 16,
-
-//       }}
-
-//       animate={{
-
-//         opacity: 1,
-
-//         y: 0,
-
-//       }}
-
-//       transition={{
-
-//         duration: 0.3,
-
-//         delay: Math.min(index * 0.035, 0.35),
-
-//       }}
-
-//       whileHover={{
-
-//         y: -3,
-
-//       }}
-
-//       className="h-full"
-
-//     >
-
-//       <Link to={route.path} className="group block h-full">
-
-//         <div
-
-//           className={`relative flex h-full min-h-[210px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-lg ${styles.hover}`}
-
-//         >
-
-//           <div className="flex items-start justify-between gap-4">
-
-//             <div
-
-//               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${styles.icon}`}
-
-//             >
-
-//               <Icon className="h-5 w-5" />
-
-//             </div>
-
-
-
-//             <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all duration-300 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600">
-
-//               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-
-//             </div>
-
-//           </div>
-
-
-
-//           <div className="mt-5 flex-1">
-
-//             <div className="mb-2">
-
-//               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.1em] text-slate-500">
-
-//                 {route.category}
-
-//               </span>
-
-//             </div>
-
-
-
-//             <h2 className="text-base font-extrabold text-slate-950 transition group-hover:text-blue-700">
-
-//               {route.name}
-
-//             </h2>
-
-
-
-//             <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
-
-//               {route.description}
-
-//             </p>
-
-//           </div>
-
-
-
-//           <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 text-xs font-extrabold text-blue-600">
-
-//             Open
-
-//             <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-
-//           </div>
-
-//         </div>
-
-//       </Link>
-
-//     </motion.div>
-
-//   );
-
-// }
-
-
-
-// const AdminDashboard = () => {
-
-//   const user = useSelector((state) => state.auth.user);
-
-
-
-//   const [searchQuery, setSearchQuery] = useState("");
-
-//   const [selectedCategory, setSelectedCategory] = useState("All");
-
-
-
-//   useEffect(() => {
-
-//     window.scrollTo(0, 0);
-
-//   }, []);
-
-
-
-//   const normalizedRole = String(user?.role || "").trim();
-
-
-
-//   const isAdmin = normalizedRole.toLowerCase() === "admin";
-
-//   const isEmployee = normalizedRole.toLowerCase() === "employee";
-
-
-
-//   const dashboardTitle = isAdmin
-
-//     ? "Admin Dashboard"
-
-//     : isEmployee
-
-//     ? "Employee Dashboard"
-
-//     : "Dashboard";
-
-
-
-//   const currentRoutes = isAdmin
-
-//     ? adminRoutes
-
-//     : isEmployee
-
-//     ? employeeRoutes
-
-//     : [];
-
-
-
-//   const categories = useMemo(() => {
-
-//     return [
-
-//       "All",
-
-//       ...Array.from(new Set(currentRoutes.map((route) => route.category))),
-
-//     ];
-
-//   }, [currentRoutes]);
-
-
-
-//   const filteredRoutes = useMemo(() => {
-
-//     const query = searchQuery.trim().toLowerCase();
-
-
-
-//     return currentRoutes.filter((route) => {
-
-//       const matchesCategory =
-
-//         selectedCategory === "All" || route.category === selectedCategory;
-
-
-
-//       const matchesSearch =
-
-//         !query ||
-
-//         route.name.toLowerCase().includes(query) ||
-
-//         route.description.toLowerCase().includes(query) ||
-
-//         route.category.toLowerCase().includes(query);
-
-
-
-//       return matchesCategory && matchesSearch;
-
-//     });
-
-//   }, [currentRoutes, searchQuery, selectedCategory]);
-
-
-
-//   if (!user || (!isAdmin && !isEmployee)) {
-
-//     return (
-
-//       <>
-
-//         <Helmet>
-
-//           <title>Access Denied - Target Trek</title>
-
-//         </Helmet>
-
-
-
-//         <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-
-//           <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl sm:p-10">
-
-//             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
-
-//               <LockKeyhole className="h-7 w-7" />
-
-//             </div>
-
-
-
-//             <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[0.15em] text-red-500">
-
-//               Restricted Area
-
-//             </p>
-
-
-
-//             <h1 className="mt-2 text-3xl font-extrabold text-slate-950">
-
-//               Access Denied
-
-//             </h1>
-
-
-
-//             <p className="mx-auto mt-3 max-w-md text-sm font-medium leading-6 text-slate-500">
-
-//               Your account does not have permission to access this dashboard.
-
-//               Please sign in using an authorized admin or employee account.
-
-//             </p>
-
-
-
-//             <Link
-
-//               to="/"
-
-//               className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
-
-//             >
-
-//               Back to Home
-
-//               <ArrowRight className="h-4 w-4" />
-
-//             </Link>
-
-//           </div>
-
-//         </main>
-
-//       </>
-
-//     );
-
-//   }
-
-
-
-//   return (
-
-//     <>
-
-//       <Helmet>
-
-//         <title>{dashboardTitle} - Target Trek</title>
-
-//       </Helmet>
-
-
-
-//       <main className="min-h-screen bg-slate-50 pb-20 pt-24 text-slate-900 sm:pt-28">
-
-//         <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-
-//           <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-
-//             <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-blue-100/50 blur-3xl" />
-
-
-
-//             <div className="absolute -bottom-32 left-20 h-72 w-72 rounded-full bg-sky-100/40 blur-3xl" />
-
-
-
-//             <div className="relative p-6 sm:p-8 lg:p-10">
-
-//               <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-
-//                 <div className="max-w-3xl">
-
-//                   <div className="flex flex-wrap items-center gap-2">
-
-//                     <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-blue-700">
-
-//                       <ShieldCheck className="h-3.5 w-3.5" />
-
-
-
-//                       {isAdmin ? "Administrator" : "Employee"}
-
-//                     </span>
-
-
-
-//                     <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-slate-500">
-
-//                       <Sparkles className="h-3.5 w-3.5" />
-
-
-
-//                       Target Trek
-
-//                     </span>
-
-//                   </div>
-
-
-
-//                   <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-
-//                     {dashboardTitle}
-
-//                   </h1>
-
-
-
-//                   <p className="mt-4 max-w-2xl text-sm font-medium leading-7 text-slate-500 sm:text-base">
-
-//                     Manage Target Trek operations from one place. Quickly access
-
-//                     books, payments, analytics, email campaigns, customers,
-
-//                     content, reviews, affiliates and other administrative tools.
-
-//                   </p>
-
-
-
-//                   {user?.name && (
-
-//                     <p className="mt-4 text-sm font-semibold text-slate-600">
-
-//                       Welcome back,{" "}
-
-//                       <span className="font-extrabold text-blue-600">
-
-//                         {user.name}
-
-//                       </span>
-
-//                       .
-
-//                     </p>
-
-//                   )}
-
-//                 </div>
-
-
-
-//                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[380px]">
-
-//                   <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
-
-//                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-
-//                       <Activity className="h-4 w-4" />
-
-//                     </div>
-
-
-
-//                     <p className="mt-3 text-2xl font-extrabold text-slate-950">
-
-//                       {currentRoutes.length}
-
-//                     </p>
-
-
-
-//                     <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-
-//                       Tools
-
-//                     </p>
-
-//                   </div>
-
-
-
-//                   <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
-
-//                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-
-//                       <Tag className="h-4 w-4" />
-
-//                     </div>
-
-
-
-//                     <p className="mt-3 text-2xl font-extrabold text-slate-950">
-
-//                       {categories.filter((item) => item !== "All").length}
-
-//                     </p>
-
-
-
-//                     <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-
-//                       Categories
-
-//                     </p>
-
-//                   </div>
-
-
-
-//                   <div className="col-span-2 rounded-2xl bg-slate-950 p-4 text-white shadow-sm sm:col-span-1">
-
-//                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white">
-
-//                       <ShieldCheck className="h-4 w-4" />
-
-//                     </div>
-
-
-
-//                     <p className="mt-3 text-sm font-extrabold">
-
-//                       {isAdmin ? "Full Access" : "Employee"}
-
-//                     </p>
-
-
-
-//                     <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-
-//                       Permission
-
-//                     </p>
-
-//                   </div>
-
-//                 </div>
-
-//               </div>
-
-//             </div>
-
-//           </section>
-
-
-
-//           <section className="sticky top-20 z-20 mt-5 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur sm:top-24 sm:p-4">
-
-//             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-
-//               <div className="relative w-full xl:max-w-md">
-
-//                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-
-
-//                 <input
-
-//                   value={searchQuery}
-
-//                   onChange={(event) => setSearchQuery(event.target.value)}
-
-//                   placeholder="Search dashboard tools..."
-
-//                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
-
-//                 />
-
-//               </div>
-
-
-
-//               <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
-
-//                 {categories.map((category) => {
-
-//                   const active = selectedCategory === category;
-
-
-
-//                   return (
-
-//                     <button
-
-//                       key={category}
-
-//                       type="button"
-
-//                       onClick={() => setSelectedCategory(category)}
-
-//                       className={`whitespace-nowrap rounded-xl border px-3.5 py-2.5 text-xs font-extrabold transition ${
-
-//                         active
-
-//                           ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-
-//                           : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-
-//                       }`}
-
-//                     >
-
-//                       {category}
-
-//                     </button>
-
-//                   );
-
-//                 })}
-
-//               </div>
-
-//             </div>
-
-//           </section>
-
-
-
-//           <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-
-//             <div>
-
-//               <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-blue-600">
-
-//                 Workspace
-
-//               </p>
-
-
-
-//               <h2 className="mt-1 text-2xl font-extrabold text-slate-950">
-
-//                 Dashboard Tools
-
-//               </h2>
-
-
-
-//               <p className="mt-1 text-sm font-medium text-slate-500">
-
-//                 Choose a section to manage.
-
-//               </p>
-
-//             </div>
-
-
-
-//             <p className="text-xs font-bold text-slate-400">
-
-//               Showing{" "}
-
-//               <span className="text-slate-700">{filteredRoutes.length}</span> of{" "}
-
-//               <span className="text-slate-700">{currentRoutes.length}</span>{" "}
-
-//               tools
-
-//             </p>
-
-//           </div>
-
-
-
-//           {filteredRoutes.length > 0 ? (
-
-//             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-
-//               {filteredRoutes.map((route, index) => (
-
-//                 <DashboardCard
-
-//                   key={route.path}
-
-//                   route={route}
-
-//                   index={index}
-
-//                 />
-
-//               ))}
-
-//             </div>
-
-//           ) : (
-
-//             <div className="mt-6 rounded-3xl border border-slate-200 bg-white py-16 text-center shadow-sm">
-
-//               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-
-//                 <Search className="h-6 w-6" />
-
-//               </div>
-
-
-
-//               <h3 className="mt-4 text-lg font-extrabold text-slate-950">
-
-//                 No tools found
-
-//               </h3>
-
-
-
-//               <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-slate-500">
-
-//                 No dashboard section matches your current search or selected
-
-//                 category.
-
-//               </p>
-
-
-
-//               <button
-
-//                 type="button"
-
-//                 onClick={() => {
-
-//                   setSearchQuery("");
-
-//                   setSelectedCategory("All");
-
-//                 }}
-
-//                 className="mt-5 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
-
-//               >
-
-//                 Clear Filters
-
-//               </button>
-
-//             </div>
-
-//           )}
-
-//         </div>
-
-//       </main>
-
-//     </>
-
-//   );
-
-// };
-
-
-
-// export default AdminDashboard;
 
 import React, {
   useCallback,
@@ -1154,9 +6,10 @@ import React, {
   useState,
 } from "react";
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
+import { Helmet } from "react-helmet";
 
 import {
   Activity,
@@ -1190,7 +43,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   Star,
-  Tag,
   TicketPercent,
   UserCog,
   UserPlus,
@@ -1199,260 +51,286 @@ import {
   X,
 } from "lucide-react";
 
-// ===========================================================
-// ADMIN DASHBOARD - TARGET TREK
-// ===========================================================
+/* ==========================================================
+   CONFIGURATION
+========================================================== */
 
 const THEME_STORAGE_KEY = "theme";
 const FAVORITES_KEY = "targettrek_admin_favorites";
 const RECENT_KEY = "targettrek_admin_recent";
 
-// ===========================================================
-// ADMIN ROUTES
-// ===========================================================
+/* ==========================================================
+   PRIORITY ROUTES
 
-const adminRoutes = [
-  // FINANCE & REVENUE
+   These six cards always appear at the top for admins.
+========================================================== */
+
+const PRIORITY_ROUTES = [
+  {
+    path: "/admin/books",
+    name: "Books Management",
+    icon: BookOpen,
+    description:
+      "Manage all ebooks, product listings, prices, covers, payment links, publishing settings and availability.",
+    category: "Books & Products",
+    keywords:
+      "books products hld lld java ebook manage publishing",
+    featured: true,
+    priority: 1,
+  },
   {
     path: "/admin/finance",
     name: "Finance Management",
     icon: CircleDollarSign,
     description:
-      "Monitor total revenue, operating costs, affiliate commissions, profit margins, gateway fees, and financial reports.",
+      "Monitor gross revenue, payment gateway fees, expenses, affiliate commissions, profit and financial analytics.",
     category: "Finance & Revenue",
-    keywords: "finance expenses income profits accounting money",
+    keywords:
+      "finance revenue costs profit expenses income",
     featured: true,
+    priority: 2,
   },
+  {
+    path: "/admin/daily-payments",
+    name: "Daily Payments",
+    icon: CreditCard,
+    description:
+      "View all payments for any date, inspect transactions, track successful and failed orders, and manage payment records.",
+    category: "Finance & Revenue",
+    keywords:
+      "daily payments orders transactions cashfree payu razorpay",
+    featured: true,
+    priority: 3,
+  },
+  {
+    path: "/admin/coupon/dashboard",
+    name: "Coupon Dashboard",
+    icon: TicketPercent,
+    description:
+      "Create coupon codes, manage discounts, configure promotional offers and monitor coupon performance.",
+    category: "Books & Products",
+    keywords:
+      "coupon discounts offers sales promo codes",
+    featured: true,
+    priority: 4,
+  },
+  {
+    path: "/admin/mock-interviews",
+    name: "Mock Interviews",
+    icon: Users,
+    description:
+      "Manage mock interview requests, candidates, interviewers, scheduled sessions, feedback and interview operations.",
+    category: "Interviews",
+    keywords:
+      "mock interviews candidates engineers booking sessions",
+    featured: true,
+    priority: 5,
+  },
+  {
+    path: "/campaign",
+    name: "Email Campaigns",
+    icon: Send,
+    description:
+      "Send book announcements, promotional emails, discount campaigns, customer notifications and product updates.",
+    category: "Marketing",
+    keywords:
+      "email campaigns marketing newsletters bulk promotions",
+    featured: true,
+    priority: 6,
+  },
+];
+
+/* ==========================================================
+   OTHER ADMIN ROUTES
+========================================================== */
+
+const OTHER_ADMIN_ROUTES = [
   {
     path: "/admin/book/analytics",
     name: "Book Analytics",
     icon: BarChart3,
     description:
-      "Analyze book performance, payments, successful purchases, order trends, and product revenue.",
+      "Analyze book sales, purchases, revenue, payment performance and product growth.",
     category: "Finance & Revenue",
-    keywords: "books sales statistics reports charts",
-    featured: true,
+    keywords: "book sales reports analytics",
   },
   {
     path: "/admin/dashboard",
     name: "Sales Dashboard",
     icon: LayoutDashboard,
     description:
-      "Review orders, payment statuses, sales metrics, transaction activity, and sales performance.",
+      "Review overall sales, orders, payment statuses and business performance.",
     category: "Finance & Revenue",
-    keywords: "sales payments revenue transactions",
-  },
-
-  // INTERVIEWS & BOOKINGS
-  {
-    path: "/admin/mock-interviews",
-    name: "Mock Interviews",
-    icon: Users,
-    description:
-      "Manage mock interview requests, candidates, interviewers, scheduled sessions, and interview operations.",
-    category: "Interviews & Bookings",
-    keywords: "mock interviews practice interview candidates engineers",
-    featured: true,
-  },
-  {
-    path: "/admin/booking",
-    name: "Bookings",
-    icon: CalendarDays,
-    description:
-      "View and manage booking requests, upcoming sessions, scheduling information, and booking activity.",
-    category: "Interviews & Bookings",
-    keywords: "appointments meetings interview booking schedule",
-  },
-  {
-    path: "/admin/slots",
-    name: "Booking Slots",
-    icon: Clock3,
-    description:
-      "Create and manage available time slots, engineer schedules, and appointment availability.",
-    category: "Interviews & Bookings",
-    keywords: "slots availability schedule time appointments",
-  },
-  {
-    path: "/admin/interviews",
-    name: "Interview Experiences",
-    icon: BriefcaseBusiness,
-    description:
-      "Review, publish, edit, and organize interview experiences submitted to the platform.",
-    category: "Content & Publishing",
-    keywords: "interview experiences submissions articles",
-  },
-
-  // BOOKS
-  {
-    path: "/admin/books",
-    name: "Manage Books",
-    icon: BookOpen,
-    description:
-      "Manage ebook listings, book pricing, payment links, cover images, resource types, and availability.",
-    category: "Books & Products",
-    keywords: "ebooks hld lld java genai books products",
-    featured: true,
+    keywords: "sales dashboard payments statistics",
   },
   {
     path: "/admin/book/create",
     name: "Add New Book",
     icon: PlusCircle,
     description:
-      "Create a book listing with its title, pricing, cover image, delivery settings, and product details.",
+      "Create a new ebook listing with pricing, cover, resource details and publishing settings.",
     category: "Books & Products",
-    keywords: "new book create product ebook",
+    keywords: "new book create upload",
   },
   {
-    path: "/admin/coupon/dashboard",
-    name: "Coupons Dashboard",
-    icon: TicketPercent,
+    path: "/admin/interviews",
+    name: "Interview Experiences",
+    icon: BriefcaseBusiness,
     description:
-      "Create discount codes, configure promotions, monitor coupon usage, and manage offers.",
-    category: "Books & Products",
-    keywords: "discount promo sale offers coupon",
+      "Review, edit, publish and manage technical interview experiences.",
+    category: "Content & Publishing",
+    keywords: "interview experiences content",
   },
-
-  // MARKETING
-  {
-    path: "/campaign",
-    name: "Email Campaigns",
-    icon: Send,
-    description:
-      "Send promotional campaigns, product announcements, discount offers, and customer notifications.",
-    category: "Marketing",
-    keywords: "email marketing newsletter promotions notification",
-  },
-  {
-    path: "/admin/affiliate-manage",
-    name: "Affiliate Management",
-    icon: Handshake,
-    description:
-      "Manage referral partners, affiliate relationships, commissions, and affiliate sales performance.",
-    category: "Marketing",
-    keywords: "referrals creators affiliates commissions partners",
-  },
-  {
-    path: "/interest",
-    name: "Interested Users",
-    icon: MessageSquareHeart,
-    description:
-      "Review people interested in Target Trek products, services, interviews, and opportunities.",
-    category: "Marketing",
-    keywords: "leads interested users prospects",
-  },
-
-  // USERS & ACCESS
-  {
-    path: "/admin/users",
-    name: "User Management",
-    icon: UserCog,
-    description:
-      "View registered users, manage roles, account access, user statuses, and internal team members.",
-    category: "Users & Access",
-    keywords: "users employees admins roles access accounts",
-  },
-  {
-    path: "/admin/signup",
-    name: "Add a User",
-    icon: UserPlus,
-    description:
-      "Create authorized accounts for new administrators, employees, and platform team members.",
-    category: "Users & Access",
-    keywords: "register new admin employee account",
-  },
-  {
-    path: "/profile",
-    name: "My Profile",
-    icon: CircleUserRound,
-    description:
-      "View your account details and manage your personal profile information.",
-    category: "Users & Access",
-    keywords: "my account personal profile",
-  },
-
-  // CONTENT & PUBLISHING
   {
     path: "/admin/add-blog",
     name: "Add Blog",
     icon: PlusCircle,
     description:
-      "Create a new blog post, technical article, interview experience, or learning resource.",
+      "Write and publish technical articles, learning resources and interview posts.",
     category: "Content & Publishing",
-    keywords: "new article write blog publish",
+    keywords: "new blog article write",
   },
   {
     path: "/blog-manage",
     name: "Manage Blogs",
     icon: FileText,
     description:
-      "Edit, review, organize, publish, or remove existing articles and blog posts.",
+      "Edit, organize, publish or remove existing blog posts and articles.",
     category: "Content & Publishing",
-    keywords: "blog posts articles content edit",
+    keywords: "blog content publishing",
   },
   {
-    path: "/admin/add-portfolio",
-    name: "Add Portfolio",
-    icon: PlusCircle,
+    path: "/admin/affiliate-manage",
+    name: "Affiliate Management",
+    icon: Handshake,
     description:
-      "Create new portfolio entries to showcase projects, achievements, and professional work.",
-    category: "Content & Publishing",
-    keywords: "projects portfolio add",
+      "Manage referral partners, affiliate relationships, commissions and affiliate sales.",
+    category: "Marketing",
+    keywords: "referral affiliates creators partners",
   },
   {
-    path: "/portfolio-manage",
-    name: "Manage Portfolio",
-    icon: Image,
+    path: "/interest",
+    name: "Interested Users",
+    icon: MessageSquareHeart,
     description:
-      "Update existing portfolio projects, images, descriptions, and portfolio assets.",
-    category: "Content & Publishing",
-    keywords: "portfolio projects images",
+      "Review leads and users interested in products, interviews and services.",
+    category: "Marketing",
+    keywords: "interested leads prospects",
   },
-
-  // REVIEWS & SUPPORT
+  {
+    path: "/admin/users",
+    name: "User Management",
+    icon: UserCog,
+    description:
+      "Manage registered users, employees, roles, permissions and account access.",
+    category: "Users & Access",
+    keywords: "users employee admin roles",
+  },
+  {
+    path: "/admin/signup",
+    name: "Add a User",
+    icon: UserPlus,
+    description:
+      "Create authorized accounts for administrators, employees and internal team members.",
+    category: "Users & Access",
+    keywords: "signup employee account",
+  },
+  {
+    path: "/profile",
+    name: "My Profile",
+    icon: CircleUserRound,
+    description:
+      "Manage your account information and personal profile details.",
+    category: "Users & Access",
+    keywords: "profile account",
+  },
   {
     path: "/admin/generate-review-link",
     name: "Generate Review Link",
     icon: Gift,
     description:
-      "Generate dedicated review submission links for customers and product purchasers.",
+      "Create review submission links for customers and book purchasers.",
     category: "Reviews & Support",
-    keywords: "review link customers feedback",
+    keywords: "review link feedback",
   },
   {
     path: "/admin/manage-reviews",
     name: "Manage Reviews",
     icon: CheckCircle2,
     description:
-      "Review, approve, edit, and manage customer ratings, feedback, and testimonials.",
+      "Review, approve, edit and manage ratings, testimonials and customer feedback.",
     category: "Reviews & Support",
-    keywords: "feedback reviews ratings testimonials",
+    keywords: "reviews ratings testimonials",
   },
   {
     path: "/contact-query",
     name: "Contact Queries",
     icon: Mail,
     description:
-      "Review customer questions, contact submissions, support inquiries, and received messages.",
+      "Review customer questions, contact submissions and support inquiries.",
     category: "Reviews & Support",
-    keywords: "support email contacts queries customer",
+    keywords: "support contact customer mail",
   },
-
-  // BUSINESS
+  {
+    path: "/admin/add-portfolio",
+    name: "Add Portfolio",
+    icon: PlusCircle,
+    description:
+      "Create portfolio entries for projects and professional achievements.",
+    category: "Content & Publishing",
+    keywords: "portfolio create",
+  },
+  {
+    path: "/portfolio-manage",
+    name: "Manage Portfolio",
+    icon: Image,
+    description:
+      "Edit existing portfolio projects, images and other portfolio assets.",
+    category: "Content & Publishing",
+    keywords: "portfolio images projects",
+  },
   {
     path: "/clients",
     name: "Clients",
     icon: BriefcaseBusiness,
     description:
-      "Manage customer and client records, onboarded accounts, and client information.",
+      "Manage onboarded clients, customer records and business relationships.",
     category: "Business Operations",
-    keywords: "clients customers business accounts",
+    keywords: "clients customer business",
   },
 ];
 
-// ===========================================================
-// EMPLOYEE ROUTES
-// Keep original access restrictions.
-// ===========================================================
+/* ==========================================================
+   DISABLED FEATURES
+
+   Moved to bottom.
+   No navigation is allowed.
+========================================================== */
+
+const DISABLED_ROUTES = [
+  {
+    path: "/admin/booking",
+    name: "Bookings",
+    icon: CalendarDays,
+    description:
+      "Legacy booking administration is currently disabled. Use Mock Interviews for interview-related operations.",
+    category: "Disabled Features",
+    disabled: true,
+  },
+  {
+    path: "/admin/slots",
+    name: "Booking Slots",
+    icon: Clock3,
+    description:
+      "Legacy booking-slot management is currently disabled. This section is unavailable.",
+    category: "Disabled Features",
+    disabled: true,
+  },
+];
+
+/* ==========================================================
+   PERMISSIONS
+========================================================== */
 
 const employeeAllowedPaths = new Set([
   "/profile",
@@ -1468,13 +346,29 @@ const employeeAllowedPaths = new Set([
   "/admin/affiliate-manage",
 ]);
 
-const employeeRoutes = adminRoutes.filter((route) =>
+const ADMIN_ROUTES = [
+  ...PRIORITY_ROUTES,
+  ...OTHER_ADMIN_ROUTES,
+];
+
+const EMPLOYEE_ROUTES = ADMIN_ROUTES.filter((route) =>
   employeeAllowedPaths.has(route.path)
 );
 
-// ===========================================================
-// HELPERS
-// ===========================================================
+const CATEGORY_ORDER = [
+  "Books & Products",
+  "Finance & Revenue",
+  "Interviews",
+  "Marketing",
+  "Users & Access",
+  "Content & Publishing",
+  "Reviews & Support",
+  "Business Operations",
+];
+
+/* ==========================================================
+   STORAGE HELPERS
+========================================================== */
 
 const readTheme = () => {
   if (typeof window === "undefined") return "light";
@@ -1482,9 +376,11 @@ const readTheme = () => {
   try {
     const value = localStorage.getItem(THEME_STORAGE_KEY);
 
-    if (value === "dark" || value === "light") return value;
+    if (value === "dark" || value === "light") {
+      return value;
+    }
   } catch {
-    // Use document theme as fallback.
+    // Use root document theme as fallback.
   }
 
   return document.documentElement.classList.contains("dark")
@@ -1493,8 +389,12 @@ const readTheme = () => {
 };
 
 const readArray = (key) => {
+  if (typeof window === "undefined") return [];
+
   try {
-    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    const value = JSON.parse(
+      localStorage.getItem(key) || "[]"
+    );
 
     return Array.isArray(value) ? value : [];
   } catch {
@@ -1506,11 +406,18 @@ const saveArray = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Navigation remains available if storage is blocked.
+    // Dashboard still works if storage is blocked.
   }
 };
 
-const useSyncedTheme = () => {
+/* ==========================================================
+   THEME SYNCHRONIZATION
+
+   Navbar controls localStorage["theme"].
+   This component never changes the theme itself.
+========================================================== */
+
+function useSyncedTheme() {
   const [theme, setTheme] = useState(readTheme);
 
   useEffect(() => {
@@ -1530,11 +437,12 @@ const useSyncedTheme = () => {
       "theme-change",
       "theme-changed",
       "THEME_EVENT",
+      "focus",
     ];
 
-    events.forEach((name) =>
-      window.addEventListener(name, synchronize)
-    );
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, synchronize);
+    });
 
     const observer = new MutationObserver(synchronize);
 
@@ -1543,30 +451,31 @@ const useSyncedTheme = () => {
       attributeFilter: ["class", "data-theme"],
     });
 
-    const onVisibility = () => {
+    const handleVisibility = () => {
       if (!document.hidden) synchronize();
     };
 
     document.addEventListener(
       "visibilitychange",
-      onVisibility
+      handleVisibility
     );
 
-    // Covers Navbar code that only updates localStorage.
+    // Covers navbar implementations that only change
+    // localStorage without dispatching an event.
     const interval = window.setInterval(synchronize, 500);
 
     return () => {
-      events.forEach((name) =>
-        window.removeEventListener(name, synchronize)
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, synchronize);
+      });
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
       );
 
       observer.disconnect();
       clearInterval(interval);
-
-      document.removeEventListener(
-        "visibilitychange",
-        onVisibility
-      );
     };
   }, []);
 
@@ -1574,14 +483,18 @@ const useSyncedTheme = () => {
     theme,
     isDark: theme === "dark",
   };
-};
+}
+
+/* ==========================================================
+   LOCAL THEME COLORS
+========================================================== */
 
 const getColors = (isDark) => ({
   page: isDark ? "#111111" : "#F6F5F2",
   panel: isDark ? "#191919" : "#FFFFFF",
   border: isDark ? "#303030" : "#E7E5E0",
   text: isDark ? "#F5F5F5" : "#1B1B1B",
-  muted: isDark ? "#999999" : "#777777",
+  muted: isDark ? "#A1A1AA" : "#71717A",
   input: isDark ? "#212121" : "#FAFAF8",
   inputBorder: isDark ? "#393939" : "#E1DFDA",
   subtle: isDark ? "#252525" : "#F7F6F3",
@@ -1599,55 +512,12 @@ const getColors = (isDark) => ({
   redSoft: isDark ? "#382221" : "#FFF1EF",
 });
 
-const CATEGORY_ORDER = [
-  "Finance & Revenue",
-  "Interviews & Bookings",
-  "Books & Products",
-  "Marketing",
-  "Users & Access",
-  "Content & Publishing",
-  "Reviews & Support",
-  "Business Operations",
-];
+const cx = (...items) =>
+  items.filter(Boolean).join(" ");
 
-const cx = (...values) => values.filter(Boolean).join(" ");
-
-// ===========================================================
-// REUSABLE COMPONENTS
-// ===========================================================
-
-function DashboardButton({
-  children,
-  onClick,
-  colors,
-  primary = false,
-  className = "",
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        "inline-flex h-10 items-center justify-center gap-2",
-        "rounded-[10px] border px-4 text-[12px] font-bold",
-        "transition-all duration-200",
-        "hover:-translate-y-0.5",
-        className
-      )}
-      style={{
-        backgroundColor: primary
-          ? colors.orange
-          : colors.panel,
-        borderColor: primary
-          ? colors.orange
-          : colors.border,
-        color: primary ? "#1B1B1B" : colors.text,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
+/* ==========================================================
+   DASHBOARD CARD
+========================================================== */
 
 function DashboardCard({
   route,
@@ -1656,9 +526,12 @@ function DashboardCard({
   isFavorite,
   onFavorite,
   onOpen,
-  layout,
+  layout = "grid",
+  prominent = false,
 }) {
   const Icon = route.icon;
+
+  const isList = layout === "list";
 
   return (
     <motion.div
@@ -1667,37 +540,55 @@ function DashboardCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{
-        duration: 0.22,
-        delay: Math.min(index * 0.015, 0.18),
+        duration: 0.2,
+        delay: Math.min(index * 0.018, 0.15),
       }}
       className="min-w-0"
     >
       <div
         className={cx(
-          "group relative h-full rounded-[16px] border",
+          "group relative h-full overflow-hidden rounded-2xl border",
           "transition-all duration-200 hover:-translate-y-0.5",
-          "hover:shadow-[0_10px_28px_rgba(0,0,0,0.06)]",
-          layout === "list" ? "p-4" : "p-5"
+          "hover:shadow-[0_12px_28px_rgba(0,0,0,0.07)]",
+          isList ? "p-4" : "p-5",
+          prominent && "ring-1"
         )}
         style={{
           backgroundColor: colors.panel,
-          borderColor: colors.border,
+          borderColor: prominent
+            ? colors.orangeSoft
+            : colors.border,
+          "--tw-ring-color": prominent
+            ? colors.orangeSoft
+            : "transparent",
         }}
       >
+        {prominent && (
+          <div
+            className="absolute inset-x-0 top-0 h-1"
+            style={{ backgroundColor: colors.orange }}
+          />
+        )}
+
         <div
           className={cx(
-            "flex gap-4",
-            layout === "grid"
-              ? "h-full flex-col"
-              : "items-center"
+            "flex h-full gap-4",
+            isList ? "items-center" : "flex-col"
           )}
         >
-          <div className="flex items-start justify-between gap-3">
+          {/* TOP */}
+
+          <div
+            className={cx(
+              "flex items-start justify-between gap-3",
+              isList && "shrink-0"
+            )}
+          >
             <Link
               to={route.path}
               onClick={() => onOpen(route.path)}
               aria-label={`Open ${route.name}`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
               style={{
                 backgroundColor: colors.orangeSoft,
                 color: colors.orangeText,
@@ -1706,20 +597,20 @@ function DashboardCard({
               <Icon size={21} strokeWidth={1.9} />
             </Link>
 
-            {layout === "grid" && (
+            {!isList && (
               <button
                 type="button"
                 onClick={() => onFavorite(route.path)}
-                aria-label={
-                  isFavorite
-                    ? `Remove ${route.name} from favorites`
-                    : `Add ${route.name} to favorites`
-                }
                 title={
                   isFavorite
                     ? "Remove favorite"
-                    : "Add to favorites"
+                    : "Add favorite"
                 }
+                aria-label={`${
+                  isFavorite ? "Remove" : "Add"
+                } ${route.name} ${
+                  isFavorite ? "from" : "to"
+                } favorites`}
                 className="rounded-lg p-2 transition-transform hover:scale-110"
                 style={{
                   color: isFavorite
@@ -1729,11 +620,15 @@ function DashboardCard({
               >
                 <Star
                   size={17}
-                  fill={isFavorite ? colors.orange : "none"}
+                  fill={
+                    isFavorite ? colors.orange : "none"
+                  }
                 />
               </button>
             )}
           </div>
+
+          {/* CONTENT */}
 
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -1747,15 +642,15 @@ function DashboardCard({
                 {route.category}
               </span>
 
-              {route.featured && (
+              {prominent && !isList && (
                 <span
-                  className="rounded-md px-2 py-1 text-[10px] font-bold"
+                  className="rounded-md px-2 py-1 text-[10px] font-extrabold"
                   style={{
                     backgroundColor: colors.orangeSoft,
                     color: colors.orangeText,
                   }}
                 >
-                  Featured
+                  Priority Tool
                 </span>
               )}
             </div>
@@ -1763,7 +658,7 @@ function DashboardCard({
             <Link
               to={route.path}
               onClick={() => onOpen(route.path)}
-              className="block text-[15px] font-bold transition-colors hover:text-[#E9812B]"
+              className="block text-[15px] font-extrabold transition-colors hover:text-[#E9812B]"
               style={{ color: colors.text }}
             >
               {route.name}
@@ -1772,7 +667,7 @@ function DashboardCard({
             <p
               className={cx(
                 "mt-2 text-[12px] leading-[1.8]",
-                layout === "list" ? "line-clamp-2" : ""
+                isList && "line-clamp-2"
               )}
               style={{ color: colors.muted }}
             >
@@ -1780,32 +675,32 @@ function DashboardCard({
             </p>
           </div>
 
+          {/* BOTTOM */}
+
           <div
             className={cx(
               "flex items-center justify-between gap-3",
-              layout === "grid"
-                ? "border-t pt-4"
-                : "shrink-0 self-center"
+              isList
+                ? "shrink-0"
+                : "border-t pt-4"
             )}
-            style={{
-              borderColor: colors.divider,
-            }}
+            style={{ borderColor: colors.divider }}
           >
-            {layout === "grid" && (
+            {!isList && (
               <span
                 className="text-[11px] font-semibold"
                 style={{ color: colors.muted }}
               >
-                Workspace tool
+                {prominent ? "Quick Access" : "Workspace Tool"}
               </span>
             )}
 
-            {layout === "list" && (
+            {isList && (
               <button
                 type="button"
                 onClick={() => onFavorite(route.path)}
-                className="rounded-lg p-2"
                 title="Toggle favorite"
+                className="rounded-lg p-2"
                 style={{
                   color: isFavorite
                     ? colors.orangeDark
@@ -1814,7 +709,9 @@ function DashboardCard({
               >
                 <Star
                   size={16}
-                  fill={isFavorite ? colors.orange : "none"}
+                  fill={
+                    isFavorite ? colors.orange : "none"
+                  }
                 />
               </button>
             )}
@@ -1822,11 +719,14 @@ function DashboardCard({
             <Link
               to={route.path}
               onClick={() => onOpen(route.path)}
-              className="inline-flex items-center gap-1.5 text-[12px] font-bold"
+              className="inline-flex items-center gap-1.5 text-xs font-bold"
               style={{ color: colors.orangeDark }}
             >
               Open
-              <ArrowRight size={15} />
+              <ArrowRight
+                size={15}
+                className="transition-transform group-hover:translate-x-1"
+              />
             </Link>
           </div>
         </div>
@@ -1835,20 +735,148 @@ function DashboardCard({
   );
 }
 
-// ===========================================================
-// MAIN DASHBOARD
-// ===========================================================
+/* ==========================================================
+   DISABLED CARD
+
+   No Link or onClick.
+========================================================== */
+
+function DisabledCard({ route, colors }) {
+  const Icon = route.icon;
+
+  return (
+    <div
+      aria-disabled="true"
+      className="relative rounded-2xl border p-5 opacity-60"
+      style={{
+        backgroundColor: colors.panel,
+        borderColor: colors.border,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-xl"
+          style={{
+            backgroundColor: colors.subtle,
+            color: colors.muted,
+          }}
+        >
+          <Icon size={21} />
+        </div>
+
+        <span
+          className="rounded-lg border px-2.5 py-1 text-[10px] font-extrabold uppercase"
+          style={{
+            borderColor: colors.border,
+            backgroundColor: colors.subtle,
+            color: colors.muted,
+          }}
+        >
+          Disabled
+        </span>
+      </div>
+
+      <h3
+        className="mt-5 text-base font-extrabold"
+        style={{ color: colors.text }}
+      >
+        {route.name}
+      </h3>
+
+      <p
+        className="mt-2 text-xs leading-6"
+        style={{ color: colors.muted }}
+      >
+        {route.description}
+      </p>
+
+      <div
+        className="mt-5 flex items-center gap-2 border-t pt-4 text-xs font-semibold"
+        style={{
+          borderColor: colors.divider,
+          color: colors.muted,
+        }}
+      >
+        <LockKeyhole size={14} />
+        Currently unavailable
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================
+   SECTION HEADING
+========================================================== */
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  colors,
+  count,
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        {eyebrow && (
+          <p
+            className="text-[10px] font-extrabold uppercase tracking-[0.14em]"
+            style={{ color: colors.orangeText }}
+          >
+            {eyebrow}
+          </p>
+        )}
+
+        <h2
+          className="mt-1 text-xl font-black tracking-tight sm:text-2xl"
+          style={{ color: colors.text }}
+        >
+          {title}
+        </h2>
+
+        {description && (
+          <p
+            className="mt-1 text-xs leading-6 sm:text-sm"
+            style={{ color: colors.muted }}
+          >
+            {description}
+          </p>
+        )}
+      </div>
+
+      {count !== undefined && (
+        <span
+          className="rounded-full border px-3 py-1.5 text-xs font-bold"
+          style={{
+            backgroundColor: colors.panel,
+            borderColor: colors.border,
+            color: colors.muted,
+          }}
+        >
+          {count} tools
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ==========================================================
+   ADMIN DASHBOARD
+========================================================== */
 
 export default function AdminDashboard() {
-  const user = useSelector((state) => state.auth.user);
-  const navigate = useNavigate();
+  const user = useSelector((state) => state.auth?.user);
 
-  const { theme, isDark } = useSyncedTheme();
+  const { isDark } = useSyncedTheme();
 
   const colors = useMemo(
     () => getColors(isDark),
     [isDark]
   );
+
+  /* --------------------------------------------------------
+     STATE
+  -------------------------------------------------------- */
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] =
@@ -1867,9 +895,9 @@ export default function AdminDashboard() {
     readArray(RECENT_KEY)
   );
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
+  /* --------------------------------------------------------
+     ROLE / PERMISSIONS
+  -------------------------------------------------------- */
 
   const role = String(user?.role || "")
     .trim()
@@ -1878,9 +906,11 @@ export default function AdminDashboard() {
   const isAdmin = role === "admin";
   const isEmployee = role === "employee";
 
+  const authorized = isAdmin || isEmployee;
+
   const currentRoutes = useMemo(() => {
-    if (isAdmin) return adminRoutes;
-    if (isEmployee) return employeeRoutes;
+    if (isAdmin) return ADMIN_ROUTES;
+    if (isEmployee) return EMPLOYEE_ROUTES;
     return [];
   }, [isAdmin, isEmployee]);
 
@@ -1889,21 +919,51 @@ export default function AdminDashboard() {
     [currentRoutes]
   );
 
-  const categories = useMemo(() => {
-    return CATEGORY_ORDER.filter((category) =>
-      currentRoutes.some((route) => route.category === category)
-    );
-  }, [currentRoutes]);
+  const currentPriorityRoutes = useMemo(
+    () =>
+      PRIORITY_ROUTES.filter((route) =>
+        currentPaths.has(route.path)
+      ),
+    [currentPaths]
+  );
+
+  const currentOtherRoutes = useMemo(
+    () =>
+      OTHER_ADMIN_ROUTES.filter((route) =>
+        currentPaths.has(route.path)
+      ),
+    [currentPaths]
+  );
 
   const validFavorites = useMemo(
-    () => favorites.filter((path) => currentPaths.has(path)),
+    () =>
+      favorites.filter((path) =>
+        currentPaths.has(path)
+      ),
     [favorites, currentPaths]
   );
 
   const validRecent = useMemo(
-    () => recent.filter((path) => currentPaths.has(path)),
+    () =>
+      recent.filter((path) =>
+        currentPaths.has(path)
+      ),
     [recent, currentPaths]
   );
+
+  const categories = useMemo(
+    () =>
+      CATEGORY_ORDER.filter((category) =>
+        currentRoutes.some(
+          (route) => route.category === category
+        )
+      ),
+    [currentRoutes]
+  );
+
+  /* --------------------------------------------------------
+     FAVORITES
+  -------------------------------------------------------- */
 
   const toggleFavorite = useCallback((path) => {
     setFavorites((previous) => {
@@ -1912,10 +972,13 @@ export default function AdminDashboard() {
         : [...previous, path];
 
       saveArray(FAVORITES_KEY, next);
-
       return next;
     });
   }, []);
+
+  /* --------------------------------------------------------
+     RECENTLY OPENED
+  -------------------------------------------------------- */
 
   const trackOpen = useCallback((path) => {
     setRecent((previous) => {
@@ -1925,15 +988,21 @@ export default function AdminDashboard() {
       ].slice(0, 12);
 
       saveArray(RECENT_KEY, next);
-
       return next;
     });
   }, []);
 
+  /* --------------------------------------------------------
+     FILTER AND SORT OTHER TOOLS
+
+     Priority tools remain separate and always appear at top
+     in their predefined order in the normal dashboard view.
+  -------------------------------------------------------- */
+
   const filteredRoutes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    let result = currentRoutes.filter((route) => {
+    let routes = currentOtherRoutes.filter((route) => {
       const matchesSearch =
         !query ||
         [
@@ -1973,42 +1042,39 @@ export default function AdminDashboard() {
     });
 
     if (sortBy === "az") {
-      result = [...result].sort((a, b) =>
+      routes = [...routes].sort((a, b) =>
         a.name.localeCompare(b.name)
       );
     }
 
     if (sortBy === "za") {
-      result = [...result].sort((a, b) =>
+      routes = [...routes].sort((a, b) =>
         b.name.localeCompare(a.name)
       );
     }
 
     if (sortBy === "category") {
-      result = [...result].sort((a, b) => {
-        const categoryCompare = a.category.localeCompare(
-          b.category
-        );
-
-        return categoryCompare || a.name.localeCompare(b.name);
-      });
+      routes = [...routes].sort((a, b) =>
+        a.category.localeCompare(b.category) ||
+        a.name.localeCompare(b.name)
+      );
     }
 
     if (sortBy === "recent") {
-      result = [...result].sort((a, b) => {
+      routes = [...routes].sort((a, b) => {
         const aIndex = validRecent.indexOf(a.path);
         const bIndex = validRecent.indexOf(b.path);
 
         return (
-          (aIndex === -1 ? 999 : aIndex) -
-          (bIndex === -1 ? 999 : bIndex)
+          (aIndex < 0 ? 999 : aIndex) -
+          (bIndex < 0 ? 999 : bIndex)
         );
       });
     }
 
-    return result;
+    return routes;
   }, [
-    currentRoutes,
+    currentOtherRoutes,
     searchQuery,
     selectedCategory,
     quickFilter,
@@ -2017,16 +1083,71 @@ export default function AdminDashboard() {
     validRecent,
   ]);
 
-  const groupedRoutes = useMemo(() => {
-    return categories
-      .map((category) => ({
-        category,
-        routes: filteredRoutes.filter(
-          (route) => route.category === category
-        ),
-      }))
-      .filter((group) => group.routes.length > 0);
-  }, [filteredRoutes, categories]);
+  const visiblePriority = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return currentPriorityRoutes.filter((route) => {
+      const searchMatches =
+        !query ||
+        [
+          route.name,
+          route.description,
+          route.category,
+          route.keywords,
+          route.path,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+
+      const categoryMatches =
+        selectedCategory === "All" ||
+        selectedCategory === route.category;
+
+      const quickMatches =
+        quickFilter === "all" ||
+        (quickFilter === "favorites" &&
+          validFavorites.includes(route.path)) ||
+        (quickFilter === "recent" &&
+          validRecent.includes(route.path)) ||
+        (quickFilter === "featured" && route.featured);
+
+      return (
+        searchMatches &&
+        categoryMatches &&
+        quickMatches
+      );
+    });
+  }, [
+    currentPriorityRoutes,
+    searchQuery,
+    selectedCategory,
+    quickFilter,
+    validFavorites,
+    validRecent,
+  ]);
+
+  const groupedRoutes = useMemo(
+    () =>
+      categories
+        .map((category) => ({
+          category,
+          routes: filteredRoutes.filter(
+            (route) => route.category === category
+          ),
+        }))
+        .filter((group) => group.routes.length > 0),
+    [filteredRoutes, categories]
+  );
+
+  const totalVisible =
+    visiblePriority.length + filteredRoutes.length;
+
+  const hasFilters =
+    Boolean(searchQuery.trim()) ||
+    selectedCategory !== "All" ||
+    quickFilter !== "all" ||
+    sortBy !== "default";
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -2035,220 +1156,204 @@ export default function AdminDashboard() {
     setSortBy("default");
   };
 
-  const hasFilters =
-    Boolean(searchQuery.trim()) ||
-    selectedCategory !== "All" ||
-    quickFilter !== "all" ||
-    sortBy !== "default";
+  /* ========================================================
+     ACCESS DENIED
+  ======================================================== */
 
-  const quickLinks = [
-    {
-      name: "Finance",
-      path: "/admin/finance",
-      icon: CircleDollarSign,
-    },
-    {
-      name: "Mock Interviews",
-      path: "/admin/mock-interviews",
-      icon: Users,
-    },
-    {
-      name: "Books",
-      path: "/admin/books",
-      icon: BookOpen,
-    },
-    {
-      name: "Sales",
-      path: "/admin/dashboard",
-      icon: BarChart3,
-    },
-  ].filter((item) => currentPaths.has(item.path));
-
-  // =========================================================
-  // ACCESS DENIED
-  // =========================================================
-
-  if (!user || (!isAdmin && !isEmployee)) {
+  if (!authorized) {
     return (
+      <>
+        <Helmet>
+          <title>Access Denied | Target Trek</title>
+          <meta name="robots" content="noindex,nofollow" />
+        </Helmet>
+
+        <main
+          className="mt-16 flex min-h-[75vh] items-center justify-center px-4"
+          style={{
+            backgroundColor: colors.page,
+            color: colors.text,
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border p-8 text-center"
+            style={{
+              backgroundColor: colors.panel,
+              borderColor: colors.border,
+            }}
+          >
+            <div
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{
+                backgroundColor: colors.redSoft,
+                color: colors.red,
+              }}
+            >
+              <LockKeyhole size={26} />
+            </div>
+
+            <h1 className="mt-5 text-2xl font-black">
+              Access Denied
+            </h1>
+
+            <p
+              className="mt-3 text-sm leading-6"
+              style={{ color: colors.muted }}
+            >
+              You need an authorized administrator or employee
+              account to access this workspace.
+            </p>
+
+            <Link
+              to="/"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
+              style={{
+                backgroundColor: colors.orange,
+                color: "#1B1B1B",
+              }}
+            >
+              Back to Home
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  /* ========================================================
+     MAIN PAGE
+  ======================================================== */
+
+  return (
+    <>
+      <Helmet>
+        <title>
+          {isAdmin ? "Admin Dashboard" : "Employee Dashboard"}
+          {" | Target Trek"}
+        </title>
+
+        <meta name="robots" content="noindex,nofollow" />
+      </Helmet>
+
       <main
-        data-theme={theme}
-        className="mt-16 flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10"
+        className="mt-16 min-h-screen pb-20 pt-6 transition-colors sm:pt-8"
         style={{
           backgroundColor: colors.page,
           color: colors.text,
         }}
       >
-        <div
-          className="w-full max-w-md rounded-[18px] border p-7 text-center shadow-sm sm:p-9"
-          style={{
-            backgroundColor: colors.panel,
-            borderColor: colors.border,
-          }}
-        >
-          <div
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+        <div className="mx-auto max-w-[1550px] px-3 sm:px-6 lg:px-8">
+          {/* ============================================
+              HERO
+          ============================================ */}
+
+          <section
+            className="relative overflow-hidden rounded-3xl border"
             style={{
-              backgroundColor: colors.redSoft,
-              color: colors.red,
+              backgroundColor: colors.panel,
+              borderColor: colors.border,
             }}
           >
-            <LockKeyhole size={26} />
-          </div>
+            <div
+              className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full blur-3xl"
+              style={{
+                backgroundColor: colors.orangeSoft,
+                opacity: 0.7,
+              }}
+            />
 
-          <h1 className="mt-5 text-2xl font-bold">
-            Access Denied
-          </h1>
-
-          <p
-            className="mt-3 text-sm leading-7"
-            style={{ color: colors.muted }}
-          >
-            You need an authorized administrator or employee
-            account to access this workspace.
-          </p>
-
-          <DashboardButton
-            colors={colors}
-            primary
-            className="mt-6 w-full"
-            onClick={() => navigate("/")}
-          >
-            Return to Home
-            <ArrowRight size={15} />
-          </DashboardButton>
-        </div>
-      </main>
-    );
-  }
-
-  // =========================================================
-  // RENDER
-  // =========================================================
-
-  return (
-    <main
-      data-theme={theme}
-      className="mt-16 min-h-[calc(100vh-4rem)] pb-20 pt-6 transition-colors duration-200 sm:pt-8"
-      style={{
-        backgroundColor: colors.page,
-        color: colors.text,
-        fontFamily:
-          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8">
-        {/* ================================================= */}
-        {/* HEADER */}
-        {/* ================================================= */}
-
-        <section
-          className="relative overflow-hidden rounded-[20px] border"
-          style={{
-            backgroundColor: colors.panel,
-            borderColor: colors.border,
-          }}
-        >
-          <div
-            className="absolute inset-x-0 top-0 h-[3px]"
-            style={{ backgroundColor: colors.orange }}
-          />
-
-          <div className="relative p-5 sm:p-7 lg:p-9">
-            <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-[750px]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em]"
-                    style={{
-                      backgroundColor: colors.orangeSoft,
-                      color: colors.orangeText,
-                    }}
-                  >
-                    <ShieldCheck size={13} />
-                    {isAdmin ? "Administrator" : "Employee"}
-                  </span>
-
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: colors.subtle,
-                      borderColor: colors.border,
-                      color: colors.muted,
-                    }}
-                  >
-                    <Sparkles size={13} />
-                    Target Trek Workspace
-                  </span>
-                </div>
-
-                <h1 className="mt-5 text-[clamp(28px,4vw,42px)] font-bold tracking-[-1.5px]">
-                  {isAdmin ? "Admin" : "Employee"}{" "}
-                  <span style={{ color: colors.orangeDark }}>
-                    Dashboard
-                  </span>
-                </h1>
-
-                <p
-                  className="mt-3 max-w-2xl text-[13px] leading-[1.9] sm:text-[14px]"
-                  style={{ color: colors.muted }}
-                >
-                  Everything you need to manage Target Trek,
-                  organized in one workspace. Find tools,
-                  monitor business operations, and access your
-                  most-used sections quickly.
-                </p>
-
-                {user?.name && (
-                  <p
-                    className="mt-4 text-[12px] font-medium"
-                    style={{ color: colors.muted }}
-                  >
-                    Welcome back,{" "}
+            <div className="relative p-5 sm:p-8 lg:p-9">
+              <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+                <div className="max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className="font-bold"
-                      style={{ color: colors.orangeDark }}
-                    >
-                      {user.name}
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-2.5 sm:gap-3 lg:min-w-[340px]">
-                {[
-                  {
-                    label: "Tools",
-                    value: currentRoutes.length,
-                    icon: Grid2X2,
-                  },
-                  {
-                    label: "Sections",
-                    value: categories.length,
-                    icon: LayersIcon,
-                  },
-                  {
-                    label: "Favorites",
-                    value: validFavorites.length,
-                    icon: Star,
-                  },
-                ].map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <div
-                      key={item.label}
-                      className="min-w-0 rounded-[13px] border p-3 sm:p-4"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider"
                       style={{
-                        backgroundColor: colors.subtle,
-                        borderColor: colors.border,
+                        backgroundColor: colors.orangeSoft,
+                        color: colors.orangeText,
                       }}
                     >
-                      <Icon
+                      <ShieldCheck size={13} />
+                      {isAdmin ? "Administrator" : "Employee"}
+                    </span>
+
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold"
+                      style={{
+                        backgroundColor: colors.subtle,
+                        color: colors.muted,
+                      }}
+                    >
+                      <Sparkles size={13} />
+                      Target Trek Workspace
+                    </span>
+                  </div>
+
+                  <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
+                    {isAdmin ? "Admin" : "Employee"}{" "}
+                    <span style={{ color: colors.orangeDark }}>
+                      Dashboard
+                    </span>
+                  </h1>
+
+                  <p
+                    className="mt-3 max-w-xl text-sm leading-7"
+                    style={{ color: colors.muted }}
+                  >
+                    Manage your books, finance, payments, coupons,
+                    mock interviews, campaigns and platform
+                    operations from one place.
+                  </p>
+
+                  {user?.name && (
+                    <p
+                      className="mt-4 text-sm font-semibold"
+                      style={{ color: colors.muted }}
+                    >
+                      Welcome back,{" "}
+                      <span
+                        className="font-extrabold"
+                        style={{ color: colors.orangeDark }}
+                      >
+                        {user.name}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:w-[360px]">
+                  {[
+                    {
+                      title: "Active Tools",
+                      value: currentRoutes.length,
+                      icon: Grid2X2,
+                    },
+                    {
+                      title: "Favorites",
+                      value: validFavorites.length,
+                      icon: Star,
+                    },
+                    {
+                      title: "Categories",
+                      value: categories.length,
+                      icon: Filter,
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.title}
+                      className="min-w-0 rounded-2xl border p-3 sm:p-4"
+                      style={{
+                        borderColor: colors.border,
+                        backgroundColor: colors.subtle,
+                      }}
+                    >
+                      <item.icon
                         size={18}
                         style={{ color: colors.orangeDark }}
                       />
 
-                      <p className="mt-3 text-xl font-bold sm:text-2xl">
+                      <p className="mt-3 text-2xl font-black">
                         {item.value}
                       </p>
 
@@ -2256,502 +1361,454 @@ export default function AdminDashboard() {
                         className="mt-1 text-[10px] font-semibold"
                         style={{ color: colors.muted }}
                       >
-                        {item.label}
+                        {item.title}
                       </p>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* QUICK ACCESS - ADMIN */}
-        {/* ================================================= */}
-
-        {quickLinks.length > 0 && (
-          <section className="mt-6">
-            <div className="mb-3 flex items-center gap-2">
-              <Sparkles
-                size={16}
-                style={{ color: colors.orangeDark }}
-              />
-
-              <h2 className="text-[13px] font-bold">
-                Quick Access
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {quickLinks.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => trackOpen(item.path)}
-                    className="group flex min-w-0 items-center gap-3 rounded-[13px] border p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4"
-                    style={{
-                      backgroundColor: colors.panel,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
-                      style={{
-                        backgroundColor: colors.orangeSoft,
-                        color: colors.orangeText,
-                      }}
-                    >
-                      <Icon size={19} />
-                    </div>
-
-                    <span className="min-w-0 flex-1 text-[12px] font-bold sm:text-[13px]">
-                      {item.name}
-                    </span>
-
-                    <ArrowRight
-                      size={15}
-                      className="hidden shrink-0 transition-transform group-hover:translate-x-1 sm:block"
-                      style={{ color: colors.orangeDark }}
-                    />
-                  </Link>
-                );
-              })}
             </div>
           </section>
-        )}
 
-        {/* ================================================= */}
-        {/* SEARCH & FILTER PANEL */}
-        {/* ================================================= */}
+          {/* ============================================
+              PRIORITY TOOLS
 
-        <section
-          className="sticky top-16 z-30 mt-6 rounded-[16px] border p-3 shadow-sm sm:p-4"
-          style={{
-            backgroundColor: colors.panel,
-            borderColor: colors.border,
-          }}
-        >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            {/* Search */}
-            <div className="relative min-w-0 flex-1">
-              <Search
-                size={18}
-                className="pointer-events-none absolute left-3.5 top-3.5"
-                style={{ color: colors.muted }}
-              />
+              ALWAYS ABOVE OTHER WORKSPACE TOOLS
+          ============================================ */}
 
-              <input
-                type="search"
-                placeholder="Search finance, interviews, books, users..."
-                value={searchQuery}
-                onChange={(event) =>
-                  setSearchQuery(event.target.value)
+          {visiblePriority.length > 0 && (
+            <section className="mt-7">
+              <SectionHeading
+                eyebrow="Quick Access"
+                title="Essential Management Tools"
+                description={
+                  isAdmin
+                    ? "Your six primary administration tools, arranged by priority."
+                    : "Your most useful available tools."
                 }
-                className="h-11 w-full rounded-[10px] border pl-11 pr-10 text-[13px] outline-none transition-colors focus:border-[#F28C38]"
-                style={{
-                  backgroundColor: colors.input,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                }}
-              />
-
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-3 rounded p-1"
-                  style={{ color: colors.muted }}
-                >
-                  <X size={15} />
-                </button>
-              )}
-            </div>
-
-            {/* Sort */}
-            <div className="flex flex-wrap gap-2">
-              <div className="relative min-w-0 flex-1 lg:w-44 lg:flex-none">
-                <select
-                  value={sortBy}
-                  onChange={(event) =>
-                    setSortBy(event.target.value)
-                  }
-                  className="h-11 w-full appearance-none rounded-[10px] border px-3 pr-9 text-[12px] font-semibold outline-none focus:border-[#F28C38]"
-                  style={{
-                    backgroundColor: colors.input,
-                    borderColor: colors.inputBorder,
-                    color: colors.text,
-                  }}
-                >
-                  <option value="default">Recommended</option>
-                  <option value="az">Name A–Z</option>
-                  <option value="za">Name Z–A</option>
-                  <option value="category">By Category</option>
-                  <option value="recent">Recently Opened</option>
-                </select>
-
-                <ChevronDown
-                  size={15}
-                  className="pointer-events-none absolute right-3 top-3.5"
-                  style={{ color: colors.muted }}
-                />
-              </div>
-
-              <DashboardButton
+                count={visiblePriority.length}
                 colors={colors}
-                onClick={() =>
-                  setShowAdvanced((previous) => !previous)
-                }
-              >
-                <SlidersHorizontal size={15} />
-                <span>Filters</span>
-                <ChevronDown
-                  size={14}
-                  className={cx(
-                    "transition-transform",
-                    showAdvanced && "rotate-180"
-                  )}
-                />
-              </DashboardButton>
+              />
 
-              <div
-                className="inline-flex h-10 overflow-hidden rounded-[10px] border"
-                style={{ borderColor: colors.border }}
-              >
-                {[
-                  ["grid", Grid2X2],
-                  ["list", List],
-                ].map(([value, Icon]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    title={`${value} view`}
-                    onClick={() => setLayout(value)}
-                    className="flex h-full w-10 items-center justify-center transition-colors"
-                    style={{
-                      backgroundColor:
-                        layout === value
-                          ? colors.orangeSoft
-                          : colors.panel,
-                      color:
-                        layout === value
-                          ? colors.orangeDark
-                          : colors.muted,
-                    }}
-                  >
-                    <Icon size={17} />
-                  </button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+                {visiblePriority.map((route, index) => (
+                  <DashboardCard
+                    key={route.path}
+                    route={route}
+                    index={index}
+                    colors={colors}
+                    prominent
+                    isFavorite={validFavorites.includes(
+                      route.path
+                    )}
+                    onFavorite={toggleFavorite}
+                    onOpen={trackOpen}
+                    layout="grid"
+                  />
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Quick Filters */}
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {[
-              {
-                key: "all",
-                label: "All Tools",
-                icon: Grid2X2,
-              },
-              {
-                key: "featured",
-                label: "Featured",
-                icon: Sparkles,
-              },
-              {
-                key: "favorites",
-                label: "Favorites",
-                icon: Star,
-              },
-              {
-                key: "recent",
-                label: "Recently Used",
-                icon: Clock3,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              const active = quickFilter === item.key;
-
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setQuickFilter(item.key)}
-                  className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[9px] border px-3 py-2 text-[11px] font-bold transition-colors"
-                  style={{
-                    backgroundColor: active
-                      ? colors.orangeSoft
-                      : colors.panel,
-                    borderColor: active
-                      ? colors.orange
-                      : colors.border,
-                    color: active
-                      ? colors.orangeText
-                      : colors.muted,
-                  }}
-                >
-                  <Icon size={14} />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <AnimatePresence>
-            {showAdvanced && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div
-                  className="mt-4 border-t pt-4"
-                  style={{ borderColor: colors.divider }}
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[12px] font-bold">
-                      Filter by Category
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="text-[11px] font-bold"
-                      style={{ color: colors.orangeDark }}
-                    >
-                      Reset All
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {["All", ...categories].map((category) => {
-                      const active =
-                        selectedCategory === category;
-
-                      return (
-                        <button
-                          key={category}
-                          type="button"
-                          onClick={() =>
-                            setSelectedCategory(category)
-                          }
-                          className="rounded-[9px] border px-3 py-2 text-[11px] font-semibold transition-colors"
-                          style={{
-                            backgroundColor: active
-                              ? colors.orange
-                              : colors.subtle,
-                            borderColor: active
-                              ? colors.orange
-                              : colors.border,
-                            color: active
-                              ? "#1B1B1B"
-                              : colors.muted,
-                          }}
-                        >
-                          {category}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-
-        {/* ================================================= */}
-        {/* SECTION HEADING */}
-        {/* ================================================= */}
-
-        <section className="mt-7">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p
-                className="text-[10px] font-bold uppercase tracking-[0.15em]"
-                style={{ color: colors.orangeDark }}
-              >
-                Workspace
-              </p>
-
-              <h2 className="mt-1 text-[23px] font-bold tracking-tight">
-                Dashboard Tools
-              </h2>
-
-              <p
-                className="mt-1 text-[12px]"
-                style={{ color: colors.muted }}
-              >
-                Choose a section to manage.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <p
-                className="text-[12px] font-semibold"
-                style={{ color: colors.muted }}
-              >
-                Showing{" "}
-                <strong style={{ color: colors.text }}>
-                  {filteredRoutes.length}
-                </strong>{" "}
-                of {currentRoutes.length} tools
-              </p>
-
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold"
-                  style={{ color: colors.orangeDark }}
-                >
-                  <X size={13} />
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Active Category */}
-          {selectedCategory !== "All" && (
-            <div
-              className="mt-4 inline-flex items-center gap-2 rounded-[9px] px-3 py-2 text-[11px] font-semibold"
-              style={{
-                backgroundColor: colors.orangeSoft,
-                color: colors.orangeText,
-              }}
-            >
-              <Filter size={13} />
-              {selectedCategory}
-
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("All")}
-              >
-                <X size={13} />
-              </button>
-            </div>
+            </section>
           )}
-        </section>
 
-        {/* ================================================= */}
-        {/* TOOL DIRECTORY */}
-        {/* ================================================= */}
+          {/* ============================================
+              SEARCH / FILTER BAR
+          ============================================ */}
 
-        {filteredRoutes.length > 0 ? (
-          <div className="mt-5 space-y-8">
-            {groupedRoutes.map((group) => (
-              <section key={group.category}>
-                <div className="mb-4 flex items-center gap-3">
-                  <div
-                    className="h-6 w-[3px] rounded-full"
-                    style={{
-                      backgroundColor: colors.orange,
-                    }}
-                  />
-
-                  <h3 className="text-[15px] font-bold">
-                    {group.category}
-                  </h3>
-
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                    style={{
-                      backgroundColor: colors.subtle,
-                      color: colors.muted,
-                    }}
-                  >
-                    {group.routes.length}
-                  </span>
-
-                  <div
-                    className="h-px min-w-0 flex-1"
-                    style={{
-                      backgroundColor: colors.divider,
-                    }}
-                  />
-                </div>
-
-                <div
-                  className={cx(
-                    "grid gap-3.5 sm:gap-4",
-                    layout === "grid"
-                      ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-                      : "grid-cols-1 lg:grid-cols-2"
-                  )}
-                >
-                  <AnimatePresence mode="popLayout">
-                    {group.routes.map((route, index) => (
-                      <DashboardCard
-                        key={route.path}
-                        route={route}
-                        index={index}
-                        colors={colors}
-                        layout={layout}
-                        isFavorite={validFavorites.includes(
-                          route.path
-                        )}
-                        onFavorite={toggleFavorite}
-                        onOpen={trackOpen}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div
-            className="mt-5 rounded-[18px] border px-5 py-14 text-center"
+          <section
+            className="sticky top-16 z-20 mt-7 rounded-2xl border p-3 shadow-sm backdrop-blur sm:p-4"
             style={{
               backgroundColor: colors.panel,
               borderColor: colors.border,
             }}
           >
-            <div
-              className="mx-auto flex h-14 w-14 items-center justify-center rounded-[13px]"
-              style={{
-                backgroundColor: colors.orangeSoft,
-                color: colors.orangeText,
-              }}
-            >
-              <Search size={24} />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="relative w-full lg:max-w-md">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"
+                  style={{ color: colors.muted }}
+                />
+
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) =>
+                    setSearchQuery(e.target.value)
+                  }
+                  placeholder="Search dashboard tools..."
+                  className="h-11 w-full rounded-xl border pl-10 pr-4 text-sm outline-none transition focus:border-[#F28C38]"
+                  style={{
+                    backgroundColor: colors.input,
+                    borderColor: colors.inputBorder,
+                    color: colors.text,
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+                {[
+                  ["all", "All"],
+                  ["favorites", "Favorites"],
+                  ["recent", "Recent"],
+                  ["featured", "Featured"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setQuickFilter(value)}
+                    className="rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors"
+                    style={{
+                      borderColor:
+                        quickFilter === value
+                          ? colors.orange
+                          : colors.border,
+                      backgroundColor:
+                        quickFilter === value
+                          ? colors.orange
+                          : colors.subtle,
+                      color:
+                        quickFilter === value
+                          ? "#1B1B1B"
+                          : colors.muted,
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowAdvanced((prev) => !prev)
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold"
+                  style={{
+                    backgroundColor: colors.input,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                >
+                  <SlidersHorizontal size={15} />
+                  Filters
+                  <ChevronDown
+                    size={14}
+                    className={
+                      showAdvanced ? "rotate-180" : ""
+                    }
+                  />
+                </button>
+              </div>
             </div>
 
-            <h3 className="mt-5 text-[17px] font-bold">
-              No tools found
-            </h3>
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    className="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3"
+                    style={{ borderColor: colors.divider }}
+                  >
+                    <div>
+                      <label
+                        className="mb-2 block text-xs font-bold"
+                        style={{ color: colors.muted }}
+                      >
+                        Category
+                      </label>
 
-            <p
-              className="mx-auto mt-2 max-w-md text-[13px] leading-7"
-              style={{ color: colors.muted }}
-            >
-              No workspace tools match your current search or
-              filter selection. Try a different keyword or
-              reset the filters.
-            </p>
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) =>
+                          setSelectedCategory(e.target.value)
+                        }
+                        className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
+                        style={{
+                          backgroundColor: colors.input,
+                          borderColor: colors.inputBorder,
+                          color: colors.text,
+                        }}
+                      >
+                        <option value="All">
+                          All Categories
+                        </option>
 
-            <DashboardButton
+                        {categories.map((category) => (
+                          <option
+                            key={category}
+                            value={category}
+                          >
+                            {category}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        className="mb-2 block text-xs font-bold"
+                        style={{ color: colors.muted }}
+                      >
+                        Sort Other Tools
+                      </label>
+
+                      <select
+                        value={sortBy}
+                        onChange={(e) =>
+                          setSortBy(e.target.value)
+                        }
+                        className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
+                        style={{
+                          backgroundColor: colors.input,
+                          borderColor: colors.inputBorder,
+                          color: colors.text,
+                        }}
+                      >
+                        <option value="default">
+                          Default Order
+                        </option>
+                        <option value="az">A to Z</option>
+                        <option value="za">Z to A</option>
+                        <option value="category">
+                          Category
+                        </option>
+                        <option value="recent">
+                          Recently Opened
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        className="mb-2 block text-xs font-bold"
+                        style={{ color: colors.muted }}
+                      >
+                        Display Style
+                      </label>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          ["grid", Grid2X2, "Grid"],
+                          ["list", List, "List"],
+                        ].map(([value, Icon, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setLayout(value)}
+                            className="flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-xs font-bold"
+                            style={{
+                              backgroundColor:
+                                layout === value
+                                  ? colors.orangeSoft
+                                  : colors.input,
+                              borderColor:
+                                layout === value
+                                  ? colors.orange
+                                  : colors.inputBorder,
+                              color:
+                                layout === value
+                                  ? colors.orangeText
+                                  : colors.text,
+                            }}
+                          >
+                            <Icon size={15} />
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="flex items-center gap-2 text-xs font-bold"
+                      style={{
+                        color: colors.orangeText,
+                      }}
+                    >
+                      <X size={14} />
+                      Reset All Filters
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
+
+          {/* ============================================
+              OTHER MANAGEMENT TOOLS
+          ============================================ */}
+
+          <section className="mt-8">
+            <SectionHeading
+              eyebrow="Workspace"
+              title="Other Management Tools"
+              description="Access publishing, users, support, analytics and additional platform operations."
+              count={filteredRoutes.length}
               colors={colors}
-              primary
-              className="mt-5"
-              onClick={resetFilters}
-            >
-              <X size={15} />
-              Clear Filters
-            </DashboardButton>
-          </div>
-        )}
-      </div>
-    </main>
-  );
-}
+            />
 
-// Small icon wrapper for section statistics.
-function LayersIcon(props) {
-  return <LayoutDashboard {...props} />;
+            {groupedRoutes.length > 0 ? (
+              <div className="space-y-8">
+                {groupedRoutes.map((group) => (
+                  <div key={group.category}>
+                    <div className="mb-3 flex items-center gap-3">
+                      <h3
+                        className="text-sm font-extrabold"
+                        style={{ color: colors.text }}
+                      >
+                        {group.category}
+                      </h3>
+
+                      <div
+                        className="h-px flex-1"
+                        style={{
+                          backgroundColor: colors.divider,
+                        }}
+                      />
+
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: colors.muted }}
+                      >
+                        {group.routes.length}
+                      </span>
+                    </div>
+
+                    <div
+                      className={cx(
+                        "grid gap-3",
+                        layout === "grid"
+                          ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                          : "grid-cols-1 lg:grid-cols-2"
+                      )}
+                    >
+                      {group.routes.map((route, index) => (
+                        <DashboardCard
+                          key={route.path}
+                          route={route}
+                          index={index}
+                          colors={colors}
+                          layout={layout}
+                          isFavorite={validFavorites.includes(
+                            route.path
+                          )}
+                          onFavorite={toggleFavorite}
+                          onOpen={trackOpen}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : totalVisible === 0 ? (
+              <div
+                className="rounded-2xl border px-5 py-14 text-center"
+                style={{
+                  backgroundColor: colors.panel,
+                  borderColor: colors.border,
+                }}
+              >
+                <Search
+                  size={27}
+                  className="mx-auto"
+                  style={{ color: colors.orangeDark }}
+                />
+
+                <h3 className="mt-4 text-lg font-extrabold">
+                  No Tools Found
+                </h3>
+
+                <p
+                  className="mt-2 text-sm"
+                  style={{ color: colors.muted }}
+                >
+                  Try changing your search or filters.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold"
+                  style={{
+                    backgroundColor: colors.orange,
+                    color: "#1B1B1B",
+                  }}
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div
+                className="rounded-xl border p-6 text-center text-sm"
+                style={{
+                  backgroundColor: colors.panel,
+                  borderColor: colors.border,
+                  color: colors.muted,
+                }}
+              >
+                No additional tools match your current filters.
+              </div>
+            )}
+          </section>
+
+          {/* ============================================
+              DISABLED FEATURES — BOTTOM
+
+              Admin only.
+              Bookings and Booking Slots are not clickable.
+          ============================================ */}
+
+          {isAdmin && (
+            <section className="mt-12">
+              <SectionHeading
+                eyebrow="Inactive Modules"
+                title="Disabled Features"
+                description="These legacy modules are temporarily disabled and cannot be opened from this dashboard."
+                count={DISABLED_ROUTES.length}
+                colors={colors}
+              />
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {DISABLED_ROUTES.map((route) => (
+                  <DisabledCard
+                    key={route.path}
+                    route={route}
+                    colors={colors}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ============================================
+              PAGE STATUS
+          ============================================ */}
+
+          <div
+            className="mt-10 flex flex-col gap-2 border-t pt-5 text-xs sm:flex-row sm:items-center sm:justify-between"
+            style={{
+              borderColor: colors.divider,
+              color: colors.muted,
+            }}
+          >
+            <span>
+              Target Trek Administration Workspace
+            </span>
+
+            <span>
+              {currentRoutes.length} active tools
+              {isAdmin &&
+                ` · ${DISABLED_ROUTES.length} disabled modules`}
+            </span>
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }
