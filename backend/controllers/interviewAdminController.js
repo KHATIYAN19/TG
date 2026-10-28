@@ -91,7 +91,7 @@ const sendConfirmationAfterMeetingAssigned = async (
       console.error(
         "Interview candidate confirmation email not sent:",
         candidateResult?.reason ||
-          "No delivery result"
+        "No delivery result"
       );
     }
 
@@ -354,7 +354,7 @@ export const bulkCreateSlots = wrap(
       if (
         current.startTime.getTime() <
         previous.endTime.getTime() +
-          bufferMs
+        bufferMs
       ) {
         fail(
           409,
@@ -378,25 +378,25 @@ export const bulkCreateSlots = wrap(
           });
         }
 
-       created = await InterviewSlot.create(
-  payloads.map((payload) => ({
-    ...payload,
+        created = await InterviewSlot.create(
+          payloads.map((payload) => ({
+            ...payload,
 
-    interviewerId,
+            interviewerId,
 
-    status: "AVAILABLE",
+            status: "AVAILABLE",
 
-    active: true,
-    isDeleted: false,
+            active: true,
+            isDeleted: false,
 
-    createdBy: adminId,
-    updatedBy: adminId,
-  })),
-  {
-    session,
-    ordered: true, // Fix for multiple documents in a transaction
-  }
-);
+            createdBy: adminId,
+            updatedBy: adminId,
+          })),
+          {
+            session,
+            ordered: true, // Fix for multiple documents in a transaction
+          }
+        );
       }
     );
 
@@ -892,7 +892,7 @@ export const deleteSlot = wrap(
     const reason =
       cleanString(
         req.body.reason ||
-          "Removed by admin",
+        "Removed by admin",
         2000
       );
 
@@ -1048,7 +1048,7 @@ export const getAdminBookings = wrap(
         })
         .skip(
           (page - 1) *
-            limit
+          limit
         )
         .limit(limit)
         .lean(),
@@ -1185,14 +1185,14 @@ export const updateBooking = wrap(
     ) {
       if (
         req.body.candidate?.[
-          key
+        key
         ] !== undefined
       ) {
         booking.candidate[
           key
         ] =
           req.body.candidate[
-            key
+          key
           ];
       }
     }
@@ -1507,7 +1507,7 @@ export const cancelBookingByAdmin = wrap(
           !slot.isDeleted &&
           slot.active &&
           slot.startTime >
-            new Date();
+          new Date();
 
         const oldStatus =
           booking.status;
