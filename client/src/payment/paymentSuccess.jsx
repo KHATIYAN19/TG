@@ -3146,195 +3146,179 @@ export default function PaymentSuccess() {
           className="
             fixed inset-0
             z-[9999]
-            flex items-center
-            justify-center
+            overflow-y-auto
+            overscroll-contain
             bg-black/75
-            px-4 py-6
             backdrop-blur-sm
           "
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="purchase-ready-title"
-            className={`
-              w-full max-w-lg
-              overflow-hidden
-              rounded-3xl
-              border shadow-2xl
-              ${border}
-              ${cardBg}
-              ${primaryText}
-            `}
+          <div
+            className="
+              flex min-h-full
+              items-center
+              justify-center
+              px-4 py-6
+            "
           >
-            <div
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="purchase-ready-title"
               className={`
-                border-b p-6
+                w-full max-w-md
+                rounded-3xl
+                border shadow-2xl
                 ${border}
+                ${cardBg}
+                ${primaryText}
               `}
             >
               <div
-                className="
-                  flex h-14 w-14
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  bg-orange-600
-                  text-white
-                "
-              >
-                <CheckCircle2 size={30} />
-              </div>
-
-              <h2
-                id="purchase-ready-title"
-                className="
-                  mt-5 text-2xl
-                  font-black
-                "
-              >
-                Your ebooks are ready!
-              </h2>
-
-              <p
                 className={`
-                  mt-3 text-sm
-                  leading-7
-                  ${secondaryText}
-                `}
-              >
-                Your purchase has been
-                verified.
-
-                {" "}
-
-                {totalBooks === 1
-                  ? "Your ebook is ready to download."
-                  : `All ${totalBooks} ebooks are ready to download.`}
-              </p>
-            </div>
-
-            <div className="p-6">
-              <div
-                className={`
-                  flex items-start
-                  gap-3 rounded-xl
-                  border p-4
+                  flex items-center gap-3
+                  border-b p-4 sm:p-5
                   ${border}
-                  ${softBg}
                 `}
               >
-                <Download
-                  size={20}
-                  className="mt-1 shrink-0 text-orange-500"
-                />
+                <div
+                  className="
+                    flex h-11 w-11
+                    shrink-0 items-center
+                    justify-center
+                    rounded-xl
+                    bg-orange-600
+                    text-white
+                  "
+                >
+                  <CheckCircle2 size={24} />
+                </div>
 
-                <div>
-                  <h3 className="text-sm font-extrabold">
-                    Save your PDF files
-                  </h3>
+                <div className="min-w-0">
+                  <h2
+                    id="purchase-ready-title"
+                    className="text-lg font-black leading-tight sm:text-xl"
+                  >
+                    Your ebooks are ready!
+                  </h2>
 
                   <p
                     className={`
-                      mt-2 text-sm
-                      leading-7
+                      mt-1 text-xs
+                      leading-5
                       ${secondaryText}
                     `}
                   >
-                    Download your purchased
-                    books and save them to your
-                    device for offline reading.
+                    {totalBooks === 1
+                      ? "Your ebook is ready to download."
+                      : `All ${totalBooks} ebooks are ready to download.`}
                   </p>
                 </div>
               </div>
 
-              <ul
-                className={`
-                  mt-4 list-disc space-y-1
-                  pl-5 text-xs leading-6
-                  ${secondaryText}
-                `}
-              >
-                <li>
-                  Please download your
-                  book{totalBooks > 1 ? "s" : ""} as
-                  soon as possible and keep
-                  a copy on your device.
-                </li>
-                <li>
-                  You can download one book
-                  or all books at once.
-                </li>
-                <li>
-                  Keep this page URL saved;
-                  you can refresh or reopen it
-                  anytime.
-                </li>
-                <li>
-                  Need help? Email{" "}
+              <div className="p-4 sm:p-5">
+                <div
+                  className={`
+                    flex items-start
+                    gap-3 rounded-xl
+                    border p-3
+                    ${border}
+                    ${softBg}
+                  `}
+                >
+                  <Download
+                    size={18}
+                    className="mt-0.5 shrink-0 text-orange-500"
+                  />
+
+                  <p
+                    className={`
+                      text-xs leading-6
+                      ${secondaryText}
+                    `}
+                  >
+                    Please download your
+                    book{totalBooks > 1 ? "s" : ""} as
+                    soon as possible and save
+                    {totalBooks > 1 ? " them" : " it"} to
+                    your device. You can download
+                    one book or all at once.
+                  </p>
+                </div>
+
+                <p
+                  className={`
+                    mt-3 flex flex-wrap
+                    items-center gap-1.5
+                    text-xs leading-5
+                    ${secondaryText}
+                  `}
+                >
+                  <Mail size={14} />
+                  Need help? Email
                   <a
                     href={`mailto:${SUPPORT_EMAIL}`}
-                    className="font-bold text-orange-500 underline"
+                    className="break-all font-bold text-orange-500 underline"
                   >
                     {SUPPORT_EMAIL}
                   </a>
-                </li>
-              </ul>
+                </p>
 
-              <label
-                className={`
-                  mt-6 flex
-                  cursor-pointer
-                  items-start gap-3
-                  rounded-xl border
-                  p-4
-                  ${border}
-                `}
-              >
-                <input
-                  type="checkbox"
-                  checked={
-                    acceptedTerms
+                <label
+                  className={`
+                    mt-4 flex
+                    cursor-pointer
+                    items-start gap-3
+                    rounded-xl border
+                    p-3
+                    ${border}
+                  `}
+                >
+                  <input
+                    type="checkbox"
+                    checked={
+                      acceptedTerms
+                    }
+                    onChange={(event) =>
+                      setAcceptedTerms(
+                        event.target.checked
+                      )
+                    }
+                    className="
+                      mt-1 h-4 w-4
+                      shrink-0
+                      accent-orange-600
+                    "
+                  />
+
+                  <span className="text-sm leading-6">
+                    I understand that I should
+                    save my purchased PDFs to
+                    my own device.
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  disabled={
+                    !acceptedTerms
                   }
-                  onChange={(event) =>
-                    setAcceptedTerms(
-                      event.target.checked
-                    )
+                  onClick={
+                    handleUnlock
                   }
-                  className="
-                    mt-1 h-4 w-4
-                    accent-orange-600
-                  "
-                />
+                  className={`
+                    ${primaryButton}
+                    mt-4 w-full
+                  `}
+                >
+                  <Download size={19} />
 
-                <span className="text-sm leading-7">
-                  I understand that I should
-                  save my purchased PDFs to
-                  my own device.
-                </span>
-              </label>
+                  Access My Ebooks
 
-              <button
-                type="button"
-                disabled={
-                  !acceptedTerms
-                }
-                onClick={
-                  handleUnlock
-                }
-                className={`
-                  ${primaryButton}
-                  mt-6 w-full
-                `}
-              >
-                <Download size={19} />
-
-                Access My Ebooks
-
-                <ArrowRight size={17} />
-              </button>
-            </div>
-          </section>
+                  <ArrowRight size={17} />
+                </button>
+              </div>
+            </section>
+          </div>
         </div>
       )}
     </>
