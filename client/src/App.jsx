@@ -1918,6 +1918,10 @@ const ContactList = lazy(() =>
 
 );
 
+
+const HowToSellEbook = lazy(() => 
+  import("./component/HowToSellEbook.jsx")
+);  
 const ContactDetail = lazy(() =>
 
   import("./Admin/ContactDetails")
@@ -2811,6 +2815,14 @@ function App() {
             path="/submit-review/:token"
 
             element={<SubmitReviewPage />}
+
+          />
+
+           <Route
+
+            path="/others/book/how-to-sell-ebook"
+
+            element={<HowToSellEbook />}
 
           />
 

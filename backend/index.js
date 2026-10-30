@@ -40,9 +40,15 @@ import BookReviewRoute from "./routes/bookReviewRoute.js";
 
 import affiliateRoutes from "./routes/affiliateRoutes.js";
 
+
+import { auth, isAdmin } from "./Middleware/auth.js";
 /* =====================================================
    AUTHENTICATION ROUTES
 ===================================================== */
+
+
+import analyticsReportRoutes from
+  "./routes/analyticsReportRoutes.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
@@ -535,6 +541,15 @@ app.use(
 /* =====================================================
    BOOK MANAGEMENT
 ===================================================== */
+
+
+
+app.use(
+  "/api/admin/analytics",
+  auth,
+  isAdmin,
+  analyticsReportRoutes
+);
 
 app.use(
   "/admin/books",

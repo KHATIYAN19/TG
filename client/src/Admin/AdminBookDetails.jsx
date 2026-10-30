@@ -1,5 +1,7 @@
 // import React, {
 //   useCallback,
+//   useContext,
+//   createContext,
 //   useEffect,
 //   useMemo,
 //   useRef,
@@ -9,7 +11,7 @@
 // import { Helmet } from "react-helmet-async";
 // import { useNavigate, useParams } from "react-router-dom";
 // import { useSelector } from "react-redux";
-// import toast, { Toaster } from "react-hot-toast";
+// import toast from "react-hot-toast";
 
 // import {
 //   AlertCircle,
@@ -289,6 +291,116 @@
 
 // const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// // These components MUST remain outside AdminBookDetails.
+// // Defining them inside the parent was the root cause of input focus loss.
+// const PageUiContext = createContext(null);
+
+// function Panel({ title, subtitle, children, action }) {
+//   const { panelClass, ui } = useContext(PageUiContext);
+//   return (
+//     <section className={panelClass}>
+//       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+//         <div>
+//           <h2 className={`text-lg font-extrabold ${ui.text}`}>{title}</h2>
+//           {subtitle && <p className={`mt-1 text-xs leading-6 ${ui.secondary}`}>{subtitle}</p>}
+//         </div>
+//         {action}
+//       </div>
+//       {children}
+//     </section>
+//   );
+// }
+
+// function Field({ label, name, type = "text", required = false, placeholder = "", help = "" }) {
+//   const { form, errors, handleChange, ui, inputClass } = useContext(PageUiContext);
+//   return (
+//     <div className="min-w-0">
+//       <label htmlFor={`book-field-${name}`} className={`mb-2 block text-xs font-bold ${ui.secondary}`}>
+//         {label}{required && <span className="text-red-500"> *</span>}
+//       </label>
+//       <input
+//         id={`book-field-${name}`}
+//         type={type}
+//         name={name}
+//         value={form[name] ?? ""}
+//         onChange={handleChange}
+//         required={required}
+//         step={type === "number" ? "0.01" : undefined}
+//         min={type === "number" ? "0" : undefined}
+//         placeholder={placeholder}
+//         className={inputClass}
+//       />
+//       {help && <p className={`mt-1.5 text-xs ${ui.secondary}`}>{help}</p>}
+//       {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
+//     </div>
+//   );
+// }
+
+// function TextArea({ label, name, rows = 4 }) {
+//   const { form, errors, handleChange, ui, inputClass } = useContext(PageUiContext);
+//   return (
+//     <div className="min-w-0">
+//       <label htmlFor={`book-field-${name}`} className={`mb-2 block text-xs font-bold ${ui.secondary}`}>{label}</label>
+//       <textarea
+//         id={`book-field-${name}`}
+//         name={name}
+//         value={form[name] ?? ""}
+//         onChange={handleChange}
+//         rows={rows}
+//         className={`${inputClass} resize-y`}
+//       />
+//       {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
+//     </div>
+//   );
+// }
+
+// function Detail({ label, value, mono = false }) {
+//   const { ui } = useContext(PageUiContext);
+//   return (
+//     <div className={`border-b py-3 last:border-b-0 ${ui.border}`}>
+//       <p className={`text-[11px] font-semibold uppercase tracking-wide ${ui.secondary}`}>{label}</p>
+//       <p className={`mt-1 break-all text-sm font-medium ${ui.text} ${mono ? "font-mono text-xs" : ""}`}>
+//         {value === undefined || value === null || value === "" ? "—" : String(value)}
+//       </p>
+//     </div>
+//   );
+// }
+
+// function Stat({ label, value, icon: Icon }) {
+//   const { ui, summaryLoading } = useContext(PageUiContext);
+//   return (
+//     <div className={`rounded-2xl border p-4 transition-shadow hover:shadow-md ${ui.card}`}>
+//       <div className="flex items-center justify-between gap-2">
+//         <p className={`text-xs ${ui.secondary}`}>{label}</p>
+//         {Icon && <Icon size={17} className="text-orange-500" />}
+//       </div>
+//       <p className={`mt-3 break-words text-xl font-extrabold ${ui.text}`}>
+//         {summaryLoading ? <Loader2 size={19} className="animate-spin" /> : (value ?? 0)}
+//       </p>
+//     </div>
+//   );
+// }
+
+// function BookCover({ item, className = "" }) {
+//   const { ui } = useContext(PageUiContext);
+//   return (
+//     <div className={`shrink-0 overflow-hidden rounded-2xl border ${ui.border} ${ui.soft} ${className}`}>
+//       {item?.coverPageUrl ? (
+//         <img src={item.coverPageUrl} alt={`${item.title || "Book"} cover`} className="h-full w-full object-contain" loading="lazy" />
+//       ) : (
+//         <div className="flex h-full items-center justify-center"><BookOpen size={27} className={ui.secondary} /></div>
+//       )}
+//     </div>
+//   );
+// }
+
+// // A relative product route must open on the website, not the current admin route.
+// const storefrontUrl = (path) => {
+//   if (!path) return "";
+//   try { return new URL(path, "https://www.targettrek.in").href; }
+//   catch { return ""; }
+// };
+
 // // =====================================================
 // // MAIN COMPONENT
 // // =====================================================
@@ -413,15 +525,15 @@
 //   const ui = useMemo(
 //     () => ({
 //       page: dark
-//         ? "bg-[#080D14] text-slate-100"
-//         : "bg-[#F6F8FC] text-slate-900",
+//         ? "bg-[#100D0A] text-slate-100"
+//         : "bg-[#FFFAF5] text-slate-900",
 
 //       card: dark
-//         ? "bg-[#111B29] border-slate-800"
+//         ? "bg-[#1F1813] border-slate-800"
 //         : "bg-white border-slate-200",
 
 //       soft: dark
-//         ? "bg-[#0C1520]"
+//         ? "bg-[#18120F]"
 //         : "bg-slate-50",
 
 //       text: dark
@@ -437,7 +549,7 @@
 //         : "border-slate-200",
 
 //       input: dark
-//         ? "bg-[#0C1520] text-white border-slate-700 placeholder:text-slate-500"
+//         ? "bg-[#18120F] text-white border-slate-700 placeholder:text-slate-500"
 //         : "bg-white text-slate-900 border-slate-200 placeholder:text-slate-400",
 
 //       buttonSecondary: dark
@@ -445,8 +557,8 @@
 //         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
 
 //       selected: dark
-//         ? "border-blue-500 bg-blue-950/30"
-//         : "border-blue-500 bg-blue-50",
+//         ? "border-orange-500 bg-orange-950/30"
+//         : "border-orange-500 bg-orange-50",
 
 //       hover: dark
 //         ? "hover:bg-slate-800/60"
@@ -455,12 +567,12 @@
 //     [dark]
 //   );
 
-//   const panelClass = `rounded-2xl border p-5 sm:p-6 shadow-sm ${ui.card}`;
+//   const panelClass = `rounded-[24px] border p-5 sm:p-6 shadow-sm ${ui.card}`;
 
 //   const inputClass = `
 //     w-full rounded-xl border px-3.5 py-3
 //     text-sm outline-none transition
-//     focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+//     focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20
 //     ${ui.input}
 //   `;
 
@@ -473,11 +585,19 @@
 
 //   const primaryButton = `
 //     inline-flex items-center justify-center gap-2
-//     rounded-xl bg-blue-600 px-5 py-2.5
+//     rounded-xl bg-orange-600 px-5 py-2.5
 //     text-sm font-bold text-white transition
-//     hover:bg-blue-700 disabled:opacity-50
+//     hover:bg-orange-700 disabled:opacity-50
 //     disabled:cursor-not-allowed
 //   `;
+
+//   useEffect(() => {
+//     if (!editMode) return;
+//     const id = requestAnimationFrame(() => {
+//       document.getElementById("bundle-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+//     });
+//     return () => cancelAnimationFrame(id);
+//   }, [editMode]);
 
 //   const isBundle = book?.resourceType === "bundle";
 //   const editingBundle = form.resourceType === "bundle";
@@ -1201,136 +1321,18 @@
 //     }
 //   };
 
-//   // ===================================================
-//   // UI HELPERS
-//   // ===================================================
+//   // Components below are module-level, so editing an input never
+//   // changes its React component type or remounts the DOM element.
+//   const localColors = {
+//     "--tt-orange": dark ? "#FB923C" : "#EA580C",
+//     "--tt-orange-soft": dark ? "#3A2416" : "#FFF0E1",
+//     "--tt-orange-border": dark ? "#7C3E1B" : "#FED7AA",
+//   };
 
-//   const Panel = ({ title, subtitle, children, action }) => (
-//     <section className={panelClass}>
-//       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-//         <div>
-//           <h2 className={`text-lg font-bold ${ui.text}`}>
-//             {title}
-//           </h2>
-
-//           {subtitle && (
-//             <p className={`mt-1 text-xs leading-6 ${ui.secondary}`}>
-//               {subtitle}
-//             </p>
-//           )}
-//         </div>
-
-//         {action}
-//       </div>
-
-//       {children}
-//     </section>
-//   );
-
-//   const Field = ({
-//     label,
-//     name,
-//     type = "text",
-//     required = false,
-//     placeholder = "",
-//   }) => (
-//     <div>
-//       <label className={`mb-2 block text-xs font-bold ${ui.secondary}`}>
-//         {label}
-//         {required && <span className="text-red-500"> *</span>}
-//       </label>
-
-//       <input
-//         type={type}
-//         name={name}
-//         value={form[name]}
-//         onChange={handleChange}
-//         placeholder={placeholder}
-//         className={inputClass}
-//       />
-
-//       {errors[name] && (
-//         <p className="mt-1 text-xs text-red-500">
-//           {errors[name]}
-//         </p>
-//       )}
-//     </div>
-//   );
-
-//   const TextArea = ({ label, name, rows = 4 }) => (
-//     <div>
-//       <label className={`mb-2 block text-xs font-bold ${ui.secondary}`}>
-//         {label}
-//       </label>
-
-//       <textarea
-//         name={name}
-//         value={form[name]}
-//         onChange={handleChange}
-//         rows={rows}
-//         className={`${inputClass} resize-y`}
-//       />
-//     </div>
-//   );
-
-//   const Detail = ({ label, value, mono = false }) => (
-//     <div className={`border-b py-3 last:border-b-0 ${ui.border}`}>
-//       <p className={`text-[11px] font-semibold uppercase ${ui.secondary}`}>
-//         {label}
-//       </p>
-
-//       <p
-//         className={`mt-1 break-words text-sm font-medium ${ui.text} ${
-//           mono ? "font-mono text-xs" : ""
-//         }`}
-//       >
-//         {value === undefined || value === null || value === ""
-//           ? "—"
-//           : String(value)}
-//       </p>
-//     </div>
-//   );
-
-//   const Stat = ({ label, value, icon: Icon }) => (
-//     <div className={`rounded-xl border p-4 ${ui.card}`}>
-//       <div className="flex items-center justify-between gap-2">
-//         <p className={`text-xs ${ui.secondary}`}>
-//           {label}
-//         </p>
-
-//         {Icon && <Icon size={17} className="text-blue-500" />}
-//       </div>
-
-//       <p className={`mt-2 break-words text-xl font-bold ${ui.text}`}>
-//         {summaryLoading ? (
-//           <Loader2 size={19} className="animate-spin" />
-//         ) : (
-//           value ?? 0
-//         )}
-//       </p>
-//     </div>
-//   );
-
-//   const BookCover = ({ item, className = "" }) => (
-//     <div
-//       className={`
-//         shrink-0 overflow-hidden rounded-xl border
-//         ${ui.border} ${ui.soft} ${className}
-//       `}
-//     >
-//       {item?.coverPageUrl ? (
-//         <img
-//           src={item.coverPageUrl}
-//           alt={item.title}
-//           className="h-full w-full object-cover"
-//         />
-//       ) : (
-//         <div className="flex h-full items-center justify-center">
-//           <BookOpen size={24} className={ui.secondary} />
-//         </div>
-//       )}
-//     </div>
-//   );
+//   const pageContext = {
+//     ui, panelClass, inputClass, form, errors, handleChange,
+//     summaryLoading,
+//   };
 
 //   // ===================================================
 //   // LOADING / ERROR
@@ -1338,12 +1340,12 @@
 
 //   if (loading) {
 //     return (
-//       <main className={`min-h-screen pt-28 ${ui.page}`}>
+//       <main className={`min-h-screen mt-16 pt-6 ${ui.page}`}>
 //         <div className="flex min-h-[50vh] items-center justify-center">
 //           <div className="text-center">
 //             <Loader2
 //               size={36}
-//               className="mx-auto animate-spin text-blue-500"
+//               className="mx-auto animate-spin text-orange-500"
 //             />
 //             <p className={`mt-4 ${ui.secondary}`}>
 //               Loading product details...
@@ -1356,7 +1358,7 @@
 
 //   if (notFound || error || !book) {
 //     return (
-//       <main className={`min-h-screen px-4 pt-28 ${ui.page}`}>
+//       <main className={`min-h-screen mt-16 px-4 pt-6 ${ui.page}`}>
 //         <div className={`mx-auto max-w-lg rounded-2xl border p-8 text-center ${ui.card}`}>
 //           <AlertCircle
 //             size={35}
@@ -1392,14 +1394,14 @@
 //   // ===================================================
 
 //   return (
-//     <>
+//     <PageUiContext.Provider value={pageContext}>
 //       <Helmet>
 //         <title>{book.title} | Target Trek Admin</title>
 //       </Helmet>
 
-//       <Toaster position="top-right" />
+    
 
-//       <main className={`min-h-screen pt-28 pb-20 ${ui.page}`}>
+//       <main style={localColors} className={`min-h-screen mt-16 pb-20 pt-6 ${ui.page}`}>
 //         <div className="mx-auto max-w-[1450px] px-4 sm:px-6 lg:px-8">
 
 //           {/* HEADER NAV */}
@@ -1413,19 +1415,28 @@
 //             Back to Books
 //           </button>
 
+//           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+//             <div>
+//               <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--tt-orange)]">Target Trek / Product management</p>
+//               <h2 className={`mt-1 text-2xl font-black tracking-tight sm:text-3xl ${ui.text}`}>Product overview</h2>
+//               <p className={`mt-1 text-sm ${ui.secondary}`}>Content, pricing, storefront links, delivery files and transactions.</p>
+//             </div>
+//             <span className="rounded-full border border-[var(--tt-orange-border)] bg-[var(--tt-orange-soft)] px-3 py-1.5 text-xs font-bold text-[var(--tt-orange)]">Live product record</span>
+//           </div>
+
 //           {/* PRODUCT HERO */}
 
 //           <section className={panelClass}>
-//             <div className="flex flex-col gap-6 md:flex-row">
+//             <div className="flex flex-col gap-7 md:flex-row md:items-start">
 
 //               <BookCover
 //                 item={book}
-//                 className="h-[240px] w-[175px]"
+//                 className="h-[280px] w-[196px] self-center shadow-xl md:self-start"
 //               />
 
 //               <div className="min-w-0 flex-1">
 //                 <div className="flex flex-wrap gap-2">
-//                   <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-500">
+//                   <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-500">
 //                     {book.resourceType?.toUpperCase()}
 //                   </span>
 
@@ -1456,7 +1467,7 @@
 //                   )}
 //                 </div>
 
-//                 <h1 className={`mt-4 text-2xl font-extrabold sm:text-3xl ${ui.text}`}>
+//                 <h1 className={`mt-4 text-3xl font-black tracking-tight sm:text-4xl ${ui.text}`}>
 //                   {book.title}
 //                 </h1>
 
@@ -1501,7 +1512,7 @@
 
 //                   {book.redirectUrl && (
 //                     <a
-//                       href={book.redirectUrl}
+//                       href={storefrontUrl(book.redirectUrl)}
 //                       target="_blank"
 //                       rel="noopener noreferrer"
 //                       className={secondaryButton}
@@ -1531,7 +1542,7 @@
 //               <div className="mb-5 flex items-center justify-between gap-4">
 //                 <div>
 //                   <div className="flex items-center gap-2">
-//                     <Package size={21} className="text-blue-500" />
+//                     <Package size={21} className="text-orange-500" />
 
 //                     <h2 className={`text-lg font-bold ${ui.text}`}>
 //                       Books Included in This Bundle
@@ -1548,12 +1559,7 @@
 //                   onClick={() => {
 //                     setEditMode(true);
 
-//                     document
-//                       .getElementById("bundle-editor")
-//                       ?.scrollIntoView({
-//                         behavior: "smooth",
-//                         block: "start",
-//                       });
+
 //                   }}
 //                   className={secondaryButton}
 //                 >
@@ -1589,7 +1595,7 @@
 //                           </p>
 //                         )}
 
-//                         <p className="mt-3 text-sm font-bold text-blue-500">
+//                         <p className="mt-3 text-sm font-bold text-orange-500">
 //                           {money(item.price, item.currency)}
 //                         </p>
 
@@ -1851,7 +1857,7 @@
 //             <form
 //               id="bundle-editor"
 //               onSubmit={handleUpdate}
-//               className="mt-8 space-y-6 scroll-mt-28"
+//               className="mt-8 space-y-6 scroll-mt-24"
 //             >
 //               <div className="flex flex-wrap items-center justify-between gap-3">
 //                 <div>
@@ -1882,7 +1888,7 @@
 //                   subtitle="Select or remove existing ebooks. The backend receives their IDs as includedBooks."
 //                 >
 //                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-//                     <span className="rounded-full bg-blue-500/10 px-3 py-1.5 text-xs font-bold text-blue-500">
+//                     <span className="rounded-full bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-500">
 //                       {selectedBookIds.length} selected
 //                     </span>
 
@@ -1920,7 +1926,7 @@
 //                   {availableLoading ? (
 //                     <div className="flex justify-center py-12">
 //                       <Loader2
-//                         className="animate-spin text-blue-500"
+//                         className="animate-spin text-orange-500"
 //                       />
 //                     </div>
 //                   ) : (
@@ -1944,7 +1950,7 @@
 //                               onChange={() =>
 //                                 toggleIncludedBook(item._id)
 //                               }
-//                               className="mt-2 h-4 w-4 accent-blue-600"
+//                               className="mt-2 h-4 w-4 accent-orange-600"
 //                             />
 
 //                             <BookCover
@@ -1961,7 +1967,7 @@
 //                                 {item.resourceType.toUpperCase()}
 //                               </p>
 
-//                               <p className="mt-2 text-sm font-bold text-blue-500">
+//                               <p className="mt-2 text-sm font-bold text-orange-500">
 //                                 {money(item.price, item.currency)}
 //                               </p>
 //                             </div>
@@ -2096,6 +2102,7 @@
 //                     name="price"
 //                     type="number"
 //                     required
+//                     help="Enter the final selling price; decimals are supported."
 //                   />
 
 //                   <Field
@@ -2146,7 +2153,7 @@
 //                           className="max-h-[200px] max-w-full object-contain"
 //                         />
 //                       ) : (
-//                         <Upload size={30} className="text-blue-500" />
+//                         <Upload size={30} className="text-orange-500" />
 //                       )}
 
 //                       <input
@@ -2229,7 +2236,7 @@
 //                         onChange={(e) =>
 //                           setBooleanField(key, e.target.checked)
 //                         }
-//                         className="h-5 w-5 accent-blue-600"
+//                         className="h-5 w-5 accent-orange-600"
 //                       />
 //                     </label>
 //                   ))}
@@ -2289,6 +2296,12 @@
 //                     ["Resource Type", book.resourceType],
 //                     ["Category", book.category],
 //                     ["Badge", book.badge],
+//                     ["Book ID", book._id],
+//                     ["Cover URL", book.coverPageUrl],
+//                     ["PDF URL", book.pdfUrl],
+//                     ["Language", book.language],
+//                     ["Format", book.format],
+//                     ["Edition", book.edition],
 //                     ["Created By", book.createdBy],
 //                     ["Updated By", book.updatedBy],
 //                     ["Created At", formatDate(book.createdAt)],
@@ -2314,11 +2327,11 @@
 //                       </p>
 
 //                       <div className="flex flex-wrap gap-2">
-//                         {(values || []).length ? (
+//                         {Array.isArray(values) && values.length ? (
 //                           values.map((value, index) => (
 //                             <span
 //                               key={index}
-//                               className="rounded-full bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-500"
+//                               className="rounded-full bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-500"
 //                             >
 //                               {value}
 //                             </span>
@@ -2335,9 +2348,26 @@
 //               </div>
 
 //               <div className="space-y-6">
-//                 <Panel title="Delivery & Links">
-//                   <Detail label="Redirect URL" value={book.redirectUrl} />
-//                   <Detail label="Payment URL" value={book.paymentUrl} />
+//                 <Panel title="Cover & Book URLs" subtitle="Original product assets and customer-facing pages">
+//                   <div className="mb-5 flex justify-center rounded-2xl bg-orange-500/5 p-4">
+//                     <BookCover item={book} className="h-[280px] w-[200px]" />
+//                   </div>
+//                   <Detail label="Cover Image URL" value={book.coverPageUrl} mono />
+//                   {isValidHttpUrl(book.coverPageUrl) && (
+//                     <a href={book.coverPageUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> Open cover image</a>
+//                   )}
+//                   <Detail label="Redirect URL" value={book.redirectUrl} mono />
+//                   {book.redirectUrl && (
+//                     <a href={storefrontUrl(book.redirectUrl)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> View product page</a>
+//                   )}
+//                   <Detail label="PDF URL" value={book.pdfUrl} mono />
+//                   {isValidHttpUrl(book.pdfUrl) && (
+//                     <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> Open PDF</a>
+//                   )}
+//                   <Detail label="Payment URL" value={book.paymentUrl} mono />
+//                   {isValidHttpUrl(book.paymentUrl) && (
+//                     <a href={book.paymentUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> Open payment URL</a>
+//                   )}
 //                   <Detail
 //                     label="Delivery"
 //                     value={isBundle
@@ -2423,7 +2453,7 @@
 //           </div>
 //         </div>
 //       )}
-//     </>
+//     </PageUiContext.Provider>
 //   );
 // }
 import React, {
@@ -2513,6 +2543,7 @@ const EMPTY_FORM = {
   isPublished: false,
   isActive: true,
   isFeatured: false,
+  showInMainBooks: false,
 };
 
 const EMPTY_SUMMARY = {
@@ -2696,6 +2727,7 @@ const createFormFromBook = (book) => ({
   isPublished: book?.isPublished === true,
   isActive: book?.isActive !== false,
   isFeatured: book?.isFeatured === true,
+  showInMainBooks: book?.showInMainBooks === true,
 });
 
 const getErrorMessage = (result, fallback) =>
@@ -3648,6 +3680,7 @@ export default function AdminBookDetails() {
         "isPublished",
         "isActive",
         "isFeatured",
+        "showInMainBooks",
       ]) {
         data.append(field, String(form[field]));
       }
@@ -3893,6 +3926,16 @@ export default function AdminBookDetails() {
                       Featured
                     </span>
                   )}
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      book.showInMainBooks
+                        ? "bg-orange-500/10 text-orange-500"
+                        : "bg-slate-500/10 text-slate-400"
+                    }`}
+                  >
+                    Show in Main Books: {book.showInMainBooks ? "Yes" : "No"}
+                  </span>
                 </div>
 
                 <h1 className={`mt-4 text-3xl font-black tracking-tight sm:text-4xl ${ui.text}`}>
@@ -4649,13 +4692,21 @@ export default function AdminBookDetails() {
                     ["isActive", "Active"],
                     ["isPublished", "Published"],
                     ["isFeatured", "Featured"],
+                    ["showInMainBooks", "Show in Main Books"],
                   ].map(([key, label]) => (
                     <label
                       key={key}
                       className={`flex items-center justify-between rounded-xl border p-4 ${ui.border}`}
                     >
-                      <span className={`text-sm font-bold ${ui.text}`}>
-                        {label}
+                      <span>
+                        <span className={`block text-sm font-bold ${ui.text}`}>
+                          {label}
+                        </span>
+                        {key === "showInMainBooks" && (
+                          <span className={`mt-1 block text-xs ${ui.secondary}`}>
+                            Controls whether this book appears in the Main Books section of the storefront.
+                          </span>
+                        )}
                       </span>
 
                       <input
@@ -4722,6 +4773,7 @@ export default function AdminBookDetails() {
                     ["Slug", book.slug],
                     ["Page Key", book.pageKey],
                     ["Resource Type", book.resourceType],
+                    ["Show in Main Books", book.showInMainBooks ? "Yes" : "No"],
                     ["Category", book.category],
                     ["Badge", book.badge],
                     ["Book ID", book._id],

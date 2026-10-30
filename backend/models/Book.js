@@ -97,6 +97,11 @@ const bookSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    showInMainBooks: {
+  type: Boolean,
+  default: true,
+  index: true,
+},
 
     tags: {
       type: [String],
