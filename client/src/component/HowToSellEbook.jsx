@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { trackViewContent } from "../lib/metaPixel.js";
 
@@ -82,14 +80,6 @@ const faqs = [
     q: "Ebook purchase karne ke baad kaise milegi?",
 
     a: "Successful payment ke baad download/access instructions payment flow par available honge. Registered email par bhi relevant details share ki ja sakti hain."
-
-  },
-
-  {
-
-    q: "Kya main apni existing knowledge se ebook bana sakta hoon?",
-
-    a: "Bilkul. Aap apne professional experience, skills, hobbies ya kisi specific problem ko solve karne wali knowledge ko ebook mein convert kar sakte hain."
 
   },
 
