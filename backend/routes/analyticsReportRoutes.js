@@ -1,42 +1,67 @@
-
 import express from "express";
 
 import {
+  getLive,
+  getLiveHistory,
+  getDashboard,
   getOverview,
   getTimeline,
   getPages,
   getPageDetails,
+  getEntryExit,
   getReferrals,
+  getSources,
+  getQueryParams,
   getDevices,
-  getLive,
+  getGeo,
+  getEvents,
+  getHeatmap,
+  getVisitors,
+  getSessions,
+  getVisitorJourney,
 } from "../controllers/analyticsReportController.js";
 
-import {auth, isAdmin} from "../Middleware/auth.js";
+import { auth, isAdmin } from "../Middleware/auth.js";
 
 const router = express.Router();
 
-// Add auth and isAdmin to this router at mount time,
-// as shown below. This ensures every route is protected.
+// Mounted at /api/admin/analytics. Every route is admin-only.
+router.use(auth, isAdmin);
 
-// Live users, independent of reporting period
-router.get("/live", auth, isAdmin, getLive);
+// Real time
+router.get("/live", getLive);
+router.get("/live-history", getLiveHistory);
 
-// Overall reporting
-router.get("/overview", auth, isAdmin,   getOverview);
+// Everything for the dashboard in one request
+router.get("/dashboard", getDashboard);
 
-// Graph showing page views and users over time
-router.get("/timeline", auth, isAdmin, getTimeline);
+// Totals, with comparison to the previous period
+router.get("/overview", getOverview);
 
-// Most viewed routes with unique visitor counts
-router.get("/pages", auth, isAdmin, getPages);
+// Chart series: page views, visitors, sessions per bucket
+router.get("/timeline", getTimeline);
 
-// Detailed metrics for one specific route
-router.get("/page-details", auth, isAdmin, getPageDetails);
+// Routes
+router.get("/pages", getPages);
+router.get("/page-details", getPageDetails);
+router.get("/entry-exit", getEntryExit);
 
-// Referrals: ASH, TT and other codes
-router.get("/referrals", auth, isAdmin, getReferrals);
+// Acquisition
+router.get("/referrals", getReferrals);
+router.get("/sources", getSources);
+router.get("/query-params", getQueryParams);
 
-// Devices, browser and operating system
-router.get("/devices", auth, isAdmin,  getDevices);
+// Audience
+router.get("/devices", getDevices);
+router.get("/geo", getGeo);
+
+// Behaviour
+router.get("/events", getEvents);
+router.get("/heatmap", getHeatmap);
+
+// Individual records
+router.get("/visitors", getVisitors);
+router.get("/visitors/:visitorId", getVisitorJourney);
+router.get("/sessions", getSessions);
 
 export default router;

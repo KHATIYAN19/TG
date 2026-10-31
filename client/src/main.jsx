@@ -47,6 +47,7 @@ import "./index.css";
 // Components
 import ScrollTop from "./component/ScrollTop.jsx";
 import MetaPageTracker from "./component/MetaPageTracker.jsx";
+import AnalyticsTracker from "./component/AnalyticsTracker.jsx";
 
 // React Router
 import { BrowserRouter } from "react-router-dom";
@@ -88,6 +89,9 @@ ReactDOM.createRoot(rootElement).render(
 
         {/* Meta Pixel SPA navigation tracking */}
         <MetaPageTracker />
+
+        {/* First-party analytics (visitors, routes, live users) */}
+        <AnalyticsTracker />
 
         {/* Redux provider */}
         <Provider store={store}>

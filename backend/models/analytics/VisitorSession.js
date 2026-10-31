@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const visitorSessionSchema = new mongoose.Schema(
@@ -27,6 +26,7 @@ const visitorSessionSchema = new mongoose.Schema(
     },
 
     endedAt: Date,
+    endReason: String,
 
     status: {
       type: String,
@@ -34,7 +34,10 @@ const visitorSessionSchema = new mongoose.Schema(
       default: "ACTIVE",
     },
 
+    isNewVisitor: { type: Boolean, default: false },
+
     landingPage: String,
+    exitPage: String,
 
     referralCode: {
       type: String,
@@ -43,6 +46,30 @@ const visitorSessionSchema = new mongoose.Schema(
     },
 
     source: String,
+
+    // External referrer (google.com, instagram.com ...)
+    referrer: String,
+    referrerHost: String,
+
+    utm: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
+    // Query params of the landing URL
+    query: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+
+    country: String,
+    ipHash: String,
+
+    pageCount: { type: Number, default: 0 },
+    eventCount: { type: Number, default: 0 },
+    activeSeconds: { type: Number, default: 0 },
+    durationSeconds: Number,
+    isBounce: Boolean,
 
     device: {
       type: mongoose.Schema.Types.Mixed,
@@ -56,8 +83,11 @@ visitorSessionSchema.index({
   startedAt: -1,
 });
 
+visitorSessionSchema.index({ startedAt: -1 });
+visitorSessionSchema.index({ lastSeenAt: -1 });
 visitorSessionSchema.index({
-  lastSeenAt: -1,
+  status: 1,
+  lastSeenAt: 1,
 });
 
 export default mongoose.model(

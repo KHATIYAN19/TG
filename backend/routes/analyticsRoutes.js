@@ -1,82 +1,18 @@
-
 import express from "express";
-import {
-  pageViewController,
-  heartbeatController,
-  engagementController,
-  eventController,
-  pageExitController,
-  sessionEndController,
-  liveController,
-  overviewController,
-  referralController,
-  visitorsController,
-  visitorJourneyController,
-  dailyTrafficController,
-} from "../controllers/analyticsController.js";
 
-import {
-  validateBase,
-} from "../Middleware/analyticsValidation.js";
+import { trackController } from "../controllers/analyticsController.js";
+import { validateBase } from "../Middleware/analyticsValidation.js";
+import { analyticsTrackLimiter } from "../Middleware/rateLimiter.js";
 
 const router = express.Router();
 
-// PUBLIC TRACKING ROUTES
-// Mount behind your existing request-rate limiter.
-
+// PUBLIC: the only endpoint the website calls.
+// Mounted at /api/analytics (see index.js).
 router.post(
-  "/page-view",
+  "/track",
+  analyticsTrackLimiter,
   validateBase,
-  pageViewController
-);
-
-router.post(
-  "/heartbeat",
-  validateBase,
-  heartbeatController
-);
-
-router.post(
-  "/engagement",
-  validateBase,
-  engagementController
-);
-
-router.post(
-  "/event",
-  validateBase,
-  eventController
-);
-
-router.post(
-  "/page-exit",
-  validateBase,
-  pageExitController
-);
-
-router.post(
-  "/session-end",
-  validateBase,
-  sessionEndController
-);
-
-// ADMIN ROUTES
-// Must be protected in app.js using your existing
-// authentication and admin-role authorization.
-
-export const analyticsAdminRouter = express.Router();
-
-analyticsAdminRouter.get("/live", liveController);
-analyticsAdminRouter.get("/overview", overviewController);
-analyticsAdminRouter.get("/referrals", referralController);
-analyticsAdminRouter.get("/visitors", visitorsController);
-analyticsAdminRouter.get(
-  "/visitors/:visitorId",
-  visitorJourneyController
-);
-analyticsAdminRouter.get(
-  "/daily-traffic",
-  dailyTrafficController
+  trackController
 );
 
 export default router;

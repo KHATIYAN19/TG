@@ -49,6 +49,11 @@ import { auth, isAdmin } from "./Middleware/auth.js";
 
 import analyticsReportRoutes from
   "./routes/analyticsReportRoutes.js";
+import analyticsRoutes from
+  "./routes/analyticsRoutes.js";
+import {
+  startAnalyticsJobs,
+} from "./services/analyticsJobs.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
@@ -282,6 +287,20 @@ app.post(
   },
 
   interviewCashfreeWebhook
+);
+
+/* =====================================================
+   PUBLIC ANALYTICS TRACKING
+
+   Registered before the 10mb JSON parser and the global
+   rate limiter: it has a small body limit and its own
+   limiter, so heartbeats never eat the visitor's quota.
+===================================================== */
+
+app.use(
+  "/api/analytics",
+  express.json({ limit: "8kb" }),
+  analyticsRoutes
 );
 
 /* =====================================================
@@ -544,10 +563,9 @@ app.use(
 
 
 
+// Auth + admin check are applied inside the router.
 app.use(
   "/api/admin/analytics",
-  auth,
-  isAdmin,
   analyticsReportRoutes
 );
 
@@ -683,6 +701,8 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await connectDB();
+
+    startAnalyticsJobs();
 
     app.listen(PORT, () => {
       console.log(

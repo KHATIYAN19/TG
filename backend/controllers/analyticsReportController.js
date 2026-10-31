@@ -1,96 +1,118 @@
-
 import * as report from "../services/analyticsReportService.js";
 
-const asyncHandler = (fn) => async (req, res, next) => {
+const handler = (fn) => async (req, res, next) => {
   try {
-    await fn(req, res, next);
+    const data = await fn(req);
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }
 };
 
-function success(res, data) {
-  return res.status(200).json({
-    success: true,
-    data,
-  });
-}
+const range = (req) => report.resolveRange(req.query);
 
-// GET /overview?period=7d
-export const getOverview = asyncHandler(
-  async (req, res) => {
-    const data = await report.getOverview(
-      req.query.period || "7d"
-    );
+// Common query: ?period=today|yesterday|24h|7d|30d|90d|180d|365d
+//   or ?period=custom&from=2026-10-01&to=2026-10-31
 
-    return success(res, data);
-  }
+export const getLive = handler(() => report.getLiveReport());
+
+export const getLiveHistory = handler((req) =>
+  report.getLiveHistory(range(req))
 );
 
-// GET /timeline?period=30d
-export const getTimeline = asyncHandler(
-  async (req, res) => {
-    const data = await report.getTrafficTimeline(
-      req.query.period || "7d"
-    );
-
-    return success(res, data);
-  }
+export const getDashboard = handler((req) =>
+  report.getDashboard(range(req))
 );
 
-// GET /pages?period=7d&sort=views&limit=20
-export const getPages = asyncHandler(
-  async (req, res) => {
-    const data = await report.getTopPages(
-      req.query.period || "7d",
-      {
-        sort: req.query.sort || "views",
-        limit: req.query.limit || 20,
-      }
-    );
-
-    return success(res, data);
-  }
+export const getOverview = handler((req) =>
+  report.getOverview(range(req))
 );
 
-// GET /page-details?period=7d&page=/books
-export const getPageDetails = asyncHandler(
-  async (req, res) => {
-    const data = await report.getPageDetails(
-      req.query.period || "7d",
-      req.query.page
-    );
-
-    return success(res, data);
-  }
+export const getTimeline = handler((req) =>
+  report.getTrafficTimeline(range(req), req.query.page)
 );
 
-// GET /referrals?period=30d
-export const getReferrals = asyncHandler(
-  async (req, res) => {
-    const data = await report.getReferralReport(
-      req.query.period || "7d"
-    );
-
-    return success(res, data);
-  }
+// ?sort=views|unique|scroll|engagement&limit=20
+export const getPages = handler((req) =>
+  report.getTopPages(range(req), {
+    sort: req.query.sort,
+    limit: req.query.limit,
+  })
 );
 
-// GET /devices?period=30d
-export const getDevices = asyncHandler(
-  async (req, res) => {
-    const data = await report.getDeviceReport(
-      req.query.period || "7d"
-    );
-
-    return success(res, data);
-  }
+// ?page=/books/dsa
+export const getPageDetails = handler((req) =>
+  report.getPageDetails(range(req), req.query.page)
 );
 
-// GET /live
-export const getLive = asyncHandler(
-  async (req, res) => {
-    const data = await report.getLiveReport();
-    return success(res, data);
+export const getEntryExit = handler((req) =>
+  report.getEntryExitPages(range(req), req.query.limit)
+);
+
+export const getReferrals = handler((req) =>
+  report.getReferralReport(range(req))
+);
+
+export const getSources = handler((req) =>
+  report.getSourceReport(range(req))
+);
+
+// ?key=ref&page=/books
+export const getQueryParams = handler((req) =>
+  report.getQueryParams(range(req), {
+    key: req.query.key,
+    page: req.query.page,
+  })
+);
+
+export const getDevices = handler((req) =>
+  report.getDeviceReport(range(req))
+);
+
+export const getGeo = handler((req) =>
+  report.getGeoReport(range(req))
+);
+
+export const getEvents = handler((req) =>
+  report.getEventReport(range(req))
+);
+
+export const getHeatmap = handler((req) =>
+  report.getHeatmap(range(req))
+);
+
+// ?page=1&limit=20&q=&ref=ASH&device=mobile&country=IN&returning=true
+export const getVisitors = async (req, res, next) => {
+  try {
+    const { data, pagination } = await report.listVisitors(
+      req.query,
+      range(req)
+    );
+
+    return res
+      .status(200)
+      .json({ success: true, data, pagination });
+  } catch (error) {
+    next(error);
   }
+};
+
+// ?status=ACTIVE|ENDED&ref=ASH&landingPage=/books&visitorId=
+export const getSessions = async (req, res, next) => {
+  try {
+    const { data, pagination } = await report.listSessions(
+      req.query,
+      range(req)
+    );
+
+    return res
+      .status(200)
+      .json({ success: true, data, pagination });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getVisitorJourney = handler((req) =>
+  report.getVisitorJourney(String(req.params.visitorId).slice(0, 40))
 );

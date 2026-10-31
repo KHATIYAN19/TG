@@ -2645,6 +2645,9 @@ const SalesDashboard = lazy(() =>
 const BookSalesAnalytics = lazy(() =>
   import("./Admin/BookSalesAnalytics.jsx")
 );
+const WebsiteAnalytics = lazy(() =>
+  import("./Admin/WebsiteAnalytics.jsx")
+);
 const AdminBooks = lazy(() =>
   import("./Admin/AdminBooks.jsx")
 );
@@ -3382,6 +3385,12 @@ function App() {
             path="/admin/book/analytics"
             element={requireAdmin(
               <BookSalesAnalytics />
+            )}
+          />
+          <Route
+            path="/admin/website-analytics"
+            element={requireAdmin(
+              <WebsiteAnalytics />
             )}
           />
           <Route

@@ -1,4 +1,3 @@
-
 import Visitor from "../models/analytics/Visitor.js";
 import VisitorSession from "../models/analytics/VisitorSession.js";
 import PageVisit from "../models/analytics/PageVisit.js";
@@ -7,35 +6,36 @@ import AnalyticsEvent from "../models/analytics/AnalyticsEvent.js";
 import {
   markSessionLive,
   removeLiveSession,
-  getLiveSessions,
+  getLiveSession,
 } from "../config/analyticsRedis.js";
 
 import {
   getDevice,
+  getClientInfo,
   cleanPage,
+  cleanQuery,
   cleanReferral,
+  cleanReferrer,
+  cleanUtm,
   isUUID,
   validateEventType,
 } from "../Middleware/analyticsValidation.js";
 
-const fail = (message, status = 400) => {
+// A session with no signal for this long is closed.
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
+// Mongo session.lastSeenAt is refreshed at most this often.
+const SESSION_TOUCH_MS = 30 * 1000;
+
+const fail = (message, status = 400, code) => {
   const error = new Error(message);
   error.status = status;
+  error.code = code;
   throw error;
 };
 
 function validatePageVisitId(id) {
   if (!isUUID(id)) fail("Invalid pageVisitId");
-}
-
-async function getOwnedSession(visitorId, sessionId) {
-  const session = await VisitorSession.findOne({
-    visitorId,
-    sessionId,
-  }).lean();
-
-  if (!session) fail("Session not found", 404);
-  return session;
 }
 
 async function getOwnedPageVisit({
@@ -53,104 +53,215 @@ async function getOwnedPageVisit({
   return visit;
 }
 
-// Called once whenever a visitor opens a new page.
-export async function startPageVisit(req) {
-  const {
+async function getOwnedSession(visitorId, sessionId) {
+  const session = await VisitorSession.findOne({
     visitorId,
     sessionId,
-    pageVisitId,
-    device: deviceInput,
-  } = req.body;
+  }).lean();
+
+  if (!session) fail("Session not found", 404);
+  return session;
+}
+
+function assertSessionActive(session) {
+  if (session.status !== "ACTIVE") {
+    fail("Session already ended", 409, "SESSION_ENDED");
+  }
+}
+
+// Refresh session.lastSeenAt without writing on every ping.
+function touchSession(sessionId, now = new Date()) {
+  return VisitorSession.updateOne(
+    {
+      sessionId,
+      lastSeenAt: {
+        $lt: new Date(now.getTime() - SESSION_TOUCH_MS),
+      },
+    },
+    { $set: { lastSeenAt: now } }
+  );
+}
+
+/* =====================================================
+   PAGE VIEW
+   Called once per frontend route change.
+===================================================== */
+
+export async function startPageVisit(body, req) {
+  const { visitorId, sessionId, pageVisitId } = body;
 
   validatePageVisitId(pageVisitId);
 
-  const page = cleanPage(req.body.page);
+  const page = cleanPage(body.page);
   if (!page) fail("Invalid page");
 
   if (page.startsWith("/admin")) {
     fail("Admin pages are not tracked");
   }
 
-  const referralCode = cleanReferral(
-    req.body.referralCode
+  const query = cleanQuery(body.query);
+  const utm = cleanUtm(query);
+
+  const pageReferral = cleanReferral(
+    query.ref ||
+      query.referral ||
+      body.referralCode
   );
 
-  const now = new Date();
-  const device = getDevice(req, deviceInput || {});
+  const { referrer, referrerHost } = cleanReferrer(
+    body.referrer
+  );
 
-  // Upsert the browser record.
-  await Visitor.updateOne(
+  const previousPage = cleanPage(body.previousPage);
+  const now = new Date();
+  const device = getDevice(req, body.device || {});
+  const client = getClientInfo(req);
+
+  // 1. Visitor (one per browser)
+  const visitorResult = await Visitor.updateOne(
     { visitorId },
     {
       $setOnInsert: {
         visitorId,
         firstSeenAt: now,
-        firstReferralCode: referralCode,
+        firstReferralCode: pageReferral,
         firstLandingPage: page,
+        firstReferrerHost: referrerHost,
       },
       $set: {
         lastSeenAt: now,
         device,
+        ...(client.country
+          ? { country: client.country }
+          : {}),
+        ...(client.ipHash
+          ? { ipHash: client.ipHash }
+          : {}),
+        ...(pageReferral
+          ? { lastReferralCode: pageReferral }
+          : {}),
       },
     },
     { upsert: true }
   );
 
-  // Session referral is fixed when the session is created.
-  await VisitorSession.updateOne(
-    { sessionId },
-    {
-      $setOnInsert: {
-        sessionId,
-        visitorId,
-        startedAt: now,
-        landingPage: page,
-        referralCode,
-        source:
-          typeof req.body.source === "string"
-            ? req.body.source.slice(0, 60)
-            : null,
-        device,
+  const visitorIsNew = visitorResult.upsertedCount === 1;
+
+  // 2. Session. Acquisition data is fixed at creation.
+  const sessionResult =
+    await VisitorSession.findOneAndUpdate(
+      { sessionId },
+      {
+        $setOnInsert: {
+          sessionId,
+          visitorId,
+          startedAt: now,
+          landingPage: page,
+          referralCode: pageReferral,
+          source:
+            typeof body.source === "string"
+              ? body.source.slice(0, 60)
+              : null,
+          referrer,
+          referrerHost,
+          utm,
+          query,
+          isNewVisitor: visitorIsNew,
+          country: client.country,
+          ipHash: client.ipHash,
+          device,
+        },
+        $set: { lastSeenAt: now },
       },
-    },
-    { upsert: true }
-  );
+      {
+        upsert: true,
+        new: true,
+        includeResultMetadata: true,
+      }
+    );
 
-  // Ensure this session belongs to this browser.
-  const session = await getOwnedSession(
-    visitorId,
-    sessionId
-  );
+  const session = sessionResult.value;
+  const sessionIsNew =
+    !sessionResult.lastErrorObject?.updatedExisting;
 
-  if (session.status !== "ACTIVE") {
-    fail("Session already ended", 409);
+  if (session.visitorId !== visitorId) {
+    fail("Session not found", 404);
   }
 
-  // Idempotent page creation.
-  await PageVisit.updateOne(
-    { pageVisitId },
-    {
-      $setOnInsert: {
-        pageVisitId,
-        visitorId,
-        sessionId,
-        page,
-        referralCode: session.referralCode,
-        enteredAt: now,
+  assertSessionActive(session);
+
+  if (sessionIsNew) {
+    await Visitor.updateOne(
+      { visitorId },
+      { $inc: { sessionCount: 1 } }
+    );
+  }
+
+  // A page-level ?ref= wins, otherwise inherit session's.
+  const referralCode =
+    pageReferral || session.referralCode || null;
+
+  // 3. Page visit (idempotent on pageVisitId)
+  const visitResult =
+    await PageVisit.findOneAndUpdate(
+      { pageVisitId },
+      {
+        $setOnInsert: {
+          pageVisitId,
+          visitorId,
+          sessionId,
+          page,
+          query,
+          title:
+            typeof body.title === "string"
+              ? body.title.slice(0, 150)
+              : null,
+          referralCode,
+          referrerHost: sessionIsNew
+            ? referrerHost
+            : null,
+          previousPage,
+          isEntry: sessionIsNew,
+          isNewVisitor: !!session.isNewVisitor,
+          deviceType: device.type,
+          browser: device.browser,
+          os: device.os,
+          country: client.country,
+          enteredAt: now,
+          lastSeenAt: now,
+        },
       },
-    },
-    { upsert: true }
-  );
+      {
+        upsert: true,
+        new: true,
+        includeResultMetadata: true,
+      }
+    );
 
-  const visit = await getOwnedPageVisit({
-    visitorId,
-    sessionId,
-    pageVisitId,
-  });
+  const visit = visitResult.value;
 
-  // Do not silently overwrite an existing page ID.
-  if (visit.page !== page) {
+  if (
+    visit.visitorId !== visitorId ||
+    visit.sessionId !== sessionId ||
+    visit.page !== page
+  ) {
     fail("Page visit ID already used", 409);
+  }
+
+  if (!visitResult.lastErrorObject?.updatedExisting) {
+    await Promise.all([
+      VisitorSession.updateOne(
+        { sessionId },
+        {
+          $inc: { pageCount: 1 },
+          $set: { exitPage: page },
+        }
+      ),
+      Visitor.updateOne(
+        { visitorId },
+        { $inc: { pageViewCount: 1 } }
+      ),
+    ]);
   }
 
   await markSessionLive({
@@ -158,24 +269,36 @@ export async function startPageVisit(req) {
     sessionId,
     pageVisitId,
     page,
-    referralCode: session.referralCode,
+    referralCode,
+    country: client.country,
+    startedAt: session.startedAt,
     device,
   });
 
-  return {
-    pageVisitId,
-    sessionId,
-    referralCode: session.referralCode,
-  };
+  return { pageVisitId, sessionId, referralCode };
 }
 
-// Called periodically while the visitor's page is visible.
-// Writes only to Redis.
-export async function heartbeat(req) {
-  const { visitorId, sessionId, pageVisitId } =
-    req.body;
+/* =====================================================
+   HEARTBEAT
+   Redis only on the hot path; Mongo is a fallback.
+===================================================== */
+
+export async function heartbeat(body) {
+  const { visitorId, sessionId, pageVisitId } = body;
 
   validatePageVisitId(pageVisitId);
+
+  const live = await getLiveSession(sessionId);
+
+  if (
+    live &&
+    live.visitorId === visitorId &&
+    live.pageVisitId === pageVisitId
+  ) {
+    await markSessionLive(live);
+    await touchSession(sessionId);
+    return { success: true };
+  }
 
   const visit = await getOwnedPageVisit({
     visitorId,
@@ -192,51 +315,33 @@ export async function heartbeat(req) {
     sessionId
   );
 
-  if (session.status !== "ACTIVE") {
-    fail("Session already ended", 409);
-  }
+  assertSessionActive(session);
 
   await markSessionLive({
     visitorId,
     sessionId,
     pageVisitId,
     page: visit.page,
-    referralCode: session.referralCode,
+    referralCode: visit.referralCode,
+    country: session.country,
+    startedAt: session.startedAt,
     device: session.device,
   });
+
+  await touchSession(sessionId);
 
   return { success: true };
 }
 
-// Called every 15-30 seconds and on page exit.
-// activeTimeSeconds must be cumulative for this page visit.
-export async function updateEngagement(req) {
-  const {
-    visitorId,
-    sessionId,
-    pageVisitId,
-  } = req.body;
+/* =====================================================
+   ENGAGEMENT
+   Scroll and active time are cumulative per page visit.
+===================================================== */
 
-  validatePageVisitId(pageVisitId);
-
-  const visit = await getOwnedPageVisit({
-    visitorId,
-    sessionId,
-    pageVisitId,
-  });
-
-  if (visit.exitedAt) {
-    return { success: true, alreadyEnded: true };
-  }
-
-  const scroll = Number(
-    req.body.maxScrollPercentage
-  );
-
-  const pixels = Number(req.body.maxScrollPixels);
-  const activeSeconds = Number(
-    req.body.activeTimeSeconds
-  );
+function readEngagement(body) {
+  const scroll = Number(body.maxScrollPercentage);
+  const pixels = Number(body.maxScrollPixels);
+  const activeSeconds = Number(body.activeTimeSeconds);
 
   if (
     !Number.isFinite(scroll) ||
@@ -252,39 +357,83 @@ export async function updateEngagement(req) {
     fail("Invalid engagement data");
   }
 
-  const now = new Date();
-
-  const update = {
-    $max: {
-      maxScrollPercentage: scroll,
-      maxScrollPixels: Math.floor(pixels),
-      activeTimeSeconds: Math.floor(activeSeconds),
-      lastSeenAt: now,
-    },
+  return {
+    scroll,
+    pixels: Math.floor(pixels),
+    activeSeconds: Math.floor(activeSeconds),
   };
+}
+
+async function applyEngagement(visit, body) {
+  const { scroll, pixels, activeSeconds } =
+    readEngagement(body);
+
+  const now = new Date();
 
   await PageVisit.updateOne(
     {
-      visitorId,
-      sessionId,
-      pageVisitId,
+      pageVisitId: visit.pageVisitId,
       exitedAt: { $exists: false },
     },
-    update
+    {
+      $max: {
+        maxScrollPercentage: scroll,
+        maxScrollPixels: pixels,
+        activeTimeSeconds: activeSeconds,
+        lastSeenAt: now,
+      },
+    }
   );
+
+  // Keep session totals current using the delta only.
+  const delta = Math.max(
+    0,
+    activeSeconds - (visit.activeTimeSeconds || 0)
+  );
+
+  await VisitorSession.updateOne(
+    { sessionId: visit.sessionId },
+    {
+      ...(delta > 0
+        ? { $inc: { activeSeconds: delta } }
+        : {}),
+      $max: { lastSeenAt: now },
+    }
+  );
+}
+
+export async function updateEngagement(body) {
+  const { visitorId, sessionId, pageVisitId } = body;
+
+  validatePageVisitId(pageVisitId);
+
+  const visit = await getOwnedPageVisit({
+    visitorId,
+    sessionId,
+    pageVisitId,
+  });
+
+  if (visit.exitedAt) {
+    return { success: true, alreadyEnded: true };
+  }
+
+  await applyEngagement(visit, body);
 
   return { success: true };
 }
 
-// Important interaction: Buy Now, PDF Preview, etc.
-export async function trackEvent(req) {
+/* =====================================================
+   EVENTS (Buy Now, Preview PDF, ...)
+===================================================== */
+
+export async function trackEvent(body) {
   const {
     eventId,
     visitorId,
     sessionId,
     pageVisitId,
     eventType,
-  } = req.body;
+  } = body;
 
   if (!isUUID(eventId)) fail("Invalid eventId");
   validatePageVisitId(pageVisitId);
@@ -299,9 +448,8 @@ export async function trackEvent(req) {
     pageVisitId,
   });
 
-  // Allow only small, predictable event metadata.
   const metadata = {};
-  const input = req.body.metadata || {};
+  const input = body.metadata;
 
   if (
     input &&
@@ -312,9 +460,13 @@ export async function trackEvent(req) {
       "buttonId",
       "bookSlug",
       "section",
+      "amount",
     ]) {
-      if (typeof input[key] === "string") {
-        metadata[key] = input[key].slice(0, 100);
+      if (
+        typeof input[key] === "string" ||
+        typeof input[key] === "number"
+      ) {
+        metadata[key] = String(input[key]).slice(0, 100);
       }
     }
   }
@@ -337,34 +489,51 @@ export async function trackEvent(req) {
     throw error;
   }
 
-  // Count only newly inserted events.
-  await PageVisit.updateOne(
-    { pageVisitId, visitorId, sessionId },
-    {
-      $inc: {
-        [`clickCounts.${eventType}`]: 1,
-      },
-    }
-  );
+  await Promise.all([
+    PageVisit.updateOne(
+      { pageVisitId, visitorId, sessionId },
+      { $inc: { [`clickCounts.${eventType}`]: 1 } }
+    ),
+    VisitorSession.updateOne(
+      { sessionId },
+      {
+        $inc: { eventCount: 1 },
+        $max: { lastSeenAt: new Date() },
+      }
+    ),
+  ]);
 
   return { success: true };
 }
 
-// Called when the user navigates away from a page.
-export async function endPageVisit(req) {
-  const { visitorId, sessionId, pageVisitId } =
-    req.body;
+/* =====================================================
+   PAGE EXIT / SESSION END
+===================================================== */
+
+export async function endPageVisit(body) {
+  const { visitorId, sessionId, pageVisitId } = body;
 
   validatePageVisitId(pageVisitId);
 
-  await updateEngagement(req);
+  const visit = await getOwnedPageVisit({
+    visitorId,
+    sessionId,
+    pageVisitId,
+  });
+
+  if (visit.exitedAt) {
+    return { success: true, alreadyEnded: true };
+  }
+
+  // Engagement fields are optional on exit.
+  if (body.activeTimeSeconds !== undefined) {
+    await applyEngagement(visit, body);
+  }
 
   const now = new Date();
 
   await PageVisit.updateOne(
     {
-      visitorId,
-      sessionId,
       pageVisitId,
       exitedAt: { $exists: false },
     },
@@ -372,6 +541,12 @@ export async function endPageVisit(req) {
       $set: {
         exitedAt: now,
         exitReason: "NAVIGATION",
+        durationSeconds: Math.max(
+          0,
+          Math.round(
+            (now - new Date(visit.enteredAt)) / 1000
+          )
+        ),
       },
     }
   );
@@ -379,37 +554,86 @@ export async function endPageVisit(req) {
   return { success: true };
 }
 
-// Used on an explicit session end, not normal page navigation.
-export async function endSession(req) {
-  const { visitorId, sessionId } = req.body;
+// Mongo aggregation-pipeline update used by both the explicit
+// end-of-session call and the idle timeout job.
+function closeSessionPipeline(endExpr, reason) {
+  return [
+    {
+      $set: {
+        status: "ENDED",
+        endedAt: endExpr,
+        durationSeconds: {
+          $max: [
+            0,
+            {
+              $round: [
+                {
+                  $divide: [
+                    { $subtract: [endExpr, "$startedAt"] },
+                    1000,
+                  ],
+                },
+                0,
+              ],
+            },
+          ],
+        },
+        isBounce: {
+          $and: [
+            { $lte: [{ $ifNull: ["$pageCount", 0] }, 1] },
+            {
+              $lt: [
+                { $ifNull: ["$activeSeconds", 0] },
+                10,
+              ],
+            },
+            { $lte: [{ $ifNull: ["$eventCount", 0] }, 0] },
+          ],
+        },
+        endReason: reason,
+      },
+    },
+  ];
+}
+
+export async function endSession(body) {
+  const { visitorId, sessionId } = body;
 
   await getOwnedSession(visitorId, sessionId);
 
   const now = new Date();
 
-  await VisitorSession.updateOne(
-    { visitorId, sessionId, status: "ACTIVE" },
-    {
-      $set: {
-        status: "ENDED",
-        endedAt: now,
-        lastSeenAt: now,
+  await PageVisit.updateMany(
+    { sessionId, exitedAt: { $exists: false } },
+    [
+      {
+        $set: {
+          exitedAt: now,
+          exitReason: "SESSION_ENDED",
+          durationSeconds: {
+            $max: [
+              0,
+              {
+                $round: [
+                  {
+                    $divide: [
+                      { $subtract: [now, "$enteredAt"] },
+                      1000,
+                    ],
+                  },
+                  0,
+                ],
+              },
+            ],
+          },
+        },
       },
-    }
+    ]
   );
 
-  await PageVisit.updateMany(
-    {
-      visitorId,
-      sessionId,
-      exitedAt: { $exists: false },
-    },
-    {
-      $set: {
-        exitedAt: now,
-        exitReason: "SESSION_ENDED",
-      },
-    }
+  await VisitorSession.updateOne(
+    { sessionId, status: "ACTIVE" },
+    closeSessionPipeline(now, "EXPLICIT")
   );
 
   await removeLiveSession(sessionId);
@@ -417,36 +641,73 @@ export async function endSession(req) {
   return { success: true };
 }
 
-// Returns individual live sessions and counts per page.
-export async function getLiveAnalytics() {
-  const sessions = await getLiveSessions();
+// Closes sessions and page visits that went silent.
+export async function closeIdleSessions() {
+  const cutoff = new Date(Date.now() - SESSION_TIMEOUT_MS);
 
-  const pages = {};
-  const referrals = {};
-  const devices = {};
+  const pages = await PageVisit.updateMany(
+    {
+      exitedAt: { $exists: false },
+      lastSeenAt: { $lt: cutoff },
+    },
+    [
+      {
+        $set: {
+          exitedAt: "$lastSeenAt",
+          exitReason: "TIMEOUT",
+          durationSeconds: {
+            $max: [
+              0,
+              {
+                $round: [
+                  {
+                    $divide: [
+                      {
+                        $subtract: [
+                          "$lastSeenAt",
+                          "$enteredAt",
+                        ],
+                      },
+                      1000,
+                    ],
+                  },
+                  0,
+                ],
+              },
+            ],
+          },
+        },
+      },
+    ]
+  );
 
-  for (const session of sessions) {
-    pages[session.page] =
-      (pages[session.page] || 0) + 1;
-
-    const referral =
-      session.referralCode || "DIRECT";
-
-    referrals[referral] =
-      (referrals[referral] || 0) + 1;
-
-    const type = session.device?.type || "unknown";
-
-    devices[type] = (devices[type] || 0) + 1;
-  }
+  const sessions = await VisitorSession.updateMany(
+    { status: "ACTIVE", lastSeenAt: { $lt: cutoff } },
+    closeSessionPipeline("$lastSeenAt", "TIMEOUT")
+  );
 
   return {
-    activeSessions: sessions.length,
-    activePages: Object.keys(pages).length,
-    pages,
-    referrals,
-    devices,
-    sessions,
-    generatedAt: new Date(),
+    pagesClosed: pages.modifiedCount,
+    sessionsClosed: sessions.modifiedCount,
   };
+}
+
+// Single dispatcher behind POST /api/analytics/track
+export async function track(body, req) {
+  switch (body.type) {
+    case "page_view":
+      return startPageVisit(body, req);
+    case "heartbeat":
+      return heartbeat(body);
+    case "engagement":
+      return updateEngagement(body);
+    case "event":
+      return trackEvent(body);
+    case "page_exit":
+      return endPageVisit(body);
+    case "session_end":
+      return endSession(body);
+    default:
+      return fail("Invalid tracking type");
+  }
 }

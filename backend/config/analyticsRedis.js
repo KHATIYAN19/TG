@@ -43,6 +43,33 @@ export async function removeLiveSession(sessionId) {
   ]);
 }
 
+export async function getLiveSession(sessionId) {
+  return analyticsRedis.get(sessionKey(sessionId));
+}
+
+// Cheap count for the per-minute snapshot job.
+export async function countLiveSessions() {
+  const cutoff =
+    Date.now() - ACTIVE_SECONDS * 1000;
+
+  return analyticsRedis.zcount(
+    ACTIVE_KEY,
+    cutoff,
+    "+inf"
+  );
+}
+
+// Lets only one server instance run a scheduled job.
+export async function acquireLock(name, seconds) {
+  const result = await analyticsRedis.set(
+    `tt:analytics:lock:${name}`,
+    1,
+    { nx: true, ex: seconds }
+  );
+
+  return result === "OK";
+}
+
 export async function getLiveSessions() {
   const cutoff =
     Date.now() - ACTIVE_SECONDS * 1000;

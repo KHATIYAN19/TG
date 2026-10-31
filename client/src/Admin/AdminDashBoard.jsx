@@ -146,6 +146,15 @@ const PRIORITY_ROUTES = [
 
 const OTHER_ADMIN_ROUTES = [
   {
+    path: "/admin/website-analytics",
+    name: "Website Analytics",
+    icon: BarChart3,
+    description:
+      "Live visitors, traffic graphs, routes, referral codes, devices, events and visitor journeys.",
+    category: "Marketing",
+    keywords: "website traffic visitors live users analytics referral ref",
+  },
+  {
     path: "/admin/book/analytics",
     name: "Book Analytics",
     icon: BarChart3,

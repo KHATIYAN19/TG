@@ -361,3 +361,24 @@ export const passwordSetupLimiter = createMiddleware(
     failClosed: true,
   }
 );
+
+/* =====================================================
+   ANALYTICS TRACKING RATE LIMITER
+
+   Separate from the global limiter so heartbeats never
+   use up a visitor's quota for real API calls. Fails
+   open: analytics must not block the website.
+===================================================== */
+
+const analyticsTrackRateLimit = createRateLimiter(
+  "analytics-track",
+  120,
+  "1 m"
+);
+
+export const analyticsTrackLimiter = createMiddleware(
+  analyticsTrackRateLimit,
+  {
+    failClosed: false,
+  }
+);
