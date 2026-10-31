@@ -1,3501 +1,45 @@
-// import React, {
-//   useCallback,
-//   useEffect,
-//   useMemo,
-//   useState,
-// } from "react";
-
-// import { Helmet } from "react-helmet";
-// import { useNavigate } from "react-router-dom";
-
-// import {
-//   AlertCircle,
-//   ArrowRight,
-//   BookOpen,
-//   CheckCircle2,
-//   ChevronDown,
-//   Code2,
-//   FileText,
-//   Filter,
-//   Layers3,
-//   Search,
-//   ShieldCheck,
-//   Sparkles,
-//   Target,
-//   X,
-//   Zap,
-// } from "lucide-react";
-
-// import BASE_URL from "../utils/Url";
-
-// const SITE_URL = "https://www.targettrek.in";
-// const SITE_NAME = "TargetTrek";
-// const PAGE_URL = `${SITE_URL}/books`;
-
-// const THEME_KEY = "theme";
-// const THEME_EVENT = "targettrek-theme-change";
-
-// const SEO_TITLE =
-//   "Software Engineering Books, System Design & GenAI Guides | TargetTrek";
-
-// const SEO_DESCRIPTION =
-//   "Explore practical software engineering ebooks and developer guides from TargetTrek. Learn System Design, Java LLD, Google ADK, RAG, MCP, GenAI, backend engineering and interview preparation.";
-
-// const readTheme = () => {
-//   if (typeof window === "undefined") {
-//     return "light";
-//   }
-
-//   return window.localStorage.getItem(
-//     THEME_KEY
-//   ) === "dark"
-//     ? "dark"
-//     : "light";
-// };
-
-// const money = (
-//   value,
-//   currency = "INR"
-// ) => {
-//   if (
-//     value === undefined ||
-//     value === null ||
-//     value === ""
-//   ) {
-//     return "";
-//   }
-
-//   const number = Number(value);
-
-//   if (!Number.isFinite(number)) {
-//     return "";
-//   }
-
-//   const localeByCurrency = {
-//     INR: "en-IN",
-//     USD: "en-US",
-//     GBP: "en-GB",
-//     EUR: "en-IE",
-//     AUD: "en-AU",
-//     CAD: "en-CA",
-//   };
-
-//   try {
-//     return new Intl.NumberFormat(
-//       localeByCurrency[currency] ||
-//         "en",
-//       {
-//         style: "currency",
-//         currency,
-//         minimumFractionDigits:
-//           Number.isInteger(number)
-//             ? 0
-//             : 2,
-//         maximumFractionDigits: 2,
-//       }
-//     ).format(number);
-//   } catch {
-//     return `${currency} ${number}`;
-//   }
-// };
-
-// const getDiscount = (book) => {
-//   const price = Number(book?.price);
-//   const mrp = Number(book?.mrp);
-
-//   if (
-//     !Number.isFinite(price) ||
-//     !Number.isFinite(mrp) ||
-//     mrp <= 0 ||
-//     price >= mrp
-//   ) {
-//     return 0;
-//   }
-
-//   return Math.round(
-//     ((mrp - price) / mrp) * 100
-//   );
-// };
-
-// const getSavings = (book) => {
-//   const price = Number(book?.price);
-//   const mrp = Number(book?.mrp);
-
-//   if (
-//     !Number.isFinite(price) ||
-//     !Number.isFinite(mrp) ||
-//     mrp <= price
-//   ) {
-//     return 0;
-//   }
-
-//   return mrp - price;
-// };
-
-// const formatResourceType = (
-//   type
-// ) => {
-//   const map = {
-//     pdf: "PDF",
-//     ebook: "Ebook",
-//     course: "Course",
-//     bundle: "Bundle",
-//     template: "Template",
-//     notes: "Notes",
-//     other: "Digital Product",
-//   };
-
-//   return (
-//     map[type] ||
-//     "Digital Product"
-//   );
-// };
-
-// const getCoverUrl = (book) => {
-//   return (
-//     book?.coverPageUrl ||
-//     book?.coverpageurl ||
-//     book?.cover_page_url ||
-//     ""
-//   );
-// };
-
-// const getBookCategories = (
-//   book
-// ) => {
-//   if (
-//     Array.isArray(
-//       book?.categories
-//     ) &&
-//     book.categories.length > 0
-//   ) {
-//     return book.categories.filter(
-//       Boolean
-//     );
-//   }
-
-//   if (book?.category) {
-//     return [book.category];
-//   }
-
-//   return [];
-// };
-
-// const getPrimaryCategory = (
-//   book
-// ) => {
-//   return (
-//     getBookCategories(book)[0] ||
-//     ""
-//   );
-// };
-
-// const absoluteBookUrl = (
-//   redirectUrl
-// ) => {
-//   if (!redirectUrl) {
-//     return "";
-//   }
-
-//   if (
-//     redirectUrl.startsWith(
-//       "http://"
-//     ) ||
-//     redirectUrl.startsWith(
-//       "https://"
-//     )
-//   ) {
-//     return redirectUrl;
-//   }
-
-//   const path =
-//     redirectUrl.startsWith("/")
-//       ? redirectUrl
-//       : `/${redirectUrl}`;
-
-//   return `${SITE_URL}${path}`;
-// };
-
-// const discoveryItems = [
-//   {
-//     icon: Code2,
-//     title:
-//       "Code-first learning",
-//     text:
-//       "Understand concepts through practical code, implementation examples and engineering decisions.",
-//   },
-//   {
-//     icon: Layers3,
-//     title:
-//       "Structured preparation",
-//     text:
-//       "Move from fundamentals to architecture, trade-offs, edge cases and interview-level discussions.",
-//   },
-//   {
-//     icon: ShieldCheck,
-//     title:
-//       "Production-aware",
-//     text:
-//       "Go beyond basic demos with reliability, security, scaling, evaluation and deployment topics.",
-//   },
-//   {
-//     icon: Zap,
-//     title:
-//       "Built for revision",
-//     text:
-//       "Use structured chapters, quick references and practical examples when interview time is limited.",
-//   },
-// ];
-
-// const learningTracks = [
-//   {
-//     icon: Layers3,
-//     title: "System Design",
-//     query: "system design",
-//     text:
-//       "HLD, LLD, scalability, APIs, databases, caching, concurrency and design interviews.",
-//   },
-//   {
-//     icon: Sparkles,
-//     title: "GenAI Engineering",
-//     query: "genai",
-//     text:
-//       "Google ADK, RAG, MCP, agents, retrieval pipelines and production GenAI systems.",
-//   },
-//   {
-//     icon: Code2,
-//     title: "Java & Backend",
-//     query: "java",
-//     text:
-//       "Object-oriented design, Java implementation and practical backend engineering concepts.",
-//   },
-//   {
-//     icon: Target,
-//     title: "Interview Preparation",
-//     query: "interview",
-//     text:
-//       "Resources designed around technical interviews, revision, architecture and engineering discussions.",
-//   },
-// ];
-
-// const learningSteps = [
-//   {
-//     number: "01",
-//     title:
-//       "Choose a focused goal",
-//     text:
-//       "Start with the topic you need now instead of trying to learn everything at once.",
-//   },
-//   {
-//     number: "02",
-//     title:
-//       "Follow structured material",
-//     text:
-//       "Move from fundamentals to implementation, architecture, edge cases and trade-offs.",
-//   },
-//   {
-//     number: "03",
-//     title:
-//       "Apply what you learn",
-//     text:
-//       "Use code, design exercises, diagrams and interview questions to convert knowledge into practice.",
-//   },
-// ];
-
-// const faqs = [
-//   {
-//     q:
-//       "What books and resources are available on TargetTrek?",
-//     a:
-//       "The TargetTrek library contains practical digital resources for software engineering, System Design, Java LLD, GenAI, Google ADK, RAG, MCP, backend engineering and interview preparation. The exact catalog depends on currently published resources.",
-//   },
-//   {
-//     q:
-//       "Are the prices shown on this page current?",
-//     a:
-//       "Yes. Product information and pricing displayed in the library are loaded from the TargetTrek backend when the page loads.",
-//   },
-//   {
-//     q:
-//       "Can I search and filter the library?",
-//     a:
-//       "Yes. You can search by title, topic and tags, filter by category or resource type, and sort resources by price or title.",
-//   },
-//   {
-//     q:
-//       "Are TargetTrek books useful for software engineering interviews?",
-//     a:
-//       "Many TargetTrek resources are designed around technical interview preparation and practical engineering topics such as HLD, LLD, backend systems and GenAI.",
-//   },
-//   {
-//     q:
-//       "Are these physical books?",
-//     a:
-//       "Resources in the library are digital products unless the individual product page states otherwise. Check the resource format before purchasing.",
-//   },
-//   {
-//     q:
-//       "Where can I get help with a book purchase?",
-//     a:
-//       "For payment, download or ebook-related issues, contact supporttargettrek@gmail.com.",
-//   },
-// ];
-
-// function BookCover({
-//   book,
-//   priority = false,
-// }) {
-//   const [
-//     imageError,
-//     setImageError,
-//   ] = useState(false);
-
-//   const coverUrl =
-//     getCoverUrl(book);
-
-//   useEffect(() => {
-//     setImageError(false);
-//   }, [coverUrl]);
-
-//   return (
-//     <div className="relative h-full w-full">
-//       {coverUrl &&
-//       !imageError ? (
-//         <img
-//           src={coverUrl}
-//           alt={`${
-//             book?.title ||
-//             "TargetTrek resource"
-//           } cover`}
-//           loading={
-//             priority
-//               ? "eager"
-//               : "lazy"
-//           }
-//           decoding="async"
-//           onError={() =>
-//             setImageError(true)
-//           }
-//           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.035]"
-//         />
-//       ) : (
-//         <div className="flex h-full w-full flex-col justify-between bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 p-4 text-white">
-//           <div className="flex items-center justify-between">
-//             <BookOpen className="h-6 w-6 text-blue-200" />
-
-//             <span className="text-[8px] font-bold uppercase tracking-widest text-white/50">
-//               TargetTrek
-//             </span>
-//           </div>
-
-//           <div>
-//             <div className="mb-3 h-1 w-9 rounded-full bg-blue-300" />
-
-//             <p className="line-clamp-4 text-sm font-black leading-5 sm:text-base">
-//               {book?.title ||
-//                 "Digital Resource"}
-//             </p>
-//           </div>
-//         </div>
-//       )}
-
-//       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-white/5" />
-//     </div>
-//   );
-// }
-
-// function ProductCard({
-//   book,
-//   onOpen,
-//   isDark,
-//   featured = false,
-//   priority = false,
-// }) {
-//   const discount =
-//     getDiscount(book);
-
-//   const savings =
-//     getSavings(book);
-
-//   const category =
-//     getPrimaryCategory(book);
-
-//   const tags =
-//     Array.isArray(book?.tags)
-//       ? book.tags
-//       : [];
-
-//   const firstTag =
-//     tags[0] || null;
-
-//   const handleKeyboard = (
-//     event
-//   ) => {
-//     if (
-//       event.key === "Enter" ||
-//       event.key === " "
-//     ) {
-//       event.preventDefault();
-//       onOpen(book);
-//     }
-//   };
-
-//   const surface =
-//     isDark
-//       ? "border-slate-800 bg-[#101924]"
-//       : "border-slate-200 bg-white";
-
-//   const text =
-//     isDark
-//       ? "text-white"
-//       : "text-slate-950";
-
-//   const muted =
-//     isDark
-//       ? "text-slate-400"
-//       : "text-slate-500";
-
-//   return (
-//     <article
-//       role="link"
-//       tabIndex={0}
-//       onClick={() =>
-//         onOpen(book)
-//       }
-//       onKeyDown={
-//         handleKeyboard
-//       }
-//       aria-label={`View ${
-//         book?.title ||
-//         "resource"
-//       }`}
-//       className={`
-//         group
-//         relative
-//         cursor-pointer
-//         overflow-hidden
-//         rounded-2xl
-//         border
-//         outline-none
-//         transition-all
-//         duration-300
-//         hover:-translate-y-1
-//         focus-visible:ring-4
-//         focus-visible:ring-blue-500/20
-//         ${surface}
-//         ${
-//           isDark
-//             ? "hover:border-blue-800 hover:shadow-[0_20px_50px_rgba(0,0,0,.24)]"
-//             : "hover:border-blue-200 hover:shadow-[0_20px_50px_rgba(15,23,42,.10)]"
-//         }
-//         ${
-//           featured
-//             ? "flex flex-col sm:min-h-[330px] sm:flex-row"
-//             : "flex min-h-[220px]"
-//         }
-//       `}
-//     >
-//       <div
-//         className={`
-//           relative
-//           shrink-0
-//           overflow-hidden
-//           border
-//           shadow-sm
-
-//           ${
-//             isDark
-//               ? "border-slate-700 bg-slate-900"
-//               : "border-slate-200 bg-slate-100"
-//           }
-
-//           ${
-//             featured
-//               ? "mx-auto mt-4 aspect-[3/4] w-[150px] rounded-2xl sm:m-4 sm:w-[190px] lg:w-[220px]"
-//               : "m-3 w-[96px] rounded-xl sm:m-4 sm:w-[125px] lg:w-[145px]"
-//           }
-//         `}
-//       >
-//         <BookCover
-//           book={book}
-//           priority={priority}
-//         />
-//       </div>
-
-//       <div
-//         className={`
-//           flex
-//           min-w-0
-//           flex-1
-//           flex-col
-//           ${
-//             featured
-//               ? "px-5 pb-6 pt-4 sm:py-6 sm:pr-7"
-//               : "py-4 pr-4 sm:py-5 sm:pr-5"
-//           }
-//         `}
-//       >
-//         <div className="flex flex-wrap items-center gap-1.5">
-//           {firstTag && (
-//             <span
-//               title={firstTag}
-//               className={`
-//                 max-w-[120px]
-//                 truncate
-//                 rounded-full
-//                 border
-//                 px-2.5
-//                 py-1
-//                 text-[9px]
-//                 font-black
-//                 uppercase
-//                 tracking-wide
-//                 ${
-//                   isDark
-//                     ? "border-blue-900/60 bg-blue-950/30 text-blue-300"
-//                     : "border-blue-200 bg-blue-50 text-blue-700"
-//                 }
-//               `}
-//             >
-//               {firstTag}
-//             </span>
-//           )}
-
-//           {category && (
-//             <span
-//               title={category}
-//               className={`
-//                 max-w-[120px]
-//                 truncate
-//                 rounded-full
-//                 border
-//                 px-2.5
-//                 py-1
-//                 text-[9px]
-//                 font-black
-//                 uppercase
-//                 tracking-wide
-//                 ${
-//                   isDark
-//                     ? "border-violet-900/60 bg-violet-950/30 text-violet-300"
-//                     : "border-violet-200 bg-violet-50 text-violet-700"
-//                 }
-//               `}
-//             >
-//               {category}
-//             </span>
-//           )}
-
-//           <span
-//             className={`
-//               flex
-//               items-center
-//               gap-1
-//               rounded-full
-//               border
-//               px-2.5
-//               py-1
-//               text-[9px]
-//               font-black
-//               uppercase
-//               tracking-wide
-//               ${
-//                 isDark
-//                   ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-300"
-//                   : "border-emerald-200 bg-emerald-50 text-emerald-700"
-//               }
-//             `}
-//           >
-//             <FileText className="h-2.5 w-2.5" />
-
-//             {formatResourceType(
-//               book?.resourceType
-//             )}
-//           </span>
-//         </div>
-
-//         {(book?.isFeatured ||
-//           book?.badge) && (
-//           <div className="mt-3 flex flex-wrap items-center gap-2">
-//             {book?.isFeatured && (
-//               <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-blue-500">
-//                 <Sparkles className="h-3 w-3" />
-
-//                 Featured
-//               </span>
-//             )}
-
-//             {book?.badge && (
-//               <span
-//                 className={`text-[10px] font-semibold ${muted}`}
-//               >
-//                 {book.badge}
-//               </span>
-//             )}
-//           </div>
-//         )}
-
-//         <h3
-//           className={`
-//             mt-3
-//             line-clamp-2
-//             font-black
-//             tracking-tight
-//             transition-colors
-//             group-hover:text-blue-500
-//             ${text}
-
-//             ${
-//               featured
-//                 ? "text-xl leading-7 sm:text-2xl sm:leading-8"
-//                 : "text-sm leading-5 sm:text-lg sm:leading-6"
-//             }
-//           `}
-//         >
-//           {book?.title ||
-//             "Untitled Resource"}
-//         </h3>
-
-//         {book?.subtitle && (
-//           <p
-//             className={`
-//               mt-2
-//               ${muted}
-//               ${
-//                 featured
-//                   ? "line-clamp-3 text-sm leading-7"
-//                   : "line-clamp-2 text-[11px] leading-5 sm:text-[13px]"
-//               }
-//             `}
-//           >
-//             {book.subtitle}
-//           </p>
-//         )}
-
-//         {featured &&
-//           book?.shortDescription && (
-//             <p
-//               className={`mt-3 hidden line-clamp-2 text-sm leading-6 sm:block ${muted}`}
-//             >
-//               {
-//                 book.shortDescription
-//               }
-//             </p>
-//           )}
-
-//         <div className="flex-1" />
-
-//         <div
-//           className={`
-//             mt-4
-//             border-t
-//             pt-3
-//             ${
-//               isDark
-//                 ? "border-slate-800"
-//                 : "border-slate-100"
-//             }
-//           `}
-//         >
-//           <div className="flex items-end justify-between gap-3">
-//             <div className="min-w-0">
-//               <p
-//                 className={`mb-1 text-[9px] font-black uppercase tracking-wider ${muted}`}
-//               >
-//                 Current price
-//               </p>
-
-//               <div className="flex flex-wrap items-center gap-2">
-//                 <span
-//                   className={`
-//                     font-black
-//                     tracking-tight
-//                     ${text}
-//                     ${
-//                       featured
-//                         ? "text-2xl sm:text-3xl"
-//                         : "text-lg sm:text-xl"
-//                     }
-//                   `}
-//                 >
-//                   {money(
-//                     book?.price,
-//                     book?.currency
-//                   )}
-//                 </span>
-
-//                 {Number(
-//                   book?.mrp
-//                 ) >
-//                   Number(
-//                     book?.price
-//                   ) && (
-//                   <span
-//                     className={`text-xs font-semibold line-through ${muted}`}
-//                   >
-//                     {money(
-//                       book?.mrp,
-//                       book?.currency
-//                     )}
-//                   </span>
-//                 )}
-//               </div>
-
-//               {(savings > 0 ||
-//                 discount > 0) && (
-//                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-//                   {savings > 0 && (
-//                     <span className="text-[10px] font-black text-emerald-500">
-//                       Save{" "}
-//                       {money(
-//                         savings,
-//                         book?.currency
-//                       )}
-//                     </span>
-//                   )}
-
-//                   {discount > 0 && (
-//                     <span
-//                       className={`
-//                         rounded-md
-//                         px-1.5
-//                         py-0.5
-//                         text-[9px]
-//                         font-black
-//                         ${
-//                           isDark
-//                             ? "bg-emerald-950/40 text-emerald-300"
-//                             : "bg-emerald-50 text-emerald-700"
-//                         }
-//                       `}
-//                     >
-//                       {discount}% OFF
-//                     </span>
-//                   )}
-//                 </div>
-//               )}
-//             </div>
-
-//             <div
-//               className={`
-//                 flex
-//                 h-10
-//                 w-10
-//                 shrink-0
-//                 items-center
-//                 justify-center
-//                 rounded-full
-//                 text-white
-//                 transition-all
-//                 duration-300
-//                 group-hover:scale-105
-//                 group-hover:bg-blue-600
-//                 ${
-//                   isDark
-//                     ? "bg-slate-700"
-//                     : "bg-slate-950"
-//                 }
-//               `}
-//             >
-//               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </article>
-//   );
-// }
-
-// function SelectField({
-//   value,
-//   onChange,
-//   options,
-//   placeholder,
-//   ariaLabel,
-//   isDark,
-// }) {
-//   return (
-//     <div className="relative w-full sm:w-auto">
-//       <select
-//         value={value}
-//         onChange={(event) =>
-//           onChange(
-//             event.target.value
-//           )
-//         }
-//         aria-label={
-//           ariaLabel ||
-//           placeholder
-//         }
-//         className={`
-//           h-11
-//           w-full
-//           appearance-none
-//           rounded-xl
-//           border
-//           pl-4
-//           pr-10
-//           text-sm
-//           font-semibold
-//           outline-none
-//           transition
-//           sm:w-auto
-//           sm:min-w-[150px]
-
-//           ${
-//             isDark
-//               ? "border-slate-700 bg-slate-900 text-slate-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-900/30"
-//               : "border-slate-200 bg-white text-slate-700 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-//           }
-//         `}
-//       >
-//         <option value="">
-//           {placeholder}
-//         </option>
-
-//         {options.map(
-//           (option) => {
-//             const optionValue =
-//               option.value ??
-//               option;
-
-//             const optionLabel =
-//               option.label ??
-//               option;
-
-//             return (
-//               <option
-//                 key={
-//                   optionValue
-//                 }
-//                 value={
-//                   optionValue
-//                 }
-//               >
-//                 {optionLabel}
-//               </option>
-//             );
-//           }
-//         )}
-//       </select>
-
-//       <ChevronDown
-//         className={`
-//           pointer-events-none
-//           absolute
-//           right-3
-//           top-1/2
-//           h-4
-//           w-4
-//           -translate-y-1/2
-//           ${
-//             isDark
-//               ? "text-slate-500"
-//               : "text-slate-400"
-//           }
-//         `}
-//       />
-//     </div>
-//   );
-// }
-
-// function ProductSkeleton({
-//   isDark,
-// }) {
-//   return (
-//     <div
-//       className={`
-//         flex
-//         min-h-[220px]
-//         animate-pulse
-//         overflow-hidden
-//         rounded-2xl
-//         border
-//         ${
-//           isDark
-//             ? "border-slate-800 bg-[#101924]"
-//             : "border-slate-200 bg-white"
-//         }
-//       `}
-//     >
-//       <div
-//         className={`
-//           m-3
-//           w-[96px]
-//           shrink-0
-//           rounded-xl
-//           sm:m-4
-//           sm:w-[125px]
-//           lg:w-[145px]
-//           ${
-//             isDark
-//               ? "bg-slate-800"
-//               : "bg-slate-100"
-//           }
-//         `}
-//       />
-
-//       <div className="flex flex-1 flex-col py-5 pr-5">
-//         <div className="flex gap-2">
-//           <div
-//             className={`h-5 w-16 rounded-full ${
-//               isDark
-//                 ? "bg-slate-800"
-//                 : "bg-slate-100"
-//             }`}
-//           />
-
-//           <div
-//             className={`h-5 w-20 rounded-full ${
-//               isDark
-//                 ? "bg-slate-800"
-//                 : "bg-slate-100"
-//             }`}
-//           />
-//         </div>
-
-//         <div
-//           className={`mt-5 h-5 w-full rounded ${
-//             isDark
-//               ? "bg-slate-800"
-//               : "bg-slate-100"
-//           }`}
-//         />
-
-//         <div
-//           className={`mt-2 h-5 w-4/5 rounded ${
-//             isDark
-//               ? "bg-slate-800"
-//               : "bg-slate-100"
-//           }`}
-//         />
-
-//         <div className="flex-1" />
-
-//         <div
-//           className={`mt-5 border-t pt-4 ${
-//             isDark
-//               ? "border-slate-800"
-//               : "border-slate-100"
-//           }`}
-//         >
-//           <div
-//             className={`h-7 w-24 rounded ${
-//               isDark
-//                 ? "bg-slate-800"
-//                 : "bg-slate-100"
-//             }`}
-//           />
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// function SectionHeading({
-//   eyebrow,
-//   title,
-//   description,
-//   isDark,
-//   center = false,
-// }) {
-//   return (
-//     <div
-//       className={`max-w-3xl ${
-//         center
-//           ? "mx-auto text-center"
-//           : ""
-//       }`}
-//     >
-//       <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-500">
-//         {eyebrow}
-//       </p>
-
-//       <h2
-//         className={`
-//           mt-3
-//           text-3xl
-//           font-black
-//           tracking-tight
-//           sm:text-4xl
-//           ${
-//             isDark
-//               ? "text-white"
-//               : "text-slate-950"
-//           }
-//         `}
-//       >
-//         {title}
-//       </h2>
-
-//       {description && (
-//         <p
-//           className={`
-//             mt-4
-//             text-sm
-//             leading-7
-//             sm:text-base
-//             ${
-//               isDark
-//                 ? "text-slate-400"
-//                 : "text-slate-500"
-//             }
-//           `}
-//         >
-//           {description}
-//         </p>
-//       )}
-//     </div>
-//   );
-// }
-
-// export default function Books() {
-//   const navigate =
-//     useNavigate();
-
-//   const [
-//     theme,
-//     setTheme,
-//   ] = useState(
-//     readTheme
-//   );
-
-//   const [
-//     books,
-//     setBooks,
-//   ] = useState([]);
-
-//   const [
-//     loading,
-//     setLoading,
-//   ] = useState(true);
-
-//   const [
-//     error,
-//     setError,
-//   ] = useState("");
-
-//   const [
-//     retryCount,
-//     setRetryCount,
-//   ] = useState(0);
-
-//   const [
-//     search,
-//     setSearch,
-//   ] = useState("");
-
-//   const [
-//     category,
-//     setCategory,
-//   ] = useState("");
-
-//   const [
-//     resourceType,
-//     setResourceType,
-//   ] = useState("");
-
-//   const [
-//     sort,
-//     setSort,
-//   ] = useState("");
-
-//   const [
-//     openFaq,
-//     setOpenFaq,
-//   ] = useState(0);
-
-//   const isDark =
-//     theme === "dark";
-
-//   useEffect(() => {
-//     window.scrollTo({
-//       top: 0,
-//       left: 0,
-//       behavior: "auto",
-//     });
-//   }, []);
-
-//   useEffect(() => {
-//     setTheme(
-//       readTheme()
-//     );
-
-//     const handleThemeChange =
-//       (event) => {
-//         const newTheme =
-//           event?.detail
-//             ?.theme;
-
-//         if (
-//           newTheme ===
-//             "dark" ||
-//           newTheme ===
-//             "light"
-//         ) {
-//           setTheme(
-//             newTheme
-//           );
-//         }
-//       };
-
-//     const handleStorageChange =
-//       (event) => {
-//         if (
-//           event.key !==
-//           THEME_KEY
-//         ) {
-//           return;
-//         }
-
-//         if (
-//           event.newValue ===
-//             "dark" ||
-//           event.newValue ===
-//             "light"
-//         ) {
-//           setTheme(
-//             event.newValue
-//           );
-//         }
-//       };
-
-//     window.addEventListener(
-//       THEME_EVENT,
-//       handleThemeChange
-//     );
-
-//     window.addEventListener(
-//       "storage",
-//       handleStorageChange
-//     );
-
-//     return () => {
-//       window.removeEventListener(
-//         THEME_EVENT,
-//         handleThemeChange
-//       );
-
-//       window.removeEventListener(
-//         "storage",
-//         handleStorageChange
-//       );
-//     };
-//   }, []);
-
-//   const fetchBooks =
-//     useCallback(
-//       async (signal) => {
-//         try {
-//           setLoading(true);
-//           setError("");
-
-//           const response =
-//             await fetch(
-//               `${BASE_URL}/book`,
-//               {
-//                 method:
-//                   "GET",
-//                 cache:
-//                   "no-store",
-//                 headers: {
-//                   Accept:
-//                     "application/json",
-//                 },
-//                 signal,
-//               }
-//             );
-
-//           const result =
-//             await response
-//               .json()
-//               .catch(
-//                 () => null
-//               );
-
-//           if (
-//             !response.ok ||
-//             result?.success !==
-//               true
-//           ) {
-//             throw new Error(
-//               result?.error
-//                 ?.message ||
-//                 result?.message ||
-//                 "Unable to load resources."
-//             );
-//           }
-
-//           setBooks(
-//             Array.isArray(
-//               result?.data
-//             )
-//               ? result.data
-//               : []
-//           );
-//         } catch (err) {
-//           if (
-//             err?.name ===
-//             "AbortError"
-//           ) {
-//             return;
-//           }
-
-//           console.error(
-//             "Books fetch error:",
-//             err
-//           );
-
-//           setBooks([]);
-
-//           setError(
-//             err?.message ||
-//               "Something went wrong while loading the library."
-//           );
-//         } finally {
-//           if (
-//             !signal?.aborted
-//           ) {
-//             setLoading(
-//               false
-//             );
-//           }
-//         }
-//       },
-//       []
-//     );
-
-//   useEffect(() => {
-//     const controller =
-//       new AbortController();
-
-//     fetchBooks(
-//       controller.signal
-//     );
-
-//     return () =>
-//       controller.abort();
-//   }, [
-//     fetchBooks,
-//     retryCount,
-//   ]);
-
-//   const categories =
-//     useMemo(() => {
-//       return [
-//         ...new Set(
-//           books.flatMap(
-//             (book) =>
-//               getBookCategories(
-//                 book
-//               )
-//           )
-//         ),
-//       ].sort((a, b) =>
-//         a.localeCompare(b)
-//       );
-//     }, [books]);
-
-//   const resourceTypes =
-//     useMemo(() => {
-//       return [
-//         ...new Set(
-//           books
-//             .map(
-//               (book) =>
-//                 book?.resourceType
-//             )
-//             .filter(Boolean)
-//         ),
-//       ].sort();
-//     }, [books]);
-
-//   const filteredBooks =
-//     useMemo(() => {
-//       const query =
-//         search
-//           .trim()
-//           .toLowerCase();
-
-//       const result =
-//         books.filter(
-//           (book) => {
-//             const tags =
-//               Array.isArray(
-//                 book?.tags
-//               )
-//                 ? book.tags.join(
-//                     " "
-//                   )
-//                 : "";
-
-//             const categoryText =
-//               getBookCategories(
-//                 book
-//               ).join(" ");
-
-//             const searchable =
-//               [
-//                 book?.title,
-//                 book?.slug,
-//                 book?.subtitle,
-//                 book?.shortDescription,
-//                 book?.description,
-//                 book?.resourceType,
-//                 book?.pageKey,
-//                 book?.badge,
-//                 categoryText,
-//                 tags,
-//               ]
-//                 .filter(
-//                   Boolean
-//                 )
-//                 .join(" ")
-//                 .toLowerCase();
-
-//             const matchesSearch =
-//               !query ||
-//               searchable.includes(
-//                 query
-//               );
-
-//             const matchesCategory =
-//               !category ||
-//               getBookCategories(
-//                 book
-//               ).includes(
-//                 category
-//               );
-
-//             const matchesType =
-//               !resourceType ||
-//               book?.resourceType ===
-//                 resourceType;
-
-//             return (
-//               matchesSearch &&
-//               matchesCategory &&
-//               matchesType
-//             );
-//           }
-//         );
-
-//       return [
-//         ...result,
-//       ].sort((a, b) => {
-//         if (
-//           sort ===
-//           "price-low"
-//         ) {
-//           return (
-//             Number(
-//               a?.price || 0
-//             ) -
-//             Number(
-//               b?.price || 0
-//             )
-//           );
-//         }
-
-//         if (
-//           sort ===
-//           "price-high"
-//         ) {
-//           return (
-//             Number(
-//               b?.price || 0
-//             ) -
-//             Number(
-//               a?.price || 0
-//             )
-//           );
-//         }
-
-//         if (
-//           sort === "title"
-//         ) {
-//           return String(
-//             a?.title || ""
-//           ).localeCompare(
-//             String(
-//               b?.title || ""
-//             )
-//           );
-//         }
-
-//         if (
-//           sort ===
-//           "featured"
-//         ) {
-//           return (
-//             Number(
-//               Boolean(
-//                 b?.isFeatured
-//               )
-//             ) -
-//             Number(
-//               Boolean(
-//                 a?.isFeatured
-//               )
-//             )
-//           );
-//         }
-
-//         return 0;
-//       });
-//     }, [
-//       books,
-//       search,
-//       category,
-//       resourceType,
-//       sort,
-//     ]);
-
-//   const featuredBook =
-//     useMemo(() => {
-//       return (
-//         books.find(
-//           (book) =>
-//             book?.isFeatured
-//         ) ||
-//         books[0] ||
-//         null
-//       );
-//     }, [books]);
-
-//   const openBook = (
-//     book
-//   ) => {
-//     const redirectUrl =
-//       book?.redirectUrl?.trim();
-
-//     if (!redirectUrl) {
-//       console.error(
-//         "Book redirect URL missing:",
-//         book
-//       );
-
-//       return;
-//     }
-
-//     if (
-//       redirectUrl.startsWith(
-//         "http://"
-//       ) ||
-//       redirectUrl.startsWith(
-//         "https://"
-//       )
-//     ) {
-//       window.location.href =
-//         redirectUrl;
-
-//       return;
-//     }
-
-//     navigate(
-//       redirectUrl.startsWith(
-//         "/"
-//       )
-//         ? redirectUrl
-//         : `/${redirectUrl}`
-//     );
-//   };
-
-//   const clearFilters =
-//     () => {
-//       setSearch("");
-//       setCategory("");
-//       setResourceType("");
-//       setSort("");
-//     };
-
-//   const scrollToLibrary =
-//     () => {
-//       document
-//         .getElementById(
-//           "library"
-//         )
-//         ?.scrollIntoView({
-//           behavior:
-//             "smooth",
-//         });
-//     };
-
-//   const selectTrack = (
-//     query
-//   ) => {
-//     setSearch(query);
-//     setCategory("");
-//     setResourceType("");
-//     setSort("");
-
-//     window.setTimeout(
-//       scrollToLibrary,
-//       50
-//     );
-//   };
-
-//   const hasFilters =
-//     Boolean(search) ||
-//     Boolean(category) ||
-//     Boolean(
-//       resourceType
-//     ) ||
-//     Boolean(sort);
-
-//   const firstCover =
-//     featuredBook
-//       ? getCoverUrl(
-//           featuredBook
-//         )
-//       : "";
-
-//   const structuredData =
-//     useMemo(() => {
-//       const items =
-//         books
-//           .filter(
-//             (book) =>
-//               book?.redirectUrl
-//           )
-//           .slice(0, 50)
-//           .map(
-//             (book, index) => {
-//               const url =
-//                 absoluteBookUrl(
-//                   book.redirectUrl
-//                 );
-
-//               const cover =
-//                 getCoverUrl(
-//                   book
-//                 );
-
-//               return {
-//                 "@type":
-//                   "ListItem",
-//                 position:
-//                   index + 1,
-//                 url,
-//                 item: {
-//                   "@type":
-//                     "CreativeWork",
-//                   name:
-//                     book?.title ||
-//                     "TargetTrek Resource",
-//                   url,
-//                   ...(book?.subtitle
-//                     ? {
-//                         description:
-//                           book.subtitle,
-//                       }
-//                     : {}),
-//                   ...(cover
-//                     ? {
-//                         image:
-//                           cover,
-//                       }
-//                     : {}),
-//                 },
-//               };
-//             }
-//           );
-
-//       return {
-//         "@context":
-//           "https://schema.org",
-
-//         "@graph": [
-//           {
-//             "@type":
-//               "Organization",
-
-//             "@id":
-//               `${SITE_URL}/#organization`,
-
-//             name:
-//               SITE_NAME,
-
-//             url:
-//               SITE_URL,
-
-//             email:
-//               "supporttargettrek@gmail.com",
-//           },
-
-//           {
-//             "@type":
-//               "WebSite",
-
-//             "@id":
-//               `${SITE_URL}/#website`,
-
-//             name:
-//               SITE_NAME,
-
-//             url:
-//               SITE_URL,
-
-//             publisher: {
-//               "@id":
-//                 `${SITE_URL}/#organization`,
-//             },
-//           },
-
-//           {
-//             "@type":
-//               "CollectionPage",
-
-//             "@id":
-//               `${PAGE_URL}#webpage`,
-
-//             name:
-//               SEO_TITLE,
-
-//             url:
-//               PAGE_URL,
-
-//             description:
-//               SEO_DESCRIPTION,
-
-//             isPartOf: {
-//               "@id":
-//                 `${SITE_URL}/#website`,
-//             },
-
-//             publisher: {
-//               "@id":
-//                 `${SITE_URL}/#organization`,
-//             },
-//           },
-
-//           {
-//             "@type":
-//               "BreadcrumbList",
-
-//             "@id":
-//               `${PAGE_URL}#breadcrumb`,
-
-//             itemListElement: [
-//               {
-//                 "@type":
-//                   "ListItem",
-//                 position: 1,
-//                 name:
-//                   "TargetTrek",
-//                 item:
-//                   SITE_URL,
-//               },
-//               {
-//                 "@type":
-//                   "ListItem",
-//                 position: 2,
-//                 name:
-//                   "Books",
-//                 item:
-//                   PAGE_URL,
-//               },
-//             ],
-//           },
-
-//           {
-//             "@type":
-//               "ItemList",
-
-//             "@id":
-//               `${PAGE_URL}#resources`,
-
-//             name:
-//               "TargetTrek Developer Books and Resources",
-
-//             numberOfItems:
-//               items.length,
-
-//             itemListElement:
-//               items,
-//           },
-
-//           {
-//             "@type":
-//               "FAQPage",
-
-//             "@id":
-//               `${PAGE_URL}#faq`,
-
-//             mainEntity:
-//               faqs.map(
-//                 (item) => ({
-//                   "@type":
-//                     "Question",
-
-//                   name:
-//                     item.q,
-
-//                   acceptedAnswer:
-//                     {
-//                       "@type":
-//                         "Answer",
-
-//                       text:
-//                         item.a,
-//                     },
-//                 })
-//               ),
-//           },
-//         ],
-//       };
-//     }, [books]);
-
-//   const pageBg =
-//     isDark
-//       ? "bg-[#080D14]"
-//       : "bg-[#F7F9FC]";
-
-//   const sectionBg =
-//     isDark
-//       ? "bg-[#0B111A]"
-//       : "bg-white";
-
-//   const softBg =
-//     isDark
-//       ? "bg-[#0C131D]"
-//       : "bg-slate-50";
-
-//   const cardBg =
-//     isDark
-//       ? "bg-[#101924]"
-//       : "bg-white";
-
-//   const primaryText =
-//     isDark
-//       ? "text-white"
-//       : "text-slate-950";
-
-//   const secondaryText =
-//     isDark
-//       ? "text-slate-400"
-//       : "text-slate-500";
-
-//   const border =
-//     isDark
-//       ? "border-slate-800"
-//       : "border-slate-200";
-
-//   return (
-//     <>
-//       <Helmet>
-//         <title>
-//           {SEO_TITLE}
-//         </title>
-
-//         <meta
-//           name="description"
-//           content={
-//             SEO_DESCRIPTION
-//           }
-//         />
-
-//         <meta
-//           name="keywords"
-//           content="software engineering books, system design book, HLD book, LLD Java book, GenAI ebook, Google ADK book, RAG ebook, MCP ebook, backend engineering, developer interview preparation, TargetTrek"
-//         />
-
-//         <meta
-//           name="author"
-//           content={
-//             SITE_NAME
-//           }
-//         />
-
-//         <meta
-//           name="application-name"
-//           content={
-//             SITE_NAME
-//           }
-//         />
-
-//         <meta
-//           name="robots"
-//           content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
-//         />
-
-//         <meta
-//           name="googlebot"
-//           content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
-//         />
-
-//         <meta
-//           name="theme-color"
-//           content={
-//             isDark
-//               ? "#080D14"
-//               : "#ffffff"
-//           }
-//         />
-
-//         <link
-//           rel="canonical"
-//           href={PAGE_URL}
-//         />
-
-//         <meta
-//           property="og:type"
-//           content="website"
-//         />
-
-//         <meta
-//           property="og:site_name"
-//           content={
-//             SITE_NAME
-//           }
-//         />
-
-//         <meta
-//           property="og:locale"
-//           content="en_IN"
-//         />
-
-//         <meta
-//           property="og:title"
-//           content={
-//             SEO_TITLE
-//           }
-//         />
-
-//         <meta
-//           property="og:description"
-//           content={
-//             SEO_DESCRIPTION
-//           }
-//         />
-
-//         <meta
-//           property="og:url"
-//           content={PAGE_URL}
-//         />
-
-//         {firstCover && (
-//           <meta
-//             property="og:image"
-//             content={
-//               firstCover
-//             }
-//           />
-//         )}
-
-//         {firstCover && (
-//           <meta
-//             property="og:image:alt"
-//             content={`${
-//               featuredBook?.title ||
-//               "TargetTrek developer book"
-//             } cover`}
-//           />
-//         )}
-
-//         <meta
-//           name="twitter:card"
-//           content={
-//             firstCover
-//               ? "summary_large_image"
-//               : "summary"
-//           }
-//         />
-
-//         <meta
-//           name="twitter:title"
-//           content={
-//             SEO_TITLE
-//           }
-//         />
-
-//         <meta
-//           name="twitter:description"
-//           content={
-//             SEO_DESCRIPTION
-//           }
-//         />
-
-//         {firstCover && (
-//           <meta
-//             name="twitter:image"
-//             content={
-//               firstCover
-//             }
-//           />
-//         )}
-
-//         <script
-//           type="application/ld+json"
-//         >
-//           {JSON.stringify(
-//             structuredData
-//           )}
-//         </script>
-//       </Helmet>
-
-//       <main
-//         className={`
-//           min-h-screen
-//           w-full
-//           overflow-x-hidden
-//           pt-16
-//           transition-colors
-//           duration-300
-//           ${pageBg}
-//           ${primaryText}
-//         `}
-//       >
-//         <section
-//           className={`
-//             relative
-//             overflow-hidden
-//             border-b
-//             ${border}
-//             ${sectionBg}
-//           `}
-//         >
-//           <div className="pointer-events-none absolute inset-0">
-//             <div
-//               className={`
-//                 absolute
-//                 -left-40
-//                 -top-40
-//                 h-[480px]
-//                 w-[480px]
-//                 rounded-full
-//                 blur-[130px]
-//                 ${
-//                   isDark
-//                     ? "bg-blue-900/15"
-//                     : "bg-blue-100/70"
-//                 }
-//               `}
-//             />
-
-//             <div
-//               className={`
-//                 absolute
-//                 -right-40
-//                 top-0
-//                 h-[520px]
-//                 w-[520px]
-//                 rounded-full
-//                 blur-[140px]
-//                 ${
-//                   isDark
-//                     ? "bg-indigo-900/10"
-//                     : "bg-indigo-100/60"
-//                 }
-//               `}
-//             />
-
-//             <div
-//               className="absolute inset-0 opacity-40"
-//               style={{
-//                 backgroundImage:
-//                   isDark
-//                     ? "linear-gradient(rgba(59,130,246,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.035) 1px, transparent 1px)"
-//                     : "linear-gradient(rgba(37,99,235,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,.035) 1px, transparent 1px)",
-//                 backgroundSize:
-//                   "42px 42px",
-//               }}
-//             />
-//           </div>
-
-//           <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:px-8 lg:py-24">
-//             <div>
-//               <div
-//                 className={`
-//                   inline-flex
-//                   items-center
-//                   gap-2
-//                   rounded-full
-//                   border
-//                   px-3.5
-//                   py-2
-//                   text-[10px]
-//                   font-black
-//                   uppercase
-//                   tracking-[0.15em]
-//                   sm:text-[11px]
-//                   ${
-//                     isDark
-//                       ? "border-blue-900/60 bg-blue-950/30 text-blue-300"
-//                       : "border-blue-200 bg-blue-50 text-blue-700"
-//                   }
-//                 `}
-//               >
-//                 <BookOpen className="h-3.5 w-3.5" />
-
-//                 TargetTrek Library
-//               </div>
-
-//               <h1
-//                 className={`
-//                   mt-6
-//                   max-w-3xl
-//                   text-4xl
-//                   font-black
-//                   leading-[1.04]
-//                   tracking-[-0.04em]
-//                   sm:text-5xl
-//                   lg:text-6xl
-//                   ${primaryText}
-//                 `}
-//               >
-//                 Practical books for{" "}
-
-//                 <span className="text-blue-500">
-//                   software engineers.
-//                 </span>
-//               </h1>
-
-//               <p
-//                 className={`
-//                   mt-6
-//                   max-w-2xl
-//                   text-base
-//                   leading-8
-//                   sm:text-lg
-//                   ${secondaryText}
-//                 `}
-//               >
-//                 Explore structured
-//                 developer resources
-//                 for System Design,
-//                 Java LLD, GenAI,
-//                 RAG, MCP, Google ADK,
-//                 backend engineering
-//                 and technical
-//                 interviews.
-//               </p>
-
-//               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-//                 <button
-//                   type="button"
-//                   onClick={
-//                     scrollToLibrary
-//                   }
-//                   className="
-//                     inline-flex
-//                     min-h-[48px]
-//                     w-full
-//                     items-center
-//                     justify-center
-//                     gap-2
-//                     rounded-xl
-//                     bg-blue-600
-//                     px-6
-//                     py-3
-//                     text-sm
-//                     font-black
-//                     text-white
-//                     shadow-lg
-//                     shadow-blue-600/20
-//                     transition
-//                     hover:-translate-y-0.5
-//                     hover:bg-blue-700
-//                     sm:w-auto
-//                   "
-//                 >
-//                   Explore Library
-
-//                   <ArrowRight className="h-4 w-4" />
-//                 </button>
-
-//                 <button
-//                   type="button"
-//                   onClick={() =>
-//                     selectTrack(
-//                       "system design"
-//                     )
-//                   }
-//                   className={`
-//                     inline-flex
-//                     min-h-[48px]
-//                     w-full
-//                     items-center
-//                     justify-center
-//                     rounded-xl
-//                     border
-//                     px-6
-//                     py-3
-//                     text-sm
-//                     font-black
-//                     transition
-//                     sm:w-auto
-//                     ${
-//                       isDark
-//                         ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-700"
-//                         : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
-//                     }
-//                   `}
-//                 >
-//                   System Design Books
-//                 </button>
-//               </div>
-
-//               {!loading &&
-//                 !error &&
-//                 books.length >
-//                   0 && (
-//                   <div className="mt-9 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
-//                     {[
-//                       [
-//                         books.length,
-//                         "Resources",
-//                       ],
-//                       [
-//                         categories.length,
-//                         "Categories",
-//                       ],
-//                       [
-//                         resourceTypes.length,
-//                         "Formats",
-//                       ],
-//                       [
-//                         "Live",
-//                         "Pricing",
-//                       ],
-//                     ].map(
-//                       ([
-//                         value,
-//                         label,
-//                       ]) => (
-//                         <div
-//                           key={
-//                             label
-//                           }
-//                           className={`
-//                             rounded-2xl
-//                             border
-//                             px-4
-//                             py-4
-//                             ${
-//                               isDark
-//                                 ? "border-slate-800 bg-slate-900/70"
-//                                 : "border-slate-200 bg-white/80"
-//                             }
-//                           `}
-//                         >
-//                           <div className="text-xl font-black text-blue-500 sm:text-2xl">
-//                             {value}
-//                           </div>
-
-//                           <div
-//                             className={`mt-1 text-[10px] font-bold sm:text-xs ${secondaryText}`}
-//                           >
-//                             {label}
-//                           </div>
-//                         </div>
-//                       )
-//                     )}
-//                   </div>
-//                 )}
-//             </div>
-
-//             <div className="relative mx-auto w-full max-w-[470px]">
-//               <div
-//                 className={`
-//                   relative
-//                   overflow-hidden
-//                   rounded-3xl
-//                   border
-//                   p-5
-//                   shadow-2xl
-//                   sm:p-7
-//                   ${border}
-//                   ${
-//                     isDark
-//                       ? "bg-[#0C131D]"
-//                       : "bg-white"
-//                   }
-//                 `}
-//               >
-//                 <div className="flex items-center justify-between gap-4">
-//                   <div>
-//                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-500">
-//                       TargetTrek Learn
-//                     </p>
-
-//                     <h2
-//                       className={`mt-2 text-xl font-black sm:text-2xl ${primaryText}`}
-//                     >
-//                       One library.
-//                       Multiple engineering
-//                       paths.
-//                     </h2>
-//                   </div>
-
-//                   <div
-//                     className={`
-//                       flex
-//                       h-11
-//                       w-11
-//                       shrink-0
-//                       items-center
-//                       justify-center
-//                       rounded-xl
-//                       ${
-//                         isDark
-//                           ? "bg-blue-950/40 text-blue-300"
-//                           : "bg-blue-50 text-blue-600"
-//                       }
-//                     `}
-//                   >
-//                     <Layers3 className="h-5 w-5" />
-//                   </div>
-//                 </div>
-
-//                 <div className="mt-7 space-y-3">
-//                   {[
-//                     [
-//                       "01",
-//                       "Understand",
-//                       "Learn fundamentals and mental models",
-//                     ],
-//                     [
-//                       "02",
-//                       "Implement",
-//                       "Study code, architecture and trade-offs",
-//                     ],
-//                     [
-//                       "03",
-//                       "Apply",
-//                       "Prepare for interviews and real engineering",
-//                     ],
-//                   ].map(
-//                     ([
-//                       number,
-//                       title,
-//                       description,
-//                     ]) => (
-//                       <div
-//                         key={
-//                           number
-//                         }
-//                         className={`
-//                           flex
-//                           items-center
-//                           gap-4
-//                           rounded-2xl
-//                           border
-//                           p-4
-//                           ${border}
-//                           ${
-//                             isDark
-//                               ? "bg-[#101924]"
-//                               : "bg-slate-50"
-//                           }
-//                         `}
-//                       >
-//                         <span
-//                           className={`
-//                             flex
-//                             h-10
-//                             w-10
-//                             shrink-0
-//                             items-center
-//                             justify-center
-//                             rounded-xl
-//                             font-mono
-//                             text-xs
-//                             font-black
-//                             ${
-//                               isDark
-//                                 ? "bg-blue-950/40 text-blue-300"
-//                                 : "bg-blue-100 text-blue-700"
-//                             }
-//                           `}
-//                         >
-//                           {number}
-//                         </span>
-
-//                         <div>
-//                           <p
-//                             className={`font-black ${primaryText}`}
-//                           >
-//                             {title}
-//                           </p>
-
-//                           <p
-//                             className={`mt-1 text-xs leading-5 ${secondaryText}`}
-//                           >
-//                             {
-//                               description
-//                             }
-//                           </p>
-//                         </div>
-//                       </div>
-//                     )
-//                   )}
-//                 </div>
-
-//                 <div
-//                   className={`
-//                     mt-6
-//                     grid
-//                     grid-cols-3
-//                     gap-2
-//                     border-t
-//                     pt-5
-//                     text-center
-//                     text-[10px]
-//                     font-bold
-//                     ${border}
-//                     ${secondaryText}
-//                   `}
-//                 >
-//                   <span>
-//                     Code-first
-//                   </span>
-
-//                   <span>
-//                     Interview-ready
-//                   </span>
-
-//                   <span>
-//                     Production-aware
-//                   </span>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         </section>
-
-//         <section
-//           className={`border-b ${border} ${sectionBg}`}
-//         >
-//           <div className="mx-auto grid max-w-7xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
-//             {discoveryItems.map(
-//               ({
-//                 icon: Icon,
-//                 title,
-//                 text,
-//               }) => (
-//                 <article
-//                   key={
-//                     title
-//                   }
-//                   className={`
-//                     rounded-2xl
-//                     border
-//                     p-5
-//                     ${border}
-//                     ${
-//                       isDark
-//                         ? "bg-[#101924]"
-//                         : "bg-slate-50/70"
-//                     }
-//                   `}
-//                 >
-//                   <div
-//                     className={`
-//                       flex
-//                       h-10
-//                       w-10
-//                       items-center
-//                       justify-center
-//                       rounded-xl
-//                       ${
-//                         isDark
-//                           ? "bg-blue-950/40 text-blue-300"
-//                           : "bg-blue-50 text-blue-600"
-//                       }
-//                     `}
-//                   >
-//                     <Icon className="h-5 w-5" />
-//                   </div>
-
-//                   <h2
-//                     className={`mt-4 text-sm font-black ${primaryText}`}
-//                   >
-//                     {title}
-//                   </h2>
-
-//                   <p
-//                     className={`mt-2 text-xs leading-6 ${secondaryText}`}
-//                   >
-//                     {text}
-//                   </p>
-//                 </article>
-//               )
-//             )}
-//           </div>
-//         </section>
-
-//         <section
-//           className={`py-16 sm:py-20 ${pageBg}`}
-//         >
-//           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-//             <SectionHeading
-//               eyebrow="Explore by goal"
-//               title="Choose what you want to learn next"
-//               description="Start with a specific engineering goal and jump directly into relevant resources in the library."
-//               isDark={
-//                 isDark
-//               }
-//               center
-//             />
-
-//             <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-//               {learningTracks.map(
-//                 ({
-//                   icon: Icon,
-//                   title,
-//                   query,
-//                   text,
-//                 }) => (
-//                   <button
-//                     key={
-//                       title
-//                     }
-//                     type="button"
-//                     onClick={() =>
-//                       selectTrack(
-//                         query
-//                       )
-//                     }
-//                     className={`
-//                       group
-//                       rounded-2xl
-//                       border
-//                       p-5
-//                       text-left
-//                       transition
-//                       hover:-translate-y-1
-//                       ${border}
-//                       ${cardBg}
-//                       ${
-//                         isDark
-//                           ? "hover:border-blue-800"
-//                           : "hover:border-blue-200 hover:shadow-lg"
-//                       }
-//                     `}
-//                   >
-//                     <div
-//                       className={`
-//                         flex
-//                         h-11
-//                         w-11
-//                         items-center
-//                         justify-center
-//                         rounded-xl
-//                         ${
-//                           isDark
-//                             ? "bg-blue-950/40 text-blue-300"
-//                             : "bg-blue-50 text-blue-600"
-//                         }
-//                       `}
-//                     >
-//                       <Icon className="h-5 w-5" />
-//                     </div>
-
-//                     <h3
-//                       className={`mt-5 text-lg font-black ${primaryText}`}
-//                     >
-//                       {title}
-//                     </h3>
-
-//                     <p
-//                       className={`mt-2 text-sm leading-6 ${secondaryText}`}
-//                     >
-//                       {text}
-//                     </p>
-
-//                     <span className="mt-5 inline-flex items-center gap-2 text-xs font-black text-blue-500">
-//                       View resources
-
-//                       <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-//                     </span>
-//                   </button>
-//                 )
-//               )}
-//             </div>
-//           </div>
-//         </section>
-
-//         {!loading &&
-//           !error &&
-//           featuredBook && (
-//             <section
-//               className={`border-y py-16 sm:py-20 ${border} ${sectionBg}`}
-//             >
-//               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-//                 <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-//                   <SectionHeading
-//                     eyebrow="Featured resource"
-//                     title="A strong place to start"
-//                     description="Explore one highlighted resource from the current TargetTrek library."
-//                     isDark={
-//                       isDark
-//                     }
-//                   />
-
-//                   <button
-//                     type="button"
-//                     onClick={
-//                       scrollToLibrary
-//                     }
-//                     className="inline-flex min-h-[44px] items-center gap-2 text-sm font-black text-blue-500"
-//                   >
-//                     Browse all resources
-
-//                     <ArrowRight className="h-4 w-4" />
-//                   </button>
-//                 </div>
-
-//                 <div className="mt-8 max-w-6xl">
-//                   <ProductCard
-//                     book={
-//                       featuredBook
-//                     }
-//                     onOpen={
-//                       openBook
-//                     }
-//                     isDark={
-//                       isDark
-//                     }
-//                     priority
-//                     featured
-//                   />
-//                 </div>
-//               </div>
-//             </section>
-//           )}
-
-//         <section
-//           id="library"
-//           className={`scroll-mt-24 border-b py-16 sm:py-20 ${border} ${softBg}`}
-//         >
-//           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-//             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-//               <SectionHeading
-//                 eyebrow="Complete library"
-//                 title="Find the right resource for your next goal"
-//                 description="Search the complete catalog, filter by category or format, and compare current prices."
-//                 isDark={
-//                   isDark
-//                 }
-//               />
-
-//               {!loading &&
-//                 !error &&
-//                 books.length >
-//                   0 && (
-//                   <p
-//                     className={`text-sm font-semibold ${secondaryText}`}
-//                   >
-//                     {books.length}{" "}
-//                     {books.length ===
-//                     1
-//                       ? "resource"
-//                       : "resources"}{" "}
-//                     available
-//                   </p>
-//                 )}
-//             </div>
-
-//             {!loading &&
-//               !error &&
-//               categories.length >
-//                 0 && (
-//                 <div className="mt-8 flex gap-2 overflow-x-auto pb-2">
-//                   <button
-//                     type="button"
-//                     onClick={() =>
-//                       setCategory(
-//                         ""
-//                       )
-//                     }
-//                     className={`
-//                       shrink-0
-//                       rounded-full
-//                       border
-//                       px-4
-//                       py-2.5
-//                       text-xs
-//                       font-black
-//                       transition
-//                       ${
-//                         !category
-//                           ? "border-blue-600 bg-blue-600 text-white"
-//                           : isDark
-//                           ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-blue-700"
-//                           : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
-//                       }
-//                     `}
-//                   >
-//                     All topics
-//                   </button>
-
-//                   {categories.map(
-//                     (item) => (
-//                       <button
-//                         type="button"
-//                         key={
-//                           item
-//                         }
-//                         onClick={() =>
-//                           setCategory(
-//                             item
-//                           )
-//                         }
-//                         className={`
-//                           shrink-0
-//                           rounded-full
-//                           border
-//                           px-4
-//                           py-2.5
-//                           text-xs
-//                           font-black
-//                           transition
-//                           ${
-//                             category ===
-//                             item
-//                               ? "border-blue-600 bg-blue-600 text-white"
-//                               : isDark
-//                               ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-blue-700"
-//                               : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
-//                           }
-//                         `}
-//                       >
-//                         {item}
-//                       </button>
-//                     )
-//                   )}
-//                 </div>
-//               )}
-
-//             {!loading &&
-//               !error &&
-//               books.length >
-//                 0 && (
-//                 <div
-//                   className={`
-//                     mt-5
-//                     rounded-2xl
-//                     border
-//                     p-4
-//                     shadow-sm
-//                     ${border}
-//                     ${cardBg}
-//                   `}
-//                 >
-//                   <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-//                     <div className="relative">
-//                       <Search
-//                         className={`
-//                           absolute
-//                           left-4
-//                           top-1/2
-//                           h-4
-//                           w-4
-//                           -translate-y-1/2
-//                           ${secondaryText}
-//                         `}
-//                       />
-
-//                       <input
-//                         type="search"
-//                         value={
-//                           search
-//                         }
-//                         onChange={(
-//                           event
-//                         ) =>
-//                           setSearch(
-//                             event
-//                               .target
-//                               .value
-//                           )
-//                         }
-//                         placeholder="Search books, topics, technologies..."
-//                         aria-label="Search TargetTrek resources"
-//                         className={`
-//                           h-11
-//                           w-full
-//                           rounded-xl
-//                           border
-//                           pl-11
-//                           pr-10
-//                           text-sm
-//                           outline-none
-//                           transition
-
-//                           ${
-//                             isDark
-//                               ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-900/30"
-//                               : "border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
-//                           }
-//                         `}
-//                       />
-
-//                       {search && (
-//                         <button
-//                           type="button"
-//                           aria-label="Clear search"
-//                           onClick={() =>
-//                             setSearch(
-//                               ""
-//                             )
-//                           }
-//                           className={`
-//                             absolute
-//                             right-2
-//                             top-1/2
-//                             flex
-//                             h-8
-//                             w-8
-//                             -translate-y-1/2
-//                             items-center
-//                             justify-center
-//                             rounded-full
-//                             transition
-//                             ${
-//                               isDark
-//                                 ? "hover:bg-slate-800"
-//                                 : "hover:bg-slate-100"
-//                             }
-//                           `}
-//                         >
-//                           <X
-//                             className={`h-4 w-4 ${secondaryText}`}
-//                           />
-//                         </button>
-//                       )}
-//                     </div>
-
-//                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex">
-//                       {categories.length >
-//                         0 && (
-//                         <SelectField
-//                           value={
-//                             category
-//                           }
-//                           onChange={
-//                             setCategory
-//                           }
-//                           options={
-//                             categories
-//                           }
-//                           placeholder="All Categories"
-//                           ariaLabel="Filter by category"
-//                           isDark={
-//                             isDark
-//                           }
-//                         />
-//                       )}
-
-//                       {resourceTypes.length >
-//                         0 && (
-//                         <SelectField
-//                           value={
-//                             resourceType
-//                           }
-//                           onChange={
-//                             setResourceType
-//                           }
-//                           options={resourceTypes.map(
-//                             (
-//                               type
-//                             ) => ({
-//                               value:
-//                                 type,
-//                               label:
-//                                 formatResourceType(
-//                                   type
-//                                 ),
-//                             })
-//                           )}
-//                           placeholder="All Types"
-//                           ariaLabel="Filter by resource type"
-//                           isDark={
-//                             isDark
-//                           }
-//                         />
-//                       )}
-
-//                       <SelectField
-//                         value={
-//                           sort
-//                         }
-//                         onChange={
-//                           setSort
-//                         }
-//                         options={[
-//                           {
-//                             value:
-//                               "featured",
-//                             label:
-//                               "Featured First",
-//                           },
-//                           {
-//                             value:
-//                               "price-low",
-//                             label:
-//                               "Price: Low to High",
-//                           },
-//                           {
-//                             value:
-//                               "price-high",
-//                             label:
-//                               "Price: High to Low",
-//                           },
-//                           {
-//                             value:
-//                               "title",
-//                             label:
-//                               "Title: A-Z",
-//                           },
-//                         ]}
-//                         placeholder="Sort By"
-//                         ariaLabel="Sort resources"
-//                         isDark={
-//                           isDark
-//                         }
-//                       />
-//                     </div>
-//                   </div>
-
-//                   <div
-//                     className={`
-//                       mt-4
-//                       flex
-//                       flex-wrap
-//                       items-center
-//                       justify-between
-//                       gap-3
-//                       border-t
-//                       pt-3
-//                       ${border}
-//                     `}
-//                   >
-//                     <div
-//                       className={`flex items-center gap-2 text-xs ${secondaryText}`}
-//                     >
-//                       <Filter className="h-3.5 w-3.5" />
-
-//                       <span>
-//                         Showing{" "}
-
-//                         <strong
-//                           className={
-//                             primaryText
-//                           }
-//                         >
-//                           {
-//                             filteredBooks.length
-//                           }
-//                         </strong>{" "}
-
-//                         of{" "}
-
-//                         <strong
-//                           className={
-//                             primaryText
-//                           }
-//                         >
-//                           {
-//                             books.length
-//                           }
-//                         </strong>{" "}
-
-//                         resources
-//                       </span>
-//                     </div>
-
-//                     {hasFilters && (
-//                       <button
-//                         type="button"
-//                         onClick={
-//                           clearFilters
-//                         }
-//                         className="text-xs font-black text-blue-500 hover:text-blue-400"
-//                       >
-//                         Clear filters
-//                       </button>
-//                     )}
-//                   </div>
-//                 </div>
-//               )}
-
-//             <div className="mt-8">
-//               {loading && (
-//                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-//                   {Array.from({
-//                     length: 6,
-//                   }).map(
-//                     (
-//                       _,
-//                       index
-//                     ) => (
-//                       <ProductSkeleton
-//                         key={
-//                           index
-//                         }
-//                         isDark={
-//                           isDark
-//                         }
-//                       />
-//                     )
-//                   )}
-//                 </div>
-//               )}
-
-//               {!loading &&
-//                 error && (
-//                   <div
-//                     role="alert"
-//                     className={`
-//                       rounded-3xl
-//                       border
-//                       px-6
-//                       py-16
-//                       text-center
-//                       ${border}
-//                       ${cardBg}
-//                     `}
-//                   >
-//                     <div
-//                       className={`
-//                         mx-auto
-//                         flex
-//                         h-16
-//                         w-16
-//                         items-center
-//                         justify-center
-//                         rounded-2xl
-//                         ${
-//                           isDark
-//                             ? "bg-red-950/30"
-//                             : "bg-red-50"
-//                         }
-//                       `}
-//                     >
-//                       <AlertCircle className="h-8 w-8 text-red-500" />
-//                     </div>
-
-//                     <h2
-//                       className={`mt-6 text-2xl font-black ${primaryText}`}
-//                     >
-//                       Unable to load
-//                       the library
-//                     </h2>
-
-//                     <p
-//                       className={`mx-auto mt-3 max-w-lg text-sm leading-6 ${secondaryText}`}
-//                     >
-//                       {error}
-//                     </p>
-
-//                     <button
-//                       type="button"
-//                       onClick={() =>
-//                         setRetryCount(
-//                           (
-//                             count
-//                           ) =>
-//                             count +
-//                             1
-//                         )
-//                       }
-//                       className="mt-7 min-h-[44px] rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white hover:bg-blue-700"
-//                     >
-//                       Try Again
-//                     </button>
-//                   </div>
-//                 )}
-
-//               {!loading &&
-//                 !error &&
-//                 books.length ===
-//                   0 && (
-//                   <div
-//                     className={`
-//                       rounded-3xl
-//                       border
-//                       px-6
-//                       py-20
-//                       text-center
-//                       ${border}
-//                       ${cardBg}
-//                     `}
-//                   >
-//                     <div
-//                       className={`
-//                         mx-auto
-//                         flex
-//                         h-20
-//                         w-20
-//                         items-center
-//                         justify-center
-//                         rounded-3xl
-//                         ${
-//                           isDark
-//                             ? "bg-blue-950/40"
-//                             : "bg-blue-50"
-//                         }
-//                       `}
-//                     >
-//                       <BookOpen className="h-9 w-9 text-blue-500" />
-//                     </div>
-
-//                     <h2
-//                       className={`mt-7 text-3xl font-black ${primaryText}`}
-//                     >
-//                       New resources
-//                       are coming soon
-//                     </h2>
-
-//                     <p
-//                       className={`mx-auto mt-4 max-w-xl text-sm leading-7 sm:text-base ${secondaryText}`}
-//                     >
-//                       We&apos;re
-//                       currently adding
-//                       more books and
-//                       digital learning
-//                       resources to the
-//                       TargetTrek
-//                       library.
-//                     </p>
-//                   </div>
-//                 )}
-
-//               {!loading &&
-//                 !error &&
-//                 books.length >
-//                   0 &&
-//                 filteredBooks.length >
-//                   0 && (
-//                   <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-//                     {filteredBooks.map(
-//                       (
-//                         book,
-//                         index
-//                       ) => (
-//                         <ProductCard
-//                           key={
-//                             book._id ||
-//                             book.pageKey ||
-//                             book.slug ||
-//                             index
-//                           }
-//                           book={
-//                             book
-//                           }
-//                           onOpen={
-//                             openBook
-//                           }
-//                           isDark={
-//                             isDark
-//                           }
-//                           priority={
-//                             index <
-//                             2
-//                           }
-//                         />
-//                       )
-//                     )}
-//                   </div>
-//                 )}
-
-//               {!loading &&
-//                 !error &&
-//                 books.length >
-//                   0 &&
-//                 filteredBooks.length ===
-//                   0 && (
-//                   <div
-//                     className={`
-//                       rounded-3xl
-//                       border
-//                       px-6
-//                       py-16
-//                       text-center
-//                       ${border}
-//                       ${cardBg}
-//                     `}
-//                   >
-//                     <div
-//                       className={`
-//                         mx-auto
-//                         flex
-//                         h-16
-//                         w-16
-//                         items-center
-//                         justify-center
-//                         rounded-2xl
-//                         ${
-//                           isDark
-//                             ? "bg-slate-800"
-//                             : "bg-slate-100"
-//                         }
-//                       `}
-//                     >
-//                       <Search
-//                         className={`h-7 w-7 ${secondaryText}`}
-//                       />
-//                     </div>
-
-//                     <h2
-//                       className={`mt-6 text-2xl font-black ${primaryText}`}
-//                     >
-//                       No resources
-//                       found
-//                     </h2>
-
-//                     <p
-//                       className={`mt-3 text-sm ${secondaryText}`}
-//                     >
-//                       Try another
-//                       search term or
-//                       clear the
-//                       selected
-//                       filters.
-//                     </p>
-
-//                     <button
-//                       type="button"
-//                       onClick={
-//                         clearFilters
-//                       }
-//                       className="mt-7 min-h-[44px] rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white hover:bg-blue-700"
-//                     >
-//                       Clear Filters
-//                     </button>
-//                   </div>
-//                 )}
-//             </div>
-//           </div>
-//         </section>
-
-//         <section
-//           className={`py-16 sm:py-20 ${sectionBg}`}
-//         >
-//           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-//             <SectionHeading
-//               eyebrow="Simple learning workflow"
-//               title="Turn a resource into practical progress"
-//               description="Use the library as a focused learning system instead of a collection of disconnected material."
-//               center
-//               isDark={
-//                 isDark
-//               }
-//             />
-
-//             <div className="mt-10 grid gap-4 md:grid-cols-3">
-//               {learningSteps.map(
-//                 (step) => (
-//                   <article
-//                     key={
-//                       step.number
-//                     }
-//                     className={`
-//                       rounded-2xl
-//                       border
-//                       p-6
-//                       ${border}
-//                       ${
-//                         isDark
-//                           ? "bg-[#101924]"
-//                           : "bg-slate-50"
-//                       }
-//                     `}
-//                   >
-//                     <span className="font-mono text-xs font-black tracking-[0.15em] text-blue-500">
-//                       STEP{" "}
-//                       {step.number}
-//                     </span>
-
-//                     <h3
-//                       className={`mt-4 text-xl font-black ${primaryText}`}
-//                     >
-//                       {
-//                         step.title
-//                       }
-//                     </h3>
-
-//                     <p
-//                       className={`mt-3 text-sm leading-7 ${secondaryText}`}
-//                     >
-//                       {step.text}
-//                     </p>
-//                   </article>
-//                 )
-//               )}
-//             </div>
-//           </div>
-//         </section>
-
-//         <section
-//           className={`
-//             border-y
-//             py-16
-//             sm:py-20
-//             ${border}
-//             ${
-//               isDark
-//                 ? "bg-[#0B111A]"
-//                 : "bg-blue-50/60"
-//             }
-//           `}
-//         >
-//           <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[.82fr_1.18fr] lg:px-8">
-//             <div>
-//               <SectionHeading
-//                 eyebrow="Why TargetTrek"
-//                 title="Technical learning built around real developer goals"
-//                 description="The library connects concepts with implementation, interview preparation and production engineering context."
-//                 isDark={
-//                   isDark
-//                 }
-//               />
-//             </div>
-
-//             <div className="grid gap-4 sm:grid-cols-2">
-//               {[
-//                 [
-//                   "Interview-focused",
-//                   "Learn to explain concepts, trade-offs and architecture decisions clearly.",
-//                 ],
-//                 [
-//                   "Implementation-aware",
-//                   "Understand how ideas translate into code and working systems.",
-//                 ],
-//                 [
-//                   "Structured for revision",
-//                   "Use focused chapters and examples to revisit important concepts quickly.",
-//                 ],
-//                 [
-//                   "Growing technical library",
-//                   "Explore new developer and GenAI resources as the TargetTrek catalog expands.",
-//                 ],
-//               ].map(
-//                 ([
-//                   title,
-//                   description,
-//                 ]) => (
-//                   <div
-//                     key={
-//                       title
-//                     }
-//                     className={`
-//                       rounded-2xl
-//                       border
-//                       p-5
-//                       ${border}
-//                       ${cardBg}
-//                     `}
-//                   >
-//                     <CheckCircle2 className="h-5 w-5 text-blue-500" />
-
-//                     <h3
-//                       className={`mt-4 font-black ${primaryText}`}
-//                     >
-//                       {title}
-//                     </h3>
-
-//                     <p
-//                       className={`mt-2 text-sm leading-6 ${secondaryText}`}
-//                     >
-//                       {
-//                         description
-//                       }
-//                     </p>
-//                   </div>
-//                 )
-//               )}
-//             </div>
-//           </div>
-//         </section>
-
-//         <section
-//           className={`py-16 sm:py-20 ${sectionBg}`}
-//         >
-//           <div className="mx-auto max-w-3xl px-4 sm:px-6">
-//             <SectionHeading
-//               eyebrow="Questions"
-//               title="Frequently asked questions"
-//               center
-//               isDark={
-//                 isDark
-//               }
-//             />
-
-//             <div
-//               className={`
-//                 mt-10
-//                 divide-y
-//                 border-y
-//                 ${
-//                   isDark
-//                     ? "divide-slate-800 border-slate-800"
-//                     : "divide-slate-200 border-slate-200"
-//                 }
-//               `}
-//             >
-//               {faqs.map(
-//                 (
-//                   item,
-//                   index
-//                 ) => (
-//                   <div
-//                     key={
-//                       item.q
-//                     }
-//                   >
-//                     <button
-//                       type="button"
-//                       onClick={() =>
-//                         setOpenFaq(
-//                           openFaq ===
-//                             index
-//                             ? -1
-//                             : index
-//                         )
-//                       }
-//                       aria-expanded={
-//                         openFaq ===
-//                         index
-//                       }
-//                       aria-controls={`books-faq-${index}`}
-//                       className={`
-//                         flex
-//                         min-h-[64px]
-//                         w-full
-//                         items-center
-//                         justify-between
-//                         gap-5
-//                         py-5
-//                         text-left
-//                         text-sm
-//                         font-black
-//                         sm:text-base
-//                         ${primaryText}
-//                       `}
-//                     >
-//                       <span>
-//                         {item.q}
-//                       </span>
-
-//                       <ChevronDown
-//                         className={`
-//                           h-5
-//                           w-5
-//                           shrink-0
-//                           transition-transform
-//                           ${secondaryText}
-//                           ${
-//                             openFaq ===
-//                             index
-//                               ? "rotate-180"
-//                               : ""
-//                           }
-//                         `}
-//                       />
-//                     </button>
-
-//                     <div
-//                       id={`books-faq-${index}`}
-//                       hidden={
-//                         openFaq !==
-//                         index
-//                       }
-//                       className={`pb-5 pr-7 text-sm leading-7 ${secondaryText}`}
-//                     >
-//                       {item.a}
-//                     </div>
-//                   </div>
-//                 )
-//               )}
-//             </div>
-//           </div>
-//         </section>
-
-//         <section
-//           className={`
-//             border-t
-//             px-4
-//             py-14
-//             sm:px-6
-//             lg:px-8
-//             ${border}
-//             ${
-//               isDark
-//                 ? "bg-[#080D14]"
-//                 : "bg-[#0B111A]"
-//             }
-//           `}
-//         >
-//           <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
-//             <div>
-//               <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-400">
-//                 Keep learning
-//               </p>
-
-//               <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight text-white sm:text-4xl">
-//                 Build stronger
-//                 engineering skills
-//                 with practical,
-//                 structured resources.
-//               </h2>
-
-//               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
-//                 Explore System
-//                 Design, Java,
-//                 backend engineering
-//                 and GenAI resources
-//                 designed for
-//                 developers.
-//               </p>
-//             </div>
-
-//             <button
-//               type="button"
-//               onClick={
-//                 scrollToLibrary
-//               }
-//               className="inline-flex min-h-[48px] w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white transition hover:bg-blue-700 md:w-auto"
-//             >
-//               Explore All Books
-
-//               <ArrowRight className="h-4 w-4" />
-//             </button>
-//           </div>
-//         </section>
-//       </main>
-//     </>
-//   );
-// }
-
 import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { Helmet } from "react-helmet-async";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+
+import {
+  AnimatePresence,
+  MotionConfig,
+  animate,
+  motion,
+  useInView,
+  useMotionValue,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 
 import {
   ArrowRight,
+  ArrowUp,
   ArrowUpRight,
   BookOpen,
   Check,
   ChevronDown,
-  FileText,
+  Code2,
   Filter,
   Grid2X2,
+  Layers3,
   List,
-  Loader2,
+  Network,
   RefreshCw,
   Search,
   SlidersHorizontal,
   Sparkles,
   X,
+  Zap,
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
@@ -3515,6 +59,70 @@ const SEO_TITLE =
 
 const SEO_DESCRIPTION =
   "Explore practical ebooks on System Design HLD, Java LLD, Google ADK, RAG, MCP, GenAI, and backend engineering from Target Trek.";
+
+const EASE = [0.22, 1, 0.36, 1];
+
+const SEARCH_EXAMPLES = [
+  "System Design HLD",
+  "Java LLD",
+  "Google ADK",
+  "RAG",
+  "MCP",
+  "Spring Boot",
+  "GenAI agents",
+];
+
+const QUICK_FILTERS = [
+  { label: "All books", value: "" },
+  { label: "System Design", value: "system design" },
+  { label: "Java", value: "java" },
+  { label: "GenAI", value: "genai" },
+  { label: "RAG", value: "rag" },
+  { label: "MCP", value: "mcp" },
+];
+
+const TICKER = [
+  "System Design",
+  "Java LLD",
+  "Google ADK",
+  "RAG",
+  "MCP",
+  "Spring Boot",
+  "Design Patterns",
+  "Caching",
+  "Kafka",
+  "Concurrency",
+  "GenAI",
+  "Backend",
+];
+
+const FAQS = [
+  {
+    question: "Which Target Trek book should I start with?",
+    answer:
+      "For architecture, scalability and system design interviews start with the System Design HLD book. For object-oriented design in Java choose the LLD book. For AI engineering, explore the Google ADK, RAG and MCP guides.",
+  },
+  {
+    question: "What is the difference between HLD and LLD?",
+    answer:
+      "HLD (high-level design) covers scalable architecture, APIs, databases, caching and distributed systems. LLD (low-level design) covers classes, interfaces, UML, design patterns and Java implementation.",
+  },
+  {
+    question: "How do I read the ebooks after buying?",
+    answer:
+      "Our books are digital ebooks. After a successful payment you receive a secure access link and can read the book in the built-in reader on the Target Trek website.",
+  },
+  {
+    question: "Are ebook purchases refundable?",
+    answer:
+      "Ebooks are digital products and purchases are final and non-refundable, so please review the book details and our Refund Policy before buying.",
+  },
+  {
+    question: "Who do I contact for purchase or access help?",
+    answer:
+      "Email supporttargettrek@gmail.com with your order reference and we will help with purchase and access issues.",
+  },
+];
 
 // =======================================================
 // UTILITIES
@@ -3663,6 +271,210 @@ const getBookUrl = (book) => {
       }`;
 };
 
+const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+// Cursor spotlight (CSS variables read by .tb-spot)
+const spot = (event) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+
+  event.currentTarget.style.setProperty(
+    "--mx",
+    `${event.clientX - rect.left}px`
+  );
+  event.currentTarget.style.setProperty(
+    "--my",
+    `${event.clientY - rect.top}px`
+  );
+};
+
+// Real <a href> so search engines can follow every book link
+function BookLink({ book, className, children, ...rest }) {
+  const raw = book?.redirectUrl?.trim();
+
+  if (!raw) {
+    return (
+      <span className={className} {...rest}>
+        {children}
+      </span>
+    );
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    return (
+      <a href={raw} className={className} {...rest}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      to={raw.startsWith("/") ? raw : `/${raw}`}
+      className={className}
+      {...rest}
+    >
+      {children}
+    </Link>
+  );
+}
+
+// =======================================================
+// MOTION HELPERS
+// =======================================================
+
+const stagger = (gap = 0.08, delay = 0) => ({
+  hidden: {},
+  show: { transition: { staggerChildren: gap, delayChildren: delay } },
+});
+
+const rise = {
+  hidden: { opacity: 0, y: 34, scale: 0.95 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.7, ease: EASE },
+  },
+};
+
+function Reveal({ children, delay = 0, y = 30, className }) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-70px" }}
+      transition={{ duration: 0.75, delay, ease: EASE }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Stagger({ children, className, gap, delay }) {
+  return (
+    <motion.div
+      className={className}
+      variants={stagger(gap, delay)}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: "-60px" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// 3D tilt that follows the cursor
+function Tilt({ children, className, max = 8, scale = 1.02 }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [max, -max]), {
+    stiffness: 220,
+    damping: 20,
+  });
+
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-max, max]), {
+    stiffness: 220,
+    damping: 20,
+  });
+
+  const onMove = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    x.set((event.clientX - rect.left) / rect.width - 0.5);
+    y.set((event.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const onLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.div
+      className={cn("tb-tilt", className)}
+      style={{ rotateX, rotateY, transformPerspective: 1000 }}
+      whileHover={{ scale }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Counter({ to }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-30px" });
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return undefined;
+
+    const controls = animate(0, to, {
+      duration: 1.2,
+      ease: "easeOut",
+      onUpdate: (latest) => setValue(Math.round(latest)),
+    });
+
+    return () => controls.stop();
+  }, [inView, to]);
+
+  return <span ref={ref}>{value}</span>;
+}
+
+function SplitWords({ text, className, delay = 0.15 }) {
+  return (
+    <span className={className} aria-label={text}>
+      {text.split(" ").map((word, index) => (
+        <span className="tb-word-mask" key={`${word}-${index}`}>
+          <motion.span
+            className="tb-word"
+            aria-hidden="true"
+            initial={{ y: "115%", rotate: 7 }}
+            animate={{ y: "0%", rotate: 0 }}
+            transition={{
+              duration: 0.85,
+              delay: delay + index * 0.09,
+              ease: EASE,
+            }}
+          >
+            {word}
+          </motion.span>{" "}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+// Words that wave in when scrolled into view
+function ScrollWords({ text }) {
+  return (
+    <>
+      {text.split(" ").map((word, index) => (
+        <span className="tb-word-mask" key={`${word}-${index}`}>
+          <motion.span
+            className="tb-word"
+            initial={{ y: "115%", rotate: 5 }}
+            whileInView={{ y: "0%", rotate: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{
+              duration: 0.7,
+              delay: index * 0.09,
+              ease: EASE,
+            }}
+          >
+            {word}
+          </motion.span>{" "}
+        </span>
+      ))}
+    </>
+  );
+}
+
 // =======================================================
 // BOOK COVER
 // =======================================================
@@ -3671,6 +483,7 @@ function BookCover({
   book,
   className = "",
   priority = false,
+  decorative = false,
 }) {
   const [imageError, setImageError] = useState(false);
 
@@ -3681,54 +494,32 @@ function BookCover({
   }, [image]);
 
   return (
-    <div
-      className={`
-        relative overflow-hidden rounded-xl
-        bg-[#24211F] ${className}
-      `}
-    >
+    <div className={cn("tb-cover", className)}>
       {image && !imageError ? (
         <img
           src={image}
-          alt={`${book?.title || "Ebook"} cover`}
+          alt={decorative ? "" : `${book?.title || "Ebook"} cover`}
+          width="300"
+          height="400"
           loading={priority ? "eager" : "lazy"}
           decoding="async"
           onError={() => setImageError(true)}
-          className="
-            h-full w-full object-cover
-            transition-transform duration-500
-            group-hover:scale-[1.035]
-          "
         />
       ) : (
-        <div
-          className="
-            flex h-full w-full flex-col
-            justify-between bg-gradient-to-br
-            from-[#1D1B19] via-[#342820]
-            to-[#9A3412] p-4 text-white
-          "
-        >
-          <div className="flex items-center justify-between">
-            <BookOpen size={22} className="text-orange-300" />
-            <span className="text-[9px] font-black tracking-widest text-white/60">
-              TARGET TREK
-            </span>
+        <div className="tb-cover-fallback">
+          <div className="tb-cover-fallback-top">
+            <BookOpen size={22} />
+            <span>TARGET TREK</span>
           </div>
 
           <div>
-            <div className="mb-3 h-1 w-10 rounded-full bg-orange-400" />
-            <h3
-              className="
-                line-clamp-5 text-sm font-extrabold
-                leading-snug sm:text-base
-              "
-            >
-              {book?.title || "Digital Ebook"}
-            </h3>
+            <i />
+            <h3>{book?.title || "Digital Ebook"}</h3>
           </div>
         </div>
       )}
+
+      <span className="tb-cover-shine" aria-hidden="true" />
     </div>
   );
 }
@@ -3737,44 +528,88 @@ function BookCover({
 // PRICE
 // =======================================================
 
-function BookPrice({ book, large = false, isDark }) {
+function BookPrice({ book, large = false }) {
   const discount = getDiscount(book);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-      <span
-        className={`
-          font-extrabold tracking-tight
-          ${large ? "text-3xl" : "text-xl"}
-          ${isDark ? "text-white" : "text-[#292524]"}
-        `}
-      >
-        {money(book?.price, book?.currency)}
-      </span>
+    <div className={cn("tb-price", large && "tb-price-lg")}>
+      <strong>{money(book?.price, book?.currency)}</strong>
 
       {Number(book?.mrp) > Number(book?.price) && (
-        <span
-          className={`
-            text-sm line-through
-            ${isDark ? "text-stone-500" : "text-stone-400"}
-          `}
-        >
-          {money(book?.mrp, book?.currency)}
-        </span>
+        <s>{money(book?.mrp, book?.currency)}</s>
       )}
 
       {discount > 0 && (
-        <span
-          className="
-            rounded-md bg-orange-100 px-2 py-1
-            text-[10px] font-extrabold
-            text-orange-700
-          "
-        >
-          {discount}% OFF
-        </span>
+        <span className="tb-off">{discount}% OFF</span>
       )}
     </div>
+  );
+}
+
+// =======================================================
+// HERO BOOK FAN
+// =======================================================
+
+function HeroFan({ books }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [12, -12]), {
+    stiffness: 120,
+    damping: 18,
+  });
+
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-16, 16]), {
+    stiffness: 120,
+    damping: 18,
+  });
+
+  const onMove = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    x.set((event.clientX - rect.left) / rect.width - 0.5);
+    y.set((event.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const onLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  // always render three slots; real covers when available
+  const slots = [books[1], books[0], books[2]];
+
+  return (
+    <motion.div
+      className="tb-fan-wrap"
+      initial={{ opacity: 0, scale: 0.8, rotate: -6 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      transition={{ duration: 1, delay: 0.35, ease: EASE }}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+    >
+      <div className="tb-ring tb-ring-1" aria-hidden="true" />
+      <div className="tb-ring tb-ring-2" aria-hidden="true" />
+
+      <span className="tb-orb tb-orb-1"><Zap size={18} /></span>
+      <span className="tb-orb tb-orb-2"><Network size={18} /></span>
+      <span className="tb-orb tb-orb-3"><Code2 size={18} /></span>
+
+      <motion.div
+        className="tb-fan"
+        style={{ rotateX, rotateY, transformPerspective: 1100 }}
+      >
+        {slots.map((book, index) => (
+          <div className={`tb-fan-book tb-fan-${index + 1}`} key={index}>
+            <BookCover
+              book={book || { title: "Target Trek Ebook" }}
+              priority
+              decorative
+            />
+          </div>
+        ))}
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -3782,364 +617,196 @@ function BookPrice({ book, large = false, isDark }) {
 // FEATURED HLD CARD
 // =======================================================
 
-function FeaturedBook({ book, onOpen, isDark }) {
+function FeaturedBook({ book }) {
   if (!book) return null;
 
   const categories = getCategories(book);
 
   return (
-    <section className="mb-8">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles size={17} className="text-orange-500" />
+    <section className="tb-featured-section" aria-labelledby="tb-featured-title">
+      <Reveal>
+        <div className="tb-section-label">
+          <Sparkles size={16} />
+          <h2 id="tb-featured-title">Featured book</h2>
+          <span>Recommended reading</span>
+        </div>
+      </Reveal>
 
-          <h2
-            className={`
-              text-base font-extrabold tracking-tight
-              ${isDark ? "text-white" : "text-stone-900"}
-            `}
+      <Reveal y={50}>
+        <div className="tb-aurora">
+          <article
+            className="tb-featured tb-spot"
+            onMouseMove={spot}
+            itemScope
+            itemType="https://schema.org/Product"
           >
-            Featured book
-          </h2>
-        </div>
+            <div className="tb-featured-glow" aria-hidden="true" />
 
-        <span className="text-xs font-semibold text-stone-500">
-          Recommended reading
-        </span>
-      </div>
-
-      <article
-        className={`
-          group relative overflow-hidden rounded-[22px]
-          border transition-all duration-300
-          ${
-            isDark
-              ? "border-stone-700 bg-[#211D1A]"
-              : "border-orange-200 bg-[#FFF6ED]"
-          }
-        `}
-      >
-        <div
-          className="
-            pointer-events-none absolute -right-20
-            -top-28 h-72 w-72 rounded-full
-            bg-orange-500/10 blur-3xl
-          "
-        />
-
-        <div
-          className="
-            relative grid gap-5 p-4
-            sm:grid-cols-[170px_1fr]
-            sm:items-center sm:gap-7 sm:p-6
-            lg:grid-cols-[205px_1fr]
-          "
-        >
-          <div className="flex justify-center sm:justify-start">
-            <div
-              className="
-                relative w-[150px] rotate-[-2deg]
-                rounded-xl shadow-[12px_18px_25px_rgba(0,0,0,.17)]
-                transition-transform duration-500
-                group-hover:rotate-0
-                sm:w-[170px] lg:w-[195px]
-              "
-            >
-              <BookCover
-                book={book}
-                priority
-                className="aspect-[3/4]"
-              />
+            <div className="tb-featured-media">
+              <Tilt max={12} scale={1.05}>
+                <div className="tb-featured-cover">
+                  <BookCover book={book} priority />
+                </div>
+              </Tilt>
             </div>
-          </div>
 
-          <div className="min-w-0">
-            <div className="flex flex-wrap gap-2">
-              <span
-                className="
-                  inline-flex items-center gap-1.5
-                  rounded-md bg-orange-500 px-2.5 py-1
-                  text-[10px] font-extrabold uppercase
-                  tracking-wider text-white
-                "
-              >
-                <Sparkles size={11} />
-                Featured
-              </span>
-
-              {categories.slice(0, 2).map((item) => (
-                <span
-                  key={item}
-                  className={`
-                    rounded-md px-2.5 py-1
-                    text-[10px] font-bold
-                    ${
-                      isDark
-                        ? "bg-stone-700 text-stone-200"
-                        : "bg-white text-stone-700"
-                    }
-                  `}
-                >
-                  {item}
+            <div className="tb-featured-body">
+              <div className="tb-tags">
+                <span className="tb-tag tb-tag-solid">
+                  <Sparkles size={11} />
+                  Featured
                 </span>
-              ))}
+
+                {categories.slice(0, 2).map((item) => (
+                  <span className="tb-tag" key={item}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+
+              <h3>{book.title}</h3>
+
+              <p>
+                {book.shortDescription ||
+                  book.subtitle ||
+                  book.description ||
+                  "Explore this practical software engineering guide."}
+              </p>
+
+              <BookPrice book={book} large />
+
+              <div className="tb-featured-actions">
+                <motion.div
+                  className="tb-inline"
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <BookLink book={book} className="tb-btn">
+                    Explore this book
+                    <ArrowUpRight size={16} />
+                  </BookLink>
+                </motion.div>
+
+                <span className="tb-format">
+                  <Check size={14} />
+                  {getResourceType(book.resourceType)}
+                </span>
+              </div>
             </div>
-
-            <h3
-              className={`
-                mt-3 max-w-2xl text-2xl
-                font-extrabold leading-tight
-                tracking-[-0.035em]
-                sm:text-3xl lg:text-[34px]
-                ${
-                  isDark
-                    ? "text-white"
-                    : "text-[#292524]"
-                }
-              `}
-            >
-              {book.title}
-            </h3>
-
-            <p
-              className={`
-                mt-3 max-w-2xl text-sm leading-6
-                ${
-                  isDark
-                    ? "text-stone-400"
-                    : "text-stone-600"
-                }
-              `}
-            >
-              {book.shortDescription ||
-                book.subtitle ||
-                book.description ||
-                "Explore this practical software engineering guide."}
-            </p>
-
-            <div className="mt-5">
-              <BookPrice book={book} large isDark={isDark} />
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => onOpen(book)}
-                className="
-                  inline-flex h-11 items-center
-                  justify-center gap-2 rounded-xl
-                  bg-orange-500 px-5 text-sm
-                  font-extrabold text-white
-                  transition hover:bg-orange-600
-                  active:scale-[.98]
-                "
-              >
-                Explore this book
-                <ArrowUpRight size={16} />
-              </button>
-
-              <span
-                className={`
-                  flex items-center gap-1.5 text-xs
-                  ${
-                    isDark
-                      ? "text-stone-400"
-                      : "text-stone-500"
-                  }
-                `}
-              >
-                <Check size={14} className="text-orange-500" />
-                {getResourceType(book.resourceType)}
-              </span>
-            </div>
-          </div>
+          </article>
         </div>
-      </article>
+      </Reveal>
     </section>
   );
 }
 
 // =======================================================
-// REGULAR BOOK CARD
+// BOOK CARD
 // =======================================================
 
-function BookCard({ book, onOpen, isDark, view }) {
+const BookCard = React.forwardRef(function BookCard(
+  { book, view, index },
+  ref
+) {
   const listView = view === "list";
   const categories = getCategories(book);
+  const discount = getDiscount(book);
 
   return (
-    <article
-      className={`
-        group overflow-hidden rounded-2xl border
-        transition-all duration-300
-        hover:-translate-y-1
-        ${
-          isDark
-            ? "border-stone-800 bg-[#211D1A] hover:border-orange-900"
-            : "border-stone-200 bg-white hover:border-orange-300 hover:shadow-[0_14px_36px_rgba(41,37,36,.08)]"
-        }
-        ${listView ? "flex flex-row" : "flex flex-col"}
-      `}
+    <motion.div
+      ref={ref}
+      layout
+      className="tb-cell"
+      initial={{ opacity: 0, y: 46, scale: 0.92 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.2 } }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{
+        duration: 0.65,
+        delay: (index % 4) * 0.08,
+        ease: EASE,
+        layout: { type: "spring", stiffness: 260, damping: 30 },
+      }}
     >
-      <button
-        type="button"
-        onClick={() => onOpen(book)}
-        className={`
-          flex shrink-0 items-center justify-center
-          overflow-hidden text-left
-          ${
-            listView
-              ? "w-[115px] p-3 sm:w-[155px] sm:p-4"
-              : "h-[215px] p-4 sm:h-[240px]"
-          }
-          ${
-            isDark
-              ? "bg-[#2A241F]"
-              : "bg-[#FAF6F1]"
-          }
-        `}
-        aria-label={`View ${book?.title}`}
-      >
-        <BookCover
-          book={book}
-          className={`
-            aspect-[3/4] shadow-lg
-            ${
-              listView
-                ? "w-full max-w-[120px]"
-                : "h-full max-w-[175px]"
-            }
-          `}
-        />
-      </button>
+      <Tilt max={listView ? 3 : 7} scale={1.025}>
+        <article
+          className={cn(
+            "tb-card tb-spot",
+            listView && "tb-card-list"
+          )}
+          onMouseMove={spot}
+        >
+          <BookLink
+            book={book}
+            className="tb-card-media"
+            aria-label={`View ${book?.title}`}
+          >
+            <span className="tb-card-aura" aria-hidden="true" />
 
-      <div
-        className={`
-          flex min-w-0 flex-1 flex-col
-          ${listView ? "p-3 sm:p-5" : "p-4"}
-        `}
-      >
-        <div className="flex flex-wrap gap-1.5">
-          {categories.slice(0, 1).map((item) => (
-            <span
-              key={item}
-              className="
-                rounded-md bg-orange-500/10
-                px-2 py-1 text-[10px]
-                font-bold text-orange-500
-              "
+            <div
+              className="tb-card-float"
+              style={{
+                animationDelay: `${(index % 5) * -0.9}s`,
+                animationDuration: `${4.4 + (index % 3) * 0.7}s`,
+              }}
             >
-              {item}
-            </span>
-          ))}
+              <BookCover book={book} />
+            </div>
 
-          <span
-            className={`
-              rounded-md px-2 py-1
-              text-[10px] font-bold
-              ${
-                isDark
-                  ? "bg-stone-800 text-stone-400"
-                  : "bg-stone-100 text-stone-600"
-              }
-            `}
-          >
-            {getResourceType(book.resourceType)}
-          </span>
-        </div>
+            {discount > 0 && (
+              <span className="tb-ribbon">{discount}% OFF</span>
+            )}
+          </BookLink>
 
-        <h3
-          className={`
-            mt-3 line-clamp-2 text-base
-            font-extrabold leading-snug
-            tracking-tight
-            ${
-              isDark
-                ? "text-white"
-                : "text-stone-900"
-            }
-          `}
-        >
-          {book.title}
-        </h3>
+          <div className="tb-card-body">
+            <div className="tb-tags">
+              {categories.slice(0, 1).map((item) => (
+                <span className="tb-tag tb-tag-orange" key={item}>
+                  {item}
+                </span>
+              ))}
 
-        {(book.subtitle || book.shortDescription) && (
-          <p
-            className={`
-              mt-2 line-clamp-2 text-xs
-              leading-5
-              ${
-                isDark
-                  ? "text-stone-400"
-                  : "text-stone-500"
-              }
-            `}
-          >
-            {book.subtitle || book.shortDescription}
-          </p>
-        )}
+              <span className="tb-tag">
+                {getResourceType(book.resourceType)}
+              </span>
+            </div>
 
-        <div className="flex-1" />
+            <h3>{book.title}</h3>
 
-        <div
-          className={`
-            mt-5 border-t pt-4
-            ${
-              isDark
-                ? "border-stone-800"
-                : "border-stone-100"
-            }
-          `}
-        >
-          <BookPrice book={book} isDark={isDark} />
+            {(book.subtitle || book.shortDescription) && (
+              <p>{book.subtitle || book.shortDescription}</p>
+            )}
 
-          <button
-            type="button"
-            onClick={() => onOpen(book)}
-            className="
-              mt-3 inline-flex items-center
-              gap-1.5 text-xs font-extrabold
-              text-orange-500 transition
-              hover:gap-2.5 hover:text-orange-600
-            "
-          >
-            View book details
-            <ArrowRight size={14} />
-          </button>
-        </div>
-      </div>
-    </article>
+            <div className="tb-card-spacer" />
+
+            <div className="tb-card-foot">
+              <BookPrice book={book} />
+
+              <BookLink book={book} className="tb-card-link">
+                View book details
+                <span className="tb-arrow">
+                  <ArrowRight size={14} />
+                </span>
+              </BookLink>
+            </div>
+          </div>
+        </article>
+      </Tilt>
+    </motion.div>
   );
-}
+});
 
 // =======================================================
 // FILTER SELECT
 // =======================================================
 
-function FilterSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-  isDark,
-}) {
+function FilterSelect({ value, onChange, options, placeholder }) {
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className="tb-select">
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-label={placeholder}
-        className={`
-          h-11 w-full appearance-none rounded-xl
-          border px-3 pr-9 text-xs font-semibold
-          outline-none transition focus:border-orange-500
-          sm:text-sm
-          ${
-            isDark
-              ? "border-stone-700 bg-[#211D1A] text-white"
-              : "border-stone-200 bg-white text-stone-700"
-          }
-        `}
       >
         <option value="">{placeholder}</option>
 
@@ -4157,13 +824,7 @@ function FilterSelect({
         })}
       </select>
 
-      <ChevronDown
-        size={15}
-        className="
-          pointer-events-none absolute right-3
-          top-1/2 -translate-y-1/2 text-stone-400
-        "
-      />
+      <ChevronDown size={15} />
     </div>
   );
 }
@@ -4172,37 +833,18 @@ function FilterSelect({
 // LOADING
 // =======================================================
 
-function BookSkeleton({ isDark }) {
+function BookSkeleton() {
   return (
-    <div
-      className={`
-        overflow-hidden rounded-2xl border
-        ${
-          isDark
-            ? "border-stone-800 bg-[#211D1A]"
-            : "border-stone-200 bg-white"
-        }
-      `}
-    >
-      <div
-        className={`
-          flex h-[220px] animate-pulse
-          items-center justify-center
-          ${
-            isDark
-              ? "bg-stone-800"
-              : "bg-stone-100"
-          }
-        `}
-      >
-        <div className="h-40 w-28 rounded-lg bg-stone-500/20" />
+    <div className="tb-skeleton">
+      <div className="tb-skeleton-media">
+        <div />
       </div>
 
-      <div className="space-y-3 p-4">
-        <div className="h-3 w-20 animate-pulse rounded bg-stone-500/20" />
-        <div className="h-5 w-full animate-pulse rounded bg-stone-500/20" />
-        <div className="h-4 w-3/4 animate-pulse rounded bg-stone-500/20" />
-        <div className="mt-6 h-7 w-24 animate-pulse rounded bg-stone-500/20" />
+      <div className="tb-skeleton-body">
+        <i style={{ width: "30%" }} />
+        <i style={{ width: "100%", height: 18 }} />
+        <i style={{ width: "70%" }} />
+        <i style={{ width: "40%", height: 26, marginTop: 22 }} />
       </div>
     </div>
   );
@@ -4213,8 +855,6 @@ function BookSkeleton({ isDark }) {
 // =======================================================
 
 export default function Books() {
-  const navigate = useNavigate();
-
   const [theme, setTheme] = useState(readTheme);
 
   const [books, setBooks] = useState([]);
@@ -4230,7 +870,53 @@ export default function Books() {
   const [view, setView] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
 
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [showTop, setShowTop] = useState(false);
+
   const isDark = theme === "dark";
+
+  const heroRef = useRef(null);
+
+  // =====================================================
+  // SCROLL EFFECTS
+  // =====================================================
+
+  const { scrollYProgress: pageProgress } = useScroll();
+
+  const progress = useSpring(pageProgress, {
+    stiffness: 140,
+    damping: 28,
+  });
+
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+
+  const blobY = useTransform(heroProgress, [0, 1], [0, 170]);
+  const blobY2 = useTransform(heroProgress, [0, 1], [0, -100]);
+  const copyY = useTransform(heroProgress, [0, 1], [0, 60]);
+  const fanY = useTransform(heroProgress, [0, 1], [0, 110]);
+  const heroFade = useTransform(heroProgress, [0, 0.85], [1, 0.2]);
+  const fanScale = useTransform(heroProgress, [0, 1], [1, 0.86]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 700);
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // rotating search placeholder
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPlaceholderIndex((n) => (n + 1) % SEARCH_EXAMPLES.length);
+    }, 2600);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // =====================================================
   // THEME - EXISTING EVENT SUPPORT
@@ -4255,29 +941,14 @@ export default function Books() {
 
     const handleFocus = () => setTheme(readTheme());
 
-    window.addEventListener(
-      THEME_EVENT,
-      handleThemeChange
-    );
-    window.addEventListener(
-      "storage",
-      handleStorageChange
-    );
+    window.addEventListener(THEME_EVENT, handleThemeChange);
+    window.addEventListener("storage", handleStorageChange);
     window.addEventListener("focus", handleFocus);
 
     return () => {
-      window.removeEventListener(
-        THEME_EVENT,
-        handleThemeChange
-      );
-      window.removeEventListener(
-        "storage",
-        handleStorageChange
-      );
-      window.removeEventListener(
-        "focus",
-        handleFocus
-      );
+      window.removeEventListener(THEME_EVENT, handleThemeChange);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 
@@ -4302,14 +973,9 @@ export default function Books() {
         signal,
       });
 
-      const result = await response
-        .json()
-        .catch(() => null);
+      const result = await response.json().catch(() => null);
 
-      if (
-        !response.ok ||
-        result?.success !== true
-      ) {
+      if (!response.ok || result?.success !== true) {
         throw new Error(
           result?.error?.message ||
             result?.message ||
@@ -4317,11 +983,7 @@ export default function Books() {
         );
       }
 
-      setBooks(
-        Array.isArray(result?.data)
-          ? result.data
-          : []
-      );
+      setBooks(Array.isArray(result?.data) ? result.data : []);
     } catch (err) {
       if (err?.name === "AbortError") return;
 
@@ -4330,8 +992,7 @@ export default function Books() {
       setBooks([]);
 
       setError(
-        err?.message ||
-          "Something went wrong while loading books."
+        err?.message || "Something went wrong while loading books."
       );
     } finally {
       if (!signal?.aborted) {
@@ -4354,18 +1015,14 @@ export default function Books() {
 
   const categories = useMemo(() => {
     return [
-      ...new Set(
-        books.flatMap((book) => getCategories(book))
-      ),
+      ...new Set(books.flatMap((book) => getCategories(book))),
     ].sort((a, b) => a.localeCompare(b));
   }, [books]);
 
   const resourceTypes = useMemo(() => {
     return [
       ...new Set(
-        books
-          .map((book) => book.resourceType)
-          .filter(Boolean)
+        books.map((book) => book.resourceType).filter(Boolean)
       ),
     ].sort();
   }, [books]);
@@ -4387,9 +1044,17 @@ export default function Books() {
     );
   }, [books]);
 
-  const featuredId = featuredBook
-    ? getBookId(featuredBook)
-    : null;
+  const featuredId = featuredBook ? getBookId(featuredBook) : null;
+
+  // books shown in the hero fan: featured first, then others
+  const fanBooks = useMemo(() => {
+    if (!featuredBook) return [];
+
+    return [
+      featuredBook,
+      ...books.filter((b) => getBookId(b) !== featuredId),
+    ].slice(0, 3);
+  }, [books, featuredBook, featuredId]);
 
   // =====================================================
   // FILTERS & SORTING
@@ -4399,9 +1064,7 @@ export default function Books() {
     const query = search.trim().toLowerCase();
 
     const result = books.filter((book) => {
-      const tags = Array.isArray(book?.tags)
-        ? book.tags.join(" ")
-        : "";
+      const tags = Array.isArray(book?.tags) ? book.tags.join(" ") : "";
 
       const searchable = [
         book?.title,
@@ -4419,33 +1082,24 @@ export default function Books() {
         .join(" ")
         .toLowerCase();
 
-      const matchesSearch =
-        !query || searchable.includes(query);
+      const matchesSearch = !query || searchable.includes(query);
 
       const matchesCategory =
-        !category ||
-        getCategories(book).includes(category);
+        !category || getCategories(book).includes(category);
 
       const matchesType =
-        !resourceType ||
-        book?.resourceType === resourceType;
+        !resourceType || book?.resourceType === resourceType;
 
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesType
-      );
+      return matchesSearch && matchesCategory && matchesType;
     });
 
     return [...result].sort((a, b) => {
       if (sort === "price-low") {
-        return Number(a?.price ?? 0) -
-          Number(b?.price ?? 0);
+        return Number(a?.price ?? 0) - Number(b?.price ?? 0);
       }
 
       if (sort === "price-high") {
-        return Number(b?.price ?? 0) -
-          Number(a?.price ?? 0);
+        return Number(b?.price ?? 0) - Number(a?.price ?? 0);
       }
 
       if (sort === "title") {
@@ -4455,19 +1109,15 @@ export default function Books() {
       }
 
       if (sort === "featured") {
-        return Number(Boolean(b?.isFeatured)) -
-          Number(Boolean(a?.isFeatured));
+        return (
+          Number(Boolean(b?.isFeatured)) -
+          Number(Boolean(a?.isFeatured))
+        );
       }
 
       return 0;
     });
-  }, [
-    books,
-    search,
-    category,
-    resourceType,
-    sort,
-  ]);
+  }, [books, search, category, resourceType, sort]);
 
   const hasFilters = Boolean(
     search || category || resourceType || sort
@@ -4492,34 +1142,17 @@ export default function Books() {
     setSort("");
   };
 
-  // =====================================================
-  // EXISTING REDIRECT LOGIC
-  // =====================================================
+  // jump to the catalog with a topic applied
+  const pickPath = (value) => {
+    setSearch(value);
+    setCategory("");
+    setResourceType("");
 
-  const openBook = (book) => {
-    const redirectUrl = book?.redirectUrl?.trim();
-
-    if (!redirectUrl) {
-      console.error(
-        "Book redirect URL missing:",
-        book
-      );
-      return;
-    }
-
-    if (
-      redirectUrl.startsWith("http://") ||
-      redirectUrl.startsWith("https://")
-    ) {
-      window.location.href = redirectUrl;
-      return;
-    }
-
-    navigate(
-      redirectUrl.startsWith("/")
-        ? redirectUrl
-        : `/${redirectUrl}`
-    );
+    requestAnimationFrame(() => {
+      document
+        .getElementById("library")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   // =====================================================
@@ -4530,22 +1163,36 @@ export default function Books() {
     const items = books
       .filter((book) => book?.redirectUrl)
       .slice(0, 50)
-      .map((book, index) => ({
-        "@type": "ListItem",
-        position: index + 1,
-        url: getBookUrl(book),
-        item: {
-          "@type": "CreativeWork",
-          name: book?.title || "Target Trek Resource",
+      .map((book, index) => {
+        const price = Number(book?.price);
+
+        return {
+          "@type": "ListItem",
+          position: index + 1,
           url: getBookUrl(book),
-          ...(getCoverUrl(book)
-            ? { image: getCoverUrl(book) }
-            : {}),
-          ...(book?.subtitle
-            ? { description: book.subtitle }
-            : {}),
-        },
-      }));
+          item: {
+            "@type": "Product",
+            name: book?.title || "Target Trek Resource",
+            url: getBookUrl(book),
+            brand: { "@type": "Brand", name: "Target Trek" },
+            ...(getCoverUrl(book) ? { image: getCoverUrl(book) } : {}),
+            ...(book?.subtitle || book?.shortDescription
+              ? { description: book.subtitle || book.shortDescription }
+              : {}),
+            ...(Number.isFinite(price) && price >= 0
+              ? {
+                  offers: {
+                    "@type": "Offer",
+                    price: String(price),
+                    priceCurrency: book?.currency || "INR",
+                    availability: "https://schema.org/InStock",
+                    url: getBookUrl(book),
+                  },
+                }
+              : {}),
+          },
+        };
+      });
 
     return {
       "@context": "https://schema.org",
@@ -4562,6 +1209,24 @@ export default function Books() {
           name: SEO_TITLE,
           url: PAGE_URL,
           description: SEO_DESCRIPTION,
+          isPartOf: { "@id": `${SITE_URL}/#organization` },
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Target Trek",
+              item: SITE_URL,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Books",
+              item: PAGE_URL,
+            },
+          ],
         },
         {
           "@type": "ItemList",
@@ -4569,216 +1234,811 @@ export default function Books() {
           numberOfItems: items.length,
           itemListElement: items,
         },
+        {
+          "@type": "FAQPage",
+          mainEntity: FAQS.map((faq) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: { "@type": "Answer", text: faq.answer },
+          })),
+        },
       ],
     };
   }, [books]);
 
-  const cover = featuredBook
-    ? getCoverUrl(featuredBook)
-    : "";
+  const cover = featuredBook ? getCoverUrl(featuredBook) : "";
 
-  // =====================================================
-  // THEME CLASSES
-  // =====================================================
-
-  const pageBg = isDark
-    ? "bg-[#151311]"
-    : "bg-[#FAF9F6]";
-
-  const primaryText = isDark
-    ? "text-white"
-    : "text-[#292524]";
-
-  const secondaryText = isDark
-    ? "text-stone-400"
-    : "text-stone-500";
-
-  const border = isDark
-    ? "border-stone-800"
-    : "border-stone-200";
+  const stats = [
+    { value: books.length, label: "Digital resources" },
+    { value: categories.length, label: "Categories" },
+    { value: resourceTypes.length, label: "Formats" },
+  ];
 
   // =====================================================
   // RENDER
   // =====================================================
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <Helmet>
         <title>{SEO_TITLE}</title>
 
+        <meta name="description" content={SEO_DESCRIPTION} />
+
         <meta
-          name="description"
-          content={SEO_DESCRIPTION}
+          name="keywords"
+          content="system design books, HLD ebook, Java LLD ebook, Google ADK, RAG, MCP, GenAI ebooks, backend engineering, software engineering interview preparation, Target Trek"
+        />
+
+        <meta
+          name="robots"
+          content="index,follow,max-image-preview:large,max-snippet:-1"
         />
 
         <link rel="canonical" href={PAGE_URL} />
 
-        <meta
-          property="og:title"
-          content={SEO_TITLE}
-        />
-
-        <meta
-          property="og:description"
-          content={SEO_DESCRIPTION}
-        />
-
+        <meta property="og:site_name" content="Target Trek" />
+        <meta property="og:locale" content="en_IN" />
+        <meta property="og:title" content={SEO_TITLE} />
+        <meta property="og:description" content={SEO_DESCRIPTION} />
         <meta property="og:url" content={PAGE_URL} />
-
         <meta property="og:type" content="website" />
 
+        {cover && <meta property="og:image" content={cover} />}
         {cover && (
-          <meta property="og:image" content={cover} />
+          <meta
+            property="og:image:alt"
+            content={`${featuredBook?.title || "Target Trek"} cover`}
+          />
         )}
 
         <meta
           name="twitter:card"
           content={cover ? "summary_large_image" : "summary"}
         />
+        <meta name="twitter:title" content={SEO_TITLE} />
+        <meta name="twitter:description" content={SEO_DESCRIPTION} />
+        {cover && <meta name="twitter:image" content={cover} />}
 
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
         </script>
       </Helmet>
 
-      {/* Scoped fonts and animation */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
 
-        .tt-books {
-          font-family: 'DM Sans', sans-serif;
+        .tb-root {
+          --tb-bg: #F3EBE0;
+          --tb-surface: #FBF6EE;
+          --tb-alt: #EADFD0;
+          --tb-text: #1C1917;
+          --tb-muted: #61574F;
+          --tb-subtle: #9A8E83;
+          --tb-border: #DDD0BF;
+          --tb-orange: #E5530A;
+          --tb-orange-b: #F97316;
+          --tb-soft: #FCE6D2;
+          --tb-soft-border: #F6C79B;
+          --tb-shadow: 0 18px 50px rgba(74,48,24,.14);
+          --tb-glow: rgba(249,115,22,.2);
+
+          min-height: 100vh; width: 100%;
+          overflow-x: clip;
+          background:
+            radial-gradient(900px 500px at 8% 12%, rgba(249,115,22,.07), transparent 60%),
+            radial-gradient(800px 520px at 95% 40%, rgba(251,191,36,.09), transparent 60%),
+            var(--tb-bg);
+          color: var(--tb-text);
+          font-family: "DM Sans", sans-serif;
+          -webkit-font-smoothing: antialiased;
+          transition: background .25s, color .25s;
+        }
+        .tb-root[data-theme="dark"] {
+          --tb-bg: #151311;
+          --tb-surface: #211E1B;
+          --tb-alt: #2B2622;
+          --tb-text: #FAF8F5;
+          --tb-muted: #B5ACA5;
+          --tb-subtle: #8D827A;
+          --tb-border: #39332E;
+          --tb-orange: #FB923C;
+          --tb-soft: #37251B;
+          --tb-soft-border: #693B23;
+          --tb-shadow: 0 18px 50px rgba(0,0,0,.35);
+          --tb-glow: rgba(251,146,60,.15);
+          color-scheme: dark;
+        }
+        .tb-root *, .tb-root *::before, .tb-root *::after { box-sizing: border-box; }
+        .tb-root button { font: inherit; cursor: pointer; }
+        .tb-root h1, .tb-root h2, .tb-root h3, .tb-root h4, .tb-root button { font-family: "Manrope", sans-serif; }
+
+        .tb-shell { width: min(1240px, calc(100% - 40px)); margin: 0 auto; }
+
+        .tb-progress {
+          position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999;
+          transform-origin: 0 50%;
+          background: linear-gradient(90deg,#F97316,#FDBA74,#EA580C);
         }
 
-        .tt-books h1,
-        .tt-books h2,
-        .tt-books h3,
-        .tt-books button {
-          font-family: 'Manrope', sans-serif;
+        /* shared */
+        .tb-btn {
+          position: relative; overflow: hidden;
+          display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+          min-height: 46px; padding: 11px 22px; border: 0; border-radius: 12px;
+          background: linear-gradient(135deg,#F97316,#EA580C); color: #fff;
+          font-size: 13px; font-weight: 800;
+          box-shadow: 0 10px 26px rgba(249,115,22,.3);
+        }
+        .tb-btn::after {
+          content: ""; position: absolute; top: 0; left: -120%; width: 60%; height: 100%;
+          background: linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);
+          transform: skewX(-20deg);
+        }
+        .tb-btn:hover::after { left: 150%; transition: left .7s ease; }
+
+        .tb-spot { position: relative; overflow: hidden; }
+        .tb-spot::before {
+          content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 0;
+          background: radial-gradient(280px circle at var(--mx,50%) var(--my,50%), var(--tb-glow), transparent 70%);
+          opacity: 0; transition: opacity .3s; pointer-events: none;
+        }
+        .tb-spot:hover::before { opacity: 1; }
+        .tb-spot > * { position: relative; z-index: 1; }
+        .tb-tilt { height: 100%; transform-style: preserve-3d; }
+
+        .tb-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+        .tb-tag {
+          display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 7px;
+          background: var(--tb-alt); color: var(--tb-muted); border: 1px solid var(--tb-border);
+          font-size: 10px; font-weight: 800;
+        }
+        .tb-tag-solid { background: var(--tb-orange-b); border-color: transparent; color: #fff; text-transform: uppercase; letter-spacing: .08em; }
+        .tb-tag-orange { background: var(--tb-soft); border-color: var(--tb-soft-border); color: var(--tb-orange); }
+
+        .tb-price { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+        .tb-price strong { font-size: 21px; font-weight: 850; letter-spacing: -.03em; color: var(--tb-text); }
+        .tb-price-lg strong { font-size: 34px; }
+        .tb-price s { font-size: 13px; color: var(--tb-subtle); }
+        .tb-off {
+          padding: 4px 8px; border-radius: 7px; background: var(--tb-soft); color: var(--tb-orange);
+          font-size: 10px; font-weight: 900; animation: tb-pulse 2.4s ease-in-out infinite;
         }
 
-        .tt-book-fade {
-          animation: ttBookFade .45s ease both;
+        /* cover */
+        .tb-cover {
+          position: relative; overflow: hidden; border-radius: 6px 12px 12px 6px;
+          background: #24211F; aspect-ratio: 3 / 4; width: 100%;
+          box-shadow: inset 4px 0 0 rgba(255,255,255,.08);
+        }
+        .tb-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .tb-cover-fallback {
+          display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 14px; color: #fff;
+          background: linear-gradient(140deg,#1D1B19,#342820 60%,#9A3412);
+        }
+        .tb-cover-fallback-top { display: flex; justify-content: space-between; align-items: center; color: #FDBA74; }
+        .tb-cover-fallback-top span { font-size: 8px; letter-spacing: .16em; font-weight: 800; color: rgba(255,255,255,.6); }
+        .tb-cover-fallback i { display: block; width: 36px; height: 3px; border-radius: 3px; background: #FB923C; margin-bottom: 10px; }
+        .tb-cover-fallback h3 { margin: 0; font-size: 14px; line-height: 1.3; font-weight: 800; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+        .tb-cover-shine {
+          position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(115deg,transparent 35%,rgba(255,255,255,.34) 50%,transparent 65%);
+          transform: translateX(-130%);
         }
 
-        @keyframes ttBookFade {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        /* hero */
+        .tb-hero {
+          position: relative; overflow: hidden;
+          padding: 112px 0 96px;
+          background: linear-gradient(180deg,#FBEBD7 0%,#F5E2CB 55%,var(--tb-alt) 100%);
+        }
+        .tb-root[data-theme="dark"] .tb-hero { background: linear-gradient(180deg,#1C1816 0%,#1F1915 60%,var(--tb-alt) 100%); }
+        .tb-hero-glow {
+          position: absolute; inset: 0; pointer-events: none;
+          background: radial-gradient(420px circle at var(--hx,72%) var(--hy,30%), rgba(249,115,22,.22), transparent 70%);
+          transition: background .2s;
+        }
+        .tb-wave { position: absolute; left: 0; right: 0; bottom: -1px; height: 54px; overflow: hidden; pointer-events: none; }
+        .tb-wave svg { position: absolute; left: 0; bottom: 0; width: 200%; height: 100%; fill: var(--tb-alt); animation: tb-wave 14s linear infinite; }
+        .tb-wave svg:nth-child(2) { opacity: .55; animation-duration: 22s; animation-direction: reverse; }
+        .tb-cue {
+          position: absolute; z-index: 2; left: 50%; bottom: 62px; transform: translateX(-50%);
+          display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--tb-muted);
+          font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+        }
+        .tb-cue-mouse { width: 22px; height: 34px; border: 2px solid var(--tb-muted); border-radius: 12px; position: relative; }
+        .tb-cue-mouse::after { content: ""; position: absolute; left: 50%; top: 6px; width: 3px; height: 7px; margin-left: -1.5px; border-radius: 3px; background: var(--tb-orange-b); animation: tb-wheel 1.6s ease-in-out infinite; }
+        .tb-hero-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+        .tb-blob { position: absolute; border-radius: 50%; filter: blur(70px); }
+        .tb-blob-a { width: 540px; height: 540px; right: -170px; top: -250px; background: radial-gradient(circle,rgba(249,115,22,.28),transparent 68%); animation: tb-drift 14s ease-in-out infinite; }
+        .tb-blob-b { width: 440px; height: 440px; left: -160px; bottom: -200px; background: radial-gradient(circle,rgba(251,191,36,.22),transparent 68%); animation: tb-drift 18s ease-in-out infinite reverse; }
+        .tb-dots {
+          position: absolute; inset: 0; opacity: .55;
+          background-image: radial-gradient(var(--tb-border) 1px, transparent 1px);
+          background-size: 26px 26px;
+          mask-image: radial-gradient(ellipse at 70% 35%, #000, transparent 70%);
+          -webkit-mask-image: radial-gradient(ellipse at 70% 35%, #000, transparent 70%);
+        }
+        .tb-spark {
+          position: absolute; width: 5px; height: 5px; border-radius: 50%;
+          background: var(--tb-orange-b); opacity: .0;
+          animation: tb-rise 9s linear infinite;
         }
 
+        .tb-hero-grid {
+          position: relative; display: grid; align-items: center; gap: 50px;
+          grid-template-columns: minmax(0,1.05fr) minmax(300px,.95fr);
+        }
+        .tb-badge {
+          display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px;
+          background: var(--tb-soft); border: 1px solid var(--tb-soft-border); color: var(--tb-orange);
+          font-size: 10px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase;
+        }
+        .tb-badge svg { animation: tb-spin 6s linear infinite; }
+        .tb-hero h1 {
+          margin: 22px 0 16px; max-width: 680px;
+          font-size: clamp(40px, 5.8vw, 74px); line-height: 1.04; letter-spacing: -.06em; font-weight: 850;
+        }
+        .tb-word-mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; }
+        .tb-word { display: inline-block; transform-origin: 0 100%; }
+        .tb-accent {
+          background: linear-gradient(100deg,#F97316,#FBBF24,#EA580C,#F97316); background-size: 250% auto;
+          -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+          animation: tb-shine 5s linear infinite;
+        }
+        .tb-hero-copy { max-width: 540px; margin: 0; font-size: 15px; line-height: 1.85; color: var(--tb-muted); }
+        .tb-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+        .tb-btn-ghost {
+          display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 11px 20px;
+          border-radius: 12px; border: 1px solid var(--tb-border); background: var(--tb-surface); color: var(--tb-text);
+          font-size: 13px; font-weight: 800; transition: border-color .2s, color .2s;
+        }
+        .tb-btn-ghost:hover { border-color: var(--tb-orange); color: var(--tb-orange); }
+
+        .tb-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+        .tb-stat {
+          min-width: 110px; padding: 13px 16px; border-radius: 14px;
+          background: var(--tb-bg); border: 1px solid var(--tb-border);
+          transition: transform .3s, border-color .3s;
+        }
+        .tb-stat:hover { transform: translateY(-6px) rotate(-1.5deg); border-color: var(--tb-orange); }
+        .tb-stat strong { display: block; font-family: "Manrope",sans-serif; font-size: 26px; font-weight: 850; color: var(--tb-orange); letter-spacing: -.04em; }
+        .tb-stat span { font-size: 10px; font-weight: 800; color: var(--tb-muted); }
+
+        /* fan */
+        .tb-fan-wrap { position: relative; min-height: 400px; display: grid; place-items: center; }
+        .tb-ring {
+          position: absolute; left: 50%; top: 50%; border-radius: 50%; pointer-events: none;
+          aspect-ratio: 1; transform: translate(-50%,-50%);
+        }
+        .tb-ring-1 { width: 108%; border: 1px dashed rgba(249,115,22,.4); animation: tb-spin-c 40s linear infinite; }
+        .tb-ring-2 { width: 82%; border: 1px solid rgba(249,115,22,.18); animation: tb-spin-c 26s linear infinite reverse; }
+        .tb-orb {
+          position: absolute; z-index: 4; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px;
+          background: var(--tb-surface); color: var(--tb-orange); border: 1px solid var(--tb-soft-border);
+          box-shadow: var(--tb-shadow); animation: tb-float 6s ease-in-out infinite;
+        }
+        .tb-orb-1 { top: 2%; left: 6%; }
+        .tb-orb-2 { top: 20%; right: 0; animation-delay: -2s; }
+        .tb-orb-3 { bottom: 6%; left: 2%; animation-delay: -4s; }
+        .tb-fan { position: relative; width: min(100%, 420px); height: 400px; transform-style: preserve-3d; }
+        .tb-fan-book { position: absolute; left: 50%; top: 50%; width: 46%; transition: transform .6s cubic-bezier(.22,1,.36,1); animation: tb-bob 5.5s ease-in-out infinite; }
+        .tb-fan-book .tb-cover { box-shadow: 14px 22px 34px rgba(0,0,0,.34), inset 5px 0 rgba(255,255,255,.08); }
+        .tb-fan-1 { transform: translate(-128%,-50%) rotate(-13deg) translateZ(-30px); animation-delay: -1.5s; }
+        .tb-fan-2 { transform: translate(-50%,-52%) translateZ(60px); width: 52%; z-index: 3; }
+        .tb-fan-3 { transform: translate(28%,-50%) rotate(13deg) translateZ(-30px); animation-delay: -3s; }
+        .tb-fan-wrap:hover .tb-fan-1 { transform: translate(-150%,-50%) rotate(-19deg) translateZ(-30px); }
+        .tb-fan-wrap:hover .tb-fan-3 { transform: translate(50%,-50%) rotate(19deg) translateZ(-30px); }
+        .tb-fan-wrap:hover .tb-fan-2 { transform: translate(-50%,-56%) translateZ(90px) scale(1.06); }
+
+        /* ticker */
+        .tb-ticker {
+          overflow: hidden; padding: 10px 0 16px; border-bottom: 1px solid var(--tb-border); background: var(--tb-alt);
+          mask-image: linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+          -webkit-mask-image: linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+        }
+        .tb-ticker-track { display: flex; width: max-content; gap: 14px; animation: tb-marquee 36s linear infinite; }
+        .tb-ticker-rev { margin-top: 10px; animation-direction: reverse; animation-duration: 44s; }
+        .tb-ticker:hover .tb-ticker-track { animation-play-state: paused; }
+        .tb-ticker-item {
+          display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; padding: 8px 16px; border-radius: 999px;
+          border: 1px solid var(--tb-border); background: var(--tb-surface); color: var(--tb-muted); font-size: 12px; font-weight: 750;
+          transition: color .2s, border-color .2s, transform .2s;
+        }
+        .tb-ticker-item:hover { color: var(--tb-orange); border-color: var(--tb-orange); transform: scale(1.08) rotate(-2deg); }
+        .tb-ticker-item i { width: 6px; height: 6px; border-radius: 50%; background: var(--tb-orange-b); }
+
+        .tb-main { padding: 60px 0 40px; }
+
+        /* error */
+        .tb-error {
+          display: flex; flex-direction: column; gap: 14px; margin-bottom: 26px; padding: 18px; border-radius: 14px;
+          border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626;
+        }
+        .tb-root[data-theme="dark"] .tb-error { background: rgba(127,29,29,.2); border-color: #7F1D1D; }
+        @media (min-width: 640px) { .tb-error { flex-direction: row; align-items: center; justify-content: space-between; } }
+        .tb-error p { margin: 0; font-size: 12px; } .tb-error b { font-size: 14px; }
+        .tb-error button { display: inline-flex; gap: 8px; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: #EF4444; color: #fff; font-size: 12px; font-weight: 800; }
+
+        /* section label */
+        .tb-section-label { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; color: var(--tb-orange); }
+        .tb-section-label h2 { margin: 0; font-size: 17px; font-weight: 850; letter-spacing: -.02em; color: var(--tb-text); }
+        .tb-section-label span { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--tb-subtle); }
+
+        /* featured */
+        .tb-featured-section { margin-bottom: 64px; }
+        .tb-aurora { position: relative; overflow: hidden; padding: 2px; border-radius: 28px; isolation: isolate; }
+        .tb-aurora::before {
+          content: ""; position: absolute; z-index: -1; inset: -60%;
+          background: conic-gradient(from 0deg,#F97316,#FBBF24,transparent 35%,#EA580C,transparent 65%,#F97316);
+          animation: tb-spin 7s linear infinite;
+        }
+        .tb-featured {
+          display: grid; grid-template-columns: minmax(200px,.7fr) minmax(0,1.3fr); gap: 36px; align-items: center;
+          padding: 34px; border-radius: 26px; background: var(--tb-surface);
+        }
+        .tb-featured-glow {
+          position: absolute !important; right: -90px; top: -120px; width: 340px; height: 340px; border-radius: 50%;
+          background: radial-gradient(circle,rgba(249,115,22,.22),transparent 70%); pointer-events: none;
+        }
+        .tb-featured-media { display: grid; place-items: center; perspective: 1000px; }
+        .tb-featured-cover {
+          width: min(240px, 100%); border-radius: 8px 14px 14px 8px; transform: rotate(-3deg);
+          box-shadow: 18px 28px 44px rgba(0,0,0,.28); animation: tb-bob 6s ease-in-out infinite;
+        }
+        .tb-featured:hover .tb-cover-shine { transform: translateX(130%); transition: transform .9s ease; }
+        .tb-featured-body h3 { margin: 16px 0 0; font-size: clamp(26px,3.4vw,40px); line-height: 1.12; letter-spacing: -.045em; font-weight: 850; }
+        .tb-featured-body p { margin: 14px 0 20px; max-width: 580px; font-size: 14px; line-height: 1.8; color: var(--tb-muted); }
+        .tb-featured-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 22px; }
+        .tb-format { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--tb-muted); }
+        .tb-format svg { color: var(--tb-orange); }
+
+        .tb-inline { display: inline-block; }
+        .tb-root a { text-decoration: none; }
+        .tb-root a.tb-btn { color: #fff; }
+        a.tb-card-media { text-decoration: none; }
+        .tb-card:hover .tb-price strong { animation: tb-pop .5s ease; }
+
+        /* library heading + toolbar */
+        .tb-lib-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+        .tb-kicker { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; color: var(--tb-orange); }
+        .tb-kicker i { display: block; width: 4px; height: 16px; border-radius: 4px; background: var(--tb-orange-b); }
+        .tb-lib-head h2 { margin: 6px 0 0; font-size: clamp(26px,3.2vw,38px); font-weight: 850; letter-spacing: -.045em; }
+        .tb-lib-head p { margin: 6px 0 0; font-size: 13px; color: var(--tb-muted); }
+
+        .tb-toolbar {
+          position: sticky; top: 70px; z-index: 30; margin-bottom: 22px; padding: 12px;
+          border-radius: 18px; border: 1px solid var(--tb-border);
+          background: color-mix(in srgb, var(--tb-surface) 88%, transparent);
+          backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+          box-shadow: 0 10px 30px rgba(39,29,22,.06);
+        }
+        .tb-toolbar-row { display: flex; gap: 10px; align-items: center; }
+        .tb-search { position: relative; flex: 1; min-width: 0; }
+        .tb-search svg.tb-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--tb-subtle); }
+        .tb-search input {
+          width: 100%; height: 48px; padding: 0 44px 0 44px; border-radius: 13px; outline: none;
+          border: 1px solid var(--tb-border); background: var(--tb-bg); color: var(--tb-text); font-size: 14px;
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .tb-search input:focus { border-color: var(--tb-orange-b); box-shadow: 0 0 0 4px var(--tb-glow); }
+        .tb-search input::placeholder { color: var(--tb-subtle); }
+        .tb-search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--tb-subtle); }
+        .tb-search-clear:hover { color: var(--tb-orange); }
+        .tb-icon-btn {
+          position: relative; display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 14px;
+          border-radius: 13px; border: 1px solid var(--tb-border); background: var(--tb-bg); color: var(--tb-text);
+          font-size: 12px; font-weight: 800; transition: border-color .2s;
+        }
+        .tb-icon-btn:hover { border-color: var(--tb-orange); }
+        .tb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tb-orange-b); }
+        .tb-view { position: relative; display: flex; padding: 4px; height: 48px; border-radius: 13px; border: 1px solid var(--tb-border); background: var(--tb-bg); }
+        .tb-view button { position: relative; z-index: 1; display: grid; place-items: center; width: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--tb-muted); transition: color .2s; }
+        .tb-view button[aria-pressed="true"] { color: #fff; }
+        .tb-view-pill { position: absolute; inset: 0; z-index: -1; border-radius: 9px; background: linear-gradient(135deg,#F97316,#EA580C); }
+
+        .tb-chips { display: flex; gap: 10px; margin-top: 12px; padding: 4px 2px 6px; overflow-x: auto; scrollbar-width: none; }
+        .tb-chips::-webkit-scrollbar { display: none; }
+        .tb-chip {
+          position: relative; flex-shrink: 0; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--tb-border);
+          background: var(--tb-surface); color: var(--tb-muted); font-size: 12px; font-weight: 800;
+          transition: color .25s, border-color .25s, box-shadow .25s;
+        }
+        .tb-chip:hover { border-color: var(--tb-orange); color: var(--tb-orange); }
+        .tb-chip[aria-pressed="true"] {
+          color: #fff; border-color: transparent;
+          box-shadow: 0 8px 22px rgba(28,25,23,.38), 0 0 0 2px rgba(249,115,22,.65);
+        }
+        .tb-root[data-theme="dark"] .tb-chip[aria-pressed="true"] { color: #1C1917; box-shadow: 0 8px 22px rgba(249,115,22,.35), 0 0 0 2px rgba(253,186,116,.7); }
+        .tb-chip-label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; }
+        .tb-chip[aria-pressed="true"] .tb-chip-label::before {
+          content: ""; width: 7px; height: 7px; border-radius: 50%; background: #F97316; box-shadow: 0 0 10px #F97316;
+          animation: tb-pulse 1.6s ease-in-out infinite;
+        }
+        .tb-chip-pill {
+          position: absolute; inset: 0; border-radius: 999px;
+          background: linear-gradient(135deg,#1C1917,#3B2214 60%,#7C2D12);
+        }
+        .tb-root[data-theme="dark"] .tb-chip-pill { background: linear-gradient(135deg,#FDBA74,#F97316); }
+
+        .tb-filters { padding-top: 14px; }
+        .tb-filters-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .tb-filters-head h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 850; }
+        .tb-filters-head h3 svg { color: var(--tb-orange); }
+        .tb-link-btn { border: 0; background: transparent; color: var(--tb-orange); font-size: 12px; font-weight: 800; }
+        .tb-filter-grid { display: grid; gap: 10px; grid-template-columns: repeat(3,minmax(0,1fr)); }
+        .tb-select { position: relative; }
+        .tb-select select {
+          width: 100%; height: 46px; padding: 0 36px 0 12px; appearance: none; -webkit-appearance: none; outline: none;
+          border-radius: 12px; border: 1px solid var(--tb-border); background: var(--tb-bg); color: var(--tb-text); font-size: 13px; font-weight: 600;
+        }
+        .tb-select select:focus { border-color: var(--tb-orange-b); }
+        .tb-select svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--tb-subtle); }
+
+        .tb-count { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; font-size: 12px; font-weight: 700; color: var(--tb-muted); }
+        .tb-count b { color: var(--tb-text); }
+        .tb-count button { display: inline-flex; align-items: center; gap: 4px; }
+
+        /* grid + cards */
+        .tb-grid { display: grid; gap: 22px; padding-bottom: 30px; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); }
+        .tb-grid-list { grid-template-columns: repeat(auto-fill,minmax(min(100%,430px),1fr)); }
+        @media (min-width: 760px) {
+          .tb-grid:not(.tb-grid-list) > .tb-cell:nth-child(even) { margin-top: 26px; }
+        }
+        .tb-cell { min-width: 0; }
+        .tb-card {
+          display: flex; flex-direction: column; height: 100%; border-radius: 22px; overflow: hidden;
+          border: 1px solid var(--tb-border); background: var(--tb-surface);
+          transition: border-color .25s, box-shadow .25s;
+        }
+        .tb-card:hover { border-color: var(--tb-orange); box-shadow: var(--tb-shadow); }
+        .tb-card-list { flex-direction: row; }
+        .tb-card-media {
+          position: relative; display: grid; place-items: center; width: 100%; height: 270px; padding: 22px; border: 0;
+          background: var(--tb-alt); overflow: hidden; perspective: 900px;
+        }
+        .tb-card-list .tb-card-media { width: 150px; height: auto; min-height: 100%; flex-shrink: 0; padding: 16px; }
+        .tb-card-aura {
+          position: absolute; left: 50%; top: 50%; width: 190px; height: 190px; border-radius: 50%;
+          transform: translate(-50%,-50%) scale(.6); opacity: 0;
+          background: radial-gradient(circle,rgba(249,115,22,.38),transparent 70%);
+          transition: transform .5s, opacity .5s;
+        }
+        .tb-card:hover .tb-card-aura { transform: translate(-50%,-50%) scale(1.25); opacity: 1; }
+        .tb-card-float { position: relative; z-index: 1; width: min(150px,100%); height: auto; animation: tb-bob 5s ease-in-out infinite; }
+        .tb-card-float .tb-cover {
+          transform: rotateY(-8deg) rotateZ(-2deg);
+          box-shadow: 12px 18px 26px rgba(0,0,0,.24), inset 4px 0 rgba(255,255,255,.08);
+          transition: transform .6s cubic-bezier(.22,1,.36,1);
+        }
+        .tb-card:hover .tb-card-float .tb-cover { transform: rotateY(-20deg) rotateZ(-5deg) scale(1.1); }
+        .tb-card:hover .tb-cover-shine { transform: translateX(130%); transition: transform .8s ease; }
+        .tb-ribbon {
+          position: absolute; z-index: 2; top: 14px; right: -34px; width: 120px; padding: 4px 0; text-align: center; transform: rotate(40deg);
+          background: linear-gradient(135deg,#F97316,#EA580C); color: #fff; font-size: 9px; font-weight: 900; letter-spacing: .06em;
+        }
+        .tb-card-body { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 20px; }
+        .tb-card-list .tb-card-body { padding: 20px 22px; }
+        .tb-card-body h3 {
+          margin: 14px 0 0; font-size: 17px; line-height: 1.3; font-weight: 850; letter-spacing: -.03em;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--tb-text);
+        }
+        .tb-card-body p {
+          margin: 8px 0 0; font-size: 12px; line-height: 1.7; color: var(--tb-muted);
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .tb-card-spacer { flex: 1; min-height: 14px; }
+        .tb-card-foot { padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--tb-border); }
+        .tb-card-link {
+          display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 0; border: 0; background: transparent;
+          color: var(--tb-orange); font-size: 12px; font-weight: 850; transition: gap .2s;
+        }
+        .tb-card:hover .tb-card-link { gap: 14px; }
+        .tb-arrow {
+          display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--tb-soft);
+          transition: transform .3s, background .3s, color .3s;
+        }
+        .tb-card:hover .tb-arrow { transform: rotate(-45deg) scale(1.1); background: var(--tb-orange-b); color: #fff; }
+
+        /* faq */
+        .tb-faq { margin-top: 70px; }
+        .tb-faq-list { display: grid; gap: 12px; max-width: 860px; }
+        .tb-faq-item {
+          border-radius: 16px; border: 1px solid var(--tb-border); background: var(--tb-surface); overflow: hidden;
+          transition: border-color .25s, box-shadow .25s;
+        }
+        .tb-faq-item:hover, .tb-faq-item[open] { border-color: var(--tb-orange); }
+        .tb-faq-item[open] { box-shadow: var(--tb-shadow); }
+        .tb-faq-item summary {
+          list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer;
+          padding: 18px 20px; font-family: "Manrope",sans-serif; font-size: 14px; font-weight: 800;
+        }
+        .tb-faq-item summary::-webkit-details-marker { display: none; }
+        .tb-faq-item summary svg { flex-shrink: 0; color: var(--tb-orange); transition: transform .35s cubic-bezier(.22,1,.36,1); }
+        .tb-faq-item[open] summary svg { transform: rotate(180deg); }
+        .tb-faq-item p { margin: 0; padding: 0 20px 20px; font-size: 13px; line-height: 1.85; color: var(--tb-muted); animation: tb-open .4s ease; }
+
+        /* skeleton */
+        .tb-skeleton { overflow: hidden; border-radius: 22px; border: 1px solid var(--tb-border); background: var(--tb-surface); }
+        .tb-skeleton-media { display: grid; place-items: center; height: 270px; background: var(--tb-alt); }
+        .tb-skeleton-media div, .tb-skeleton-body i { position: relative; overflow: hidden; background: var(--tb-border); border-radius: 10px; }
+        .tb-skeleton-media div { width: 130px; height: 175px; }
+        .tb-skeleton-body { display: grid; gap: 11px; padding: 20px; }
+        .tb-skeleton-body i { display: block; height: 11px; }
+        .tb-skeleton-media div::after, .tb-skeleton-body i::after {
+          content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+          background: linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent); animation: tb-shimmer 1.4s infinite;
+        }
+        .tb-feat-skeleton { height: 300px; margin-bottom: 56px; border-radius: 26px; border: 1px solid var(--tb-border); background: var(--tb-surface); position: relative; overflow: hidden; }
+        .tb-feat-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent); animation: tb-shimmer 1.4s infinite; }
+
+        /* empty */
+        .tb-empty {
+          display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px 24px;
+          border-radius: 22px; border: 1px dashed var(--tb-border); background: var(--tb-surface);
+        }
+        .tb-empty-icon { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 18px; background: var(--tb-soft); color: var(--tb-orange); animation: tb-float 4s ease-in-out infinite; }
+        .tb-empty h3 { margin: 18px 0 0; font-size: 19px; font-weight: 850; }
+        .tb-empty p { max-width: 360px; margin: 8px 0 22px; font-size: 13px; line-height: 1.7; color: var(--tb-muted); }
+
+        /* support */
+        .tb-support {
+          position: relative; overflow: hidden; isolation: isolate; margin-top: 54px; padding: 38px;
+          display: flex; align-items: center; justify-content: space-between; gap: 24px; border-radius: 26px; color: #fff;
+          background: linear-gradient(120deg,#1C1917,#3B2214,#7C2D12,#1C1917); background-size: 300% 300%;
+          animation: tb-gradient 12s ease infinite; box-shadow: 0 26px 60px rgba(124,45,18,.25);
+        }
+        .tb-support-ring { position: absolute; z-index: -1; border-radius: 50%; border: 1px dashed rgba(251,146,60,.35); pointer-events: none; }
+        .tb-support-ring-1 { width: 360px; height: 360px; right: -100px; top: -160px; animation: tb-spin 32s linear infinite; }
+        .tb-support-ring-2 { width: 220px; height: 220px; left: -70px; bottom: -110px; animation: tb-spin 24s linear infinite reverse; }
+        .tb-support h3 { margin: 0; font-size: clamp(20px,2.4vw,28px); font-weight: 850; letter-spacing: -.04em; }
+        .tb-support p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: #D6CBC3; }
+        .tb-support a { text-decoration: none; flex-shrink: 0; }
+
+        /* back to top */
+        .tb-top {
+          position: fixed; right: 20px; bottom: 22px; z-index: 40; display: grid; place-items: center; width: 50px; height: 50px;
+          border: 0; border-radius: 16px; color: #fff; background: linear-gradient(135deg,#F97316,#EA580C);
+          box-shadow: 0 12px 28px rgba(249,115,22,.4);
+        }
+        .tb-top svg { animation: tb-updown 1.6s ease-in-out infinite; }
+
+        /* keyframes */
+        @keyframes tb-spin { to { transform: rotate(360deg); } }
+        @keyframes tb-wave { to { transform: translateX(-50%); } }
+        @keyframes tb-wheel { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(12px); opacity: 0; } 100% { opacity: 0; } }
+        @keyframes tb-pop { 0%,100% { transform: scale(1); } 40% { transform: scale(1.14) rotate(-2deg); } }
+        @keyframes tb-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+        @keyframes tb-spin-c { to { transform: translate(-50%,-50%) rotate(360deg); } }
+        @keyframes tb-float { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-14px) rotate(6deg); } }
+        @keyframes tb-bob { 0%,100% { translate: 0 0; } 50% { translate: 0 -12px; } }
+        @keyframes tb-drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-40px,30px) scale(1.12); } }
+        @keyframes tb-shine { to { background-position: 250% center; } }
+        @keyframes tb-marquee { to { transform: translateX(-50%); } }
+        @keyframes tb-shimmer { to { transform: translateX(100%); } }
+        @keyframes tb-gradient { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes tb-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes tb-updown { 0%,100% { transform: translateY(2px); } 50% { transform: translateY(-4px); } }
+        @keyframes tb-rise { 0% { transform: translateY(40px) scale(.6); opacity: 0; } 15% { opacity: .8; } 100% { transform: translateY(-420px) scale(1.2); opacity: 0; } }
+
+        /* responsive */
+        @media (max-width: 1000px) {
+          .tb-hero-grid { grid-template-columns: 1fr; gap: 36px; }
+          .tb-fan-wrap { min-height: 340px; }
+          .tb-fan { height: 340px; }
+          .tb-featured { grid-template-columns: 1fr; padding: 26px; gap: 26px; }
+        }
+        @media (max-width: 640px) {
+          .tb-shell { width: min(1240px, calc(100% - 28px)); }
+          .tb-hero { padding: 96px 0 78px; }
+          .tb-cue { display: none; }
+          .tb-faq { margin-top: 52px; }
+          .tb-main { padding-top: 44px; }
+          .tb-toolbar { top: 62px; padding: 10px; border-radius: 15px; }
+          .tb-icon-btn span.tb-label { display: none; }
+          .tb-icon-btn { padding: 0 13px; }
+          .tb-filter-grid { grid-template-columns: 1fr; }
+          .tb-grid { grid-template-columns: 1fr; gap: 18px; }
+          .tb-card-list { flex-direction: column; }
+          .tb-card-list .tb-card-media { width: 100%; height: 240px; }
+          .tb-support { flex-direction: column; align-items: flex-start; padding: 28px 22px; }
+          .tb-support a, .tb-hero-actions .tb-btn, .tb-hero-actions .tb-btn-ghost { width: 100%; justify-content: center; }
+          .tb-featured-actions .tb-btn { width: 100%; }
+          .tb-fan-wrap { min-height: 300px; }
+          .tb-fan { height: 300px; }
+          .tb-top { right: 14px; bottom: 16px; }
+        }
         @media (prefers-reduced-motion: reduce) {
-          .tt-book-fade {
-            animation: none;
+          .tb-root *, .tb-root *::before, .tb-root *::after {
+            animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important;
           }
+          .tb-ticker-track { animation: none; }
         }
       `}</style>
 
-      <main
-        className={`
-          tt-books min-h-screen w-full
-          overflow-x-hidden pt-20 pb-16
-          transition-colors duration-300
-          ${pageBg} ${primaryText}
-        `}
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <motion.div
+        className="tb-progress"
+        style={{ scaleX: progress }}
+        aria-hidden="true"
+      />
 
-          {/* ===================================== */}
-          {/* COMPACT PAGE HEADING                 */}
-          {/* ===================================== */}
+      <main className="tb-root" data-theme={isDark ? "dark" : "light"}>
+        {/* ===================================== */}
+        {/* HERO                                  */}
+        {/* ===================================== */}
 
-          <div className="mb-6 sm:mb-8">
-            <div className="flex flex-wrap items-center gap-2">
+        <section
+          className="tb-hero"
+          ref={heroRef}
+          aria-labelledby="tb-title"
+          onMouseMove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            event.currentTarget.style.setProperty("--hx", `${event.clientX - rect.left}px`);
+            event.currentTarget.style.setProperty("--hy", `${event.clientY - rect.top}px`);
+          }}
+        >
+          <div className="tb-hero-bg" aria-hidden="true">
+            <motion.div className="tb-blob tb-blob-a" style={{ y: blobY }} />
+            <motion.div className="tb-blob tb-blob-b" style={{ y: blobY2 }} />
+            <div className="tb-dots" />
+            <div className="tb-hero-glow" />
+
+            {Array.from({ length: 14 }).map((_, i) => (
               <span
-                className="
-                  inline-flex items-center gap-1.5
-                  rounded-full bg-orange-500/10
-                  px-3 py-1.5 text-[10px]
-                  font-extrabold uppercase
-                  tracking-widest text-orange-500
-                "
+                key={i}
+                className="tb-spark"
+                style={{
+                  left: `${(i * 37 + 8) % 96}%`,
+                  bottom: `${(i * 13) % 30}%`,
+                  animationDelay: `${(i % 7) * -1.3}s`,
+                  animationDuration: `${7 + (i % 5)}s`,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="tb-shell tb-hero-grid">
+            <motion.div style={{ y: copyY, opacity: heroFade }}>
+              <motion.span
+                className="tb-badge"
+                initial={{ opacity: 0, y: -14, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.6, ease: EASE }}
               >
                 <BookOpen size={13} />
                 Target Trek Library
-              </span>
+              </motion.span>
 
-              {!loading && !error && (
-                <span
-                  className={`
-                    text-xs font-semibold
-                    ${secondaryText}
-                  `}
+              <h1 id="tb-title">
+                <SplitWords text="Learn. Build." />
+                <br />
+                <SplitWords
+                  text="Level up."
+                  className="tb-accent"
+                  delay={0.4}
+                />
+              </h1>
+
+              <motion.p
+                className="tb-hero-copy"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.75, ease: EASE }}
+              >
+                Practical ebooks for System Design (HLD), Java LLD,
+                Google ADK, RAG, MCP and GenAI &mdash; written for
+                software engineers preparing for interviews and real
+                projects.
+              </motion.p>
+
+              <motion.div
+                className="tb-hero-actions"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.9, ease: EASE }}
+              >
+                <motion.button
+                  type="button"
+                  className="tb-btn"
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => pickPath("")}
                 >
-                  {books.length} digital resources
-                </span>
+                  Browse all books
+                  <ArrowRight size={16} />
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  className="tb-btn-ghost"
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => pickPath("system design")}
+                >
+                  <Layers3 size={16} />
+                  System Design
+                </motion.button>
+              </motion.div>
+
+              {!loading && !error && books.length > 0 && (
+                <Stagger className="tb-stats" gap={0.1} delay={0.2}>
+                  {stats.map((stat) => (
+                    <motion.div
+                      className="tb-stat"
+                      variants={rise}
+                      key={stat.label}
+                    >
+                      <strong>
+                        <Counter to={stat.value} />
+                      </strong>
+                      <span>{stat.label}</span>
+                    </motion.div>
+                  ))}
+                </Stagger>
               )}
-            </div>
+            </motion.div>
 
-            <h1
-              className="
-                mt-3 text-[30px] font-extrabold
-                leading-tight tracking-[-0.04em]
-                sm:text-[38px]
-              "
-            >
-              Learn. Build.{" "}
-              <span className="text-orange-500">
-                Level up.
-              </span>
-            </h1>
-
-            <p
-              className={`
-                mt-2 max-w-2xl text-sm leading-6
-                ${secondaryText}
-              `}
-            >
-              Practical books for System Design, Java,
-              GenAI and software engineering interviews.
-            </p>
+            <motion.div style={{ y: fanY, scale: fanScale }}>
+              <HeroFan books={fanBooks} />
+            </motion.div>
           </div>
 
+          <div className="tb-cue" aria-hidden="true">
+            <span className="tb-cue-mouse" />
+            Scroll
+          </div>
+
+          <div className="tb-wave" aria-hidden="true">
+            <svg viewBox="0 0 2880 60" preserveAspectRatio="none">
+              <path d="M0 30C180 60 360 0 540 30S900 60 1080 30 1260 0 1440 30V60H0Z" />
+              <path transform="translate(1440 0)" d="M0 30C180 60 360 0 540 30S900 60 1080 30 1260 0 1440 30V60H0Z" />
+            </svg>
+            <svg viewBox="0 0 2880 60" preserveAspectRatio="none">
+              <path d="M0 40C240 10 480 60 720 35S1200 10 1440 40V60H0Z" />
+              <path transform="translate(1440 0)" d="M0 40C240 10 480 60 720 35S1200 10 1440 40V60H0Z" />
+            </svg>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* TOPIC TICKER                          */}
+        {/* ===================================== */}
+
+        <div className="tb-ticker" aria-hidden="true">
+          <div className="tb-ticker-track">
+            {[...TICKER, ...TICKER].map((item, index) => (
+              <span className="tb-ticker-item" key={`${item}-${index}`}>
+                <i />
+                {item}
+              </span>
+            ))}
+          </div>
+
+          <div className="tb-ticker-track tb-ticker-rev">
+            {[...TICKER].reverse().concat([...TICKER].reverse()).map((item, index) => (
+              <span className="tb-ticker-item" key={`r-${item}-${index}`}>
+                <i />
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="tb-shell tb-main">
           {/* ===================================== */}
-          {/* API ERROR                           */}
+          {/* API ERROR                             */}
           {/* ===================================== */}
 
           {error && (
-            <div
-              className={`
-                mb-6 flex flex-col gap-3
-                rounded-xl border p-4
-                sm:flex-row sm:items-center
-                sm:justify-between
-                ${
-                  isDark
-                    ? "border-red-900 bg-red-950/20"
-                    : "border-red-200 bg-red-50"
-                }
-              `}
-            >
+            <div className="tb-error" role="alert">
               <div>
-                <p className="font-bold text-red-500">
-                  Unable to load books
-                </p>
-                <p className="mt-1 text-xs text-red-500">
-                  {error}
-                </p>
+                <b>Unable to load books</b>
+                <p>{error}</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setRetryCount((n) => n + 1)}
-                className="
-                  inline-flex h-10 items-center
-                  justify-center gap-2 rounded-lg
-                  bg-red-500 px-4 text-xs
-                  font-bold text-white
-                "
               >
                 <RefreshCw size={14} />
                 Retry
@@ -4787,341 +2047,233 @@ export default function Books() {
           )}
 
           {/* ===================================== */}
-          {/* LOADING FEATURED BOOK               */}
+          {/* LOADING FEATURED BOOK                 */}
           {/* ===================================== */}
 
-          {loading && (
-            <div className="mb-7">
-              <div className="mb-4 h-5 w-36 animate-pulse rounded bg-stone-500/20" />
-              <div
-                className={`
-                  h-[280px] animate-pulse
-                  rounded-2xl border
-                  ${
-                    isDark
-                      ? "border-stone-800 bg-stone-800/50"
-                      : "border-stone-200 bg-white"
-                  }
-                `}
-              />
-            </div>
-          )}
+          {loading && <div className="tb-feat-skeleton" />}
 
           {/* ===================================== */}
-          {/* FEATURED HLD BOOK FIRST             */}
+          {/* FEATURED HLD BOOK FIRST               */}
           {/* ===================================== */}
 
           {!loading && !error && featuredBook && (
-            <FeaturedBook
-              book={featuredBook}
-              onOpen={openBook}
-              isDark={isDark}
-            />
+            <FeaturedBook book={featuredBook} />
           )}
 
           {/* ===================================== */}
-          {/* FILTERABLE CATALOG                  */}
+          {/* FILTERABLE CATALOG                    */}
           {/* ===================================== */}
 
           {!error && (
-            <section id="library" className="scroll-mt-24">
-
-              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <div className="mb-1 flex items-center gap-2">
-                    <div className="h-4 w-1 rounded-full bg-orange-500" />
-
-                    <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-orange-500">
+            <section
+              id="library"
+              aria-labelledby="tb-library-title"
+              style={{ scrollMarginTop: 90 }}
+            >
+              <Reveal>
+                <div className="tb-lib-head">
+                  <div>
+                    <div className="tb-kicker">
+                      <i />
                       Book collection
-                    </span>
-                  </div>
+                    </div>
 
-                  <h2
-                    className={`
-                      text-2xl font-extrabold
-                      tracking-tight sm:text-[29px]
-                      ${primaryText}
-                    `}
-                  >
-                    Explore all books
-                  </h2>
+                    <h2 id="tb-library-title">
+                      <ScrollWords text="Explore all books" />
+                    </h2>
 
-                  <p
-                    className={`
-                      mt-1 text-xs sm:text-sm
-                      ${secondaryText}
-                    `}
-                  >
-                    Search and find the right guide for your next goal.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowFilters((v) => !v)}
-                    aria-expanded={showFilters}
-                    className={`
-                      inline-flex h-10 items-center
-                      gap-2 rounded-lg border
-                      px-3 text-xs font-bold
-                      transition
-                      ${
-                        isDark
-                          ? "border-stone-700 bg-stone-800"
-                          : "border-stone-200 bg-white"
-                      }
-                    `}
-                  >
-                    <SlidersHorizontal size={15} />
-                    Filters
-                    {hasFilters && (
-                      <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    )}
-                  </button>
-
-                  <div
-                    className={`
-                      flex h-10 items-center
-                      rounded-lg border p-1
-                      ${
-                        isDark
-                          ? "border-stone-700 bg-stone-800"
-                          : "border-stone-200 bg-white"
-                      }
-                    `}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setView("grid")}
-                      aria-label="Grid view"
-                      aria-pressed={view === "grid"}
-                      className={`
-                        rounded-md p-2 transition
-                        ${
-                          view === "grid"
-                            ? "bg-orange-500 text-white"
-                            : "text-stone-500"
-                        }
-                      `}
-                    >
-                      <Grid2X2 size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setView("list")}
-                      aria-label="List view"
-                      aria-pressed={view === "list"}
-                      className={`
-                        rounded-md p-2 transition
-                        ${
-                          view === "list"
-                            ? "bg-orange-500 text-white"
-                            : "text-stone-500"
-                        }
-                      `}
-                    >
-                      <List size={15} />
-                    </button>
+                    <p>
+                      Search and find the right guide for your next
+                      goal.
+                    </p>
                   </div>
                 </div>
-              </div>
+              </Reveal>
 
-              {/* SEARCH */}
+              {/* STICKY TOOLBAR */}
 
-              <div
-                className={`
-                  relative mb-3 overflow-hidden
-                  rounded-xl border
-                  ${
-                    isDark
-                      ? "border-stone-700 bg-[#211D1A]"
-                      : "border-stone-200 bg-white"
-                  }
-                `}
-              >
-                <Search
-                  size={19}
-                  className="
-                    absolute left-4 top-1/2
-                    -translate-y-1/2 text-stone-400
-                  "
-                />
+              <div className="tb-toolbar">
+                <div className="tb-toolbar-row">
+                  <div className="tb-search">
+                    <Search size={19} className="tb-search-icon" />
 
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
-                  placeholder="Search HLD, LLD, Java, RAG, MCP, GenAI..."
-                  className="
-                    h-12 w-full bg-transparent
-                    pl-12 pr-12 text-sm
-                    outline-none placeholder:text-stone-400
-                  "
-                />
+                    <input
+                      type="search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder={`Search ${SEARCH_EXAMPLES[placeholderIndex]}...`}
+                      aria-label="Search books"
+                    />
 
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    aria-label="Clear search"
-                    className="
-                      absolute right-4 top-1/2
-                      -translate-y-1/2 text-stone-400
-                      hover:text-orange-500
-                    "
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-
-              {/* TOPIC QUICK FILTERS */}
-
-              <div className="mb-4 flex flex-wrap gap-2">
-                {[
-                  { label: "All books", value: "" },
-                  { label: "System Design", value: "system design" },
-                  { label: "Java", value: "java" },
-                  { label: "GenAI", value: "genai" },
-                  { label: "RAG", value: "rag" },
-                  { label: "MCP", value: "mcp" },
-                ].map((item) => (
-                  <button
-                    type="button"
-                    key={item.label}
-                    onClick={() => {
-                      setSearch(item.value);
-                      setCategory("");
-                      setResourceType("");
-                    }}
-                    className={`
-                      rounded-full border px-3 py-1.5
-                      text-[11px] font-bold
-                      transition-colors
-                      ${
-                        search.toLowerCase() === item.value
-                          ? "border-orange-500 bg-orange-500 text-white"
-                          : isDark
-                            ? "border-stone-700 bg-[#211D1A] text-stone-300 hover:border-orange-500"
-                            : "border-stone-200 bg-white text-stone-600 hover:border-orange-300"
-                      }
-                    `}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* ADVANCED FILTERS */}
-
-              {showFilters && (
-                <div
-                  className={`
-                    tt-book-fade mb-5 rounded-xl
-                    border p-4
-                    ${
-                      isDark
-                        ? "border-stone-700 bg-[#211D1A]"
-                        : "border-stone-200 bg-white"
-                    }
-                  `}
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="flex items-center gap-2 text-sm font-extrabold">
-                      <Filter size={15} className="text-orange-500" />
-                      Refine your results
-                    </h3>
-
-                    {hasFilters && (
+                    {search && (
                       <button
                         type="button"
-                        onClick={clearFilters}
-                        className="text-xs font-bold text-orange-500"
+                        className="tb-search-clear"
+                        onClick={() => setSearch("")}
+                        aria-label="Clear search"
                       >
-                        Reset filters
+                        <X size={16} />
                       </button>
                     )}
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <FilterSelect
-                      value={category}
-                      onChange={setCategory}
-                      options={categories}
-                      placeholder="All categories"
-                      isDark={isDark}
-                    />
+                  <button
+                    type="button"
+                    className="tb-icon-btn"
+                    onClick={() => setShowFilters((v) => !v)}
+                    aria-expanded={showFilters}
+                  >
+                    <SlidersHorizontal size={16} />
+                    <span className="tb-label">Filters</span>
+                    {hasFilters && <span className="tb-dot" />}
+                  </button>
 
-                    <FilterSelect
-                      value={resourceType}
-                      onChange={setResourceType}
-                      options={resourceTypes.map((type) => ({
-                        value: type,
-                        label: getResourceType(type),
-                      }))}
-                      placeholder="All formats"
-                      isDark={isDark}
-                    />
+                  <div className="tb-view">
+                    {[
+                      { id: "grid", icon: Grid2X2, label: "Grid view" },
+                      { id: "list", icon: List, label: "List view" },
+                    ].map((option) => {
+                      const Icon = option.icon;
 
-                    <FilterSelect
-                      value={sort}
-                      onChange={setSort}
-                      options={[
-                        {
-                          value: "featured",
-                          label: "Featured first",
-                        },
-                        {
-                          value: "price-low",
-                          label: "Price: Low to high",
-                        },
-                        {
-                          value: "price-high",
-                          label: "Price: High to low",
-                        },
-                        {
-                          value: "title",
-                          label: "Title: A to Z",
-                        },
-                      ]}
-                      placeholder="Recommended order"
-                      isDark={isDark}
-                    />
+                      return (
+                        <button
+                          type="button"
+                          key={option.id}
+                          onClick={() => setView(option.id)}
+                          aria-label={option.label}
+                          aria-pressed={view === option.id}
+                        >
+                          {view === option.id && (
+                            <motion.span
+                              layoutId="tb-view-pill"
+                              className="tb-view-pill"
+                              transition={{
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 30,
+                              }}
+                            />
+                          )}
+                          <Icon size={16} />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
+
+                <nav className="tb-chips" aria-label="Book topics">
+                  {QUICK_FILTERS.map((item) => {
+                    const active = search.toLowerCase() === item.value;
+
+                    return (
+                      <motion.button
+                        type="button"
+                        key={item.label}
+                        className="tb-chip"
+                        aria-pressed={active}
+                        whileHover={{ y: -3 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          setSearch(item.value);
+                          setCategory("");
+                          setResourceType("");
+                        }}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="tb-chip-pill"
+                            className="tb-chip-pill"
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 32,
+                            }}
+                          />
+                        )}
+                        <span className="tb-chip-label">{item.label}</span>
+                      </motion.button>
+                    );
+                  })}
+                </nav>
+
+                <AnimatePresence initial={false}>
+                  {showFilters && (
+                    <motion.div
+                      key="filters"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.35, ease: EASE }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div className="tb-filters">
+                        <div className="tb-filters-head">
+                          <h3>
+                            <Filter size={15} />
+                            Refine your results
+                          </h3>
+
+                          {hasFilters && (
+                            <button
+                              type="button"
+                              className="tb-link-btn"
+                              onClick={clearFilters}
+                            >
+                              Reset filters
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="tb-filter-grid">
+                          <FilterSelect
+                            value={category}
+                            onChange={setCategory}
+                            options={categories}
+                            placeholder="All categories"
+                          />
+
+                          <FilterSelect
+                            value={resourceType}
+                            onChange={setResourceType}
+                            options={resourceTypes.map((type) => ({
+                              value: type,
+                              label: getResourceType(type),
+                            }))}
+                            placeholder="All formats"
+                          />
+
+                          <FilterSelect
+                            value={sort}
+                            onChange={setSort}
+                            options={[
+                              { value: "featured", label: "Featured first" },
+                              { value: "price-low", label: "Price: Low to high" },
+                              { value: "price-high", label: "Price: High to low" },
+                              { value: "title", label: "Title: A to Z" },
+                            ]}
+                            placeholder="Recommended order"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* RESULT COUNT */}
 
               {!loading && (
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <p
-                    className={`
-                      text-xs font-semibold
-                      ${secondaryText}
-                    `}
-                  >
-                    Showing{" "}
-                    <span className={primaryText}>
-                      {catalogBooks.length}
-                    </span>{" "}
-                    {catalogBooks.length === 1
-                      ? "resource"
-                      : "resources"}
+                <div className="tb-count">
+                  <p style={{ margin: 0 }}>
+                    Showing <b>{catalogBooks.length}</b>{" "}
+                    {catalogBooks.length === 1 ? "resource" : "resources"}
                   </p>
 
                   {hasFilters && (
                     <button
                       type="button"
+                      className="tb-link-btn"
                       onClick={clearFilters}
-                      className="
-                        inline-flex items-center gap-1
-                        text-xs font-bold text-orange-500
-                      "
                     >
                       <X size={13} />
                       Clear all
@@ -5133,12 +2285,9 @@ export default function Books() {
               {/* LOADING GRID */}
 
               {loading && (
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="tb-grid">
                   {Array.from({ length: 6 }).map((_, index) => (
-                    <BookSkeleton
-                      key={index}
-                      isDark={isDark}
-                    />
+                    <BookSkeleton key={index} />
                   ))}
                 </div>
               )}
@@ -5146,176 +2295,166 @@ export default function Books() {
               {/* LIVE BOOK GRID */}
 
               {!loading && catalogBooks.length > 0 && (
-                <div
-                  className={`
-                    grid gap-5
-                    ${
-                      view === "grid"
-                        ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                        : "grid-cols-1 lg:grid-cols-2"
-                    }
-                  `}
+                <motion.div
+                  layout
+                  className={cn(
+                    "tb-grid",
+                    view === "list" && "tb-grid-list"
+                  )}
                 >
-                  {catalogBooks.map((book, index) => (
-                    <div
-                      key={`${getBookId(book)}-${index}`}
-                      className="tt-book-fade min-w-0"
-                    >
+                  <AnimatePresence mode="popLayout">
+                    {catalogBooks.map((book, index) => (
                       <BookCard
+                        key={getBookId(book)}
                         book={book}
-                        onOpen={openBook}
-                        isDark={isDark}
                         view={view}
+                        index={index}
                       />
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
               )}
 
               {/* EMPTY SEARCH */}
 
-              {!loading &&
-                catalogBooks.length === 0 &&
-                hasFilters && (
-                  <div
-                    className={`
-                      flex flex-col items-center
-                      rounded-2xl border px-6
-                      py-14 text-center
-                      ${
-                        isDark
-                          ? "border-stone-800 bg-[#211D1A]"
-                          : "border-stone-200 bg-white"
-                      }
-                    `}
-                  >
-                    <div
-                      className="
-                        flex h-14 w-14 items-center
-                        justify-center rounded-2xl
-                        bg-orange-500/10
-                      "
-                    >
-                      <Search
-                        size={25}
-                        className="text-orange-500"
-                      />
-                    </div>
-
-                    <h3 className="mt-4 text-lg font-extrabold">
-                      No matching books found
-                    </h3>
-
-                    <p
-                      className={`
-                        mt-2 max-w-sm text-sm
-                        ${secondaryText}
-                      `}
-                    >
-                      Try another keyword or remove some
-                      filters to explore more resources.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="
-                        mt-5 rounded-lg bg-orange-500
-                        px-5 py-2.5 text-xs
-                        font-extrabold text-white
-                        hover:bg-orange-600
-                      "
-                    >
-                      Show all books
-                    </button>
+              {!loading && catalogBooks.length === 0 && hasFilters && (
+                <motion.div
+                  className="tb-empty"
+                  initial={{ opacity: 0, scale: 0.94 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, ease: EASE }}
+                >
+                  <div className="tb-empty-icon">
+                    <Search size={26} />
                   </div>
-                )}
+
+                  <h3>No matching books found</h3>
+
+                  <p>
+                    Try another keyword or remove some filters to
+                    explore more resources.
+                  </p>
+
+                  <motion.button
+                    type="button"
+                    className="tb-btn"
+                    onClick={clearFilters}
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Show all books
+                  </motion.button>
+                </motion.div>
+              )}
 
               {/* EMPTY CATALOG */}
 
-              {!loading &&
-                !error &&
-                books.length === 0 && (
-                  <div
-                    className={`
-                      rounded-2xl border p-10 text-center
-                      ${border}
-                    `}
-                  >
-                    <BookOpen
-                      size={30}
-                      className="mx-auto text-orange-500"
-                    />
-
-                    <h3 className="mt-3 font-extrabold">
-                      No books available yet
-                    </h3>
-
-                    <p
-                      className={`
-                        mt-2 text-sm ${secondaryText}
-                      `}
-                    >
-                      Published resources will appear here.
-                    </p>
+              {!loading && !error && books.length === 0 && (
+                <div className="tb-empty">
+                  <div className="tb-empty-icon">
+                    <BookOpen size={26} />
                   </div>
-                )}
+
+                  <h3>No books available yet</h3>
+
+                  <p>Published resources will appear here.</p>
+                </div>
+              )}
             </section>
           )}
 
           {/* ===================================== */}
-          {/* COMPACT SUPPORT SECTION              */}
-          {/* NOT A FOOTER                         */}
+          {/* FAQ (crawlable <details>)             */}
+          {/* ===================================== */}
+
+          <section className="tb-faq" aria-labelledby="tb-faq-title">
+            <Reveal>
+              <div className="tb-lib-head">
+                <div>
+                  <div className="tb-kicker">
+                    <i />
+                    Good to know
+                  </div>
+
+                  <h2 id="tb-faq-title">
+                    <ScrollWords text="Questions about our books" />
+                  </h2>
+                </div>
+              </div>
+            </Reveal>
+
+            <Stagger className="tb-faq-list" gap={0.08}>
+              {FAQS.map((faq) => (
+                <motion.details
+                  className="tb-faq-item"
+                  variants={rise}
+                  key={faq.question}
+                >
+                  <summary>
+                    {faq.question}
+                    <ChevronDown size={18} />
+                  </summary>
+
+                  <p>{faq.answer}</p>
+                </motion.details>
+              ))}
+            </Stagger>
+          </section>
+
+          {/* ===================================== */}
+          {/* SUPPORT                               */}
           {/* ===================================== */}
 
           {!loading && !error && books.length > 0 && (
-            <div
-              className={`
-                mt-12 flex flex-col
-                justify-between gap-4
-                rounded-2xl border p-5
-                sm:flex-row sm:items-center
-                ${
-                  isDark
-                    ? "border-stone-800 bg-[#211D1A]"
-                    : "border-stone-200 bg-white"
-                }
-              `}
+            <motion.div
+              className="tb-support"
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.85, ease: EASE }}
             >
-              <div>
-                <h3 className="text-sm font-extrabold">
-                  Need help choosing a book?
-                </h3>
+              <span className="tb-support-ring tb-support-ring-1" aria-hidden="true" />
+              <span className="tb-support-ring tb-support-ring-2" aria-hidden="true" />
 
-                <p
-                  className={`
-                    mt-1 text-xs leading-5
-                    ${secondaryText}
-                  `}
-                >
-                  Reach out for ebook, access, or purchase support.
-                </p>
+              <div>
+                <h3>Need help choosing a book?</h3>
+
+                <p>Reach out for ebook, access, or purchase support.</p>
               </div>
 
-              <a
+              <motion.a
                 href="mailto:supporttargettrek@gmail.com"
-                className="
-                  inline-flex h-10 shrink-0
-                  items-center justify-center
-                  gap-2 rounded-lg
-                  bg-orange-500 px-4
-                  text-xs font-extrabold text-white
-                  transition hover:bg-orange-600
-                "
+                className="tb-btn"
+                whileHover={{ scale: 1.07, rotate: -1.5 }}
+                whileTap={{ scale: 0.95 }}
               >
                 Contact support
                 <ArrowUpRight size={15} />
-              </a>
-            </div>
+              </motion.a>
+            </motion.div>
           )}
-
         </div>
       </main>
-    </>
+
+      <AnimatePresence>
+        {showTop && (
+          <motion.button
+            type="button"
+            className="tb-top"
+            aria-label="Back to top"
+            initial={{ opacity: 0, scale: 0.4, rotate: -90 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 0.4, rotate: 90 }}
+            whileHover={{ scale: 1.12, rotate: 8 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() =>
+              window.scrollTo({ top: 0, behavior: "smooth" })
+            }
+          >
+            <ArrowUp size={20} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </MotionConfig>
   );
 }
