@@ -46,8 +46,29 @@ function safely(name, fn) {
   };
 }
 
-// Safe on multiple instances: Redis locks pick one runner.
+// One maintenance pass: snapshot + idle cleanup.
+// Redis locks make it safe if several callers overlap.
+export async function runMaintenance() {
+  await Promise.all([
+    safely("snapshot", snapshotActiveUsers)(),
+    safely("cleanup", cleanup)(),
+  ]);
+}
+
+// Local/VM servers use timers. Cloud Run throttles CPU between
+// requests, so there Cloud Scheduler calls runMaintenance via
+// POST /internal/analytics/maintenance instead.
 export function startAnalyticsJobs() {
+  if (
+    process.env.K_SERVICE &&
+    process.env.ANALYTICS_FORCE_TIMERS !== "true"
+  ) {
+    console.log(
+      "[analytics] Cloud Run detected: use Cloud Scheduler for maintenance"
+    );
+    return;
+  }
+
   const snapshotJob = safely("snapshot", snapshotActiveUsers);
   const cleanupJob = safely("cleanup", cleanup);
 

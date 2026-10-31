@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import geoip from "geoip-country";
 import { UAParser } from "ua-parser-js";
 
 const UUID_PATTERN =
@@ -198,7 +199,8 @@ export function getDevice(req, input = {}) {
   };
 }
 
-// Country comes from the CDN/proxy header, IP is stored hashed.
+// Country: CDN header if present, else offline IP lookup.
+// The IP itself is only stored hashed.
 export function getClientInfo(req) {
   const ip = req.ip || req.socket?.remoteAddress || "";
 
@@ -213,9 +215,18 @@ export function getClientInfo(req) {
     req.headers["cloudfront-viewer-country"] ||
     "";
 
-  const country = /^[A-Za-z]{2}$/.test(countryRaw)
+  let country = /^[A-Za-z]{2}$/.test(countryRaw)
     ? countryRaw.toUpperCase()
     : null;
+
+  // Cloud Run sends no country header: look it up offline.
+  if (!country && ip) {
+    try {
+      country = geoip.lookup(ip)?.country || null;
+    } catch {
+      country = null;
+    }
+  }
 
   return {
     ipHash: ip

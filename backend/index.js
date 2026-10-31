@@ -51,6 +51,8 @@ import analyticsReportRoutes from
   "./routes/analyticsReportRoutes.js";
 import analyticsRoutes from
   "./routes/analyticsRoutes.js";
+import analyticsInternalRoutes from
+  "./routes/analyticsInternalRoutes.js";
 import {
   startAnalyticsJobs,
 } from "./services/analyticsJobs.js";
@@ -301,6 +303,12 @@ app.use(
   "/api/analytics",
   express.json({ limit: "8kb" }),
   analyticsRoutes
+);
+
+// Cloud Scheduler hook (secret-protected, no body).
+app.use(
+  "/internal/analytics",
+  analyticsInternalRoutes
 );
 
 /* =====================================================

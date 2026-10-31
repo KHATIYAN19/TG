@@ -1,7 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  animate,
+  motion,
+  useInView,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import { Document, Page, pdfjs } from "react-pdf";
 import lldPreviewPdf from "../assest/master_lld_java_preview.pdf";
 
@@ -34,9 +42,11 @@ const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
-const SEO_TITLE =
-  "Mastering System Design LLD in Java – OOP, SOLID, UML & Design Patterns | TargetTrek";
+// Title <= 60 chars and description <= 160 chars so SERP snippets are not truncated.
+const SEO_TITLE = "Java LLD Book: 23 Patterns & 16 Case Studies | Target Trek";
 const SEO_DESCRIPTION =
+  "Low-Level Design in Java: OOP, UML, SOLID, 23 GoF patterns, Spring Boot, concurrency, a 60-minute interview framework and 16 coded case studies. PDF ebook.";
+const SEO_LONG_DESCRIPTION =
   "Master Low-Level Design with Java, OOP, UML, SOLID, 23 GoF patterns, Spring Boot, APIs, persistence, concurrency, testing, a 60-minute interview framework and 16 coded case studies.";
 const PAGE_PATH = "/book/system-design/lld";
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
@@ -2350,9 +2360,822 @@ html[data-theme="dark"] body {
   .lld-companion-grid .lld-hld-actions { grid-template-columns: 1fr; }
 }
 
+/* =========================================================
+   MOTION LAYER: scroll, hover, scale and sticky buy card
+   (individual transform properties so they compose with
+   framer-motion's inline transforms)
+========================================================= */
+.lld-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 90;
+  height: 3px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #EA580C, #FB923C, #F59E0B);
+  pointer-events: none;
+}
+
+.lld-card,
+.lld-module,
+.lld-stat,
+.lld-hld-card,
+.lld-flow-step,
+.lld-pattern-card,
+.lld-design-card,
+.lld-question,
+.lld-faq-item,
+.lld-code-card,
+.lld-preview-card,
+.lld-price-card {
+  transition:
+    translate 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    scale 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.4s ease,
+    border-color 0.4s ease;
+}
+.lld-card:hover,
+.lld-module:hover,
+.lld-stat:hover,
+.lld-hld-card:hover,
+.lld-flow-step:hover,
+.lld-pattern-card:hover,
+.lld-design-card:hover,
+.lld-question:hover,
+.lld-code-card:hover,
+.lld-price-card:hover {
+  translate: 0 -6px;
+  scale: 1.015;
+  box-shadow: 0 26px 60px rgba(234, 88, 12, 0.16);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.lld-faq-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  scale: 1.005;
+}
+
+.lld-module-icon,
+.lld-flow-icon,
+.lld-module-number {
+  transition: rotate 0.4s ease, scale 0.4s ease, color 0.3s ease;
+}
+.lld-module:hover .lld-module-icon,
+.lld-flow-step:hover .lld-flow-icon {
+  rotate: -8deg;
+  scale: 1.18;
+}
+.lld-module:hover .lld-module-number {
+  scale: 1.12;
+}
+
+.lld-tag,
+.lld-pattern-pill,
+.lld-hld-topic,
+.lld-hld-badge {
+  transition: translate 0.25s ease, scale 0.25s ease, background 0.25s ease;
+}
+.lld-tag:hover,
+.lld-pattern-pill:hover,
+.lld-hld-topic:hover,
+.lld-hld-badge:hover {
+  translate: 0 -2px;
+  scale: 1.07;
+}
+
+.lld-hld-cover img,
+.lld-hld-cover-fallback {
+  transition: scale 0.5s cubic-bezier(0.22, 1, 0.36, 1), rotate 0.5s ease;
+}
+.lld-hld-card:hover .lld-hld-cover img,
+.lld-hld-card:hover .lld-hld-cover-fallback {
+  scale: 1.06;
+  rotate: -1.5deg;
+}
+
+/* CTA: press, glow and shimmer sweep */
+.lld-cta {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s,
+    filter 0.25s,
+    scale 0.2s;
+}
+.lld-cta:hover:not(:disabled) {
+  scale: 1.03;
+}
+.lld-cta:active:not(:disabled) {
+  scale: 0.97;
+}
+.lld-cta:not(.lld-cta-outline):not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.38) 50%, transparent 70%);
+  transform: translateX(-130%);
+  animation: lldSheen 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes lldSheen {
+  0%, 55% { transform: translateX(-130%); }
+  100% { transform: translateX(130%); }
+}
+.lld-cta svg {
+  transition: translate 0.25s ease;
+}
+.lld-cta:hover svg:last-child {
+  translate: 4px 0;
+}
+
+/* animated gradient headline */
+.lld-gradient-text {
+  background-size: 200% auto !important;
+  animation: lldGradient 6s linear infinite;
+}
+@keyframes lldGradient {
+  to { background-position: 200% center; }
+}
+
+/* hero pointer parallax (uses translate/rotate so it never fights lldFloat) */
+.lld-book-stage {
+  --mx: 0;
+  --my: 0;
+}
+.lld-book-mock {
+  translate: calc(var(--mx) * -12px) calc(var(--my) * -10px);
+  rotate: calc(var(--mx) * 2.5deg);
+  transition: translate 0.3s ease-out, rotate 0.3s ease-out;
+}
+.lld-chip-one {
+  translate: calc(var(--mx) * 20px) calc(var(--my) * 14px);
+}
+.lld-chip-two {
+  translate: calc(var(--mx) * -18px) calc(var(--my) * 12px);
+}
+.lld-chip-three {
+  translate: calc(var(--mx) * 14px) calc(var(--my) * -16px);
+}
+.lld-orbit {
+  translate: calc(var(--mx) * 8px) calc(var(--my) * 6px);
+  transition: translate 0.4s ease-out;
+}
+.lld-float-chip {
+  transition: translate 0.3s ease-out;
+}
+
+/* FAQ answers stay in the DOM (crawlable) and animate open */
+.lld-faq-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s ease;
+}
+.lld-faq-collapse.is-open {
+  grid-template-rows: 1fr;
+}
+.lld-faq-collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lld-stats-scale,
+.lld-companion-scale {
+  will-change: transform, opacity;
+}
+
+/* RESPONSIVE STICKY BUY CARD
+   mobile: docked strip · sm: centered card · md/lg/xl/2xl: progressively wider.
+   On md+ it slides in only after the hero scrolls away. */
+.lld-mobile-buy {
+  display: none !important;
+}
+.lldPage > main {
+  padding-bottom: 104px;
+}
+.lld-sticky {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  padding: 0 10px max(10px, env(safe-area-inset-bottom));
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
+}
+.lld-sticky.is-checkout-open {
+  transform: translateY(110%);
+  opacity: 0;
+  visibility: hidden;
+}
+.lld-sticky-card {
+  pointer-events: auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -10px 45px rgba(15, 23, 42, 0.18);
+}
+.lld-sticky-info {
+  min-width: 0;
+  padding-left: 4px;
+}
+.lld-sticky-title {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.2;
+}
+.lld-sticky-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.lld-sticky-now {
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+}
+.lld-sticky-old {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: line-through;
+}
+.lld-sticky-off {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+}
+.lld-sticky-sub {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lld-sticky-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lld-sticky-preview {
+  display: none;
+}
+.lld-sticky-actions .lld-cta {
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.lld-pulse {
+  animation: lldPulse 2.4s ease-out infinite;
+}
+@keyframes lldPulse {
+  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.45); }
+  70%, 100% { box-shadow: 0 0 0 14px rgba(249, 115, 22, 0); }
+}
+
+@media (min-width: 640px) {
+  .lld-sticky { padding-inline: 16px; }
+  .lld-sticky-card { max-width: 576px; gap: 16px; padding: 12px; border-radius: 22px; }
+  .lld-sticky-title { display: block; }
+  .lld-sticky-price { margin-top: 4px; }
+  .lld-sticky-sub { display: none; }
+  .lld-sticky-now { font-size: 17px; }
+  .lld-sticky-actions .lld-cta { padding: 0 22px; font-size: 14px; }
+}
+@media (min-width: 768px) {
+  .lld-sticky { padding-bottom: 20px; }
+  .lld-sticky-card { max-width: 672px; padding: 12px 12px 12px 20px; border-radius: 18px; }
+  .lld-sticky.is-hero-visible:not(.is-checkout-open) {
+    transform: translateY(40px);
+    opacity: 0;
+    visibility: hidden;
+  }
+  .lld-pulse { animation: none; }
+}
+@media (min-width: 1024px) {
+  .lld-sticky-card { max-width: 768px; gap: 24px; }
+  .lld-sticky-title { font-size: 16px; }
+  .lld-sticky-now { font-size: 19px; }
+  .lld-sticky-preview { display: inline-flex; }
+}
+@media (min-width: 1280px) {
+  .lld-sticky-card { max-width: 896px; }
+}
+@media (min-width: 1536px) {
+  .lld-sticky-card { max-width: 1024px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lld-gradient-text,
+  .lld-pulse,
+  .lld-cta::after {
+    animation: none !important;
+  }
+  .lld-book-mock,
+  .lld-chip-one,
+  .lld-chip-two,
+  .lld-chip-three,
+  .lld-orbit {
+    translate: none;
+    rotate: none;
+  }
+}
+
+/* =========================================================
+   COMPANION CARDS (HLD + Combo): redesigned
+========================================================= */
+.lld-cc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 26px;
+  max-width: 1000px;
+  margin: 36px auto 0;
+  align-items: stretch;
+}
+.lld-cc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 560px;
+  width: 100%;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  isolation: isolate;
+  transition:
+    translate 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease,
+    border-color 0.45s ease;
+}
+.lld-cc:hover {
+  translate: 0 -8px;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  box-shadow: 0 34px 80px rgba(234, 88, 12, 0.2);
+}
+.lld-cc--combo {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.lld-cc--combo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #ea580c, #fbbf24, #ea580c);
+  background-size: 200% 200%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: lldBorderShift 6s linear infinite;
+}
+@keyframes lldBorderShift {
+  to { background-position: 200% 200%; }
+}
+
+.lld-cc-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 270px;
+  padding: 42px 20px 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 15%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 55%),
+    linear-gradient(150deg, var(--soft), var(--surface-2));
+}
+.lld-cc-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, var(--accent) 26%, transparent) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  opacity: 0.55;
+  mask-image: linear-gradient(to bottom, #000, transparent 85%);
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%);
+}
+.lld-cc-glow {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  filter: blur(60px);
+  animation: lldGlow 5s ease-in-out infinite;
+}
+@keyframes lldGlow {
+  0%, 100% { scale: 1; opacity: 0.55; }
+  50% { scale: 1.2; opacity: 0.9; }
+}
+.lld-cc-ribbon {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(110deg, #ea580c, #f97316);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
+}
+.lld-cc--combo .lld-cc-ribbon {
+  background: linear-gradient(110deg, #f59e0b, #ea580c);
+}
+.lld-cc-plus {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 3;
+  padding: 6px 12px;
+  border: 1px solid var(--chip-border);
+  border-radius: 12px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  font-size: 11px;
+  font-weight: 900;
+  backdrop-filter: blur(8px);
+}
+.lld-cc-cover {
+  position: relative;
+  z-index: 2;
+  width: min(168px, 52%);
+  aspect-ratio: 0.72;
+  border-radius: 6px 14px 14px 6px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #221b17, #482919 65%, #9a3412);
+  box-shadow:
+    18px 24px 44px rgba(32, 19, 12, 0.35),
+    inset 6px 0 0 rgba(255, 255, 255, 0.1);
+  animation: lldCoverBob 5s ease-in-out infinite;
+  transition: scale 0.5s cubic-bezier(0.22, 1, 0.36, 1), rotate 0.5s ease;
+}
+.lld-cc:hover .lld-cc-cover {
+  scale: 1.08;
+  rotate: -3deg;
+}
+@keyframes lldCoverBob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -10px; }
+}
+.lld-cc-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lld-cc-fallback {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 16px;
+  color: #fff;
+}
+.lld-cc-fallback small {
+  color: #fdba74;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.lld-cc-fallback strong {
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+.lld-cc-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 24px 26px;
+}
+.lld-cc-eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.lld-cc-body h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.22;
+}
+.lld-cc-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.lld-cc-features {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lld-cc-features li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.lld-cc-features svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.lld-cc-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.lld-cc-topics span {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: translate 0.25s ease, scale 0.25s ease, border-color 0.25s, color 0.25s;
+}
+.lld-cc-topics span:hover {
+  translate: 0 -2px;
+  scale: 1.07;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.lld-cc-price {
+  margin-top: auto;
+  padding: 16px 18px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+.lld-cc-price-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lld-cc-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: 6px;
+}
+.lld-cc-now {
+  color: var(--text);
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.lld-cc-old {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: line-through;
+}
+.lld-cc-save {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+.lld-cc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 10px;
+}
+.lld-cc-actions .lld-cta {
+  min-height: 50px;
+  padding-inline: 12px;
+  font-size: 13px;
+}
+@media (max-width: 430px) {
+  .lld-cc-actions {
+    grid-template-columns: 1fr;
+  }
+  .lld-cc-body {
+    padding: 20px 18px 22px;
+  }
+  .lld-cc-now {
+    font-size: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lld-cc-cover,
+  .lld-cc-glow,
+  .lld-cc--combo::before {
+    animation: none !important;
+  }
+  .lld-cc:hover,
+  .lld-cc:hover .lld-cc-cover {
+    translate: none;
+    scale: 1;
+    rotate: none;
+  }
+}
+
 
 html { scroll-behavior: smooth; }
 `;
+
+function CompanionCard({
+  variant,
+  animation,
+  cover,
+  coverAlt,
+  fallbackSmall,
+  fallbackTitle,
+  ribbon,
+  eyebrow,
+  title,
+  description,
+  features,
+  topics,
+  priceLabel,
+  status,
+  price,
+  mrp,
+  currency,
+  format,
+  href,
+  viewLabel,
+  buyLabel,
+  onBuy,
+  canBuy,
+  errorText,
+}) {
+  const save = mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
+
+  return (
+    <motion.article className={`lld-cc lld-cc--${variant}`} {...animation}>
+      <div className="lld-cc-stage">
+        <span className="lld-cc-ribbon">{variant === "combo" && <Sparkles size={12} />} {ribbon}</span>
+        <span className="lld-cc-glow" aria-hidden="true" />
+        <div className="lld-cc-cover">
+          {cover ? (
+            <img src={cover} alt={coverAlt} loading="lazy" />
+          ) : (
+            <div className="lld-cc-fallback">
+              <small>{fallbackSmall}</small>
+              <strong>{fallbackTitle}</strong>
+            </div>
+          )}
+        </div>
+        {variant === "combo" && <span className="lld-cc-plus" aria-hidden="true">HLD + LLD</span>}
+      </div>
+
+      <div className="lld-cc-body">
+        <div className="lld-cc-eyebrow">{eyebrow}</div>
+        <h3>{title}</h3>
+        <p className="lld-cc-desc">{description}</p>
+
+        <ul className="lld-cc-features">
+          {features.map((item) => (
+            <li key={item}>
+              <Check size={14} /> {item}
+            </li>
+          ))}
+        </ul>
+
+        <div className="lld-cc-topics">
+          {topics.map((topic) => (
+            <span key={topic}>{topic}</span>
+          ))}
+        </div>
+
+        <div className="lld-cc-price">
+          <div className="lld-cc-price-label">
+            {status === "loading"
+              ? "Loading latest price..."
+              : status === "ready"
+                ? priceLabel
+                : "Price temporarily unavailable"}
+          </div>
+          {status === "ready" && (
+            <div className="lld-cc-price-row">
+              <span className="lld-cc-now">{format(price, currency)}</span>
+              {mrp > price && <span className="lld-cc-old">{format(mrp, currency)}</span>}
+              {save > 0 && <span className="lld-cc-save">Save {save}%</span>}
+            </div>
+          )}
+          {status === "loading" && <div className="lld-skeleton" />}
+        </div>
+
+        <div className="lld-cc-actions">
+          <a className="lld-cta lld-cta-outline" href={href}>
+            {viewLabel} <ArrowRight size={15} />
+          </a>
+          <button className="lld-cta" type="button" onClick={onBuy} disabled={!canBuy}>
+            {buyLabel} <BookOpen size={15} />
+          </button>
+        </div>
+
+        {errorText && <p className="lld-hld-error">{errorText}</p>}
+      </div>
+    </motion.article>
+  );
+}
+
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.3 });
+  return <motion.div aria-hidden="true" className="lld-progress" style={{ scaleX }} />;
+}
+
+function CountUp({ to, suffix = "", duration = 1.4 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const reduce = useReducedMotion();
+  const [value, setValue] = useState(reduce ? to : 0);
+
+  useEffect(() => {
+    if (!inView) return undefined;
+    if (reduce) {
+      setValue(to);
+      return undefined;
+    }
+    const controls = animate(0, to, {
+      duration,
+      ease: "easeOut",
+      onUpdate: (latest) => setValue(Math.round(latest)),
+    });
+    return () => controls.stop();
+  }, [inView, reduce, to, duration]);
+
+  return (
+    <span ref={ref}>
+      {value}
+      {suffix}
+    </span>
+  );
+}
+
+// Scroll-linked scale in / scale out: grows to full size entering the viewport
+// and eases back slightly as it leaves.
+function ScrollScale({ children, className, from = 0.93 }) {
+  const ref = useRef(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const scale = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [from, 1, 1, from + 0.03]);
+  const opacity = useTransform(scrollYProgress, [0, 0.18, 0.82, 1], [0.35, 1, 1, 0.55]);
+
+  if (reduce) return <div className={className}>{children}</div>;
+
+  return (
+    <motion.div ref={ref} className={className} style={{ scale, opacity }}>
+      {children}
+    </motion.div>
+  );
+}
 
 export default function SystemDesignLLD({ navbarOffset = 64 }) {
   const reduceMotion = useReducedMotion();
@@ -2367,6 +3190,33 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
   const [openFaq, setOpenFaq] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutProduct, setCheckoutProduct] = useState(null);
+
+  // Sticky buy card: on md+ it appears once the hero CTA scrolls out of view.
+  const heroRef = useRef(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroVisible(entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Pointer parallax for the hero book stage (CSS variables, no re-render).
+  const handleStageMove = (event) => {
+    if (reduceMotion) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--mx", (((event.clientX - rect.left) / rect.width) * 2 - 1).toFixed(3));
+    event.currentTarget.style.setProperty("--my", (((event.clientY - rect.top) / rect.height) * 2 - 1).toFixed(3));
+  };
+  const handleStageLeave = (event) => {
+    event.currentTarget.style.setProperty("--mx", "0");
+    event.currentTarget.style.setProperty("--my", "0");
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2563,10 +3413,6 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
     Number.isFinite(hldCurrentPrice) &&
     hldCurrentPrice >= 0;
   const hldMrp = Number(hldProduct?.mrp ?? 0);
-  const hldDiscount =
-    hldMrp > hldCurrentPrice && hldMrp > 0
-      ? Math.round(((hldMrp - hldCurrentPrice) / hldMrp) * 100)
-      : 0;
   const hldCanBuy =
     !loadingHldProduct &&
     !hldProductError &&
@@ -2596,10 +3442,10 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
   const animation = reduceMotion
     ? {}
     : {
-        initial: { opacity: 0, y: 18 },
-        whileInView: { opacity: 1, y: 0 },
+        initial: { opacity: 0, y: 28, scale: 0.96 },
+        whileInView: { opacity: 1, y: 0, scale: 1 },
         viewport: { once: true, amount: 0.16 },
-        transition: { duration: 0.5, ease: "easeOut" },
+        transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
       };
 
   const supportEmail = SUPPORT_EMAIL;
@@ -2613,7 +3459,7 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
     "@type": "Product",
     "@id": `${canonicalUrl}#product`,
     name: productName,
-    description: SEO_DESCRIPTION,
+    description: SEO_LONG_DESCRIPTION,
     url: canonicalUrl,
     category: "Low-Level Design Java Ebook",
     brand: {
@@ -2629,8 +3475,13 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
             url: canonicalUrl,
             price: currentPrice,
             priceCurrency: currency,
+            priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
             availability: "https://schema.org/InStock",
             itemCondition: "https://schema.org/NewCondition",
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+            },
             seller: {
               "@type": "Organization",
               name: SITE_NAME,
@@ -2723,6 +3574,18 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
       bookSchema,
       productSchema,
       {
+        "@type": "ItemList",
+        "@id": `${canonicalUrl}#curriculum`,
+        name: "14-part curriculum of the Java LLD handbook",
+        numberOfItems: modules.length,
+        itemListElement: modules.map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: item.title,
+          description: item.detail,
+        })),
+      },
+      {
         "@type": "FAQPage",
         "@id": `${canonicalUrl}#faq`,
         mainEntity: faqItems.map(({ q: question, a: answer }) => ({
@@ -2758,7 +3621,10 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
       <meta name="theme-color" content={theme === "dark" ? "#141210" : "#FAF9F6"} />
       <meta name="color-scheme" content={theme === "dark" ? "dark light" : "light dark"} />
       <link rel="canonical" href={canonicalUrl} />
-      <meta property="og:type" content="website" />
+      <link rel="alternate" hrefLang="en-IN" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
+      {seoImage && <link rel="preload" as="image" href={seoImage} />}
+      <meta property="og:type" content="product" />
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_IN" />
       <meta property="og:title" content={SEO_TITLE} />
@@ -2793,9 +3659,10 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
     >
       {seoHead}
       <style>{styles}</style>
+      <ScrollProgress />
 
       <main id="top">
-        <section className="lld-hero">
+        <section className="lld-hero" ref={heroRef}>
           <div className="lld-shell lld-hero-grid">
             <motion.div {...animation}>
               <div className="lld-eyebrow">
@@ -2840,6 +3707,8 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
 
             <motion.div
               className="lld-book-stage"
+              onMouseMove={handleStageMove}
+              onMouseLeave={handleStageLeave}
               initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.65, delay: 0.08 }}
@@ -2953,6 +3822,7 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
         </section>
 
         <section className="lld-shell" aria-label="Book highlights">
+          <ScrollScale className="lld-stats-scale">
           <div className="lld-stats">
             {[
               ["23", "GoF design patterns"],
@@ -2966,11 +3836,14 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
                 {...animation}
                 transition={{ ...animation.transition, delay: index * 0.05 }}
               >
-                <strong>{value}</strong>
+                <strong>
+                  <CountUp to={Number(value)} />
+                </strong>
                 <span>{label}</span>
               </motion.div>
             ))}
           </div>
+          </ScrollScale>
         </section>
 
         <section className="lld-hld-section" aria-labelledby="hld-companion-title">
@@ -2984,136 +3857,64 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
                 architecture.
               </p>
             </motion.div>
-            <div className="lld-companion-grid">
-            <motion.div className="lld-hld-card" {...animation}>
-              <div className="lld-hld-cover">
-                {hldCoverImage ? (
-                  <img
-                    src={hldCoverImage}
-                    alt="Mastering System Design High-Level Design ebook cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="lld-hld-cover-fallback">
-                    <small>Mastering System Design</small>
-                    <strong>High-Level Design</strong>
-                  </div>
-                )}
-              </div>
-              <div className="lld-hld-details">
-                <div className="lld-hld-badges">
-                  <span className="lld-hld-badge">HLD</span>
-                  <span className="lld-hld-badge">24+ Core Topics</span>
-                  <span className="lld-hld-badge">15+ Design Examples</span>
-                </div>
-                <h3>Mastering System Design — High-Level Design</h3>
-                <p>
-                  Learn how production systems scale from a single service to distributed
-                  architectures. Cover databases, Redis and caching, load balancing, Kafka,
-                  queues, replication, sharding, fault tolerance, observability and complete
-                  system-design interview flows.
-                </p>
-                <div className="lld-hld-topics">
-                  {[
-                    "Scalability",
-                    "Databases",
-                    "Redis",
-                    "Kafka",
-                    "Load Balancing",
-                    "Distributed Systems",
-                    "Fault Tolerance",
-                    "Interview Design",
-                  ].map((item) => (
-                    <span className="lld-hld-topic" key={item}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-                <div className="lld-hld-price-box">
-                  {loadingHldProduct ? (
-                    <div className="lld-hld-price-label">Loading latest HLD price...</div>
-                  ) : hldProduct && hldValidPrice ? (
-                    <>
-                      <div className="lld-hld-price-label">Current HLD ebook price</div>
-                      <div className="lld-hld-price-row">
-                        <span className="lld-hld-current">
-                          {formatMoney(hldCurrentPrice, hldCurrency)}
-                        </span>
-                        {hldMrp > hldCurrentPrice && (
-                          <span className="lld-hld-old">
-                            {formatMoney(hldMrp, hldCurrency)}
-                          </span>
-                        )}
-                        {hldDiscount > 0 && (
-                          <span className="lld-hld-save">Save {hldDiscount}%</span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="lld-hld-price-label">HLD price temporarily unavailable</div>
-                  )}
-                </div>
-                <div className="lld-hld-actions">
-                  <a className="lld-cta lld-cta-outline" href={HLD_REDIRECT_URL}>
-                    View HLD Book <ArrowRight size={15} />
-                  </a>
-                  <button
-                    className="lld-cta"
-                    type="button"
-                    onClick={openHldCheckout}
-                    disabled={!hldCanBuy}
-                  >
-                    {loadingHldProduct ? "Loading..." : "Buy HLD Now"} <BookOpen size={15} />
-                  </button>
-                </div>
-                {hldProductError && (
-                  <p className="lld-hld-error">
-                    {hldProductError} You can still open the HLD book page.
-                  </p>
-                )}
-              </div>
-            </motion.div>
-            {comboProduct && (
-              <motion.div className="lld-hld-card lld-combo-card" {...animation}>
-                <div className="lld-hld-cover">
-                  {comboCoverImage ? (
-                    <img src={comboCoverImage} alt="High-Level Design and Low-Level Design combo ebook cover" loading="lazy" />
-                  ) : (
-                    <div className="lld-hld-cover-fallback">
-                      <small>Target Trek · Complete Preparation</small>
-                      <strong>HLD + LLD Combo</strong>
-                    </div>
-                  )}
-                </div>
-                <div className="lld-hld-details">
-                  <div className="lld-hld-badges">
-                    <span className="lld-hld-badge">Bundle</span>
-                    <span className="lld-hld-badge">2 books</span>
-                    <span className="lld-hld-badge">Complete system design</span>
-                  </div>
-                  <h3>{comboProduct.title || "Mastering System Design — HLD + LLD Combo"}</h3>
-                  <p>Study distributed architectures, scaling, caches, messaging and reliability in HLD, then learn Java object design, patterns, concurrency, persistence, and solved LLD problems in the companion book.</p>
-                  <div className="lld-hld-topics">
-                    {["High-Level Design", "Java LLD", "UML", "Design Patterns", "Concurrency", "Backend Architecture"].map((topic) => (
-                      <span className="lld-hld-topic" key={topic}>{topic}</span>
-                    ))}
-                  </div>
-                  <div className="lld-hld-price-box">
-                    <div className="lld-hld-price-label">Current bundle price</div>
-                    <div className="lld-hld-price-row">
-                      <span className="lld-hld-current">{formatMoney(comboPrice, comboProduct.currency || "INR")}</span>
-                      {comboMrp > comboPrice && <span className="lld-hld-old">{formatMoney(comboMrp, comboProduct.currency || "INR")}</span>}
-                      {comboMrp > comboPrice && <span className="lld-hld-save">Save {Math.round((comboMrp - comboPrice) / comboMrp * 100)}%</span>}
-                    </div>
-                  </div>
-                  <div className="lld-hld-actions">
-                    <a className="lld-cta lld-cta-outline" href={COMBO_REDIRECT_URL}>View Combo <ArrowRight size={15} /></a>
-                    <button className="lld-cta" type="button" onClick={openComboCheckout}>Get HLD + LLD Combo <BookOpen size={15} /></button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
+            <ScrollScale className="lld-companion-scale">
+            <div className="lld-cc-grid">
+              <CompanionCard
+                variant="hld"
+                animation={animation}
+                cover={hldCoverImage}
+                coverAlt="Mastering System Design High-Level Design ebook cover"
+                fallbackSmall="Mastering System Design"
+                fallbackTitle="High-Level Design"
+                ribbon="HLD"
+                eyebrow="Architecture & scale"
+                title="Mastering System Design — High-Level Design"
+                description="Learn how production systems scale from a single service to distributed architectures: databases, Redis, load balancing, Kafka, replication, sharding, fault tolerance and full interview flows."
+                features={["24+ core topics", "15+ design examples", "Complete interview design flows"]}
+                topics={["Scalability", "Databases", "Redis", "Kafka", "Load Balancing", "Fault Tolerance"]}
+                priceLabel="Current HLD ebook price"
+                status={loadingHldProduct ? "loading" : hldProduct && hldValidPrice ? "ready" : "error"}
+                price={hldCurrentPrice}
+                mrp={hldMrp}
+                currency={hldCurrency}
+                format={formatMoney}
+                href={HLD_REDIRECT_URL}
+                viewLabel="View HLD Book"
+                buyLabel={loadingHldProduct ? "Loading..." : "Buy HLD Now"}
+                onBuy={openHldCheckout}
+                canBuy={hldCanBuy}
+                errorText={hldProductError ? `${hldProductError} You can still open the HLD book page.` : ""}
+              />
+              {comboProduct && (
+                <CompanionCard
+                  variant="combo"
+                  animation={animation}
+                  cover={comboCoverImage}
+                  coverAlt="High-Level Design and Low-Level Design combo ebook cover"
+                  fallbackSmall="Target Trek · Complete Preparation"
+                  fallbackTitle="HLD + LLD Combo"
+                  ribbon="Best value"
+                  eyebrow="2 books · one bundle"
+                  title={comboProduct.title || "Mastering System Design — HLD + LLD Combo"}
+                  description="Study distributed architecture, scaling, caching, messaging and reliability in HLD, then learn Java object design, patterns, concurrency, persistence and solved LLD problems in the companion book."
+                  features={["HLD + LLD together", "Architecture and Java code", "One checkout, both books"]}
+                  topics={["High-Level Design", "Java LLD", "UML", "Design Patterns", "Concurrency", "Backend Architecture"]}
+                  priceLabel="Current bundle price"
+                  status="ready"
+                  price={comboPrice}
+                  mrp={comboMrp}
+                  currency={comboProduct.currency || "INR"}
+                  format={formatMoney}
+                  href={COMBO_REDIRECT_URL}
+                  viewLabel="View Combo"
+                  buyLabel="Get HLD + LLD Combo"
+                  onBuy={openComboCheckout}
+                  canBuy
+                  errorText=""
+                />
+              )}
             </div>
+            </ScrollScale>
           </div>
         </section>
 
@@ -3294,20 +4095,15 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
                         <ChevronDown size={17} />
                       </motion.span>
                     </button>
-                    <AnimatePresence initial={false}>
-                      {isOpen && (
-                        <motion.div
-                          id={`lld-faq-${index}`}
-                          className="lld-faq-answer"
-                          initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: reduceMotion ? 0 : 0.22 }}
-                        >
-                          {item.a}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <div
+                      className={`lld-faq-collapse${isOpen ? " is-open" : ""}`}
+                      id={`lld-faq-${index}`}
+                      role="region"
+                    >
+                      <div className="lld-faq-collapse-inner">
+                        <div className="lld-faq-answer">{item.a}</div>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -3317,6 +4113,7 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
 
         <section className="lld-section-tight">
           <div className="lld-shell">
+            <ScrollScale from={0.9}>
             <motion.div className="lld-final-cta" {...animation}>
               <div className="lld-final-copy">
                 <div className="lld-eyebrow">
@@ -3372,22 +4169,49 @@ export default function SystemDesignLLD({ navbarOffset = 64 }) {
                 </p>
               </div>
             </motion.div>
+            </ScrollScale>
           </div>
         </section>
       </main>
 
-      <div className="lld-mobile-buy">
-        <div className="lld-mobile-price">
-          {loadingProduct
-            ? "Loading price"
-            : productError || !validPrice
-              ? "Price unavailable"
-              : formatMoney(currentPrice)}
-          <small>Master System Design - LLD</small>
+      <div
+        className={[
+          "lld-sticky",
+          heroVisible && !loadingProduct ? "is-hero-visible" : "",
+          checkoutOpen ? "is-checkout-open" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <div className="lld-sticky-card">
+          <div className="lld-sticky-info">
+            <strong className="lld-sticky-title">Master System Design — LLD in Java</strong>
+            <div className="lld-sticky-price">
+              <span className="lld-sticky-now">
+                {loadingProduct
+                  ? "Loading…"
+                  : productError || !validPrice
+                    ? "Price unavailable"
+                    : formatMoney(currentPrice)}
+              </span>
+              {!loadingProduct && !productError && mrp > currentPrice && (
+                <span className="lld-sticky-old">{formatMoney(mrp)}</span>
+              )}
+              {!loadingProduct && !productError && discount > 0 && (
+                <span className="lld-sticky-off">{discount}% off</span>
+              )}
+            </div>
+            <small className="lld-sticky-sub">Master System Design - LLD</small>
+          </div>
+          <div className="lld-sticky-actions">
+            <a className="lld-cta lld-cta-outline lld-sticky-preview" href="#preview">
+              <BookOpen size={15} /> Free preview
+            </a>
+            <button className="lld-cta lld-pulse" type="button" onClick={openCheckout} disabled={!canBuy}>
+              Get the ebook <ChevronRight size={15} />
+            </button>
+          </div>
         </div>
-        <button className="lld-cta" type="button" onClick={openCheckout} disabled={!canBuy}>
-          Get the ebook <ChevronRight size={15} />
-        </button>
       </div>
 
       </div>

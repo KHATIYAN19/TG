@@ -3,66 +3,102 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
+import { Helmet } from "react-helmet-async";
+
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useInView,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 
 import {
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
   BookOpen,
   Brain,
   Check,
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
-  CircleHelp,
   Clock3,
   Code2,
   Coffee,
+  Copy,
   Database,
   Download,
-  FileCode2,
+  FileText,
   Flame,
   GitBranch,
   GraduationCap,
   Layers3,
+  Loader2,
   LockKeyhole,
-  Menu,
   MessageSquareText,
   MonitorSmartphone,
-  PlayCircle,
   RefreshCcw,
   Rocket,
+  Search,
   Server,
   ShieldCheck,
   Sparkles,
   Terminal,
   Trophy,
-  Users,
   Workflow,
   X,
+  XCircle,
   Zap,
 } from "lucide-react";
 
-// Adjust only this import path to match your project.
-import PayUCheckoutModal from
-  "../payment/PayUCheckoutModal.jsx";
+import PayUCheckoutModal from "../payment/PayUCheckoutModal.jsx";
+import { trackViewContent } from "../lib/metaPixel.js";
+
+/* ==========================================================
+   CONFIGURATION
+========================================================== */
 
 const BASE_URL = (
   import.meta.env.VITE_BASE_URL ||
   "http://localhost:5001"
 ).replace(/\/+$/, "");
 
-const BOOK_PATH =
-  "/book/springboot-interview-handbook";
+const SITE_URL = "https://www.targettrek.in";
+const SITE_NAME = "Target Trek";
 
-const BOOK_ENDPOINT =
-  `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(
-    BOOK_PATH
-  )}`;
+const BOOK_PATH = "/book/springboot-interview-handbook";
+
+const BOOK_ENDPOINT = `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(
+  BOOK_PATH
+)}`;
+
+// Companion book shown right after the hero (loaded from the backend).
+const JAVA_BOOK_PATH = "/book/java-interview-handbook";
+
+const JAVA_BOOK_ENDPOINT = `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(
+  JAVA_BOOK_PATH
+)}`;
 
 const STORAGE_THEME_KEY = "theme";
+
+// Title <= 60 chars, description <= 160 chars.
+const SEO_TITLE = "Spring Boot Interview Questions (100 Q&A) PDF | Target Trek";
+
+const SEO_DESCRIPTION =
+  "Spring Boot interview handbook: 100 questions & answers on IoC, REST, JPA, Security, JWT, microservices, Redis, Kafka and real backend scenarios. PDF ebook.";
+
+const SEO_LONG_DESCRIPTION =
+  "100 Spring Boot interview questions covering Spring Core, REST APIs, JPA, Spring Security, transactions, microservices, Redis, Kafka and real-world backend scenarios.";
+
+const SEO_KEYWORDS =
+  "spring boot interview questions, spring boot interview questions and answers, spring boot interview book, spring boot pdf, spring data jpa interview questions, spring security jwt interview, spring boot microservices interview, dependency injection interview, spring transactional interview, kafka redis spring boot, backend interview preparation";
 
 const CHAPTERS = [
   {
@@ -592,1211 +628,215 @@ public class InventoryService {
   },
 ];
 
-const css = `
-.tt-spring-page {
-  --sb-bg: #fffdf9;
-  --sb-surface: #ffffff;
-  --sb-surface-soft: #fff6ed;
-  --sb-surface-alt: #fff0df;
-  --sb-text: #201a17;
-  --sb-muted: #71665e;
-  --sb-border: #f0dfcf;
-  --sb-primary: #ed690b;
-  --sb-primary-deep: #c64e04;
-  --sb-primary-soft: #fff0df;
-  --sb-shadow: 0 12px 35px rgba(86, 47, 12, .06);
-  --sb-code-bg: #191d25;
-  color: var(--sb-text);
-  background: var(--sb-bg);
-  min-height: 100vh;
-  font-family: Inter, ui-sans-serif, system-ui,
-    -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  overflow-x: clip;
-}
 
-.tt-spring-page[data-sb-theme="dark"] {
-  --sb-bg: #11100f;
-  --sb-surface: #1b1917;
-  --sb-surface-soft: #221b16;
-  --sb-surface-alt: #302014;
-  --sb-text: #f8f3ee;
-  --sb-muted: #b5a89c;
-  --sb-border: #39302a;
-  --sb-primary: #fb923c;
-  --sb-primary-deep: #f97316;
-  --sb-primary-soft: #352314;
-  --sb-shadow: 0 12px 35px rgba(0, 0, 0, .12);
-  --sb-code-bg: #0d1117;
-}
-
-.tt-spring-page *,
-.tt-spring-page *::before,
-.tt-spring-page *::after {
-  box-sizing: border-box;
-}
-
-.tt-spring-page button,
-.tt-spring-page input {
-  font: inherit;
-}
-
-.tt-spring-page button {
-  cursor: pointer;
-}
-
-.tt-spring-page button:disabled {
-  cursor: not-allowed;
-}
-
-.tt-spring-page button:focus-visible,
-.tt-spring-page a:focus-visible {
-  outline: 3px solid var(--sb-primary);
-  outline-offset: 4px;
-}
-
-.tt-spring-page a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.tt-spring-page .sb-container {
-  width: min(1150px, calc(100% - 40px));
-  margin-inline: auto;
-}
-
-.tt-spring-page .sb-section {
-  padding: 78px 0;
-}
-
-.tt-spring-page .sb-section.alt {
-  background: var(--sb-surface-soft);
-  border-block: 1px solid var(--sb-border);
-}
-
-.tt-spring-page .sb-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--sb-primary);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1.7px;
-}
-
-.tt-spring-page .sb-heading {
-  font-size: clamp(29px, 3.7vw, 43px);
-  font-weight: 850;
-  letter-spacing: -1.8px;
-  line-height: 1.13;
-  margin: 12px 0 14px;
-}
-
-.tt-spring-page .sb-muted {
-  color: var(--sb-muted);
-}
-
-.tt-spring-page .sb-lead {
-  color: var(--sb-muted);
-  font-size: 16px;
-  line-height: 1.85;
-  max-width: 650px;
-}
-
-.tt-spring-page .sb-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--sb-primary-soft);
-  color: var(--sb-primary);
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 750;
-  border: 1px solid var(--sb-border);
-}
-
-.tt-spring-page .sb-primary-btn {
-  border: 0;
-  background: linear-gradient(
-    110deg,
-    var(--sb-primary),
-    var(--sb-primary-deep)
-  );
-  color: #fff;
-  padding: 15px 22px;
-  border-radius: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 800;
-  transition: transform .2s, filter .2s;
-  box-shadow: 0 8px 18px rgba(234, 102, 11, .18);
-}
-
-.tt-spring-page .sb-primary-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-}
-
-.tt-spring-page .sb-primary-btn:disabled {
-  opacity: .52;
-  box-shadow: none;
-}
-
-.tt-spring-page .sb-outline-btn {
-  border: 1px solid var(--sb-border);
-  background: var(--sb-surface);
-  color: var(--sb-text);
-  padding: 14px 20px;
-  border-radius: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  font-size: 14px;
-  font-weight: 750;
-  transition: border-color .2s, transform .2s;
-}
-
-.tt-spring-page .sb-outline-btn:hover {
-  border-color: var(--sb-primary);
-  transform: translateY(-2px);
-}
-
-.tt-spring-page .sb-hero {
-  padding: 46px 0 65px;
-  position: relative;
-  overflow: hidden;
-}
-
-.tt-spring-page .sb-hero::before {
-  content: "";
-  position: absolute;
-  width: 680px;
-  height: 680px;
-  right: -280px;
-  top: -270px;
-  pointer-events: none;
-  background: radial-gradient(
-    circle,
-    rgba(248, 145, 48, .13),
-    transparent 67%
-  );
-}
-
-.tt-spring-page .sb-hero-grid {
-  display: grid;
-  grid-template-columns: 1.12fr .88fr;
-  gap: 55px;
-  align-items: center;
-  position: relative;
-}
-
-.tt-spring-page .sb-hero-title {
-  font-size: clamp(39px, 5vw, 66px);
-  line-height: 1.09;
-  letter-spacing: -3px;
-  font-weight: 900;
-  margin: 20px 0;
-}
-
-.tt-spring-page .sb-accent {
-  color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-hero-desc {
-  font-size: 16px;
-  line-height: 1.85;
-  color: var(--sb-muted);
-  max-width: 590px;
-}
-
-.tt-spring-page .sb-hero-checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin: 24px 0 28px;
-}
-
-.tt-spring-page .sb-hero-check {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.tt-spring-page .sb-hero-check svg {
-  color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-price-line {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.tt-spring-page .sb-price {
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: -1.7px;
-}
-
-.tt-spring-page .sb-mrp {
-  font-size: 18px;
-  color: var(--sb-muted);
-  text-decoration: line-through;
-}
-
-.tt-spring-page .sb-discount {
-  font-size: 12px;
-  background: var(--sb-primary-soft);
-  color: var(--sb-primary);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 800;
-}
-
-.tt-spring-page .sb-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.tt-spring-page .sb-microcopy {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  margin-top: 15px;
-  color: var(--sb-muted);
-}
-
-.tt-spring-page .sb-visual {
-  position: relative;
-  padding: 28px 8px;
-}
-
-.tt-spring-page .sb-book {
-  position: relative;
-  max-width: 380px;
-  margin-inline: auto;
-  min-height: 495px;
-  padding: 34px 30px;
-  background:
-    radial-gradient(
-      circle at 90% 7%,
-      rgba(255, 144, 51, .24),
-      transparent 44%
-    ),
-    linear-gradient(
-      155deg,
-      #27201e 0%,
-      #151414 60%,
-      #27201e 100%
-    );
-  color: #fff;
-  border-radius: 8px 14px 14px 8px;
-  border-left: 11px solid #ea6b1c;
-  box-shadow:
-    13px 17px 0 -6px rgba(105, 67, 39, .16),
-    22px 30px 55px rgba(28, 17, 8, .26);
-  transform: rotate(-3deg);
-  overflow: hidden;
-}
-
-.tt-spring-page .sb-book::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 26px,
-    rgba(255, 255, 255, .018) 27px
-  );
-  pointer-events: none;
-}
-
-.tt-spring-page .sb-book::after {
-  content: "";
-  position: absolute;
-  height: 230px;
-  width: 230px;
-  border-radius: 50%;
-  right: -90px;
-  bottom: -75px;
-  border: 32px solid rgba(249, 115, 22, .09);
-}
-
-.tt-spring-page .sb-book-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  letter-spacing: 2px;
-  font-weight: 850;
-  position: relative;
-  z-index: 1;
-}
-
-.tt-spring-page .sb-book-mark {
-  width: 56px;
-  height: 56px;
-  border-radius: 15px;
-  margin-top: 54px;
-  display: grid;
-  place-items: center;
-  background: rgba(249, 115, 22, .18);
-  color: #fb923c;
-  border: 1px solid rgba(251, 146, 60, .36);
-  position: relative;
-  z-index: 1;
-}
-
-.tt-spring-page .sb-book-title {
-  margin: 21px 0 13px;
-  font-size: clamp(32px, 4vw, 43px);
-  letter-spacing: -1.5px;
-  line-height: 1.08;
-  font-weight: 900;
-  position: relative;
-  z-index: 1;
-}
-
-.tt-spring-page .sb-book-subtitle {
-  font-size: 14px;
-  color: #d7c6ba;
-  line-height: 1.65;
-  position: relative;
-  z-index: 1;
-}
-
-.tt-spring-page .sb-book-bottom {
-  border-top: 1px solid rgba(255,255,255,.16);
-  padding-top: 17px;
-  margin-top: 57px;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  position: relative;
-  z-index: 1;
-  color: #ffb779;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.tt-spring-page .sb-visual-chip {
-  position: absolute;
-  padding: 11px 13px;
-  border-radius: 10px;
-  background: var(--sb-surface);
-  border: 1px solid var(--sb-border);
-  box-shadow: var(--sb-shadow);
-  color: var(--sb-text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 750;
-  font-size: 12px;
-  z-index: 2;
-}
-
-.tt-spring-page .sb-visual-chip svg {
-  color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-chip-one {
-  top: 65px;
-  right: -15px;
-}
-
-.tt-spring-page .sb-chip-two {
-  bottom: 65px;
-  left: -20px;
-}
-
-.tt-spring-page .sb-stats {
-  background: var(--sb-surface);
-  border-block: 1px solid var(--sb-border);
-}
-
-.tt-spring-page .sb-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.tt-spring-page .sb-stat {
-  padding: 24px 10px;
-  text-align: center;
-  border-right: 1px solid var(--sb-border);
-}
-
-.tt-spring-page .sb-stat:last-child {
-  border-right: 0;
-}
-
-.tt-spring-page .sb-stat-value {
-  font-weight: 900;
-  font-size: 26px;
-  letter-spacing: -.7px;
-  color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-stat-label {
-  font-size: 12px;
-  color: var(--sb-muted);
-  margin-top: 5px;
-}
-
-.tt-spring-page .sb-section-head {
-  max-width: 760px;
-  margin-bottom: 32px;
-}
-
-.tt-spring-page .sb-center {
-  text-align: center;
-  margin-inline: auto;
-}
-
-.tt-spring-page .sb-center .sb-lead {
-  margin-inline: auto;
-}
-
-.tt-spring-page .sb-benefit-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 17px;
-}
-
-.tt-spring-page .sb-benefit {
-  background: var(--sb-surface);
-  border: 1px solid var(--sb-border);
-  border-radius: 15px;
-  padding: 23px;
-  transition: transform .2s, border-color .2s;
-}
-
-.tt-spring-page .sb-benefit:hover {
-  transform: translateY(-4px);
-  border-color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-icon-box {
-  height: 45px;
-  width: 45px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: var(--sb-primary-soft);
-  color: var(--sb-primary);
-  margin-bottom: 19px;
-}
-
-.tt-spring-page .sb-benefit h3 {
-  font-size: 16px;
-  letter-spacing: -.3px;
-  margin: 0 0 9px;
-}
-
-.tt-spring-page .sb-benefit p {
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--sb-muted);
-  margin: 0;
-}
-
-.tt-spring-page .sb-chapter-list {
-  display: grid;
-  gap: 11px;
-}
-
-.tt-spring-page .sb-chapter {
-  background: var(--sb-surface);
-  border: 1px solid var(--sb-border);
-  border-radius: 13px;
-  overflow: hidden;
-  transition: border-color .2s;
-}
-
-.tt-spring-page .sb-chapter.open {
-  border-color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-chapter-toggle {
-  width: 100%;
-  display: flex;
-  text-align: left;
-  align-items: center;
-  gap: 15px;
-  padding: 18px 20px;
-  border: 0;
-  color: var(--sb-text);
-  background: transparent;
-}
-
-.tt-spring-page .sb-chapter-icon {
-  min-width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  background: var(--sb-primary-soft);
-  color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-chapter-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.tt-spring-page .sb-chapter-index {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--sb-primary);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.tt-spring-page .sb-chapter-name {
-  font-size: 15px;
-  font-weight: 800;
-  margin-top: 5px;
-}
-
-.tt-spring-page .sb-chapter-sub {
-  font-size: 12px;
-  color: var(--sb-muted);
-  margin-top: 5px;
-}
-
-.tt-spring-page .sb-chapter-chevron {
-  color: var(--sb-muted);
-  transition: transform .2s;
-}
-
-.tt-spring-page .sb-chapter.open .sb-chapter-chevron {
-  transform: rotate(180deg);
-}
-
-.tt-spring-page .sb-chapter-content {
-  padding: 0 20px 22px;
-  border-top: 1px solid var(--sb-border);
-}
-
-.tt-spring-page .sb-topic-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 19px;
-}
-
-.tt-spring-page .sb-topic {
-  font-size: 11px;
-  color: var(--sb-muted);
-  padding: 7px 10px;
-  background: var(--sb-surface-soft);
-  border: 1px solid var(--sb-border);
-  border-radius: 7px;
-}
-
-.tt-spring-page .sb-question-preview {
-  margin-top: 18px;
-  background: var(--sb-surface-soft);
-  border-radius: 9px;
-  padding: 17px;
-}
-
-.tt-spring-page .sb-question-preview h4 {
-  font-size: 12px;
-  margin: 0 0 12px;
-  color: var(--sb-primary);
-}
-
-.tt-spring-page .sb-question-preview ol {
-  padding-left: 20px;
-  margin: 0;
-  display: grid;
-  gap: 9px;
-}
-
-.tt-spring-page .sb-question-preview li {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--sb-text);
-}
-
-.tt-spring-page .sb-code-layout {
-  display: grid;
-  grid-template-columns: .75fr 1.25fr;
-  gap: 40px;
-  align-items: center;
-}
-
-.tt-spring-page .sb-code-tabs {
-  display: flex;
-  overflow-x: auto;
-  border-bottom: 1px solid #38404c;
-  background: #222733;
-}
-
-.tt-spring-page .sb-code-tab {
-  padding: 15px 18px;
-  background: transparent;
-  border: 0;
-  white-space: nowrap;
-  color: #aeb7c7;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.tt-spring-page .sb-code-tab.active {
-  color: #ffac6f;
-  box-shadow: inset 0 -2px #f97316;
-}
-
-.tt-spring-page .sb-code-window {
-  border-radius: 15px;
-  overflow: hidden;
-  background: var(--sb-code-bg);
-  border: 1px solid #3c4149;
-  box-shadow: 0 18px 45px rgba(0,0,0,.13);
-}
-
-.tt-spring-page .sb-code-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #222733;
-  border-bottom: 1px solid #38404c;
-  color: #c9d1de;
-  font-size: 12px;
-}
-
-.tt-spring-page .sb-window-dots {
-  display: flex;
-  gap: 5px;
-}
-
-.tt-spring-page .sb-window-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #6b7280;
-}
-
-.tt-spring-page .sb-window-dot:nth-child(1) {
-  background: #f87171;
-}
-
-.tt-spring-page .sb-window-dot:nth-child(2) {
-  background: #fbbf24;
-}
-
-.tt-spring-page .sb-window-dot:nth-child(3) {
-  background: #4ade80;
-}
-
-.tt-spring-page .sb-code-pre {
-  margin: 0;
-  padding: 22px;
-  overflow-x: auto;
-  min-height: 260px;
-  color: #dbe4ed;
-  font-family: "SFMono-Regular", Consolas,
-    "Liberation Mono", monospace;
-  font-size: 12px;
-  line-height: 1.9;
-  tab-size: 4;
-}
-
-.tt-spring-page .sb-audience-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-}
-
-.tt-spring-page .sb-audience-card {
-  border: 1px solid var(--sb-border);
-  background: var(--sb-surface);
-  border-radius: 12px;
-  padding: 23px;
-}
-
-.tt-spring-page .sb-audience-card svg {
-  color: var(--sb-primary);
-  margin-bottom: 17px;
-}
-
-.tt-spring-page .sb-audience-card h3 {
-  font-size: 14px;
-  margin: 0 0 9px;
-}
-
-.tt-spring-page .sb-audience-card p {
-  color: var(--sb-muted);
-  font-size: 12px;
-  line-height: 1.75;
-  margin: 0;
-}
-
-.tt-spring-page .sb-revision-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 9px;
-}
-
-.tt-spring-page .sb-day {
-  border: 1px solid var(--sb-border);
-  background: var(--sb-surface);
-  padding: 16px 11px;
-  border-radius: 11px;
-  min-height: 127px;
-}
-
-.tt-spring-page .sb-day-label {
-  color: var(--sb-primary);
-  font-size: 11px;
-  font-weight: 850;
-  margin-bottom: 12px;
-}
-
-.tt-spring-page .sb-day-title {
-  font-size: 12px;
-  font-weight: 750;
-  line-height: 1.55;
-}
-
-.tt-spring-page .sb-included-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 30px;
-}
-
-.tt-spring-page .sb-included-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.tt-spring-page .sb-included-item svg {
-  flex: 0 0 auto;
-  color: var(--sb-primary);
-  margin-top: 2px;
-}
-
-.tt-spring-page .sb-offer {
-  background: var(--sb-surface);
-  border: 1px solid var(--sb-border);
-  border-radius: 18px;
-  overflow: hidden;
-  max-width: 750px;
-  margin-inline: auto;
-  box-shadow: var(--sb-shadow);
-}
-
-.tt-spring-page .sb-offer-top {
-  background: var(--sb-primary-soft);
-  padding: 15px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 850;
-  color: var(--sb-primary);
-  border-bottom: 1px solid var(--sb-border);
-}
-
-.tt-spring-page .sb-offer-body {
-  padding: 32px;
-}
-
-.tt-spring-page .sb-offer-title {
-  font-size: 24px;
-  font-weight: 850;
-  letter-spacing: -.7px;
-  margin: 0 0 12px;
-}
-
-.tt-spring-page .sb-offer-price {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 12px;
-  margin: 22px 0;
-}
-
-.tt-spring-page .sb-offer-btn {
-  width: 100%;
-  margin-top: 25px;
-}
-
-.tt-spring-page .sb-faq-list {
-  max-width: 830px;
-  margin-inline: auto;
-  display: grid;
-  gap: 10px;
-}
-
-.tt-spring-page .sb-faq {
-  border: 1px solid var(--sb-border);
-  border-radius: 11px;
-  background: var(--sb-surface);
-  overflow: hidden;
-}
-
-.tt-spring-page .sb-faq-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 19px;
-  border: 0;
-  width: 100%;
-  background: transparent;
-  color: var(--sb-text);
-  text-align: left;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.tt-spring-page .sb-faq-btn svg {
-  flex-shrink: 0;
-  color: var(--sb-primary);
-  transition: transform .2s;
-}
-
-.tt-spring-page .sb-faq.open .sb-faq-btn svg {
-  transform: rotate(180deg);
-}
-
-.tt-spring-page .sb-faq-answer {
-  padding: 0 19px 19px;
-  color: var(--sb-muted);
-  font-size: 13px;
-  line-height: 1.85;
-}
-
-.tt-spring-page .sb-final-cta {
-  background: linear-gradient(
-    135deg,
-    #c64e04,
-    #f97316
-  );
-  color: #fff;
-  border-radius: 18px;
-  padding: 44px 30px;
-  text-align: center;
-}
-
-.tt-spring-page .sb-final-cta h2 {
-  font-size: clamp(26px, 4vw, 38px);
-  letter-spacing: -1px;
-  font-weight: 900;
-  margin: 0 0 14px;
-}
-
-.tt-spring-page .sb-final-cta p {
-  color: #fff3e8;
-  max-width: 550px;
-  margin: 0 auto 25px;
-  line-height: 1.8;
-  font-size: 14px;
-}
-
-.tt-spring-page .sb-final-cta button {
-  background: #fff;
-  color: #b94704;
-  box-shadow: none;
-}
-
-.tt-spring-page .sb-error-box {
-  padding: 13px;
-  border-radius: 9px;
-  border: 1px solid var(--sb-border);
-  background: var(--sb-surface-soft);
-  color: var(--sb-muted);
-  font-size: 12px;
-  line-height: 1.7;
-  margin: 15px 0;
-}
-
-.tt-spring-page .sb-mobile-bar {
-  display: none;
-}
-
-@media (max-width: 1000px) {
-  .tt-spring-page .sb-hero-grid {
-    gap: 28px;
+/* ==========================================================
+   EXTRA CONTENT (SEO + engagement)
+========================================================== */
+
+const EASE = [0.22, 1, 0.36, 1];
+
+const ctaPrimary =
+  "tt-shimmer group relative inline-flex min-h-[50px] items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 px-6 text-sm font-extrabold text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:shadow-orange-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-60";
+
+const NAV_LINKS = [
+  ["#java-book", "Java book"],
+  ["#why-spring", "Why this book"],
+  ["#spring-quiz", "Quick quiz"],
+  ["#sb-syllabus", "Syllabus"],
+  ["#spring-code", "Code"],
+  ["#spring-scenarios", "Scenarios"],
+  ["#spring-plan", "7-day plan"],
+  ["#sb-pricing", "Pricing"],
+  ["#spring-faq", "FAQ"],
+];
+
+const MARQUEE_TERMS = [
+  "Spring Boot",
+  "IoC & DI",
+  "Auto-configuration",
+  "REST APIs",
+  "Spring Data JPA",
+  "Hibernate",
+  "@Transactional",
+  "Spring AOP",
+  "Spring Security",
+  "JWT",
+  "OAuth2",
+  "Microservices",
+  "Redis",
+  "Kafka",
+  "Actuator",
+  "Testcontainers",
+];
+
+const SCENARIOS = [
+  {
+    icon: Database,
+    title: "Two users, one product",
+    text: "How would you prevent overselling when two requests try to purchase the last available item?",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Duplicate payment webhook",
+    text: "How would you make webhook processing idempotent and avoid duplicate order fulfillment?",
+  },
+  {
+    icon: Clock3,
+    title: "A 5-second API",
+    text: "How do you identify whether latency comes from database queries, thread pools or downstream calls?",
+  },
+  {
+    icon: Zap,
+    title: "High traffic spikes",
+    text: "What happens when your application exhausts database connections or request threads?",
+  },
+  {
+    icon: Workflow,
+    title: "Kafka consumer failures",
+    text: "How should retries, dead-letter topics and duplicate events be handled safely?",
+  },
+  {
+    icon: Rocket,
+    title: "Zero-downtime deployment",
+    text: "How do you roll out new code safely while maintaining application availability?",
+  },
+];
+
+const SPRING_QUIZ = [
+  {
+    question: "Which single annotation combines @Configuration, @EnableAutoConfiguration and @ComponentScan?",
+    options: ["@SpringBootApplication", "@EnableWebMvc", "@ComponentScan", "@SpringBootConfiguration"],
+    answer: 0,
+    explain:
+      "@SpringBootApplication is a convenience annotation that bundles those three. It is the entry point of auto-configuration and component scanning.",
+  },
+  {
+    question: "Two beans of the same type exist. Which annotation lets you pick one explicitly at the injection point?",
+    options: ["@Lazy", "@Qualifier", "@Scope", "@Value"],
+    answer: 1,
+    explain:
+      "@Qualifier selects a bean by name at the injection point. @Primary marks a default candidate instead, so the two are often used together.",
+  },
+  {
+    question: "A @Transactional method is called from another method in the same class. What happens to the transaction?",
+    code: `@Service
+public class OrderService {
+
+    public void placeOrder() {
+        reserveStock();      // internal call
+    }
+
+    @Transactional
+    public void reserveStock() { /* ... */ }
+}`,
+    options: [
+      "A new transaction always starts",
+      "It is not applied — self-invocation bypasses the proxy",
+      "Spring throws BeanCreationException",
+      "It always rolls back",
+    ],
+    answer: 1,
+    explain:
+      "Spring applies @Transactional through a proxy. A call from inside the same class never goes through that proxy, so no transactional behaviour is added. Move the method to another bean to fix it.",
+  },
+];
+
+const PAIN_POINTS = [
+  {
+    before: "Memorising annotations without knowing how they work",
+    after: "Internals explained: proxies, bean lifecycle and auto-configuration",
+  },
+  {
+    before: "Knowing CRUD but freezing on transaction and locking questions",
+    after: "JPA, transactions and concurrency covered with code",
+  },
+  {
+    before: "Theory-only answers when asked “what if production breaks?”",
+    after: "A full chapter of real-world SDE-2 backend scenarios",
+  },
+  {
+    before: "Scattered notes across blogs and videos",
+    after: "100 questions, 10 chapters, one revision roadmap",
+  },
+];
+
+const EXTRA_FAQS = [
+  {
+    q: "Which Spring Boot topics are covered in the 100 interview questions?",
+    a: "Spring and Spring Boot fundamentals, IoC and dependency injection, REST APIs and exception handling, Spring Data JPA and Hibernate, transactions and AOP, Spring Security with JWT and OAuth2, microservices, Redis, Kafka and async processing, testing and monitoring, and real-world backend scenarios.",
+  },
+  {
+    q: "Is there a Java interview book as well?",
+    a: "Yes. Target Trek also has a Java Interview Handbook with 100 Core Java questions — OOP, Collections, Streams, concurrency, JVM and modern Java. It is linked right below the hero on this page.",
+  },
+];
+
+/* ==========================================================
+   SMALL HELPERS
+========================================================== */
+
+const cx = (...classes) => classes.filter(Boolean).join(" ");
+
+const normalizeTheme = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "dark" || normalized === "light" ? normalized : null;
+};
+
+const readThemeFromStorage = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    return normalizeTheme(window.localStorage.getItem(STORAGE_THEME_KEY));
+  } catch {
+    return null;
   }
+};
 
-  .tt-spring-page .sb-audience-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+const readThemeFromDom = () => {
+  if (typeof document === "undefined") return null;
+  const html = document.documentElement;
+  const body = document.body;
 
-  .tt-spring-page .sb-revision-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  const explicit =
+    normalizeTheme(html.getAttribute("data-theme")) ||
+    normalizeTheme(body?.getAttribute("data-theme"));
+  if (explicit) return explicit;
 
-  .tt-spring-page .sb-book {
-    min-height: 450px;
-  }
-}
-
-@media (max-width: 760px) {
-  .tt-spring-page .sb-container {
-    width: min(100% - 32px, 1150px);
-  }
-
-  .tt-spring-page .sb-section {
-    padding: 52px 0;
-  }
-
-  .tt-spring-page .sb-hero {
-    padding: 20px 0 45px;
-  }
-
-  .tt-spring-page .sb-hero-grid,
-  .tt-spring-page .sb-code-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .tt-spring-page .sb-hero-title {
-    font-size: clamp(36px, 8vw, 49px);
-    letter-spacing: -1.9px;
-  }
-
-  .tt-spring-page .sb-hero-desc {
-    font-size: 14px;
-  }
-
-  .tt-spring-page .sb-visual {
-    max-width: 410px;
-    margin: 0 auto;
-    width: 100%;
-    padding: 18px 10px;
-  }
-
-  .tt-spring-page .sb-book {
-    max-width: 305px;
-    min-height: 415px;
-    padding: 26px 22px;
-  }
-
-  .tt-spring-page .sb-book-mark {
-    margin-top: 39px;
-  }
-
-  .tt-spring-page .sb-book-title {
-    font-size: 34px;
-  }
-
-  .tt-spring-page .sb-book-bottom {
-    margin-top: 39px;
-  }
-
-  .tt-spring-page .sb-chip-one {
-    right: -3px;
-    top: 25px;
-  }
-
-  .tt-spring-page .sb-chip-two {
-    left: -5px;
-    bottom: 25px;
-  }
-
-  .tt-spring-page .sb-benefit-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 11px;
-  }
-
-  .tt-spring-page .sb-benefit {
-    padding: 16px;
-  }
-
-  .tt-spring-page .sb-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .tt-spring-page .sb-stat {
-    border-bottom: 1px solid var(--sb-border);
-  }
-
-  .tt-spring-page .sb-stat:nth-child(even) {
-    border-right: 0;
-  }
-
-  .tt-spring-page .sb-stat:nth-child(n+3) {
-    border-bottom: 0;
-  }
-
-  .tt-spring-page .sb-included-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .tt-spring-page .sb-mobile-bar {
-    position: fixed;
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    justify-content: space-between;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 11px 16px calc(11px + env(safe-area-inset-bottom));
-    background: var(--sb-surface);
-    border-top: 1px solid var(--sb-border);
-    box-shadow: 0 -6px 25px rgba(0,0,0,.06);
-    z-index: 40;
-  }
-
-  .tt-spring-page .sb-mobile-bar .sb-primary-btn {
-    padding: 13px 16px;
-  }
-
-  .tt-spring-page {
-    padding-bottom: 84px;
-  }
-}
-
-@media (max-width: 480px) {
-  .tt-spring-page .sb-heading {
-    font-size: 28px;
-    letter-spacing: -1px;
-  }
-
-  .tt-spring-page .sb-benefit-grid,
-  .tt-spring-page .sb-audience-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .tt-spring-page .sb-benefit {
-    padding: 20px;
-  }
-
-  .tt-spring-page .sb-revision-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .tt-spring-page .sb-chapter-toggle {
-    padding: 15px 13px;
-    gap: 10px;
-  }
-
-  .tt-spring-page .sb-chapter-icon {
-    min-width: 39px;
-    height: 39px;
-  }
-
-  .tt-spring-page .sb-chapter-name {
-    font-size: 13px;
-  }
-
-  .tt-spring-page .sb-chapter-content {
-    padding: 0 13px 15px;
-  }
-
-  .tt-spring-page .sb-offer-body {
-    padding: 23px 19px;
-  }
-
-  .tt-spring-page .sb-hero-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .tt-spring-page .sb-hero-actions button,
-  .tt-spring-page .sb-hero-actions a {
-    width: 100%;
-  }
-
-  .tt-spring-page .sb-price {
-    font-size: 36px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tt-spring-page *,
-  .tt-spring-page *::before,
-  .tt-spring-page *::after {
-    scroll-behavior: auto !important;
-    transition-duration: .01ms !important;
-    animation-duration: .01ms !important;
-  }
-}
-`;
+  if (html.classList.contains("dark") || body?.classList.contains("dark")) return "dark";
+  if (html.classList.contains("light") || body?.classList.contains("light")) return "light";
+  return null;
+};
 
 function getStoredTheme() {
-  if (typeof window === "undefined") {
-    return "light";
-  }
+  if (typeof window === "undefined") return "light";
 
-  try {
-    return localStorage.getItem(STORAGE_THEME_KEY) ===
-      "dark"
-      ? "dark"
-      : "light";
-  } catch {
-    return "light";
-  }
+  return (
+    readThemeFromStorage() ||
+    readThemeFromDom() ||
+    (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light")
+  );
 }
 
 function normalizeBookResponse(json) {
-  if (
-    !json ||
-    json.success !== true ||
-    !json.data
-  ) {
-    throw new Error(
-      json?.message ||
-      "The book is currently unavailable."
-    );
+  if (!json || json.success !== true || !json.data) {
+    throw new Error(json?.message || "The book is currently unavailable.");
   }
 
-  // Supports a product object returned directly
-  // or inside data.product.
+  // Supports a product object returned directly or inside data.product.
   const data = json.data;
-
-  const product =
-    data.product &&
-    typeof data.product === "object"
-      ? data.product
-      : data;
+  const product = data.product && typeof data.product === "object" ? data.product : data;
 
   if (!product._id && !product.id) {
-    throw new Error(
-      "The API did not return a valid book ID."
-    );
+    throw new Error("The API did not return a valid book ID.");
   }
 
   const price = Number(product.price);
 
-  if (
-    !Number.isFinite(price) ||
-    price < 0 ||
-    product.price === null ||
-    product.price === undefined
-  ) {
-    throw new Error(
-      "The book price is currently unavailable."
-    );
+  if (!Number.isFinite(price) || price < 0 || product.price === null || product.price === undefined) {
+    throw new Error("The book price is currently unavailable.");
   }
 
-  if (
-    product.active === false ||
-    product.isActive === false
-  ) {
-    throw new Error(
-      "This book is not currently available for purchase."
-    );
+  if (product.active === false || product.isActive === false) {
+    throw new Error("This book is not currently available for purchase.");
   }
 
   return product;
@@ -1805,9 +845,7 @@ function normalizeBookResponse(json) {
 function formatPrice(value, currency = "INR") {
   const amount = Number(value);
 
-  if (!Number.isFinite(amount)) {
-    return "Price unavailable";
-  }
+  if (!Number.isFinite(amount)) return "Price unavailable";
 
   try {
     return new Intl.NumberFormat("en-IN", {
@@ -1821,1329 +859,2086 @@ function formatPrice(value, currency = "INR") {
   }
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  centered = false,
-}) {
+/* ==========================================================
+   ANIMATION HELPERS
+========================================================== */
+
+function Reveal({ children, delay = 0, y = 26, className, as = "div", ...rest }) {
+  const reduce = useReducedMotion();
+
+  if (reduce) {
+    const Plain = as;
+    return (
+      <Plain className={className} {...rest}>
+        {children}
+      </Plain>
+    );
+  }
+
+  const Tag = motion[as] || motion.div;
+
   return (
-    <div
-      className={
-        `sb-section-head ${
-          centered ? "sb-center" : ""
-        }`
-      }
+    <Tag
+      className={className}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.6, ease: EASE, delay }}
+      {...rest}
     >
-      <span className="sb-eyebrow">
-        <Sparkles size={14} />
-        {eyebrow}
-      </span>
+      {children}
+    </Tag>
+  );
+}
 
-      <h2 className="sb-heading">{title}</h2>
+function CountUp({ to, suffix = "", duration = 1.4 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const reduce = useReducedMotion();
+  const [value, setValue] = useState(reduce ? to : 0);
 
-      {description && (
-        <p className="sb-lead">{description}</p>
-      )}
+  useEffect(() => {
+    if (!inView) return undefined;
+
+    if (reduce) {
+      setValue(to);
+      return undefined;
+    }
+
+    const controls = animate(0, to, {
+      duration,
+      ease: "easeOut",
+      onUpdate: (latest) => setValue(Math.round(latest)),
+    });
+
+    return () => controls.stop();
+  }, [inView, reduce, to, duration]);
+
+  return (
+    <span ref={ref}>
+      {value}
+      {suffix}
+    </span>
+  );
+}
+
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.3 });
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="fixed inset-x-0 top-0 z-[120] h-[3px] origin-left bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600"
+      style={{ scaleX }}
+    />
+  );
+}
+
+function TiltBook({ children }) {
+  const reduce = useReducedMotion();
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+
+  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-12, 12]), { stiffness: 150, damping: 18 });
+  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [10, -10]), { stiffness: 150, damping: 18 });
+
+  const onMove = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    mx.set((event.clientX - rect.left) / rect.width - 0.5);
+    my.set((event.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const onLeave = () => {
+    mx.set(0);
+    my.set(0);
+  };
+
+  if (reduce) return <div>{children}</div>;
+
+  return (
+    <div style={{ perspective: 1000 }} onMouseMove={onMove} onMouseLeave={onLeave}>
+      <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+        <motion.div style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}>{children}</motion.div>
+      </motion.div>
     </div>
   );
 }
+
+function Section({ id, alt = false, isDarkMode, children, narrow = false, label }) {
+  return (
+    <section
+      id={id}
+      aria-labelledby={label}
+      className={cx(
+        "scroll-mt-28 py-16 sm:py-20 lg:py-24",
+        alt && "border-y",
+        alt && (isDarkMode ? "border-white/10 bg-[#17191e]" : "border-orange-100 bg-[#fff6ed]/70")
+      )}
+    >
+      <div className={cx("mx-auto px-4 sm:px-6 lg:px-8", narrow ? "max-w-5xl" : "max-w-7xl")}>{children}</div>
+    </section>
+  );
+}
+
+function SectionHeading({ eyebrow, title, description, centered = false, isDarkMode = false, id }) {
+  return (
+    <Reveal className={cx("max-w-3xl", centered && "mx-auto text-center")}>
+      <p className="mb-3 inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.19em] text-orange-600 dark:text-orange-400">
+        <Sparkles size={14} />
+        {eyebrow}
+      </p>
+
+      <h2
+        id={id}
+        className={cx(
+          "text-3xl font-extrabold leading-[1.15] tracking-tight sm:text-4xl lg:text-[43px]",
+          isDarkMode ? "text-white" : "text-slate-950"
+        )}
+      >
+        {title}
+      </h2>
+
+      {description && (
+        <p className={cx("mt-4 text-sm leading-7 sm:text-base", isDarkMode ? "text-slate-400" : "text-slate-600")}>
+          {description}
+        </p>
+      )}
+    </Reveal>
+  );
+}
+
+/* ==========================================================
+   BOOK ARTWORK (fallback when no cover URL)
+========================================================== */
 
 function BookArtwork() {
   return (
     <div
-      className="sb-visual"
+      className="relative mx-auto w-[250px] sm:w-[300px]"
       aria-label="Illustration of the Spring Boot interview handbook"
       role="img"
     >
-      <div className="sb-visual-chip sb-chip-one">
-        <CheckCircle2 size={15} />
-        100 Interview Questions
-      </div>
+      <div className="absolute -inset-10 rounded-full bg-orange-500/20 blur-[65px]" />
 
-      <div className="sb-book">
-        <div className="sb-book-top">
-          <span>TARGET TREK</span>
-          <BookOpen size={19} color="#fb923c" />
+      <div className="relative aspect-[0.72] overflow-hidden rounded-r-xl rounded-l-sm border-l-[9px] border-[#14110f] bg-gradient-to-br from-[#2a211d] via-[#1b1512] to-[#3a1d0c] p-6 text-white shadow-[18px_25px_60px_rgba(154,52,18,0.28)] sm:p-7">
+        <div className="absolute -right-24 top-20 h-72 w-72 rounded-full border border-white/10" />
+
+        <div className="relative flex h-full flex-col">
+          <div className="flex items-center justify-between text-[11px] font-black tracking-[0.2em]">
+            <span>TARGET TREK</span>
+            <BookOpen size={19} color="#fb923c" />
+          </div>
+
+          <div className="mt-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20">
+            <Coffee size={30} className="text-orange-300" />
+          </div>
+
+          <p className="mt-6 text-[30px] font-black leading-[1.1] tracking-tight sm:text-[34px]">
+            MASTERING
+            <br />
+            <span className="text-[#ff9d50]">SPRING BOOT</span>
+            <br />
+            INTERVIEWS
+          </p>
+
+          <p className="mt-5 text-[11px] font-semibold leading-5 text-orange-100/90">
+            100 Essential Questions
+            <br />
+            Detailed Answers & Java Code
+            <br />
+            Real-World Backend Scenarios
+          </p>
+
+          <div className="mt-auto flex items-center justify-between border-t border-white/20 pt-3 text-[9px] font-bold tracking-wide text-orange-200">
+            <span>JAVA • BACKEND • SPRING</span>
+            <span>100 Q&A</span>
+          </div>
         </div>
-
-        <div className="sb-book-mark">
-          <Coffee size={31} />
-        </div>
-
-        <div className="sb-book-title">
-          MASTERING
-          <br />
-          <span style={{ color: "#ff9d50" }}>
-            SPRING BOOT
-          </span>
-          <br />
-          INTERVIEWS
-        </div>
-
-        <div className="sb-book-subtitle">
-          100 Essential Questions
-          <br />
-          Detailed Answers & Java Code
-          <br />
-          Real-World Backend Scenarios
-        </div>
-
-        <div className="sb-book-bottom">
-          <span>JAVA • BACKEND • SPRING</span>
-          <span>100 Q&A</span>
-        </div>
-      </div>
-
-      <div className="sb-visual-chip sb-chip-two">
-        <Terminal size={15} />
-        Code + Concepts
       </div>
     </div>
   );
 }
 
-function ChapterCard({
-  chapter,
-  isOpen,
-  onToggle,
-}) {
-  const Icon = chapter.icon;
-  const contentId = `sb-chapter-${chapter.number}`;
+/* ==========================================================
+   CONCEPT QUIZ (interactive)
+========================================================== */
+
+function ConceptQuiz({ isDarkMode, cardBg, mutedText, mainText }) {
+  const reduce = useReducedMotion();
+  const [index, setIndex] = useState(0);
+  const [picked, setPicked] = useState(null);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+
+  const quiz = SPRING_QUIZ[index];
+  const answered = picked !== null;
+
+  const choose = (optionIndex) => {
+    if (answered) return;
+    setPicked(optionIndex);
+    if (optionIndex === quiz.answer) setScore((s) => s + 1);
+  };
+
+  const next = () => {
+    if (index + 1 >= SPRING_QUIZ.length) {
+      setDone(true);
+      return;
+    }
+    setIndex((i) => i + 1);
+    setPicked(null);
+  };
+
+  const restart = () => {
+    setIndex(0);
+    setPicked(null);
+    setScore(0);
+    setDone(false);
+  };
 
   return (
-    <div
-      className={
-        `sb-chapter ${isOpen ? "open" : ""}`
-      }
-    >
-      <button
-        type="button"
-        className="sb-chapter-toggle"
-        aria-expanded={isOpen}
-        aria-controls={contentId}
-        onClick={onToggle}
-      >
-        <div className="sb-chapter-icon">
-          <Icon size={21} />
-        </div>
+    <div className={cx("mx-auto mt-12 max-w-4xl rounded-3xl border p-5 shadow-sm sm:p-8", cardBg)}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-orange-600">
+          <Terminal size={16} /> Spring Boot quick quiz
+        </span>
+        <span className={cx("text-xs font-bold", mutedText)}>
+          {done ? "Finished" : `Question ${index + 1} of ${SPRING_QUIZ.length}`} · Score {score}
+        </span>
+      </div>
 
-        <div className="sb-chapter-main">
-          <div className="sb-chapter-index">
-            CHAPTER {chapter.number} • {chapter.range}
-          </div>
-          <div className="sb-chapter-name">
-            {chapter.title}
-          </div>
-          <div className="sb-chapter-sub">
-            {chapter.subtitle}
-          </div>
-        </div>
+      <div className="mt-4 flex gap-1.5" aria-hidden="true">
+        {SPRING_QUIZ.map((item, i) => (
+          <span
+            key={item.question}
+            className={cx(
+              "h-1.5 flex-1 rounded-full transition-colors duration-500",
+              i < index || done ? "bg-orange-500" : i === index ? "bg-orange-300" : isDarkMode ? "bg-white/10" : "bg-slate-200"
+            )}
+          />
+        ))}
+      </div>
 
-        <ChevronDown
-          className="sb-chapter-chevron"
-          size={20}
-        />
-      </button>
+      <AnimatePresence mode="wait" initial={false}>
+        {done ? (
+          <motion.div
+            key="done"
+            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduce ? undefined : { opacity: 0 }}
+            className="py-10 text-center"
+          >
+            <Trophy className="mx-auto text-orange-500" size={44} />
+            <h3 className={cx("mt-4 text-2xl font-black", mainText)}>
+              You scored {score} / {SPRING_QUIZ.length}
+            </h3>
+            <p className={cx("mx-auto mt-2 max-w-md text-sm leading-7", mutedText)}>
+              The handbook goes much deeper: 100 questions on Spring internals, JPA, security, microservices and production scenarios.
+            </p>
+            <button
+              type="button"
+              onClick={restart}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-orange-300 px-5 py-2.5 text-xs font-extrabold text-orange-600 transition hover:bg-orange-50"
+            >
+              <RefreshCcw size={15} /> Try again
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={index}
+            initial={reduce ? false : { opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduce ? undefined : { opacity: 0, x: -24 }}
+            transition={{ duration: 0.3, ease: EASE }}
+          >
+            <h3 className={cx("mt-6 text-lg font-extrabold leading-snug sm:text-xl", mainText)}>{quiz.question}</h3>
 
-      {isOpen && (
-        <div
-          className="sb-chapter-content"
-          id={contentId}
-        >
-          <div className="sb-topic-list">
-            {chapter.topics.map((topic) => (
-              <span
-                key={topic}
-                className="sb-topic"
-              >
-                {topic}
-              </span>
-            ))}
-          </div>
+            {quiz.code && (
+              <pre className="mt-4 overflow-x-auto rounded-2xl border border-slate-700 bg-[#151922] p-5 text-[12px] leading-7 text-slate-200 sm:text-[13px]">
+                <code>{quiz.code}</code>
+              </pre>
+            )}
 
-          <div className="sb-question-preview">
-            <h4>Questions covered in this chapter</h4>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2" role="group" aria-label="Answer options">
+              {quiz.options.map((option, optionIndex) => {
+                const isRight = optionIndex === quiz.answer;
+                const isPicked = optionIndex === picked;
 
-            <ol>
-              {chapter.questions.map((question) => (
-                <li key={question}>
-                  {question}
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      )}
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => choose(optionIndex)}
+                    disabled={answered}
+                    className={cx(
+                      "flex items-center justify-between gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-bold transition",
+                      !answered && "hover:-translate-y-0.5 hover:border-orange-400",
+                      answered && isRight && "border-green-500 bg-green-500/10 text-green-600",
+                      answered && isPicked && !isRight && "border-red-400 bg-red-500/10 text-red-500",
+                      answered && !isRight && !isPicked && "opacity-50",
+                      !answered && mainText,
+                      !answered && (isDarkMode ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white")
+                    )}
+                  >
+                    <span>{option}</span>
+                    {answered && isRight && <CheckCircle2 size={18} className="shrink-0" />}
+                    {answered && isPicked && !isRight && <XCircle size={18} className="shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <AnimatePresence>
+              {answered && (
+                <motion.div
+                  initial={reduce ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className={cx("mt-5 rounded-xl border-l-[3px] border-orange-500 p-4", isDarkMode ? "bg-orange-500/10" : "bg-orange-50")}>
+                    <p className="text-[11px] font-black uppercase tracking-wider text-orange-600">
+                      {picked === quiz.answer ? "Correct" : "Not quite"} — why?
+                    </p>
+                    <p className={cx("mt-2 text-sm leading-7", mainText)}>{quiz.explain}</p>
+                  </div>
+                  <button type="button" onClick={next} className={cx(ctaPrimary, "mt-5 min-h-[46px] text-xs")}>
+                    {index + 1 >= SPRING_QUIZ.length ? "See my score" : "Next question"}
+                    <ArrowRight size={16} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-export default function SpringBootInterviewHandbook() {
-  const [theme, setTheme] = useState(
-    getStoredTheme
+/* ==========================================================
+   JAVA HANDBOOK COMPANION CARD (backend driven)
+========================================================== */
+
+function JavaBookCard({ isDarkMode, product, loading, error, onBuy, onRetry, cardBg, mutedText, mainText }) {
+  const price = Number(product?.price);
+  const mrpValue = Number(product?.mrp || 0);
+  const currencyCode = product?.currency || "INR";
+  const hasPrice = Boolean(product) && Number.isFinite(price) && price >= 0;
+  const savings = hasPrice && mrpValue > price ? Math.round(((mrpValue - price) / mrpValue) * 100) : 0;
+
+  const cover = product?.coverpageurl || product?.coverPageUrl || product?.cover_page_url || "";
+  const title = product?.title || "Java Interview Handbook — 100 Questions";
+
+  const description =
+    product?.shortDescription ||
+    "100 Core Java interview questions across 12 chapters — OOP, Strings, Collections and HashMap internals, Streams, multithreading, JVM and garbage collection, modern Java 17/21 and tricky output questions.";
+
+  const features = [
+    "100 questions · 12 chapters",
+    "Collections & HashMap internals",
+    "Streams, concurrency & JVM",
+    "Java 17/21 & output puzzles",
+  ];
+
+  const canBuy = Boolean(product?._id) && hasPrice && !loading;
+
+  return (
+    <Reveal
+      as="article"
+      className={cx(
+        "relative overflow-hidden rounded-[28px] border shadow-[0_18px_60px_rgba(154,52,18,0.12)]",
+        isDarkMode ? "border-orange-400/25 bg-[#1b1613]" : "border-orange-200 bg-white"
+      )}
+    >
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-600 via-amber-400 to-orange-600" />
+      <div className="tt-orb pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-orange-500/10 blur-3xl" aria-hidden="true" />
+
+      <div className="relative grid gap-6 p-5 sm:grid-cols-[210px_1fr] sm:gap-8 sm:p-8 lg:grid-cols-[250px_1fr]">
+        <div className="mx-auto w-full max-w-[200px] sm:max-w-none">
+          {loading ? (
+            <div className={cx("aspect-[0.72] w-full animate-pulse rounded-2xl", isDarkMode ? "bg-white/10" : "bg-orange-100")} />
+          ) : cover ? (
+            <motion.img
+              whileHover={{ rotate: -2, scale: 1.04 }}
+              transition={{ type: "spring", stiffness: 220, damping: 16 }}
+              src={cover}
+              alt={`${title} ebook cover`}
+              loading="lazy"
+              decoding="async"
+              className="w-full rounded-2xl object-contain shadow-[14px_20px_40px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
+            />
+          ) : (
+            <motion.div
+              whileHover={{ rotate: -2, scale: 1.04 }}
+              className="relative flex aspect-[0.72] w-full flex-col justify-between overflow-hidden rounded-2xl border-l-[8px] border-orange-900 bg-gradient-to-br from-orange-400 via-orange-600 to-orange-900 p-5 text-white shadow-[14px_20px_40px_rgba(0,0,0,0.22)]"
+            >
+              <span className="text-[10px] font-black tracking-[0.2em]">TARGET TREK</span>
+              <div>
+                <Coffee size={34} className="mb-3 text-white/85" />
+                <p className="text-2xl font-black leading-tight">
+                  JAVA
+                  <br />
+                  INTERVIEW
+                  <br />
+                  HANDBOOK
+                </p>
+                <p className="mt-3 text-sm font-bold text-orange-100">100 Questions</p>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-orange-500/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-orange-600">
+              Start with the fundamentals
+            </span>
+            <span className={cx("rounded-full border px-3 py-1 text-[10px] font-bold", isDarkMode ? "border-white/10 text-slate-300" : "border-slate-200 text-slate-600")}>
+              Digital PDF ebook
+            </span>
+            {savings > 0 && (
+              <span className="rounded-full bg-green-500/10 px-3 py-1 text-[10px] font-extrabold text-green-600">{savings}% OFF</span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="mt-4 space-y-3">
+              <div className={cx("h-7 w-4/5 animate-pulse rounded-lg", isDarkMode ? "bg-white/10" : "bg-orange-100")} />
+              <div className={cx("h-4 w-full animate-pulse rounded", isDarkMode ? "bg-white/10" : "bg-orange-50")} />
+              <div className={cx("h-4 w-2/3 animate-pulse rounded", isDarkMode ? "bg-white/10" : "bg-orange-50")} />
+            </div>
+          ) : (
+            <>
+              <h3 className={cx("mt-4 text-2xl font-black leading-tight tracking-tight sm:text-3xl", mainText)}>{title}</h3>
+              <p className={cx("mt-3 text-sm leading-7", mutedText)}>{description}</p>
+
+              <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
+                {features.map((feature) => (
+                  <li key={feature} className={cx("flex items-center gap-2 text-xs font-bold", mainText)}>
+                    <CheckCircle2 size={16} className="shrink-0 text-orange-500" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          <div className={cx("mt-6 flex flex-wrap items-end gap-x-6 gap-y-4 border-t pt-5", isDarkMode ? "border-white/10" : "border-slate-200")}>
+            <div>
+              {loading ? (
+                <div className={cx("h-9 w-28 animate-pulse rounded-lg", isDarkMode ? "bg-white/10" : "bg-orange-100")} />
+              ) : hasPrice ? (
+                <div className="flex items-end gap-2">
+                  <span className={cx("text-3xl font-black tracking-tight", mainText)}>{formatPrice(price, currencyCode)}</span>
+                  {mrpValue > price && (
+                    <span className={cx("pb-1 text-sm line-through", mutedText)}>{formatPrice(mrpValue, currencyCode)}</span>
+                  )}
+                </div>
+              ) : (
+                <span className={cx("text-sm font-semibold", mutedText)}>
+                  {error ? "Price unavailable right now" : "See details for pricing"}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-1 flex-wrap gap-3 sm:justify-end">
+              {canBuy && (
+                <button type="button" onClick={onBuy} className={ctaPrimary}>
+                  <LockKeyhole size={16} />
+                  Buy Java book
+                  <ArrowRight size={16} className="transition group-hover:translate-x-1" />
+                </button>
+              )}
+
+              <a
+                href={JAVA_BOOK_PATH}
+                className={cx(
+                  "inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border px-5 text-sm font-extrabold transition hover:-translate-y-0.5 hover:border-orange-500 hover:text-orange-500",
+                  cardBg,
+                  mainText
+                )}
+              >
+                Explore the book
+                <ArrowUpRight size={16} />
+              </a>
+            </div>
+          </div>
+
+          {error && !loading && (
+            <button type="button" onClick={onRetry} className="mt-4 inline-flex items-center gap-2 text-xs font-extrabold text-orange-600 underline">
+              <RefreshCcw size={14} /> Reload price
+            </button>
+          )}
+        </div>
+      </div>
+    </Reveal>
   );
+}
 
+/* ==========================================================
+   CODE TABS
+========================================================== */
+
+function CodeTabs() {
+  const reduce = useReducedMotion();
+  const [active, setActive] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const sample = CODE_SAMPLES[active];
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(sample.code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-700 bg-[#151922] shadow-2xl">
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-700 bg-[#1c2230] p-2" role="tablist" aria-label="Code examples">
+        {CODE_SAMPLES.map((item, index) => (
+          <button
+            key={item.label}
+            type="button"
+            role="tab"
+            aria-selected={active === index}
+            onClick={() => {
+              setActive(index);
+              setCopied(false);
+            }}
+            className={cx(
+              "shrink-0 rounded-lg px-3.5 py-2 text-xs font-bold transition",
+              active === index ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30" : "text-slate-400 hover:bg-white/5 hover:text-white"
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between border-b border-slate-700 bg-[#1c2230] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+          </div>
+          <span className="ml-3 text-xs text-slate-400">{sample.filename}</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={copyCode}
+          className="flex items-center gap-1.5 rounded-md border border-slate-600 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-700"
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={sample.filename}
+          initial={reduce ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduce ? undefined : { opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <div className="overflow-x-auto p-5 sm:p-7">
+            <pre className="text-[11px] leading-7 text-slate-200 sm:text-[12px]">
+              <code>{sample.code}</code>
+            </pre>
+          </div>
+
+          <div className="flex items-start gap-2 border-t border-slate-700 bg-[#1c2230] px-5 py-3 text-xs leading-6 text-slate-400">
+            <Terminal size={15} className="mt-1 shrink-0 text-orange-400" />
+            {sample.explanation}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+
+/* ==========================================================
+   MAIN COMPONENT
+========================================================== */
+
+export default function SpringBootInterviewHandbook() {
+  const reduce = useReducedMotion();
+
+  const [theme, setTheme] = useState(getStoredTheme);
+  const isDarkMode = theme === "dark";
+
+  /* BACKEND PRODUCT — Spring Boot */
   const [product, setProduct] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
-  const [checkoutOpen, setCheckoutOpen] =
-    useState(false);
+  /* BACKEND PRODUCT — Java companion book */
+  const [javaProduct, setJavaProduct] = useState(null);
+  const [loadingJava, setLoadingJava] = useState(true);
+  const [javaError, setJavaError] = useState("");
+  const [javaReloadKey, setJavaReloadKey] = useState(0);
 
-  const [checkoutProduct, setCheckoutProduct] =
-    useState(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutProduct, setCheckoutProduct] = useState(null);
 
-  const [expandedChapters, setExpandedChapters] =
-    useState(["01"]);
-
-  const [activeCode, setActiveCode] = useState(0);
-
+  const [expandedChapters, setExpandedChapters] = useState(["01"]);
+  const [chapterQuery, setChapterQuery] = useState("");
   const [openFaq, setOpenFaq] = useState(0);
 
-  const [allChaptersOpen, setAllChaptersOpen] =
-    useState(false);
-
-  // --------------------------------------------------
-  // Theme synchronization with the existing website
-  // --------------------------------------------------
+  /* STICKY CARD VISIBILITY */
+  const heroRef = useRef(null);
+  const [heroVisible, setHeroVisible] = useState(true);
 
   useEffect(() => {
-    const syncTheme = () => {
-      const latest = getStoredTheme();
+    const el = heroRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
 
-      setTheme((previous) =>
-        previous === latest ? previous : latest
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  /* THEME SYNC WITH THE EXISTING WEBSITE */
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return undefined;
+
+    let lastStorageTheme = readThemeFromStorage();
+    let lastDomTheme = readThemeFromDom();
+
+    const commitTheme = (nextTheme) => {
+      if (!nextTheme) return;
+      setTheme((current) => (current === nextTheme ? current : nextTheme));
+    };
+
+    const syncTheme = () => {
+      const storageTheme = readThemeFromStorage();
+      const domTheme = readThemeFromDom();
+
+      if (storageTheme && storageTheme !== lastStorageTheme) {
+        lastStorageTheme = storageTheme;
+        lastDomTheme = domTheme;
+        commitTheme(storageTheme);
+        return;
+      }
+
+      if (domTheme && domTheme !== lastDomTheme) {
+        lastDomTheme = domTheme;
+        lastStorageTheme = storageTheme;
+        commitTheme(domTheme);
+        return;
+      }
+
+      lastStorageTheme = storageTheme;
+      lastDomTheme = domTheme;
+
+      commitTheme(
+        storageTheme ||
+          domTheme ||
+          (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light")
       );
     };
+
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
+    if (document.body) {
+      observer.observe(document.body, { attributes: true, attributeFilter: ["class", "data-theme"] });
+    }
 
     syncTheme();
 
-    window.addEventListener(
-      "storage",
-      syncTheme
-    );
+    // Handles same-tab updates from a navbar that only writes localStorage.
+    const intervalId = window.setInterval(syncTheme, 500);
 
-    window.addEventListener(
-      "themechange",
-      syncTheme
-    );
-
-    window.addEventListener(
-      "targettrek-theme-change",
-      syncTheme
-    );
-
-    // Handles theme updates made in the same tab
-    // even if an existing navbar only modifies
-    // localStorage without dispatching an event.
-    const intervalId = window.setInterval(
-      syncTheme,
-      500
-    );
+    window.addEventListener("storage", syncTheme);
+    window.addEventListener("themechange", syncTheme);
+    window.addEventListener("targettrek-theme-change", syncTheme);
+    window.addEventListener("focus", syncTheme);
 
     return () => {
-      window.removeEventListener(
-        "storage",
-        syncTheme
-      );
-
-      window.removeEventListener(
-        "themechange",
-        syncTheme
-      );
-
-      window.removeEventListener(
-        "targettrek-theme-change",
-        syncTheme
-      );
-
+      observer.disconnect();
       window.clearInterval(intervalId);
+      window.removeEventListener("storage", syncTheme);
+      window.removeEventListener("themechange", syncTheme);
+      window.removeEventListener("targettrek-theme-change", syncTheme);
+      window.removeEventListener("focus", syncTheme);
     };
   }, []);
 
-  // --------------------------------------------------
-  // Referral tracking (compatible with Target Trek)
-  // --------------------------------------------------
-
+  /* REFERRAL TRACKING (compatible with Target Trek) */
   useEffect(() => {
     try {
-      const params = new URLSearchParams(
-        window.location.search
-      );
+      const params = new URLSearchParams(window.location.search);
+      const referral = params.get("referralCode") || params.get("ref");
 
-      const referral =
-        params.get("referralCode") ||
-        params.get("ref");
-
-      if (
-        referral &&
-        /^[a-zA-Z0-9_-]{1,64}$/.test(referral)
-      ) {
-        localStorage.setItem(
-          "referralCode",
-          referral
-        );
+      if (referral && /^[a-zA-Z0-9_-]{1,64}$/.test(referral)) {
+        localStorage.setItem("referralCode", referral);
       }
     } catch {
       // Local storage may be unavailable.
     }
   }, []);
 
-  // --------------------------------------------------
-  // Backend product fetch
-  // --------------------------------------------------
+  /* BACKEND PRODUCT FETCH — Spring Boot (unchanged request + validation) */
+  const fetchBook = useCallback(async (signal) => {
+    setLoading(true);
+    setError("");
 
-  const fetchBook = useCallback(
-    async (signal) => {
-      setLoading(true);
-      setError("");
+    try {
+      const response = await fetch(BOOK_ENDPOINT, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+        signal,
+      });
+
+      let result;
 
       try {
-        const response = await fetch(
-          BOOK_ENDPOINT,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-            cache: "no-store",
-            signal,
-          }
-        );
-
-        let result;
-
-        try {
-          result = await response.json();
-        } catch {
-          throw new Error(
-            "Unable to read the book response."
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(
-            result?.message ||
-            `Request failed (${response.status}).`
-          );
-        }
-
-        const book = normalizeBookResponse(
-          result
-        );
-
-        if (signal?.aborted) return;
-
-        setProduct(book);
-      } catch (err) {
-        if (
-          signal?.aborted ||
-          err?.name === "AbortError"
-        ) {
-          return;
-        }
-
-        setProduct(null);
-
-        setError(
-          err?.message ||
-          "Unable to load the book right now."
-        );
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
+        result = await response.json();
+      } catch {
+        throw new Error("Unable to read the book response.");
       }
-    },
-    []
-  );
+
+      if (!response.ok) {
+        throw new Error(result?.message || `Request failed (${response.status}).`);
+      }
+
+      const book = normalizeBookResponse(result);
+
+      if (signal?.aborted) return;
+
+      setProduct(book);
+    } catch (err) {
+      if (signal?.aborted || err?.name === "AbortError") return;
+
+      setProduct(null);
+      setError(err?.message || "Unable to load the book right now.");
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-
     fetchBook(controller.signal);
-
     return () => controller.abort();
   }, [fetchBook]);
 
-  // --------------------------------------------------
-  // Dynamic price from backend
-  // --------------------------------------------------
+  /* BACKEND PRODUCT FETCH — Java Interview Handbook (same endpoint, other redirectUrl) */
+  useEffect(() => {
+    const controller = new AbortController();
 
+    const fetchJavaBook = async () => {
+      try {
+        setLoadingJava(true);
+        setJavaError("");
+
+        const response = await fetch(JAVA_BOOK_ENDPOINT, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(result?.message || `Request failed (${response.status}).`);
+        }
+
+        const book = normalizeBookResponse(result);
+
+        if (book.isDeleted === true) {
+          throw new Error("The Java handbook is currently unavailable.");
+        }
+
+        setJavaProduct(book);
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+
+        console.error("Failed to fetch Java handbook:", err);
+        setJavaProduct(null);
+        setJavaError(err?.message || "Java handbook details are unavailable.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingJava(false);
+      }
+    };
+
+    fetchJavaBook();
+
+    return () => controller.abort();
+  }, [javaReloadKey]);
+
+  /* DYNAMIC PRICE FROM BACKEND */
   const currency = product?.currency || "INR";
+  const price = product ? Number(product.price) : null;
+  const mrp = product ? Number(product.mrp) : null;
+  const validMrp = Number.isFinite(mrp) && mrp > price;
 
-  const price = product
-    ? Number(product.price)
-    : null;
+  const formattedPrice = product && price !== null ? formatPrice(price, currency) : "Price unavailable";
+  const formattedMrp = validMrp ? formatPrice(mrp, currency) : null;
+  const savingsAmount = validMrp ? formatPrice(mrp - price, currency) : null;
+  const discount = validMrp && price !== null ? Math.round(((mrp - price) / mrp) * 100) : 0;
 
-  const mrp = product
-    ? Number(product.mrp)
-    : null;
+  const canPurchase = !!product && Number.isFinite(price) && !loading;
 
-  const validMrp =
-    Number.isFinite(mrp) &&
-    mrp > price;
+  const bookCover = product?.coverpageurl || product?.coverPageUrl || product?.cover_page_url || "";
+  const productName = product?.title || "Mastering Spring Boot Interviews";
+  const canonicalUrl = `${SITE_URL}${BOOK_PATH}`;
 
-  const formattedPrice =
-    product && price !== null
-      ? formatPrice(price, currency)
-      : "Price unavailable";
+  /* META PIXEL — once per loaded product */
+  const trackedContentRef = useRef(null);
 
-  const formattedMrp = validMrp
-    ? formatPrice(mrp, currency)
-    : null;
+  useEffect(() => {
+    if (!product || !canPurchase) return;
 
-  const discount =
-    validMrp && price !== null
-      ? Math.round(
-          ((mrp - price) / mrp) * 100
-        )
-      : 0;
+    const id = String(product._id || product.id);
+    const key = `${id}:${price}:${currency}`;
+    if (trackedContentRef.current === key) return;
 
-  const canPurchase =
-    !!product &&
-    Number.isFinite(price) &&
-    !loading;
+    const sent = trackViewContent({
+      id,
+      title: product.title || "Spring Boot Interview Handbook",
+      price,
+      currency,
+    });
 
-  // --------------------------------------------------
-  // Checkout
-  // --------------------------------------------------
+    if (sent !== false) trackedContentRef.current = key;
+  }, [product, canPurchase, price, currency]);
 
+  /* CHECKOUT */
   const handleBuyNow = useCallback(() => {
     if (!canPurchase) return;
-
     setCheckoutProduct(product);
     setCheckoutOpen(true);
   }, [canPurchase, product]);
+
+  const handleJavaBuyNow = useCallback(() => {
+    if (!javaProduct) return;
+    setCheckoutProduct(javaProduct);
+    setCheckoutOpen(true);
+  }, [javaProduct]);
 
   const closeCheckout = useCallback(() => {
     setCheckoutOpen(false);
   }, []);
 
-  // --------------------------------------------------
-  // Page interactions
-  // --------------------------------------------------
+  /* PAGE INTERACTIONS */
+  const filteredChapters = useMemo(() => {
+    const query = chapterQuery.trim().toLowerCase();
+    if (!query) return CHAPTERS;
+
+    return CHAPTERS.filter((chapter) =>
+      [chapter.title, chapter.subtitle, chapter.range, ...chapter.topics, ...chapter.questions]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [chapterQuery]);
+
+  const allChaptersOpen = expandedChapters.length === CHAPTERS.length;
 
   const toggleChapter = (number) => {
     setExpandedChapters((previous) =>
-      previous.includes(number)
-        ? previous.filter(
-            (item) => item !== number
-          )
-        : [...previous, number]
+      previous.includes(number) ? previous.filter((item) => item !== number) : [...previous, number]
     );
   };
 
   const toggleAllChapters = () => {
-    if (allChaptersOpen) {
-      setExpandedChapters([]);
-      setAllChaptersOpen(false);
-    } else {
-      setExpandedChapters(
-        CHAPTERS.map((chapter) => chapter.number)
-      );
-      setAllChaptersOpen(true);
-    }
+    setExpandedChapters(allChaptersOpen ? [] : CHAPTERS.map((chapter) => chapter.number));
   };
 
   const scrollToSection = (id) => {
-    document
-      .getElementById(id)
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const structuredData = useMemo(
-    () => ({
+  const allFaqs = useMemo(() => [...FAQS, ...EXTRA_FAQS], []);
+
+  /* STRUCTURED DATA */
+  const structuredData = useMemo(() => {
+    const priceValidUntil = `${new Date().getFullYear() + 1}-12-31`;
+
+    return {
       "@context": "https://schema.org",
-      "@type": "Book",
-      name: "Mastering Spring Boot Interviews",
-      description:
-        "100 Spring Boot interview questions covering Spring Core, REST APIs, JPA, Spring Security, transactions, microservices, Redis, Kafka and real-world backend scenarios.",
-      inLanguage: "en",
-      bookFormat: "https://schema.org/EBook",
-      url:
-        "https://www.targettrek.in" +
-        BOOK_PATH,
-      publisher: {
-        "@type": "Organization",
-        name: "Target Trek",
-      },
-      ...(canPurchase
-        ? {
-            offers: {
-              "@type": "Offer",
-              url:
-                "https://www.targettrek.in" +
-                BOOK_PATH,
-              price: String(price),
-              priceCurrency: currency,
-              availability:
-                "https://schema.org/InStock",
-            },
-          }
-        : {}),
-    }),
-    [canPurchase, price, currency]
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": `${SITE_URL}/#organization`,
+          name: SITE_NAME,
+          url: SITE_URL,
+          email: "supporttargettrek@gmail.com",
+        },
+        {
+          "@type": "WebSite",
+          "@id": `${SITE_URL}/#website`,
+          url: SITE_URL,
+          name: SITE_NAME,
+          inLanguage: "en-IN",
+          publisher: { "@id": `${SITE_URL}/#organization` },
+        },
+        {
+          "@type": "WebPage",
+          "@id": `${canonicalUrl}#webpage`,
+          url: canonicalUrl,
+          name: SEO_TITLE,
+          description: SEO_DESCRIPTION,
+          inLanguage: "en-IN",
+          isPartOf: { "@id": `${SITE_URL}/#website` },
+          breadcrumb: { "@id": `${canonicalUrl}#breadcrumb` },
+          about: { "@id": `${canonicalUrl}#product` },
+          ...(bookCover ? { primaryImageOfPage: { "@type": "ImageObject", url: bookCover } } : {}),
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${canonicalUrl}#breadcrumb`,
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+            { "@type": "ListItem", position: 2, name: "Books", item: `${SITE_URL}/books` },
+            { "@type": "ListItem", position: 3, name: "Spring Boot Interview Handbook", item: canonicalUrl },
+          ],
+        },
+        {
+          "@type": ["Product", "Book"],
+          "@id": `${canonicalUrl}#product`,
+          name: productName,
+          description: SEO_LONG_DESCRIPTION,
+          url: canonicalUrl,
+          category: "Spring Boot Interview Preparation Ebook",
+          keywords: SEO_KEYWORDS,
+          inLanguage: "en",
+          bookFormat: "https://schema.org/EBook",
+          genre: "Computer science, Spring Boot, interview preparation",
+          audience: {
+            "@type": "Audience",
+            audienceType: "Java backend developers preparing for Spring Boot interviews",
+          },
+          brand: { "@type": "Brand", name: SITE_NAME },
+          author: { "@id": `${SITE_URL}/#organization` },
+          publisher: { "@id": `${SITE_URL}/#organization` },
+          isAccessibleForFree: false,
+          ...(product?._id ? { sku: String(product._id) } : {}),
+          ...(bookCover ? { image: [bookCover] } : {}),
+          ...(canPurchase
+            ? {
+                offers: {
+                  "@type": "Offer",
+                  url: canonicalUrl,
+                  price: String(price),
+                  priceCurrency: currency,
+                  priceValidUntil,
+                  availability: "https://schema.org/InStock",
+                  itemCondition: "https://schema.org/NewCondition",
+                  hasMerchantReturnPolicy: {
+                    "@type": "MerchantReturnPolicy",
+                    returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+                  },
+                  seller: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+                },
+              }
+            : {}),
+        },
+        {
+          "@type": "ItemList",
+          "@id": `${canonicalUrl}#chapters`,
+          name: "Chapters in the Spring Boot Interview Handbook",
+          numberOfItems: CHAPTERS.length,
+          itemListElement: CHAPTERS.map((chapter, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: `${chapter.title} (${chapter.range})`,
+            description: chapter.topics.join(", "),
+          })),
+        },
+        {
+          "@type": "FAQPage",
+          "@id": `${canonicalUrl}#faq`,
+          mainEntity: allFaqs.map((item) => ({
+            "@type": "Question",
+            name: item.q,
+            acceptedAnswer: { "@type": "Answer", text: item.a },
+          })),
+        },
+      ],
+    };
+  }, [allFaqs, bookCover, canPurchase, canonicalUrl, currency, price, product?._id, productName]);
+
+  /* THEME CLASSES */
+  const pageBg = isDarkMode ? "bg-[#100e0d] text-white" : "bg-[#fffdf9] text-slate-950";
+  const cardBg = isDarkMode ? "bg-[#1b1816] border-white/10" : "bg-white border-slate-200";
+  const mutedText = isDarkMode ? "text-slate-400" : "text-slate-600";
+  const mainText = isDarkMode ? "text-white" : "text-slate-950";
+  const subtleBorder = isDarkMode ? "border-white/10" : "border-slate-200";
+
+  const buyLabel = loading ? (
+    <>
+      <Loader2 size={18} className="animate-spin" />
+      Loading book...
+    </>
+  ) : !canPurchase ? (
+    <>
+      <RefreshCcw size={17} />
+      Currently unavailable
+    </>
+  ) : (
+    <>
+      <LockKeyhole size={18} />
+      Get the Handbook — {formattedPrice}
+      <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+    </>
   );
 
+  /* ========================================================
+     MAIN JSX
+  ======================================================== */
+
   return (
-    <main
-      className="tt-spring-page mt-16"
-      data-sb-theme={theme}
-      style={{ marginTop: "4rem" }}
-    >
-      <style>{css}</style>
+    <>
+      <Helmet htmlAttributes={{ lang: "en" }}>
+        <title>{SEO_TITLE}</title>
+        <meta name="description" content={SEO_DESCRIPTION} />
+        <meta name="keywords" content={SEO_KEYWORDS} />
+        <meta name="author" content={SITE_NAME} />
+        <meta
+          name="robots"
+          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+        />
+        <meta name="theme-color" content={isDarkMode ? "#100e0d" : "#fff7ed"} />
+        <link rel="canonical" href={canonicalUrl} />
+        <link rel="alternate" hrefLang="en-IN" href={canonicalUrl} />
+        <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
+        {bookCover && <link rel="preload" as="image" href={bookCover} />}
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            structuredData
-          ).replace(/</g, "\\u003c"),
-        }}
-      />
+        <meta property="og:type" content="product" />
+        <meta property="og:site_name" content={SITE_NAME} />
+        <meta property="og:locale" content="en_IN" />
+        <meta property="og:title" content={SEO_TITLE} />
+        <meta property="og:description" content={SEO_DESCRIPTION} />
+        <meta property="og:url" content={canonicalUrl} />
+        {canPurchase && <meta property="product:price:amount" content={String(price)} />}
+        {canPurchase && <meta property="product:price:currency" content={currency} />}
+        {bookCover && <meta property="og:image" content={bookCover} />}
+        {bookCover && <meta property="og:image:alt" content={`${productName} ebook cover`} />}
 
-      {/* HERO SECTION */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={SEO_TITLE} />
+        <meta name="twitter:description" content={SEO_DESCRIPTION} />
+        {bookCover && <meta name="twitter:image" content={bookCover} />}
 
-      <section className="sb-hero">
-        <div className="sb-container sb-hero-grid">
-          <div>
-            <div className="sb-pill">
-              <Flame size={14} />
-              TARGET TREK INTERVIEW HANDBOOK
-            </div>
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+      </Helmet>
 
-            <h1 className="sb-hero-title">
-              Want to master
-              <br />
-              <span className="sb-accent">
-                Spring Boot
-              </span>
-              <br />
-              & crack your
-              <br />
-              Backend Interview?
-            </h1>
+      <style>{`
+        @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
-            <p className="sb-hero-desc">
-              From Spring Core and Dependency
-              Injection to REST APIs, JPA,
-              transactions, security, Kafka,
-              Redis and microservices —
-              prepare with 100 essential
-              interview questions, detailed
-              explanations and Java code.
-            </p>
+        .tt-gradient-text { background-size: 200% auto; animation: tt-gradient 6s linear infinite; }
+        @keyframes tt-gradient { to { background-position: 200% center; } }
 
-            <div className="sb-hero-checks">
-              {[
-                "100 interview questions",
-                "10 focused chapters",
-                "Java code examples",
-                "Real backend scenarios",
-              ].map((item) => (
-                <div
-                  className="sb-hero-check"
-                  key={item}
+        .tt-orb { animation: tt-float 12s ease-in-out infinite; }
+        .tt-orb-2 { animation-duration: 16s; animation-delay: -4s; }
+        @keyframes tt-float {
+          0%, 100% { transform: translate3d(0,0,0) scale(1); }
+          50% { transform: translate3d(24px,-30px,0) scale(1.08); }
+        }
+
+        .tt-shimmer::after {
+          content: ""; position: absolute; inset: 0; transform: translateX(-120%);
+          background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
+          animation: tt-sheen 3.4s ease-in-out infinite; pointer-events: none;
+        }
+        @keyframes tt-sheen { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+        .tt-pulse { animation: tt-pulse 2.4s ease-out infinite; }
+        @media (min-width: 768px) { .md-tt-no-pulse { animation: none; } }
+        @keyframes tt-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(249,115,22,.45); }
+          70%, 100% { box-shadow: 0 0 0 14px rgba(249,115,22,0); }
+        }
+
+        .tt-marquee { display: flex; width: max-content; animation: tt-marquee 40s linear infinite; }
+        .tt-marquee-wrap:hover .tt-marquee { animation-play-state: paused; }
+        @keyframes tt-marquee { to { transform: translateX(-50%); } }
+
+        @media (prefers-reduced-motion: reduce) {
+          .tt-gradient-text, .tt-orb, .tt-shimmer::after, .tt-pulse, .tt-marquee { animation: none !important; }
+          .tt-marquee { flex-wrap: wrap; width: auto; }
+        }
+      `}</style>
+
+      <ScrollProgress />
+
+      <main
+        data-sb-theme={theme}
+        className={cx(
+          "tt-spring-page mt-16 min-h-screen w-full overflow-x-clip pb-28",
+          "font-['Inter',sans-serif] transition-colors duration-300",
+          pageBg
+        )}
+      >
+        {/* ON-PAGE NAVIGATION */}
+        <nav
+          aria-label="On this page"
+          className={cx(
+            "sticky top-16 z-40 border-b backdrop-blur-xl",
+            isDarkMode ? "border-white/10 bg-[#100e0d]/85" : "border-orange-100 bg-white/85"
+          )}
+        >
+          <ul className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2 text-xs font-bold sm:px-6 lg:px-8">
+            {NAV_LINKS.map(([href, label]) => (
+              <li key={href} className="shrink-0">
+                <a
+                  href={href}
+                  className={cx(
+                    "inline-block rounded-full px-3 py-1.5 transition hover:bg-orange-500/10 hover:text-orange-500",
+                    isDarkMode ? "text-slate-300" : "text-slate-600"
+                  )}
                 >
-                  <CheckCircle2 size={15} />
-                  {item}
-                </div>
-              ))}
-            </div>
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-            <div className="sb-price-line">
-              {loading ? (
-                <span className="sb-muted">
-                  Loading price...
-                </span>
-              ) : (
-                <>
-                  <span className="sb-price">
-                    {formattedPrice}
+        {/* ================================================
+            HERO
+        ================================================ */}
+        <section
+          ref={heroRef}
+          aria-labelledby="sb-hero-title"
+          className={cx(
+            "relative overflow-hidden pt-6 pb-14 sm:pt-10 sm:pb-20 lg:pt-14 lg:pb-24",
+            isDarkMode ? "bg-[#100e0d]" : "bg-gradient-to-br from-white via-[#fffdf9] to-orange-50/60"
+          )}
+        >
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div className="tt-orb absolute -right-32 top-20 h-[470px] w-[470px] rounded-full bg-orange-400/15 blur-[110px]" />
+            <div className="tt-orb tt-orb-2 absolute -left-32 bottom-0 h-[380px] w-[380px] rounded-full bg-amber-400/10 blur-[110px]" />
+          </div>
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <nav aria-label="Breadcrumb" className={cx("mb-6 text-xs", mutedText)}>
+              <ol className="flex flex-wrap items-center gap-2">
+                <li><a className="font-semibold hover:text-orange-500" href="/">Home</a></li>
+                <li aria-hidden="true">/</li>
+                <li><a className="font-semibold hover:text-orange-500" href="/books">Books</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" className={cx("font-bold", mainText)}>Spring Boot Interview Handbook</li>
+              </ol>
+            </nav>
+
+            <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+              <div>
+                <Reveal
+                  y={14}
+                  className={cx(
+                    "mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider",
+                    isDarkMode
+                      ? "border-orange-500/30 bg-orange-500/10 text-orange-300"
+                      : "border-orange-200 bg-orange-50 text-orange-700"
+                  )}
+                >
+                  <Flame size={14} />
+                  Target Trek interview handbook · PDF ebook
+                </Reveal>
+
+                <Reveal
+                  as="h1"
+                  delay={0.06}
+                  id="sb-hero-title"
+                  className={cx(
+                    "max-w-2xl text-[38px] font-black leading-[1.08] tracking-[-0.05em] sm:text-[54px] lg:text-[62px]",
+                    mainText
+                  )}
+                >
+                  Spring Boot Interview
+                  <br />
+                  Questions{" "}
+                  <span className="tt-gradient-text bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent">
+                    & Answers.
                   </span>
+                </Reveal>
 
-                  {formattedMrp && (
-                    <span className="sb-mrp">
-                      {formattedMrp}
-                    </span>
+                <Reveal as="p" delay={0.12} className={cx("mt-6 max-w-xl text-lg font-semibold leading-8", isDarkMode ? "text-slate-200" : "text-slate-800")}>
+                  Master Spring Boot and crack your backend interview with 100 essential questions.
+                </Reveal>
+
+                <Reveal as="p" delay={0.16} className={cx("mt-4 max-w-xl text-sm leading-7", mutedText)}>
+                  From Spring Core and Dependency Injection to REST APIs, JPA, transactions, security,
+                  Kafka, Redis and microservices — prepare with detailed explanations and Java code.
+                </Reveal>
+
+                <div className="mt-7 grid max-w-xl gap-2.5 sm:grid-cols-2">
+                  {["100 interview questions", "10 focused chapters", "Java code examples", "Real backend scenarios"].map(
+                    (item, index) => (
+                      <Reveal key={item} delay={0.2 + index * 0.07} y={12} className="flex items-center gap-2.5 text-sm font-bold">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-orange-500">
+                          <Check size={14} strokeWidth={3} />
+                        </span>
+                        <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>{item}</span>
+                      </Reveal>
+                    )
+                  )}
+                </div>
+
+                <Reveal delay={0.3} className={cx("mt-8 border-t pt-6", subtleBorder)}>
+                  {loading ? (
+                    <div className="h-10 w-36 animate-pulse rounded-lg bg-orange-100 dark:bg-white/10" />
+                  ) : canPurchase ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={cx("text-[38px] font-black tracking-tight", mainText)}>{formattedPrice}</span>
+                      {formattedMrp && <span className={cx("text-lg line-through", mutedText)}>{formattedMrp}</span>}
+                      {discount > 0 && (
+                        <span className={cx("rounded-md px-2.5 py-1 text-xs font-extrabold", isDarkMode ? "bg-orange-500/15 text-orange-300" : "bg-orange-100 text-orange-700")}>
+                          {discount}% OFF
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className={cx("text-sm font-semibold", mutedText)}>Price unavailable</p>
                   )}
 
-                  {discount > 0 && (
-                    <span className="sb-discount">
-                      {discount}% OFF
-                    </span>
+                  {savingsAmount && <p className="mt-2 text-xs font-extrabold text-green-600">You save {savingsAmount} today</p>}
+
+                  <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <button type="button" onClick={handleBuyNow} disabled={!canPurchase} className={ctaPrimary}>
+                      {buyLabel}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection("sb-syllabus")}
+                      className={cx(
+                        "inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border px-6 text-sm font-extrabold transition-all hover:-translate-y-0.5 hover:border-orange-500 hover:text-orange-500",
+                        cardBg,
+                        mainText
+                      )}
+                    >
+                      <BookOpen size={16} />
+                      Explore All 100 Questions
+                    </button>
+                  </div>
+
+                  <div className={cx("mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold", mutedText)}>
+                    <span className="inline-flex items-center gap-1.5"><Download size={15} className="text-orange-500" /> Access after successful payment</span>
+                    <span className="inline-flex items-center gap-1.5"><ShieldCheck size={15} className="text-green-600" /> Secure checkout</span>
+                    <span className="inline-flex items-center gap-1.5"><FileText size={15} className="text-orange-500" /> Digital ebook</span>
+                  </div>
+
+                  {error && (
+                    <div role="alert" className="mt-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+                      <strong>Book information unavailable.</strong>
+                      <p className="mt-1">{error}</p>
+                      <button
+                        type="button"
+                        onClick={() => fetchBook()}
+                        disabled={loading}
+                        className="mt-3 inline-flex items-center gap-2 font-bold underline"
+                      >
+                        <RefreshCcw size={14} />
+                        Try Again
+                      </button>
+                    </div>
                   )}
-                </>
+                </Reveal>
+              </div>
+
+              <Reveal delay={0.15} y={36} className="relative flex min-h-[400px] items-center justify-center py-5 sm:min-h-[500px]">
+                <div className="absolute h-80 w-80 rounded-full bg-orange-500/15 blur-[75px]" aria-hidden="true" />
+
+                <motion.div
+                  initial={reduce ? false : { opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className={cx("absolute right-0 top-6 z-10 hidden items-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold shadow-lg sm:flex", cardBg, mainText)}
+                >
+                  <CheckCircle2 size={17} className="text-green-600" />
+                  100 Interview Questions
+                </motion.div>
+
+                <div className="relative z-[2] w-full max-w-[350px]">
+                  <TiltBook>
+                    {bookCover ? (
+                      <div className="relative">
+                        <div className="absolute inset-6 bg-orange-500/20 blur-3xl" />
+                        <img
+                          src={bookCover}
+                          alt={`${productName} ebook cover`}
+                          loading="eager"
+                          decoding="async"
+                          fetchPriority="high"
+                          className="relative mx-auto max-h-[490px] w-full object-contain drop-shadow-[16px_24px_24px_rgba(0,0,0,0.18)]"
+                        />
+                      </div>
+                    ) : (
+                      <BookArtwork />
+                    )}
+                  </TiltBook>
+                </div>
+
+                <motion.div
+                  initial={reduce ? false : { opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.9 }}
+                  className={cx("absolute bottom-4 left-0 z-10 hidden items-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold shadow-lg sm:flex", cardBg, mainText)}
+                >
+                  <Terminal size={17} className="text-orange-500" />
+                  Code + Concepts
+                </motion.div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================
+            JAVA HANDBOOK — RIGHT AFTER THE HERO
+            Loaded from /book/product?redirectUrl=/book/java-interview-handbook
+        ================================================ */}
+        <section
+          id="java-book"
+          aria-labelledby="java-book-title"
+          className={cx("scroll-mt-28 border-y py-14 sm:py-16", isDarkMode ? "border-white/10 bg-[#15110f]" : "border-orange-100 bg-[#fff6ed]/70")}
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading
+              id="java-book-title"
+              eyebrow="Also from Target Trek"
+              title="Strong Java basics make Spring Boot easier. Get the Java handbook too."
+              description="Most Spring Boot interviews start with Core Java — collections, concurrency and the JVM. Buy it now or explore the full syllabus first."
+              isDarkMode={isDarkMode}
+            />
+
+            <div className="mt-8">
+              <JavaBookCard
+                isDarkMode={isDarkMode}
+                product={javaProduct}
+                loading={loadingJava}
+                error={javaError}
+                onBuy={handleJavaBuyNow}
+                onRetry={() => setJavaReloadKey((key) => key + 1)}
+                cardBg={cardBg}
+                mutedText={mutedText}
+                mainText={mainText}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* TOPIC MARQUEE */}
+        <div
+          className={cx("tt-marquee-wrap overflow-hidden border-b py-4", isDarkMode ? "border-white/10 bg-[#13100e]" : "border-orange-100 bg-white")}
+          aria-label="Spring Boot topics covered"
+        >
+          <div className="tt-marquee">
+            {[...MARQUEE_TERMS, ...MARQUEE_TERMS].map((term, index) => (
+              <span
+                key={`${term}-${index}`}
+                aria-hidden={index >= MARQUEE_TERMS.length ? "true" : undefined}
+                className={cx(
+                  "mx-2 inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em]",
+                  isDarkMode ? "border-white/10 bg-white/[0.04] text-slate-300" : "border-orange-100 bg-orange-50/70 text-orange-700"
+                )}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                {term}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* STATS */}
+        <section aria-label="Book at a glance" className={cx("border-b", subtleBorder)}>
+          <div className="mx-auto grid max-w-7xl grid-cols-2 md:grid-cols-4">
+            {[
+              [100, "Interview Questions"],
+              [10, "Detailed Chapters"],
+              ["Java", "Code Examples"],
+              ["SDE-1/2", "Interview Focus"],
+            ].map(([value, label], index) => (
+              <div
+                key={label}
+                className={cx(
+                  "px-4 py-7 text-center",
+                  index % 2 === 0 && "border-r",
+                  index < 2 && "border-b md:border-b-0",
+                  index === 1 && "md:border-r",
+                  index === 2 && "md:border-r",
+                  subtleBorder
+                )}
+              >
+                <div className="text-3xl font-extrabold text-orange-500 sm:text-4xl">
+                  {typeof value === "number" ? <CountUp to={value} /> : value}
+                </div>
+                <div className={cx("mt-1 text-xs font-bold uppercase tracking-[0.12em] sm:text-sm", mutedText)}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ================================================
+            WHY THIS HANDBOOK
+        ================================================ */}
+        <Section id="why-spring" isDarkMode={isDarkMode} label="why-title">
+          <SectionHeading
+            id="why-title"
+            eyebrow="Why this handbook"
+            title="Understand Spring Boot the way interviewers test it."
+            description="Go beyond annotations. Learn how Spring works internally, connect it to real production systems and answer follow-ups with confidence."
+            centered
+            isDarkMode={isDarkMode}
+          />
+
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {BENEFITS.map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <Reveal
+                  key={item.title}
+                  delay={(index % 3) * 0.07}
+                  className={cx("group rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-orange-400 hover:shadow-xl", cardBg)}
+                >
+                  <div
+                    className={cx(
+                      "mb-6 flex h-12 w-12 items-center justify-center rounded-xl transition duration-300 group-hover:-rotate-6 group-hover:scale-110",
+                      isDarkMode ? "bg-orange-500/15" : "bg-orange-50"
+                    )}
+                  >
+                    <Icon size={23} className="text-orange-500" />
+                  </div>
+                  <h3 className={cx("text-base font-extrabold", mainText)}>{item.title}</h3>
+                  <p className={cx("mt-3 text-xs leading-6", mutedText)}>{item.text}</p>
+                </Reveal>
+              );
+            })}
+          </div>
+
+          <div className="mt-12 grid gap-4 md:grid-cols-2">
+            {PAIN_POINTS.map((item, index) => (
+              <Reveal key={item.before} delay={(index % 2) * 0.08} className={cx("rounded-2xl border p-5 sm:p-6", cardBg)}>
+                <div className="flex items-start gap-3">
+                  <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+                  <p className={cx("text-sm font-semibold leading-6 line-through decoration-rose-400/60", mutedText)}>{item.before}</p>
+                </div>
+                <div className="mt-3 flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                  <p className={cx("text-sm font-extrabold leading-6", mainText)}>{item.after}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Section>
+
+        {/* QUIZ */}
+        <Section id="spring-quiz" alt isDarkMode={isDarkMode} label="quiz-title">
+          <SectionHeading
+            id="quiz-title"
+            eyebrow="Try it yourself"
+            title="3 quick Spring Boot interview questions."
+            description="Pick an answer and read the explanation — the handbook explains 100 questions in this depth."
+            centered
+            isDarkMode={isDarkMode}
+          />
+          <ConceptQuiz isDarkMode={isDarkMode} cardBg={cardBg} mutedText={mutedText} mainText={mainText} />
+        </Section>
+
+        {/* AUDIENCE */}
+        <Section id="who-for" isDarkMode={isDarkMode} label="who-title">
+          <SectionHeading
+            id="who-title"
+            eyebrow="Who is it for"
+            title="Built for Java developers moving into backend roles."
+            description="From freshers to SDE-2 candidates: theory, internals, implementation and scenario-based rounds."
+            isDarkMode={isDarkMode}
+          />
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {AUDIENCE.map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <Reveal
+                  key={item.label}
+                  delay={index * 0.07}
+                  className={cx("rounded-2xl border p-6 transition hover:-translate-y-1 hover:shadow-xl", cardBg)}
+                >
+                  <div className={cx("mb-5 flex h-11 w-11 items-center justify-center rounded-xl", isDarkMode ? "bg-orange-500/15" : "bg-orange-50")}>
+                    <Icon size={21} className="text-orange-500" />
+                  </div>
+                  <h3 className={cx("text-base font-extrabold", mainText)}>{item.label}</h3>
+                  <p className={cx("mt-2 text-sm leading-6", mutedText)}>{item.text}</p>
+                </Reveal>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ================================================
+            SYLLABUS
+        ================================================ */}
+        <Section id="sb-syllabus" alt isDarkMode={isDarkMode} label="syllabus-title">
+          <SectionHeading
+            id="syllabus-title"
+            eyebrow="Complete table of contents"
+            title="10 chapters. 100 Spring Boot interview questions."
+            description="Search every chapter, topic and question. Chapter details stay on the page, so you can scan the whole syllabus quickly."
+            isDarkMode={isDarkMode}
+          />
+
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className={cx("flex h-12 w-full items-center gap-3 rounded-xl border px-4 sm:max-w-sm", cardBg)}>
+              <Search size={18} className="text-orange-500" />
+              <input
+                type="search"
+                value={chapterQuery}
+                onChange={(event) => setChapterQuery(event.target.value)}
+                placeholder="Search e.g. JWT, Kafka, @Transactional…"
+                aria-label="Search chapters, topics and questions"
+                className={cx("min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-500", mainText)}
+              />
+              {chapterQuery && (
+                <button type="button" onClick={() => setChapterQuery("")} aria-label="Clear search" className={mutedText}>
+                  <X size={17} />
+                </button>
               )}
             </div>
 
-            <div className="sb-hero-actions">
-              <button
-                type="button"
-                className="sb-primary-btn"
-                onClick={handleBuyNow}
-                disabled={!canPurchase}
-              >
-                {loading
-                  ? "Loading book..."
-                  : canPurchase
-                    ? "Get the Handbook"
-                    : "Currently Unavailable"}
+            <button type="button" onClick={toggleAllChapters} className="flex items-center gap-1.5 text-xs font-extrabold text-orange-600">
+              {allChaptersOpen ? "Collapse All" : "Expand All"}
+              <ChevronDown size={15} className={cx("transition-transform", allChaptersOpen && "rotate-180")} />
+            </button>
+          </div>
 
-                <ArrowRight size={17} />
-              </button>
+          <p className={cx("mb-4 mt-5 text-xs font-semibold", mutedText)}>
+            Showing <strong>{filteredChapters.length}</strong> of {CHAPTERS.length} chapters
+          </p>
 
-              <button
-                type="button"
-                className="sb-outline-btn"
-                onClick={() =>
-                  scrollToSection("sb-syllabus")
-                }
-              >
-                <BookOpen size={16} />
-                Explore All 100 Questions
-              </button>
-            </div>
+          <div className="space-y-3">
+            {filteredChapters.map((chapter) => {
+              const Icon = chapter.icon;
+              const isOpen = expandedChapters.includes(chapter.number);
+              const contentId = `sb-chapter-${chapter.number}`;
 
-            {error && (
-              <div
-                className="sb-error-box"
-                role="alert"
-              >
-                <strong>
-                  Book information unavailable.
-                </strong>
+              return (
+                <Reveal
+                  key={chapter.number}
+                  y={16}
+                  className={cx(
+                    "overflow-hidden rounded-xl border transition-colors",
+                    isOpen ? "border-orange-400" : subtleBorder,
+                    isDarkMode ? "bg-[#1b1816]" : "bg-white"
+                  )}
+                >
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => toggleChapter(chapter.number)}
+                      aria-expanded={isOpen}
+                      aria-controls={contentId}
+                      className={cx(
+                        "flex w-full items-center gap-3 px-4 py-5 text-left sm:gap-5 sm:px-6",
+                        isDarkMode ? "hover:bg-white/[0.03]" : "hover:bg-orange-50/40"
+                      )}
+                    >
+                      <span
+                        className={cx(
+                          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                          isDarkMode ? "bg-orange-500/15 text-orange-400" : "bg-orange-50 text-orange-600"
+                        )}
+                      >
+                        <Icon size={21} />
+                      </span>
 
-                <div>{error}</div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-extrabold uppercase tracking-widest text-orange-600">
+                          Chapter {chapter.number} • {chapter.range}
+                        </span>
+                        <span className={cx("mt-1 block text-sm font-extrabold sm:text-base", mainText)}>{chapter.title}</span>
+                        <span className={cx("mt-0.5 block text-[11px] font-normal sm:text-xs", mutedText)}>{chapter.subtitle}</span>
+                      </span>
 
+                      <span className="hidden rounded-md bg-orange-100 px-2.5 py-1 text-[10px] font-extrabold text-orange-700 sm:inline-flex">
+                        {chapter.level}
+                      </span>
+
+                      <ChevronDown
+                        size={19}
+                        className={cx("shrink-0 transition-transform duration-300", isOpen ? "rotate-180 text-orange-500" : mutedText)}
+                      />
+                    </button>
+                  </h3>
+
+                  <div
+                    id={contentId}
+                    role="region"
+                    className={cx(
+                      "grid transition-[grid-template-rows] duration-300 ease-out",
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <div className={cx("border-t px-5 py-6 sm:px-7", subtleBorder)}>
+                        <ul className="flex flex-wrap gap-2">
+                          {chapter.topics.map((topic) => (
+                            <li
+                              key={topic}
+                              className={cx(
+                                "rounded-full px-3 py-1.5 text-xs font-semibold",
+                                isDarkMode ? "bg-orange-500/10 text-orange-300" : "bg-orange-50 text-orange-700"
+                              )}
+                            >
+                              {topic}
+                            </li>
+                          ))}
+                        </ul>
+
+                        <h4 className={cx("mb-3 mt-6 text-xs font-black uppercase tracking-wider", mainText)}>
+                          Questions covered in this chapter
+                        </h4>
+
+                        <ol className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+                          {chapter.questions.map((question, index) => (
+                            <li key={question} className="flex items-start gap-3">
+                              <span className="mt-0.5 w-5 shrink-0 text-right text-[11px] font-black text-orange-500">{index + 1}.</span>
+                              <span className={cx("text-xs leading-6", mutedText)}>{question}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              );
+            })}
+
+            {filteredChapters.length === 0 && (
+              <div className={cx("rounded-2xl border border-dashed p-12 text-center", subtleBorder)}>
+                <Search size={32} className="mx-auto text-orange-500" />
+                <h3 className={cx("mt-4 text-lg font-extrabold", mainText)}>No matching chapters found</h3>
+                <p className={cx("mt-2 text-sm", mutedText)}>Try a different search term.</p>
                 <button
                   type="button"
-                  onClick={() => fetchBook()}
-                  className="sb-outline-btn"
-                  style={{ marginTop: 10 }}
-                  disabled={loading}
+                  onClick={() => setChapterQuery("")}
+                  className="mt-5 rounded-lg bg-orange-500 px-5 py-2.5 text-xs font-bold text-white"
                 >
-                  <RefreshCcw size={14} />
-                  Try Again
+                  Clear Search
                 </button>
               </div>
             )}
-
-            <div className="sb-microcopy">
-              <LockKeyhole size={13} />
-
-              Digital ebook • Secure checkout •
-              Access after successful payment
-            </div>
           </div>
 
-          <BookArtwork />
-        </div>
-      </section>
-
-      {/* QUICK STATS */}
-
-      <section className="sb-stats">
-        <div className="sb-container sb-stats-grid">
-          {[
-            ["100", "Interview Questions"],
-            ["10", "Detailed Chapters"],
-            ["Java", "Code Examples"],
-            ["SDE-1/2", "Interview Focus"],
-          ].map(([value, label]) => (
-            <div
-              className="sb-stat"
-              key={label}
-            >
-              <div className="sb-stat-value">
-                {value}
-              </div>
-
-              <div className="sb-stat-label">
-                {label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* BENEFITS */}
-
-      <section className="sb-section">
-        <div className="sb-container">
-          <SectionHeading
-            eyebrow="WHY THIS HANDBOOK?"
-            title="Everything you need to prepare smarter."
-            description="Spring Boot interviews are not just about remembering annotations. Interviewers also expect you to explain the internals, understand trade-offs and solve backend problems."
-            centered
-          />
-
-          <div className="sb-benefit-grid">
-            {BENEFITS.map((benefit) => {
-              const Icon = benefit.icon;
-
-              return (
-                <article
-                  className="sb-benefit"
-                  key={benefit.title}
-                >
-                  <div className="sb-icon-box">
-                    <Icon size={21} />
-                  </div>
-
-                  <h3>{benefit.title}</h3>
-
-                  <p>{benefit.text}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* TOPICS STRIP */}
-
-      <section className="sb-section alt">
-        <div className="sb-container">
-          <SectionHeading
-            eyebrow="WHAT YOU WILL MASTER"
-            title="From annotations to production backend systems."
-            description="Build a connected understanding of Spring Boot instead of preparing disconnected theory answers."
-          />
-
-          <div className="sb-included-grid">
-            {INCLUDED.map((item) => (
-              <div
-                key={item}
-                className="sb-included-item"
-              >
-                <CheckCircle2 size={17} />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SYLLABUS */}
-
-      <section
-        className="sb-section"
-        id="sb-syllabus"
-      >
-        <div className="sb-container">
-          <SectionHeading
-            eyebrow="COMPLETE BOOK SYLLABUS"
-            title="100 questions. 10 chapters. One clear roadmap."
-            description="Every chapter focuses on a major Spring Boot interview area, with questions arranged from foundational understanding to advanced application."
-          />
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginBottom: 15,
-            }}
+          <Reveal
+            className={cx(
+              "mt-7 flex flex-col items-start justify-between gap-5 rounded-xl border border-orange-200 p-5 sm:flex-row sm:items-center sm:p-6",
+              isDarkMode ? "bg-orange-500/10" : "bg-orange-50"
+            )}
           >
-            <button
-              type="button"
-              className="sb-outline-btn"
-              onClick={toggleAllChapters}
-              style={{
-                padding: "10px 15px",
-                fontSize: 12,
-              }}
-            >
-              {allChaptersOpen
-                ? "Collapse All"
-                : "Expand All Chapters"}
+            <div className="flex items-start gap-3">
+              <BookOpen size={24} className="shrink-0 text-orange-600" />
+              <div>
+                <h3 className={cx("text-sm font-extrabold", mainText)}>Your complete Spring Boot interview roadmap</h3>
+                <p className={cx("mt-1 text-xs", mutedText)}>100 questions organized into 10 chapters.</p>
+              </div>
+            </div>
 
-              <ChevronDown size={15} />
+            <button type="button" onClick={handleBuyNow} disabled={!canPurchase} className={cx(ctaPrimary, "min-h-[46px] text-xs")}>
+              {buyLabel}
             </button>
-          </div>
+          </Reveal>
+        </Section>
 
-          <div className="sb-chapter-list">
-            {CHAPTERS.map((chapter) => (
-              <ChapterCard
-                key={chapter.number}
-                chapter={chapter}
-                isOpen={expandedChapters.includes(
-                  chapter.number
-                )}
-                onToggle={() =>
-                  toggleChapter(chapter.number)
-                }
+        {/* CODE */}
+        <Section id="spring-code" isDarkMode={isDarkMode} label="code-title">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <div>
+              <SectionHeading
+                id="code-title"
+                eyebrow="Code-based learning"
+                title="Don’t just remember it. Understand the code."
+                description="Learn Spring Boot concepts with practical Java examples: dependency injection, API development, transaction handling and other backend fundamentals."
+                isDarkMode={isDarkMode}
               />
-            ))}
-          </div>
 
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: 29,
-            }}
-          >
-            <p
-              className="sb-muted"
-              style={{
-                fontSize: 13,
-                marginBottom: 15,
-              }}
-            >
-              Ready to turn these topics into
-              stronger interview answers?
-            </p>
-
-            <button
-              type="button"
-              className="sb-primary-btn"
-              onClick={handleBuyNow}
-              disabled={!canPurchase}
-            >
-              Get All 100 Questions
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* CODE EXAMPLES */}
-
-      <section className="sb-section alt">
-        <div className="sb-container sb-code-layout">
-          <div>
-            <span className="sb-eyebrow">
-              <FileCode2 size={14} />
-              CODE-BASED LEARNING
-            </span>
-
-            <h2 className="sb-heading">
-              Don't just remember it.
-              <br />
-              <span className="sb-accent">
-                Understand the code.
-              </span>
-            </h2>
-
-            <p className="sb-lead">
-              Learn Spring Boot concepts using
-              practical Java examples. Explore
-              dependency injection, API
-              development, transaction handling
-              and other backend fundamentals.
-            </p>
-
-            <div
-              style={{
-                display: "grid",
-                gap: 13,
-                marginTop: 23,
-              }}
-            >
-              {[
-                "Understand annotations and lifecycle behavior",
-                "Connect concepts to practical Java implementations",
-                "Prepare for code-based interview follow-ups",
-              ].map((item) => (
-                <div
-                  className="sb-included-item"
-                  key={item}
-                >
-                  <CheckCircle2 size={17} />
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="sb-code-window">
-            <div className="sb-code-tabs">
-              {CODE_SAMPLES.map((sample, index) => (
-                <button
-                  key={sample.filename}
-                  type="button"
-                  onClick={() =>
-                    setActiveCode(index)
-                  }
-                  className={
-                    `sb-code-tab ${
-                      activeCode === index
-                        ? "active"
-                        : ""
-                    }`
-                  }
-                >
-                  {sample.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="sb-code-header">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <div className="sb-window-dots">
-                  <span className="sb-window-dot" />
-                  <span className="sb-window-dot" />
-                  <span className="sb-window-dot" />
-                </div>
-
-                <span>
-                  {
-                    CODE_SAMPLES[activeCode]
-                      .filename
-                  }
-                </span>
+              <div className="mt-8 space-y-4">
+                {[
+                  "Understand annotations and lifecycle behavior",
+                  "Connect concepts to practical Java implementations",
+                  "Prepare for code-based interview follow-ups",
+                ].map((item, index) => (
+                  <Reveal key={item} delay={index * 0.08} y={14} className="flex items-start gap-3">
+                    <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-orange-500" />
+                    <span className={cx("text-sm font-semibold leading-6", mainText)}>{item}</span>
+                  </Reveal>
+                ))}
               </div>
-
-              <span>Java</span>
             </div>
 
-            <pre className="sb-code-pre">
-              <code>
-                {CODE_SAMPLES[activeCode].code}
-              </code>
-            </pre>
-
-            <div
-              style={{
-                padding: "15px 18px",
-                background: "#222733",
-                color: "#c3cbd8",
-                fontSize: 12,
-                lineHeight: 1.7,
-              }}
-            >
-              <span
-                style={{
-                  color: "#fb923c",
-                  fontWeight: 800,
-                }}
-              >
-                WHY IT MATTERS:
-              </span>{" "}
-              {
-                CODE_SAMPLES[activeCode]
-                  .explanation
-              }
-            </div>
+            <Reveal delay={0.1}>
+              <CodeTabs />
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </Section>
 
-      {/* REAL-WORLD SCENARIOS */}
-
-      <section className="sb-section">
-        <div className="sb-container">
+        {/* SCENARIOS */}
+        <Section id="spring-scenarios" alt isDarkMode={isDarkMode} label="scenarios-title">
           <SectionHeading
-            eyebrow="ADVANCED INTERVIEW PREPARATION"
-            title="Be ready when the interviewer says, 'What if...?'"
-            description="Learn to reason through backend failures, performance bottlenecks and concurrency problems—not just give theoretical answers."
+            id="scenarios-title"
+            eyebrow="Advanced interview preparation"
+            title="Be ready when the interviewer says, “What if…?”"
+            description="Learn to reason through backend failures, performance bottlenecks and concurrency problems — not just give theoretical answers."
+            isDarkMode={isDarkMode}
           />
 
-          <div className="sb-benefit-grid">
-            {[
-              {
-                icon: Database,
-                title: "Two users, one product",
-                text:
-                  "How would you prevent overselling when two requests try to purchase the last available item?",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Duplicate payment webhook",
-                text:
-                  "How would you make webhook processing idempotent and avoid duplicate order fulfillment?",
-              },
-              {
-                icon: Clock3,
-                title: "A 5-second API",
-                text:
-                  "How do you identify whether latency comes from database queries, thread pools or downstream calls?",
-              },
-              {
-                icon: Zap,
-                title: "High traffic spikes",
-                text:
-                  "What happens when your application exhausts database connections or request threads?",
-              },
-              {
-                icon: Workflow,
-                title: "Kafka consumer failures",
-                text:
-                  "How should retries, dead-letter topics and duplicate events be handled safely?",
-              },
-              {
-                icon: Rocket,
-                title: "Zero-downtime deployment",
-                text:
-                  "How do you roll out new code safely while maintaining application availability?",
-              },
-            ].map((scenario) => {
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {SCENARIOS.map((scenario, index) => {
               const Icon = scenario.icon;
 
               return (
-                <article
+                <Reveal
                   key={scenario.title}
-                  className="sb-benefit"
+                  delay={(index % 3) * 0.07}
+                  className={cx("group rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-orange-400 hover:shadow-xl", cardBg)}
                 >
-                  <div className="sb-icon-box">
-                    <Icon size={20} />
+                  <div
+                    className={cx(
+                      "mb-5 flex h-12 w-12 items-center justify-center rounded-xl transition duration-300 group-hover:rotate-6 group-hover:scale-110",
+                      isDarkMode ? "bg-orange-500/15" : "bg-orange-50"
+                    )}
+                  >
+                    <Icon size={22} className="text-orange-500" />
                   </div>
-
-                  <h3>{scenario.title}</h3>
-
-                  <p>{scenario.text}</p>
-                </article>
+                  <h3 className={cx("text-base font-extrabold", mainText)}>{scenario.title}</h3>
+                  <p className={cx("mt-2 text-sm leading-6", mutedText)}>{scenario.text}</p>
+                </Reveal>
               );
             })}
           </div>
-        </div>
-      </section>
+        </Section>
 
-      {/* TARGET AUDIENCE */}
-
-      <section className="sb-section alt">
-        <div className="sb-container">
+        {/* 7-DAY PLAN */}
+        <Section id="spring-plan" isDarkMode={isDarkMode} label="plan-title">
           <SectionHeading
-            eyebrow="WHO SHOULD READ THIS?"
-            title="Built for aspiring and working backend engineers."
-            description="Whether you're preparing for your first Java backend role or moving towards SDE-2, this handbook provides a structured revision path."
-          />
-
-          <div className="sb-audience-grid">
-            {AUDIENCE.map((person) => {
-              const Icon = person.icon;
-
-              return (
-                <div
-                  className="sb-audience-card"
-                  key={person.label}
-                >
-                  <Icon size={25} />
-
-                  <h3>{person.label}</h3>
-
-                  <p>{person.text}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* REVISION ROADMAP */}
-
-      <section className="sb-section">
-        <div className="sb-container">
-          <SectionHeading
-            eyebrow="7-DAY STUDY ROADMAP"
-            title="Have an interview coming up?"
-            description="Use this focused revision sequence to organize your preparation and prioritize the most important concepts."
-          />
-
-          <div className="sb-revision-grid">
-            {REVISION.map(([day, topic]) => (
-              <div
-                className="sb-day"
-                key={day}
-              >
-                <div className="sb-day-label">
-                  {day}
-                </div>
-
-                <div className="sb-day-title">
-                  {topic}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-
-      <section
-        className="sb-section alt"
-        id="sb-pricing"
-      >
-        <div className="sb-container">
-          <SectionHeading
-            eyebrow="GET YOUR COPY"
-            title="Invest in your next backend interview."
-            description="One focused handbook to revise Spring Boot fundamentals, understand the internals and prepare for real-world backend interview questions."
+            id="plan-title"
+            eyebrow="Revision roadmap"
+            title="A 7-day plan to revise the whole book."
+            description="A simple order to follow before your interview."
             centered
+            isDarkMode={isDarkMode}
           />
 
-          <div className="sb-offer">
-            <div className="sb-offer-top">
-              <Flame
-                size={14}
-                style={{
-                  verticalAlign: "middle",
-                  marginRight: 6,
-                }}
-              />
-              DIGITAL INTERVIEW HANDBOOK
+          <ol className="relative mx-auto mt-12 max-w-3xl space-y-4">
+            <span
+              aria-hidden="true"
+              className="absolute bottom-3 left-[27px] top-3 w-px bg-gradient-to-b from-orange-500 via-orange-400/60 to-transparent"
+            />
+            {REVISION.map(([day, topic], index) => (
+              <motion.li
+                key={day}
+                initial={reduce ? false : { opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.45, delay: index * 0.05 }}
+                className="relative flex items-center gap-4"
+              >
+                <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 to-amber-500 text-xs font-black text-white shadow-lg shadow-orange-500/25">
+                  {day.replace("Day ", "D")}
+                </span>
+                <div className={cx("flex-1 rounded-xl border px-4 py-3.5 transition hover:border-orange-400", cardBg)}>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-orange-600">{day}</p>
+                  <p className={cx("mt-0.5 text-sm font-bold", mainText)}>{topic}</p>
+                </div>
+              </motion.li>
+            ))}
+          </ol>
+        </Section>
+
+        {/* ================================================
+            PRICING
+        ================================================ */}
+        <Section id="sb-pricing" alt isDarkMode={isDarkMode} label="pricing-title">
+          <SectionHeading
+            id="pricing-title"
+            eyebrow="Get your copy"
+            title="Your Spring Boot interview preparation starts here."
+            description="One focused digital handbook covering 100 important Spring Boot and backend questions."
+            centered
+            isDarkMode={isDarkMode}
+          />
+
+          <Reveal
+            className={cx(
+              "relative mx-auto mt-12 max-w-[520px] overflow-hidden rounded-2xl border border-orange-300 shadow-2xl shadow-orange-500/10",
+              isDarkMode ? "bg-[#1b1816]" : "bg-white"
+            )}
+          >
+            <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-white">
+              <Flame size={14} className="mr-1.5 inline align-[-2px]" />
+              Digital Interview Handbook
             </div>
 
-            <div className="sb-offer-body">
-              <h3
-                className="sb-offer-title"
-                style={{
-                  textAlign: "center",
-                }}
-              >
-                Mastering Spring Boot Interviews
-              </h3>
-
-              <p
-                className="sb-muted"
-                style={{
-                  textAlign: "center",
-                  fontSize: 13,
-                  lineHeight: 1.7,
-                }}
-              >
-                100 Questions • 10 Chapters •
-                Detailed Answers & Java Examples
+            <div className="p-6 sm:p-8">
+              <h3 className={cx("text-center text-2xl font-black", mainText)}>Mastering Spring Boot Interviews</h3>
+              <p className={cx("mt-2 text-center text-[13px] leading-7", mutedText)}>
+                100 Questions • 10 Chapters • Detailed Answers & Java Examples
               </p>
 
-              <div className="sb-offer-price">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 {loading ? (
-                  <span className="sb-muted">
-                    Loading price...
-                  </span>
-                ) : (
+                  <div className="h-11 w-36 animate-pulse rounded-lg bg-orange-100 dark:bg-white/10" />
+                ) : canPurchase ? (
                   <>
-                    <span className="sb-price">
-                      {formattedPrice}
-                    </span>
-
-                    {formattedMrp && (
-                      <span className="sb-mrp">
-                        {formattedMrp}
-                      </span>
+                    <strong className={cx("text-[44px] font-black tracking-tight", mainText)}>{formattedPrice}</strong>
+                    {formattedMrp && <del className={cx("text-lg", mutedText)}>{formattedMrp}</del>}
+                    {discount > 0 && (
+                      <span className="rounded-md bg-orange-100 px-2.5 py-1 text-[11px] font-black text-orange-700">{discount}% OFF</span>
                     )}
                   </>
+                ) : (
+                  <span className={cx("text-sm", mutedText)}>Price unavailable</span>
                 )}
               </div>
 
-              {discount > 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    marginBottom: 22,
-                  }}
-                >
-                  <span className="sb-discount">
-                    Save {discount}%
-                  </span>
-                </div>
-              )}
+              <div className={cx("my-7 border-t", subtleBorder)} />
 
-              <div className="sb-included-grid">
-                {[
-                  "100 Spring Boot interview questions",
-                  "Detailed concept explanations",
-                  "Java code examples",
-                  "Spring Data JPA & transactions",
-                  "Security, JWT & microservices",
-                  "Redis, Kafka & async programming",
-                  "Production troubleshooting",
-                  "Seven-day revision roadmap",
-                ].map((item) => (
-                  <div
-                    className="sb-included-item"
-                    key={item}
+              <p className={cx("mb-5 text-xs font-black uppercase tracking-wider", mainText)}>What&apos;s included</p>
+
+              <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-1">
+                {INCLUDED.map((feature, index) => (
+                  <motion.li
+                    key={feature}
+                    initial={reduce ? false : { opacity: 0, x: -12 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.03 }}
+                    className="flex items-start gap-3"
                   >
-                    <CheckCircle2 size={17} />
-                    {item}
-                  </div>
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-orange-500" />
+                    <span className={cx("text-xs font-semibold leading-5", mainText)}>{feature}</span>
+                  </motion.li>
                 ))}
+              </ul>
+
+              <div className="mt-9">
+                <button type="button" onClick={handleBuyNow} disabled={!canPurchase} className={cx(ctaPrimary, "w-full")}>
+                  {buyLabel}
+                </button>
               </div>
 
-              <button
-                type="button"
-                className="sb-primary-btn sb-offer-btn"
-                onClick={handleBuyNow}
-                disabled={!canPurchase}
-              >
-                <LockKeyhole size={16} />
-
-                {canPurchase
-                  ? `Get Instant Access — ${formattedPrice}`
-                  : loading
-                    ? "Loading book..."
-                    : "Currently Unavailable"}
-
-                <ArrowRight size={16} />
-              </button>
-
-              <div
-                className="sb-microcopy"
-                style={{
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                  marginTop: 17,
-                }}
-              >
-                <ShieldCheck size={14} />
-                Secure checkout • Digital delivery
+              <div className={cx("mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px]", mutedText)}>
+                <ShieldCheck size={16} className="text-green-600" />
+                Secure Checkout
+                <span>·</span>
+                <LockKeyhole size={14} />
+                Access after successful payment
               </div>
             </div>
+          </Reveal>
+        </Section>
+
+        {/* FAQ */}
+        <Section id="spring-faq" isDarkMode={isDarkMode} label="faq-title">
+          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+            <div>
+              <SectionHeading
+                id="faq-title"
+                eyebrow="Frequently asked questions"
+                title="Everything you need to know."
+                description="Answers to common questions about the Spring Boot Interview Handbook."
+                isDarkMode={isDarkMode}
+              />
+              <a href="mailto:supporttargettrek@gmail.com" className="mt-7 inline-flex items-center gap-2 text-sm font-extrabold text-orange-600">
+                Need Help?
+                <ArrowUpRight size={17} />
+              </a>
+            </div>
+
+            <div className={cx("border-t", subtleBorder)}>
+              {allFaqs.map((faq, index) => {
+                const isOpen = openFaq === index;
+
+                return (
+                  <div key={faq.q} className={cx("border-b", subtleBorder)}>
+                    <h3>
+                      <button
+                        type="button"
+                        id={`sb-faq-q-${index}`}
+                        aria-expanded={isOpen}
+                        aria-controls={`sb-faq-a-${index}`}
+                        onClick={() => setOpenFaq(isOpen ? -1 : index)}
+                        className={cx("flex w-full items-center justify-between gap-5 py-5 text-left text-sm font-extrabold", mainText)}
+                      >
+                        <span>{faq.q}</span>
+                        <ChevronDown
+                          size={19}
+                          className={cx("shrink-0 transition-transform duration-300", isOpen ? "rotate-180 text-orange-500" : mutedText)}
+                        />
+                      </button>
+                    </h3>
+
+                    <div
+                      id={`sb-faq-a-${index}`}
+                      role="region"
+                      aria-labelledby={`sb-faq-q-${index}`}
+                      className={cx("grid transition-[grid-template-rows] duration-300 ease-out", isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
+                    >
+                      <div className="overflow-hidden">
+                        <p className={cx("pb-6 pr-6 text-sm leading-7", mutedText)}>{faq.a}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </Section>
 
-      {/* FAQ */}
+        {/* FINAL CTA */}
+        <section aria-labelledby="sb-final-cta" className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+          <Reveal className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-orange-800 via-orange-600 to-amber-500 px-7 py-12 text-white sm:px-12 sm:py-16 lg:px-16">
+            <div className="tt-orb absolute -right-32 top-0 h-96 w-96 rounded-full border border-white/20" aria-hidden="true" />
+            <div className="tt-orb tt-orb-2 absolute -right-10 bottom-0 h-72 w-72 rounded-full border border-white/10" aria-hidden="true" />
 
-      <section className="sb-section">
-        <div className="sb-container">
-          <SectionHeading
-            eyebrow="FREQUENTLY ASKED QUESTIONS"
-            title="Everything you should know."
-            centered
-          />
+            <div className="relative z-10 max-w-2xl">
+              <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-orange-100">
+                <Rocket size={15} />
+                Target Trek Interview Series
+              </p>
 
-          <div className="sb-faq-list">
-            {FAQS.map((item, index) => (
-              <div
-                className={
-                  `sb-faq ${
-                    openFaq === index ? "open" : ""
-                  }`
-                }
-                key={item.q}
-              >
+              <h2 id="sb-final-cta" className="mt-6 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                Your next Spring Boot interview starts with preparation.
+              </h2>
+
+              <p className="mt-6 max-w-xl text-sm leading-8 text-orange-50">
+                Master essential concepts, practice technical questions and strengthen your backend engineering knowledge with the Target Trek Spring Boot Interview Handbook.
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
-                  className="sb-faq-btn"
-                  aria-expanded={openFaq === index}
-                  onClick={() =>
-                    setOpenFaq(
-                      openFaq === index
-                        ? -1
-                        : index
-                    )
-                  }
+                  onClick={handleBuyNow}
+                  disabled={!canPurchase}
+                  className="tt-shimmer relative inline-flex min-h-[54px] items-center justify-center gap-3 overflow-hidden rounded-xl bg-white px-7 text-sm font-black text-orange-700 shadow-xl transition-all hover:-translate-y-0.5 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <span>{item.q}</span>
-                  <ChevronDown size={18} />
+                  {canPurchase ? (
+                    <>
+                      <LockKeyhole size={18} />
+                      Get the Handbook — {formattedPrice}
+                      <ArrowRight size={18} />
+                    </>
+                  ) : loading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Book Currently Unavailable"
+                  )}
                 </button>
 
-                {openFaq === index && (
-                  <div className="sb-faq-answer">
-                    {item.a}
-                  </div>
-                )}
+                <a href={JAVA_BOOK_PATH} className="inline-flex items-center gap-1.5 text-sm font-bold text-orange-50 underline-offset-4 hover:underline">
+                  Also see the Java handbook
+                  <ArrowUpRight size={16} />
+                </a>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+          </Reveal>
+        </section>
 
-      {/* FINAL CTA — NOT A FOOTER */}
+        <footer className={cx("border-t px-4 py-8 text-center text-xs leading-6", subtleBorder, mutedText)}>
+          <p>Spring Boot Interview Handbook • 100 questions & answers • Digital ebook</p>
+          <p className="mt-1">
+            Support:{" "}
+            <a className="font-bold transition hover:text-orange-500" href="mailto:supporttargettrek@gmail.com">
+              supporttargettrek@gmail.com
+            </a>
+          </p>
+          <p className="mt-3 space-x-3">
+            <a className="font-semibold transition hover:text-orange-500" href={JAVA_BOOK_PATH}>Java Interview Handbook</a>
+            <a className="font-semibold transition hover:text-orange-500" href="/book/system-design/hld">System Design HLD</a>
+            <a className="font-semibold transition hover:text-orange-500" href="/books">All books</a>
+          </p>
+        </footer>
+      </main>
 
-      <section
-        className="sb-section"
-        style={{ paddingTop: 15 }}
+      {/* RESPONSIVE STICKY BUY CARD
+          mobile: docked strip · tablet: centered card · desktop: wider card
+          (appears after the hero on md+) */}
+      <div
+        className={cx(
+          "pointer-events-none fixed inset-x-0 bottom-0 z-[100] flex justify-center px-2.5 pb-[max(10px,env(safe-area-inset-bottom))] transition-all duration-300 sm:px-4 md:pb-5",
+          (checkoutOpen || (heroVisible && !loading)) && "md:translate-y-10 md:opacity-0",
+          checkoutOpen && "max-md:translate-y-24 max-md:opacity-0"
+        )}
       >
-        <div className="sb-container">
-          <div className="sb-final-cta">
-            <Sparkles
-              size={27}
-              style={{ marginBottom: 14 }}
-            />
-
-            <h2>
-              Your next Spring Boot interview
-              starts with preparation.
-            </h2>
-
-            <p>
-              Master essential concepts, practice
-              technical questions and strengthen
-              your backend engineering knowledge
-              with the Target Trek Spring Boot
-              Interview Handbook.
+        <div
+          className={cx(
+            "pointer-events-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 rounded-[20px] border p-2.5 shadow-[0_-10px_45px_rgba(15,23,42,.18)] backdrop-blur-xl",
+            "sm:max-w-xl sm:gap-4 sm:rounded-[22px] sm:p-3",
+            "md:max-w-2xl md:rounded-2xl md:py-3 md:pl-5 md:pr-3",
+            "lg:max-w-3xl lg:gap-6 xl:max-w-4xl 2xl:max-w-5xl",
+            isDarkMode ? "border-white/10 bg-[#1b1816]/95" : "border-orange-200 bg-white/95"
+          )}
+        >
+          <div className="min-w-0 pl-1">
+            <p className={cx("hidden truncate text-sm font-extrabold leading-tight sm:block lg:text-base", mainText)}>
+              Spring Boot Interview Handbook — 100 Questions
             </p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 sm:mt-1">
+              <span className="text-lg font-extrabold leading-none text-orange-500 sm:text-base lg:text-lg">
+                {loading ? "…" : formattedPrice}
+              </span>
+              {formattedMrp && <span className={cx("text-xs font-bold line-through", mutedText)}>{formattedMrp}</span>}
+              {discount > 0 && (
+                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-extrabold text-orange-500">{discount}% off</span>
+              )}
+            </div>
+            <p className={cx("mt-1 truncate text-[11px] font-bold sm:hidden", mutedText)}>Spring Boot Handbook</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => scrollToSection("java-book")}
+              className={cx(
+                "hidden min-h-[46px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition hover:-translate-y-0.5 lg:inline-flex",
+                isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-orange-200 text-orange-700 hover:bg-orange-50"
+              )}
+            >
+              <Coffee size={16} />
+              Java book
+            </button>
 
             <button
               type="button"
-              className="sb-primary-btn"
               onClick={handleBuyNow}
               disabled={!canPurchase}
+              className={cx(ctaPrimary, "tt-pulse md-tt-no-pulse min-h-[50px] px-4 text-[13px] sm:px-6 sm:text-sm")}
             >
-              {canPurchase
-                ? `Get the Handbook — ${formattedPrice}`
-                : "Book Currently Unavailable"}
-
-              <ArrowRight size={17} />
+              {loading ? (
+                <Loader2 size={17} className="animate-spin" />
+              ) : (
+                <>
+                  Buy Now
+                  <ArrowRight size={16} className="transition group-hover:translate-x-1" />
+                </>
+              )}
             </button>
           </div>
         </div>
-      </section>
-
-      {/* MOBILE STICKY BUY BAR */}
-
-      <div className="sb-mobile-bar">
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              color: "var(--sb-muted)",
-              fontWeight: 650,
-            }}
-          >
-            SPRING BOOT HANDBOOK
-          </div>
-
-          <div
-            style={{
-              fontSize: 21,
-              fontWeight: 900,
-              marginTop: 3,
-            }}
-          >
-            {loading
-              ? "Loading..."
-              : formattedPrice}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="sb-primary-btn"
-          onClick={handleBuyNow}
-          disabled={!canPurchase}
-        >
-          {canPurchase
-            ? "Buy Now"
-            : "Unavailable"}
-
-          <ArrowRight size={16} />
-        </button>
       </div>
 
-      {/* EXISTING TARGET TREK CHECKOUT */}
-
-      <PayUCheckoutModal
-        isOpen={checkoutOpen}
-        onClose={closeCheckout}
-        product={checkoutProduct}
-      />
-    </main>
+      {/* EXISTING TARGET TREK CHECKOUT (Spring Boot + Java) */}
+      <PayUCheckoutModal isOpen={checkoutOpen} onClose={closeCheckout} product={checkoutProduct} />
+    </>
   );
 }
