@@ -63,6 +63,11 @@ import store from "./Redux/store.js";
 // SEO
 import { HelmetProvider } from "react-helmet-async";
 
+import { captureAttribution } from "./lib/attribution.js";
+
+// Remember paid-ad clicks (Meta / Google) before the app renders.
+captureAttribution();
+
 // ============================================
 // ROOT ELEMENT
 // ============================================

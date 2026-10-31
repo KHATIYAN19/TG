@@ -54,6 +54,10 @@ import {
   trackPurchase,
 } from "../lib/metaPixel";
 
+import {
+  trackGooglePurchase,
+} from "../lib/googleAds";
+
 /* ==========================================================
    CONFIGURATION
 ========================================================== */
@@ -774,6 +778,15 @@ function buildMetaPurchase(
     amount,
     currency,
     bookIds,
+    title:
+      data?.product?.title ||
+      data?.title ||
+      "",
+    // Stored on the order at checkout by the backend
+    attribution:
+      data?.attribution || {
+        platform: "organic",
+      },
   };
 }
 
@@ -791,9 +804,27 @@ function reportMetaPurchase(
 
   if (!meta.eligible) {
     console.warn(
-      "[Meta Purchase] Skipped: invalid purchase context"
+      "[Ad Purchase] Skipped: invalid purchase context"
     );
 
+    return false;
+  }
+
+  // One ad platform per sale, decided by the backend.
+  // Organic / direct sales are not reported anywhere.
+  const platform =
+    meta.attribution.platform;
+
+  if (platform === "google") {
+    return trackGooglePurchase({
+      orderId: meta.orderId,
+      amount: meta.amount,
+      currency: meta.currency,
+      attribution: meta.attribution,
+    });
+  }
+
+  if (platform !== "meta") {
     return false;
   }
 
@@ -807,6 +838,11 @@ function reportMetaPurchase(
 
     return Boolean(
       trackPurchase({
+        title: meta.title,
+
+        attribution:
+          meta.attribution,
+
         orderId:
           meta.orderId,
 

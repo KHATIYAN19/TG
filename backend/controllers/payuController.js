@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 import Book from "../models/Book.js";
 import Order from "../models/Order.js";
+import { buildAttribution, publicAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
 
 import {
@@ -79,6 +80,7 @@ export const createPayUPayment = async (
       utmSource,
       utmMedium,
       utmCampaign,
+      attribution,
     } = req.body;
 
 
@@ -431,6 +433,12 @@ export const createPayUPayment = async (
           utmCampaign:
             utmCampaign ||
             null,
+
+          attribution:
+            buildAttribution(
+              attribution,
+              { utmSource, utmMedium, utmCampaign }
+            ),
         },
 
 
@@ -1690,6 +1698,11 @@ export const getPurchasedBookAccess = async (req, res) => {
           currency:
             order.book?.currency || "INR"
         },
+
+        // Ad attribution stored at checkout time
+        attribution: publicAttribution(
+          order.metadata?.attribution
+        ),
 
         // Legacy single-book response fields
         title: singleBook?.title ||

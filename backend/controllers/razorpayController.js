@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 import Book from "../models/Book.js";
 import Order from "../models/Order.js";
+import { buildAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
 
 import {
@@ -71,6 +72,7 @@ const getRequestMetadata = (
     utmSource,
     utmMedium,
     utmCampaign,
+    attribution,
   } = {}
 ) => {
   return {
@@ -106,6 +108,12 @@ const getRequestMetadata = (
     utmCampaign:
       utmCampaign ||
       null,
+
+    attribution:
+      buildAttribution(
+        attribution,
+        { utmSource, utmMedium, utmCampaign }
+      ),
   };
 };
 
@@ -651,6 +659,7 @@ export const createRazorpayPayment =
         utmSource,
         utmMedium,
         utmCampaign,
+        attribution,
       } = req.body;
 
       // ==========================================
@@ -985,6 +994,7 @@ export const createRazorpayPayment =
                 utmSource,
                 utmMedium,
                 utmCampaign,
+                attribution,
               }
             ),
 

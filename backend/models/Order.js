@@ -636,6 +636,28 @@ const orderSchema = new mongoose.Schema(
         default: null,
         trim: true,
       },
+
+      /* Ad-platform attribution (see utils/attribution.js).
+         platform: "meta" | "google" | "organic" */
+      attribution: {
+        platform: { type: String, default: "organic", index: true },
+        fbclid: { type: String, default: null },
+        fbc: { type: String, default: null },
+        fbp: { type: String, default: null },
+        gclid: { type: String, default: null },
+        gbraid: { type: String, default: null },
+        wbraid: { type: String, default: null },
+        utmSource: { type: String, default: null },
+        utmMedium: { type: String, default: null },
+        utmCampaign: { type: String, default: null },
+        utmContent: { type: String, default: null },
+        utmTerm: { type: String, default: null },
+        campaignId: { type: String, default: null },
+        adsetId: { type: String, default: null },
+        adId: { type: String, default: null },
+        landingPath: { type: String, default: null },
+        touchedAt: { type: String, default: null },
+      },
     },
 
     /* ==========================================

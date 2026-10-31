@@ -1,4 +1,5 @@
 import { trackInitiateCheckout } from "../lib/metaPixel";
+import { getAttribution } from "../lib/attribution";
 import React, { useEffect, useState } from "react";
 import {
   X,
@@ -725,6 +726,10 @@ export default function PayUCheckoutModal({
           params.get(
             "utm_campaign"
           ) || null,
+
+        // Last paid-ad touch (Meta / Google) saved on the order
+        attribution:
+          getAttribution(),
       };
     };
 

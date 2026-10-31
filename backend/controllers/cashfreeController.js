@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Book from "../models/Book.js";
 import Order from "../models/Order.js";
+import { buildAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
 import User from "../models/User.js";
 import {
@@ -779,6 +780,7 @@ export const createCashfreePayment = async (req, res) => {
       utmSource,
       utmMedium,
       utmCampaign,
+      attribution,
     } = req.body;
 
     /* ========================================================
@@ -1013,6 +1015,12 @@ export const createCashfreePayment = async (req, res) => {
           typeof utmCampaign === "string"
             ? utmCampaign.trim() || null
             : null,
+
+        attribution: buildAttribution(attribution, {
+          utmSource,
+          utmMedium,
+          utmCampaign,
+        }),
       },
 
       createdBy: "customer",

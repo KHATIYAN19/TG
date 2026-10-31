@@ -36,6 +36,8 @@
  * ============================================================
  */
 
+import { getCampaignParams } from "./attribution";
+
 const META_PIXEL_ID = "965336112563401";
 
 const PURCHASE_STORAGE_PREFIX =
@@ -310,6 +312,9 @@ export const trackViewContent = (book) => {
       value: amount,
 
       currency,
+
+      // Campaign / ad ids when the visitor came from a Meta ad
+      ...getCampaignParams("meta"),
     }
   );
 };
@@ -355,6 +360,8 @@ export const trackInitiateCheckout = (
       value: amount,
 
       currency,
+
+      ...getCampaignParams("meta"),
     }
   );
 };
@@ -402,6 +409,30 @@ export const trackPurchase = (order) => {
     normalizeBookIds(
       order?.bookIds
     );
+
+  // ----------------------------------------------------------
+  // META-ONLY GATE
+  //
+  // Purchase is reported only for orders the backend recorded
+  // as coming from a Meta ad. Organic, direct and other-platform
+  // sales are never sent to Meta.
+  // ----------------------------------------------------------
+
+  const attribution =
+    order?.attribution || {};
+
+  if (attribution.platform !== "meta") {
+    debugLog(
+      "Purchase skipped: order is not from a Meta ad",
+      {
+        platform:
+          attribution.platform ||
+          "unknown",
+      }
+    );
+
+    return false;
+  }
 
   const validOrder =
     Boolean(orderId) &&
@@ -548,8 +579,30 @@ export const trackPurchase = (order) => {
 
     content_type: "product",
 
+    content_name:
+      String(order?.title || ""),
+
+    contents: bookIds.map((id) => ({
+      id,
+      quantity: 1,
+    })),
+
     num_items: bookIds.length,
   };
+
+  // Campaign ids come from the stored order, not the browser,
+  // so they survive the payment-gateway redirect.
+  if (attribution.campaignId)
+    payload.campaign_id = attribution.campaignId;
+
+  if (attribution.adsetId)
+    payload.adset_id = attribution.adsetId;
+
+  if (attribution.adId)
+    payload.ad_id = attribution.adId;
+
+  if (attribution.utmCampaign)
+    payload.utm_campaign = attribution.utmCampaign;
 
   // ----------------------------------------------------------
   // SEND PURCHASE EVENT
