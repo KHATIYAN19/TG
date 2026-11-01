@@ -68,6 +68,20 @@ import { captureAttribution } from "./lib/attribution.js";
 // Remember paid-ad clicks (Meta / Google) before the app renders.
 captureAttribution();
 
+// After a new deploy, an open tab may request lazy chunks whose hashed
+// filenames no longer exist. Reload once to pick up the new build.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  try {
+    const last = Number(sessionStorage.getItem("tt_chunk_reload") || 0);
+    if (Date.now() - last < 10000) return; // avoid reload loops
+    sessionStorage.setItem("tt_chunk_reload", String(Date.now()));
+  } catch {
+    /* storage unavailable */
+  }
+  window.location.reload();
+});
+
 // ============================================
 // ROOT ELEMENT
 // ============================================
