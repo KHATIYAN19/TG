@@ -467,7 +467,7 @@ import {
   Workflow,
   Smartphone,
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { PiBuildingOffice } from "react-icons/pi";
 import BASE_URL from "../utils/Url.js";
 

@@ -1,5 +1,5 @@
 // // import React, { useCallback, useEffect, useMemo, useState } from "react";
-// // import { Helmet } from "react-helmet";
+// // import { Helmet } from "react-helmet-async";
 // // import { useNavigate, useParams } from "react-router-dom";
 // // import { toast } from "react-hot-toast";
 // // import {
@@ -541,7 +541,7 @@
 //   useState,
 // } from "react";
 
-// import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet-async";
 
 // import {
 //   useNavigate,
@@ -2344,7 +2344,7 @@ import React, {
   useState,
 } from "react";
 
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 import {
   Link,
@@ -2830,11 +2830,13 @@ const InterviewDetailPage = () => {
     interview?.updatedAt ||
     publishedAt;
 
-  const canonicalPath =
+  // Older records stored "/interviews/<slug>", which is not a real route.
+  const canonicalPath = (
     interview?.seo?.canonicalPath ||
-    `/interviews/${
+    `/interview/${
       interview?.slug || slug
-    }`;
+    }`
+  ).replace(/^\/interviews\//, "/interview/");
 
   const canonicalUrl =
     canonicalPath.startsWith("http")

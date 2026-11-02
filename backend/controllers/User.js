@@ -181,18 +181,15 @@ export const verifyOtp = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const isBypassOtp = otp === "111111";
-    if (!isBypassOtp) {
-        if (
-            user.otp !== otp ||
-            !user.otpExpiry ||
-            Date.now() > new Date(user.otpExpiry).getTime()
-        ) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid or expired OTP'
-            });
-        }
+    if (
+        user.otp !== otp ||
+        !user.otpExpiry ||
+        Date.now() > new Date(user.otpExpiry).getTime()
+    ) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid or expired OTP'
+        });
     }
     const token = jwt.sign(
       { userId: user._id, role: user.role },

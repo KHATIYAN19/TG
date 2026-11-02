@@ -18,7 +18,7 @@
 //   Target,
 //   Trophy
 // } from "lucide-react";
-// import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet-async";
 
 // const AffiliateMarketingPage = () => {
 //   const [faqOpen, setFaqOpen] = useState(null);
@@ -277,7 +277,7 @@ import {
   Target,
   Trophy
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 const AffiliateMarketingPage = () => {
   const [faqOpen, setFaqOpen] = useState(null);

@@ -227,6 +227,9 @@ const AdminSlotsPage = lazy(() =>
 const AddBlogPage = lazy(() =>
   import("./Admin/AddBlogPage")
 );
+const BlogAgentPage = lazy(() =>
+  import("./Admin/BlogAgentPage")
+);
 const LoginPage = lazy(() =>
   import("./Admin/LoginPage")
 );
@@ -1075,6 +1078,12 @@ function App() {
             path="/admin/add-blog"
             element={requireUser(
               <AddBlogPage />
+            )}
+          />
+          <Route
+            path="/admin/blog-agent"
+            element={requireAdmin(
+              <BlogAgentPage />
             )}
           />
           <Route

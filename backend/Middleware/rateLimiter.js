@@ -382,3 +382,21 @@ export const analyticsTrackLimiter = createMiddleware(
     failClosed: false,
   }
 );
+
+/* =====================================================
+   PUBLIC FORM SUBMISSIONS (contact, leads, interview
+   experiences, reviews): 5 per 10 minutes per IP.
+===================================================== */
+
+const publicFormRateLimit = createRateLimiter(
+  "public-form",
+  5,
+  "10 m"
+);
+
+export const publicFormLimiter = createMiddleware(
+  publicFormRateLimit,
+  {
+    failClosed: false,
+  }
+);

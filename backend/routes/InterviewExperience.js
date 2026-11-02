@@ -26,6 +26,7 @@ import {
   auth,
   isAdmin,
 } from "../Middleware/auth.js";
+import { publicFormLimiter } from "../Middleware/rateLimiter.js";
 
 const router =
   express.Router();
@@ -47,6 +48,7 @@ const router =
 
 router.post(
   "/",
+  publicFormLimiter,
   addInterviewExperience
 );
 

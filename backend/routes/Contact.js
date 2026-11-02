@@ -8,9 +8,10 @@ import {
   deleteContactMessage
 } from '../controllers/Contact.js';
 import {auth,isAdmin,isEmployee,isUser} from  "../Middleware/auth.js"
+import { publicFormLimiter } from "../Middleware/rateLimiter.js";
 const router = express.Router();
 
-router.post('/us', createContactMessage);
+router.post('/us', publicFormLimiter, createContactMessage);
 
 router.route('/',auth,isUser)
   .get(getAllContactMessages);

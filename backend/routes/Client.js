@@ -23,6 +23,8 @@ router.post("/:clientId/services/:serviceId/payments", auth,isAdmin,addPaymentTo
 router.get("/dashboard",auth,isAdmin,getFullDashboard);
 router.post(
   "/:clientId/services/:serviceId/documents",
+  auth,
+  isAdmin,
   upload.single("file"),
   addDocumentToService
 );

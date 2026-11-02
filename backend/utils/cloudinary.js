@@ -47,7 +47,8 @@ cloudinary.config({
 */
 
 const uploadFile = async (
-  filePath
+  filePath,
+  options = {}
 ) => {
   try {
     if (!filePath) {
@@ -61,6 +62,7 @@ const uploadFile = async (
         filePath,
         {
           resource_type: "auto",
+          ...options,
         }
       );
 

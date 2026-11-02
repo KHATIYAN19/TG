@@ -15,13 +15,13 @@ import {auth,isAdmin,isEmployee,isUser} from  "../Middleware/auth.js"
 router.put("/:id/basic",auth,isAdmin, updateBasicInfo);
 
 /* ===== Personal Info ===== */
-router.put("/:id/personal",auth, updatePersonalInfo);
+router.put("/:id/personal",auth,isAdmin, updatePersonalInfo);
 
 /* ===== Employment Info ===== */
 router.put("/:id/employment",auth,isAdmin, updateEmploymentInfo);
 
 
-router.put("/:id/bank",auth, updateBankDetails);
+router.put("/:id/bank",auth,isAdmin, updateBankDetails);
 
 
 router.put("/:id/government",auth,isAdmin, updateGovernmentDetails);

@@ -24,7 +24,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import BASE_URL from "../utils/Url.js";
 
 const THEME_KEY = "theme";

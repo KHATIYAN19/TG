@@ -6,7 +6,12 @@ import {
   getAllBookings
 } from '../controllers/Booking.js';
 
+import { auth, isAdmin } from '../Middleware/auth.js';
+
 const router = express.Router();
+
+// Legacy booking API: admin only (not used by the public site).
+router.use(auth, isAdmin);
 
 router.post('/create', createBooking);
 router.get('/date/:date', getBookingsByDate);

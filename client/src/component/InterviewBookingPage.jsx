@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { Helmet } from "react-helmet-async";
 import {
   AnimatePresence,
   animate,
@@ -3044,6 +3045,23 @@ export default function InterviewBookingPage({
       className="tt-ib overflow-x-clip pb-20 pt-[116px] sm:pb-0 xl:pt-[76px]"
       data-ib-theme={theme}
     >
+      <Helmet>
+              <title>Book Mock Interviews: DSA, HLD, LLD &amp; Java | Target Trek</title>
+              <meta name="description" content="Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and fix your weak points." />
+              <meta name="keywords" content="mock interview, system design mock interview, DSA mock interview, Java mock interview, backend interview practice, GenAI interview preparation" />
+              <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+              <link rel="canonical" href="https://www.targettrek.in/mock-interviews" />
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="Target Trek" />
+              <meta property="og:locale" content="en_IN" />
+              <meta property="og:title" content="Book Mock Interviews: DSA, HLD, LLD &amp; Java | Target Trek" />
+              <meta property="og:description" content="Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and fix your weak points." />
+              <meta property="og:url" content="https://www.targettrek.in/mock-interviews" />
+              <meta name="twitter:card" content="summary" />
+              <meta name="twitter:title" content="Book Mock Interviews: DSA, HLD, LLD &amp; Java | Target Trek" />
+              <meta name="twitter:description" content="Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and fix your weak points." />
+            </Helmet>
+
       <style>{styles}</style>
 
       {/* Scroll progress */}

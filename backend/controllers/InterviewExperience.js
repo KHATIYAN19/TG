@@ -1111,27 +1111,33 @@ export const getInterviewExperienceBySlug =
           });
       }
 
-      await InterviewExperience.updateOne(
-        {
-          _id:
-            interview._id,
-        },
-        {
-          $inc: {
-            "engagement.views":
-              1,
+      /*
+       * The SEO renderer (Vercel) passes ?nocount=1 so crawler / prerender
+       * requests are not counted as reader views.
+       */
+      if (req.query.nocount !== "1") {
+        await InterviewExperience.updateOne(
+          {
+            _id:
+              interview._id,
           },
-        }
-      );
+          {
+            $inc: {
+              "engagement.views":
+                1,
+            },
+          }
+        );
 
-      interview.engagement =
-        interview.engagement ||
-        {};
+        interview.engagement =
+          interview.engagement ||
+          {};
 
-      interview.engagement.views =
-        (interview
-          .engagement.views ||
-          0) + 1;
+        interview.engagement.views =
+          (interview
+            .engagement.views ||
+            0) + 1;
+      }
 
       return res
         .status(200)
@@ -1651,7 +1657,7 @@ export const updateInterviewByAdmin =
             ?.canonicalPath
         ) {
           interview.seo.canonicalPath =
-            `/interviews/${slug}`;
+            `/interview/${slug}`;
         }
       }
 

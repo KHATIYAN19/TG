@@ -4,7 +4,7 @@
 //   useState,
 // } from "react";
 
-// import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet-async";
 
 
 // import {
@@ -52,7 +52,7 @@
 //   "Google ADK Complete Developer Handbook – AI Agents, RAG, MCP & A2A | TargetTrek";
 
 // const SEO_DESCRIPTION =
-//   "Learn Google ADK with a practical developer handbook covering AI agents, tools, RAG, MCP, A2A, multi-agent workflows, sessions, evaluation, observability, security, FastAPI and production deployment.";
+//   "Practical Google ADK handbook: AI agents, tools, RAG, MCP, A2A, multi-agent workflows, evaluation, FastAPI and production deployment.";
 
 // const readTheme = () => {
 //   if (
@@ -4057,10 +4057,10 @@ const THEME_EVENT = "targettrek-theme-change";
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 
 const SEO_TITLE =
-  "Google ADK Complete Developer Handbook – AI Agents, RAG, MCP & A2A | Target Trek";
+  "Google ADK Handbook: AI Agents, RAG & MCP | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Learn Google ADK with a practical developer handbook covering AI agents, tools, RAG, MCP, A2A, multi-agent workflows, sessions, evaluation, observability, security, FastAPI and production deployment.";
+  "Practical Google ADK handbook: AI agents, tools, RAG, MCP, A2A, multi-agent workflows, evaluation, FastAPI and production deployment.";
 
 // =====================================================
 // HELPERS

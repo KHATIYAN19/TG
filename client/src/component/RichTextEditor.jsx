@@ -197,6 +197,7 @@ const RichTextEditor = ({
 
     "blockquote",
     "code-block",
+    "code",
 
     "list",
     "bullet",

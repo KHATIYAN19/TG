@@ -67,10 +67,10 @@ const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
 
 const SEO_TITLE =
-  "Master GenAI Interview MCP – Model Context Protocol, FastMCP & LangChain | Target Trek";
+  "MCP Ebook: Model Context Protocol & FastMCP | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Learn Model Context Protocol with the Target Trek MCP ebook. Understand hosts, clients, servers, JSON-RPC 2.0, STDIO, Streamable HTTP, FastMCP, LangChain, authentication, deployment, and a complete Python project.";
+  "Learn Model Context Protocol: hosts, clients, servers, JSON-RPC, STDIO, Streamable HTTP, FastMCP, LangChain, auth and a full Python project.";
 
 // ======================================================
 // THEME & PRICE HELPERS

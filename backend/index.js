@@ -43,6 +43,7 @@ import affiliateRoutes from "./routes/affiliateRoutes.js";
 
 
 import { auth, isAdmin } from "./Middleware/auth.js";
+import { sanitizeInput } from "./Middleware/sanitizeInput.js";
 /* =====================================================
    AUTHENTICATION ROUTES
 ===================================================== */
@@ -54,6 +55,8 @@ import analyticsRoutes from
   "./routes/analyticsRoutes.js";
 import analyticsInternalRoutes from
   "./routes/analyticsInternalRoutes.js";
+import blogAgentInternalRoutes from
+  "./routes/blogAgentInternalRoutes.js";
 import {
   startAnalyticsJobs,
 } from "./services/analyticsJobs.js";
@@ -207,6 +210,9 @@ const corsOptions = {
   allowedHeaders: [
     "Content-Type",
     "Authorization",
+
+    // Blog view counter (dedupes one view per visitor per 24h).
+    "x-blog-visitor-id",
   ],
 
   exposedHeaders: [
@@ -303,6 +309,7 @@ app.post(
 app.use(
   "/api/analytics",
   express.json({ limit: "8kb" }),
+  sanitizeInput,
   analyticsRoutes
 );
 
@@ -310,6 +317,12 @@ app.use(
 app.use(
   "/internal/analytics",
   analyticsInternalRoutes
+);
+
+// Daily blog-draft agent (Cloud Scheduler, secret-protected).
+app.use(
+  "/internal/blog-agent",
+  blogAgentInternalRoutes
 );
 
 /* =====================================================
@@ -349,6 +362,9 @@ app.use(
     limit: "10mb",
   })
 );
+
+// Strip MongoDB operator keys ($ne, $gt, ...) from request bodies.
+app.use(sanitizeInput);
 
 /* =====================================================
    GLOBAL RATE LIMITER

@@ -55,7 +55,7 @@ const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
 
 const SEO_TITLE =
-  "Software Engineering Books, System Design & GenAI Guides | Target Trek";
+  "System Design, Java & GenAI Ebooks (PDF) | Target Trek";
 
 const SEO_DESCRIPTION =
   "Explore practical ebooks on System Design HLD, Java LLD, Google ADK, RAG, MCP, GenAI, and backend engineering from Target Trek.";

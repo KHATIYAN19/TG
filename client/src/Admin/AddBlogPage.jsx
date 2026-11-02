@@ -405,8 +405,8 @@ const Toggle = ({
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
             checked
               ? isDark
-                ? "bg-blue-950/50 text-blue-300"
-                : "bg-blue-100 text-blue-700"
+                ? "bg-orange-950/50 text-orange-300"
+                : "bg-orange-100 text-orange-700"
               : isDark
               ? "bg-slate-800 text-slate-400"
               : "bg-white text-slate-500"
@@ -455,7 +455,7 @@ const Toggle = ({
           }
           className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
             checked
-              ? "bg-blue-600"
+              ? "bg-orange-600"
               : isDark
               ? "bg-slate-700"
               : "bg-slate-300"
@@ -477,7 +477,7 @@ const Toggle = ({
         <p
           className={`mt-1 text-center text-[10px] font-bold ${
             checked
-              ? "text-blue-500"
+              ? "text-orange-500"
               : "text-slate-500"
           }`}
         >
@@ -726,8 +726,8 @@ const AddBlogPage = () => {
       hasError
         ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
         : isDark
-        ? "border-slate-700 bg-[#0C131D] text-white placeholder:text-slate-600 focus:border-blue-600 focus:ring-4 focus:ring-blue-900/30"
-        : "border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+        ? "border-slate-700 bg-[#0C131D] text-white placeholder:text-slate-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-900/30"
+        : "border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
     }`;
 
   /*
@@ -1309,8 +1309,8 @@ const AddBlogPage = () => {
             }
             className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold transition ${
               isDark
-                ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-blue-700 hover:text-blue-400"
-                : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-600"
+                ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-orange-700 hover:text-orange-400"
+                : "border-slate-200 bg-white text-slate-700 hover:border-orange-300 hover:text-orange-600"
             }`}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -1342,7 +1342,7 @@ const AddBlogPage = () => {
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-blue-500">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-orange-500">
             <BookOpen className="h-4 w-4" />
 
             Blog Management
@@ -1386,8 +1386,8 @@ const AddBlogPage = () => {
                   <div
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                       isDark
-                        ? "bg-blue-950/40 text-blue-300"
-                        : "bg-blue-50 text-blue-600"
+                        ? "bg-orange-950/40 text-orange-300"
+                        : "bg-orange-50 text-orange-600"
                     }`}
                   >
                     <Type className="h-5 w-5" />
@@ -1520,8 +1520,8 @@ const AddBlogPage = () => {
                         formErrors.excerpt
                           ? "border-red-500 focus:ring-4 focus:ring-red-500/10"
                           : isDark
-                          ? "border-slate-700 bg-[#0C131D] text-white placeholder:text-slate-600 focus:border-blue-600 focus:ring-4 focus:ring-blue-900/30"
-                          : "border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          ? "border-slate-700 bg-[#0C131D] text-white placeholder:text-slate-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-900/30"
+                          : "border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                       }`}
                     />
                   </Field>
@@ -1644,8 +1644,8 @@ const AddBlogPage = () => {
                     <div
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                         isDark
-                          ? "bg-indigo-950/40 text-indigo-300"
-                          : "bg-indigo-50 text-indigo-600"
+                          ? "bg-orange-950/40 text-orange-300"
+                          : "bg-orange-50 text-orange-600"
                       }`}
                     >
                       <AlignLeft className="h-5 w-5" />
@@ -1765,7 +1765,7 @@ const AddBlogPage = () => {
                     className={`min-h-[44px] rounded-xl px-3 text-sm font-bold transition ${
                       imageOption ===
                       "url"
-                        ? "bg-blue-600 text-white shadow"
+                        ? "bg-orange-600 text-white shadow"
                         : isDark
                         ? "text-slate-400 hover:bg-slate-800"
                         : "text-slate-600 hover:bg-white"
@@ -1787,7 +1787,7 @@ const AddBlogPage = () => {
                     className={`min-h-[44px] rounded-xl px-3 text-sm font-bold transition ${
                       imageOption ===
                       "file"
-                        ? "bg-blue-600 text-white shadow"
+                        ? "bg-orange-600 text-white shadow"
                         : isDark
                         ? "text-slate-400 hover:bg-slate-800"
                         : "text-slate-600 hover:bg-white"
@@ -1845,11 +1845,11 @@ const AddBlogPage = () => {
                     <label
                       className={`flex min-h-[130px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition ${
                         isDark
-                          ? "border-slate-700 bg-[#0C131D] hover:border-blue-600"
-                          : "border-slate-300 bg-slate-50 hover:border-blue-400"
+                          ? "border-slate-700 bg-[#0C131D] hover:border-orange-600"
+                          : "border-slate-300 bg-slate-50 hover:border-orange-400"
                       }`}
                     >
-                      <Upload className="h-7 w-7 text-blue-500" />
+                      <Upload className="h-7 w-7 text-orange-500" />
 
                       <p
                         className={`mt-3 text-sm font-bold ${primaryText}`}
@@ -2058,8 +2058,8 @@ const AddBlogPage = () => {
                             formErrors.metaDescription
                               ? "border-red-500"
                               : isDark
-                              ? "border-slate-700 bg-[#0C131D] text-white placeholder:text-slate-600 focus:border-blue-600 focus:ring-4 focus:ring-blue-900/30"
-                              : "border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                              ? "border-slate-700 bg-[#0C131D] text-white placeholder:text-slate-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-900/30"
+                              : "border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                           }`}
                         />
                       </Field>
@@ -2185,7 +2185,7 @@ const AddBlogPage = () => {
                 className={`rounded-3xl border p-5 ${card}`}
               >
                 <div className="flex items-center gap-3">
-                  <Sparkles className="h-5 w-5 text-blue-500" />
+                  <Sparkles className="h-5 w-5 text-orange-500" />
 
                   <h2
                     className={`font-black ${primaryText}`}
@@ -2284,7 +2284,7 @@ const AddBlogPage = () => {
                 className={`rounded-3xl border p-5 ${card}`}
               >
                 <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-blue-500" />
+                  <Info className="h-4 w-4 text-orange-500" />
 
                   <p
                     className={`text-sm font-black ${primaryText}`}
@@ -2353,7 +2353,7 @@ const AddBlogPage = () => {
                 disabled={
                   isSubmitting
                 }
-                className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-orange-600/20 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>

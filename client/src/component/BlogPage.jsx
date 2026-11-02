@@ -5,7 +5,7 @@ import React, {
   useState,
 } from "react";
 
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
@@ -46,7 +46,7 @@ const SITE_URL =
   "https://www.targettrek.in";
 
 const BLOG_URL =
-  `${SITE_URL}/blog`;
+  `${SITE_URL}/blogs`;
 
 /*
 |--------------------------------------------------------------------------
@@ -402,7 +402,7 @@ const BlogImage = ({
           ${
             isDark
               ? "bg-[#101924]"
-              : "bg-[#EAF4FC]"
+              : "bg-[#FFF7ED]"
           }
         `}
       >
@@ -418,8 +418,8 @@ const BlogImage = ({
               border
               ${
                 isDark
-                  ? "border-[#1E2C3D] bg-[#0C131D] text-[#66B8EA]"
-                  : "border-[#D9E7F2] bg-white text-[#1D5C86]"
+                  ? "border-[#1E2C3D] bg-[#0C131D] text-[#FB923C]"
+                  : "border-[#FED7AA] bg-white text-[#EA580C]"
               }
             `}
           >
@@ -656,7 +656,7 @@ const BlogCard = ({
         ${
           isDark
             ? "hover:border-[#29415B] hover:shadow-[0_18px_45px_rgba(0,0,0,0.18)]"
-            : "hover:border-[#BFDDF2] hover:shadow-[0_18px_45px_rgba(15,35,58,0.10)]"
+            : "hover:border-[#FED7AA] hover:shadow-[0_18px_45px_rgba(15,35,58,0.10)]"
         }
       `}
     >
@@ -728,8 +728,8 @@ const BlogCard = ({
               font-bold
               ${
                 isDark
-                  ? "bg-blue-950/30 text-[#66B8EA]"
-                  : "bg-[#EAF4FC] text-[#1D5C86]"
+                  ? "bg-orange-950/30 text-[#FB923C]"
+                  : "bg-[#FFF7ED] text-[#EA580C]"
               }
             `}
           >
@@ -779,8 +779,8 @@ const BlogCard = ({
               ${primaryText}
               ${
                 isDark
-                  ? "group-hover:text-[#66B8EA]"
-                  : "group-hover:text-[#1D5C86]"
+                  ? "group-hover:text-[#FB923C]"
+                  : "group-hover:text-[#EA580C]"
               }
             `}
           >
@@ -869,8 +869,8 @@ const BlogCard = ({
               transition
               ${
                 isDark
-                  ? "text-[#66B8EA] hover:text-[#8ACAF0]"
-                  : "text-[#1D5C86] hover:text-[#154766]"
+                  ? "text-[#FB923C] hover:text-[#FDBA74]"
+                  : "text-[#EA580C] hover:text-[#9A3412]"
               }
             `}
           >
@@ -1712,8 +1712,8 @@ const BlogPage = () => {
 
   const blueText =
     isDark
-      ? "text-[#66B8EA]"
-      : "text-[#1D5C86]";
+      ? "text-[#FB923C]"
+      : "text-[#EA580C]";
 
   const inputBg =
     isDark
@@ -1727,8 +1727,8 @@ const BlogPage = () => {
 
   const normalButton =
     isDark
-      ? "border-[#1E2C3D] bg-[#080D14] text-[#9AA9BA] hover:border-[#29415B] hover:bg-[#101924] hover:text-[#66B8EA]"
-      : "border-[#E1E9F1] bg-[#F5F9FC] text-[#5B6B82] hover:border-[#BFDDF2] hover:bg-[#EAF4FC] hover:text-[#1D5C86]";
+      ? "border-[#1E2C3D] bg-[#080D14] text-[#9AA9BA] hover:border-[#29415B] hover:bg-[#101924] hover:text-[#FB923C]"
+      : "border-[#E1E9F1] bg-[#F5F9FC] text-[#5B6B82] hover:border-[#FED7AA] hover:bg-[#FFF7ED] hover:text-[#EA580C]";
 
   /*
   |--------------------------------------------------------------------------
@@ -1884,8 +1884,8 @@ const BlogPage = () => {
             blur-[120px]
             ${
               isDark
-                ? "bg-blue-900/10"
-                : "bg-[#E4F1FB]/80"
+                ? "bg-orange-900/10"
+                : "bg-[#FFEDD5]/80"
             }
           `}
         />
@@ -1904,8 +1904,8 @@ const BlogPage = () => {
             blur-[120px]
             ${
               isDark
-                ? "bg-cyan-900/10"
-                : "bg-[#EAF4FC]/80"
+                ? "bg-orange-900/10"
+                : "bg-[#FFF7ED]/80"
             }
           `}
         />
@@ -1917,8 +1917,8 @@ const BlogPage = () => {
           style={{
             backgroundImage:
               isDark
-                ? "repeating-linear-gradient(90deg, rgba(110,180,220,0.025) 0px, rgba(110,180,220,0.025) 1px, transparent 1px, transparent 42px)"
-                : "repeating-linear-gradient(90deg, rgba(29,92,134,0.035) 0px, rgba(29,92,134,0.035) 1px, transparent 1px, transparent 42px)",
+                ? "repeating-linear-gradient(90deg, rgba(251,146,60,0.025) 0px, rgba(251,146,60,0.025) 1px, transparent 1px, transparent 42px)"
+                : "repeating-linear-gradient(90deg, rgba(234,88,12,0.035) 0px, rgba(234,88,12,0.035) 1px, transparent 1px, transparent 42px)",
           }}
         />
 
@@ -1943,8 +1943,8 @@ const BlogPage = () => {
                 ${borderColor}
                 ${
                   isDark
-                    ? "bg-blue-950/20 text-[#66B8EA]"
-                    : "bg-[#EAF4FC] text-[#1D5C86]"
+                    ? "bg-orange-950/20 text-[#FB923C]"
+                    : "bg-[#FFF7ED] text-[#EA580C]"
                 }
               `}
             >
@@ -1977,8 +1977,8 @@ const BlogPage = () => {
                   block
                   ${
                     isDark
-                      ? "text-[#66B8EA]"
-                      : "text-[#1D5C86]"
+                      ? "text-[#FB923C]"
+                      : "text-[#EA580C]"
                   }
                 `}
               >
@@ -2177,7 +2177,7 @@ const BlogPage = () => {
                   ${
                     isDark
                       ? "hover:border-[#29415B] hover:shadow-[0_20px_50px_rgba(0,0,0,0.22)]"
-                      : "hover:border-[#BFDDF2] hover:shadow-[0_20px_50px_rgba(15,35,58,0.10)]"
+                      : "hover:border-[#FED7AA] hover:shadow-[0_20px_50px_rgba(15,35,58,0.10)]"
                   }
                 `}
               >
@@ -2236,8 +2236,8 @@ const BlogPage = () => {
                           font-bold
                           ${
                             isDark
-                              ? "bg-blue-950/30 text-[#66B8EA]"
-                              : "bg-[#EAF4FC] text-[#1D5C86]"
+                              ? "bg-orange-950/30 text-[#FB923C]"
+                              : "bg-[#FFF7ED] text-[#EA580C]"
                           }
                         `}
                       >
@@ -2325,8 +2325,8 @@ const BlogPage = () => {
                           ${primaryText}
                           ${
                             isDark
-                              ? "group-hover:text-[#66B8EA]"
-                              : "group-hover:text-[#1D5C86]"
+                              ? "group-hover:text-[#FB923C]"
+                              : "group-hover:text-[#EA580C]"
                           }
                         `}
                       >
@@ -2429,8 +2429,8 @@ const BlogPage = () => {
                           transition-all
                           ${
                             isDark
-                              ? "bg-[#1D5C86] text-white hover:bg-[#246F9F]"
-                              : "bg-[#0B1524] text-white hover:bg-[#1D5C86]"
+                              ? "bg-[#EA580C] text-white hover:bg-[#C2410C]"
+                              : "bg-[#0B1524] text-white hover:bg-[#EA580C]"
                           }
                         `}
                       >
@@ -2564,9 +2564,9 @@ const BlogPage = () => {
                     font-medium
                     outline-none
                     transition
-                    focus:border-[#2E86C1]
+                    focus:border-[#F97316]
                     focus:ring-4
-                    focus:ring-[#2E86C1]/10
+                    focus:ring-[#F97316]/10
                     ${borderColor}
                     ${inputBg}
                     ${primaryText}
@@ -2652,9 +2652,9 @@ const BlogPage = () => {
                     font-semibold
                     outline-none
                     transition
-                    focus:border-[#2E86C1]
+                    focus:border-[#F97316]
                     focus:ring-4
-                    focus:ring-[#2E86C1]/10
+                    focus:ring-[#F97316]/10
                     ${borderColor}
                     ${inputBg}
                     ${primaryText}
@@ -2726,9 +2726,9 @@ const BlogPage = () => {
                     font-semibold
                     outline-none
                     transition
-                    focus:border-[#2E86C1]
+                    focus:border-[#F97316]
                     focus:ring-4
-                    focus:ring-[#2E86C1]/10
+                    focus:ring-[#F97316]/10
                     ${borderColor}
                     ${inputBg}
                     ${primaryText}
@@ -3010,8 +3010,8 @@ const BlogPage = () => {
                     transition
                     ${
                       isDark
-                        ? "bg-[#1D5C86] hover:bg-[#246F9F]"
-                        : "bg-[#0B1524] hover:bg-[#1D5C86]"
+                        ? "bg-[#EA580C] hover:bg-[#C2410C]"
+                        : "bg-[#0B1524] hover:bg-[#EA580C]"
                     }
                   `}
                 >
@@ -3054,8 +3054,8 @@ const BlogPage = () => {
                     rounded-2xl
                     ${
                       isDark
-                        ? "bg-blue-950/25 text-[#66B8EA]"
-                        : "bg-[#EAF4FC] text-[#1D5C86]"
+                        ? "bg-orange-950/25 text-[#FB923C]"
+                        : "bg-[#FFF7ED] text-[#EA580C]"
                     }
                   `}
                 >
@@ -3181,8 +3181,8 @@ const BlogPage = () => {
                     transition
                     ${
                       isDark
-                        ? "bg-[#1D5C86] hover:bg-[#246F9F]"
-                        : "bg-[#0B1524] hover:bg-[#1D5C86]"
+                        ? "bg-[#EA580C] hover:bg-[#C2410C]"
+                        : "bg-[#0B1524] hover:bg-[#EA580C]"
                     }
                   `}
                 >
@@ -3251,8 +3251,8 @@ const BlogPage = () => {
                     rounded-xl
                     ${
                       isDark
-                        ? "bg-blue-950/25 text-[#66B8EA]"
-                        : "bg-[#EAF4FC] text-[#1D5C86]"
+                        ? "bg-orange-950/25 text-[#FB923C]"
+                        : "bg-[#FFF7ED] text-[#EA580C]"
                     }
                   `}
                 >

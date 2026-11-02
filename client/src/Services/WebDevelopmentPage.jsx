@@ -24,7 +24,7 @@ import {
   HardDrive,
   Cloud
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 const WebDevelopmentPage = () => {
   const [faqOpen, setFaqOpen] = useState(null);

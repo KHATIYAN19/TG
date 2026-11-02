@@ -248,6 +248,35 @@ const blogPostSchema =
         },
       },
 
+      /*
+       * Provenance for agent-written drafts. "" = written by a human.
+       */
+      generatedBy: {
+        type: String,
+        trim: true,
+        default: "",
+        maxlength: 60,
+      },
+
+      sources: {
+        type: [
+          {
+            _id: false,
+            title: {
+              type: String,
+              trim: true,
+              maxlength: 200,
+            },
+            url: {
+              type: String,
+              trim: true,
+              maxlength: 600,
+            },
+          },
+        ],
+        default: [],
+      },
+
       isDeleted: {
         type: Boolean,
         default: false,

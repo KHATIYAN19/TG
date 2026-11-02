@@ -1071,8 +1071,8 @@ const BlogPostDetail = () => {
 
   const blueText =
     isDark
-      ? "text-[#66B8EA]"
-      : "text-[#1D5C86]";
+      ? "text-[#FB923C]"
+      : "text-[#EA580C]";
 
   /*
   |--------------------------------------------------------------------------
@@ -1350,6 +1350,46 @@ const BlogPostDetail = () => {
 
     fetchPost();
   }, [fetchPost]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | RELATED POSTS (internal linking for SEO)
+  |--------------------------------------------------------------------------
+  */
+
+  const [relatedPosts, setRelatedPosts] = useState([]);
+
+  useEffect(() => {
+    if (!post?.slug || !post?.category) {
+      setRelatedPosts([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    axios
+      .get(`${BASE_URL}/blogs`, {
+        params: {
+          category: post.category,
+          limit: 6,
+          sort: "latest",
+        },
+      })
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        setRelatedPosts(
+          list.filter((p) => p.slug !== post.slug).slice(0, 4)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setRelatedPosts([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post?.slug, post?.category]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1871,11 +1911,8 @@ const BlogPostDetail = () => {
             Loading Article |
             Target Trek
           </title>
-
-          <meta
-            name="robots"
-            content="noindex"
-          />
+          {/* No robots tag here: a transient "noindex" while loading
+              could be captured by a crawler's render snapshot. */}
         </Helmet>
 
         <div className="text-center">
@@ -2037,14 +2074,14 @@ const BlogPostDetail = () => {
                 justify-center
                 gap-2
                 rounded-xl
-                bg-[#1D5C86]
+                bg-[#EA580C]
                 px-5
                 py-3
                 text-sm
                 font-bold
                 text-white
                 transition
-                hover:bg-[#246F9F]
+                hover:bg-[#C2410C]
               "
             >
               <ArrowLeft
@@ -2309,6 +2346,18 @@ const BlogPostDetail = () => {
             )}
           </script>
         )}
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+              { "@type": "ListItem", position: 2, name: "Blogs", item: BLOG_LIST_URL },
+              { "@type": "ListItem", position: 3, name: post.title, item: canonicalUrl },
+            ],
+          })}
+        </script>
       </Helmet>
 
       <Toaster
@@ -2354,8 +2403,8 @@ const BlogPostDetail = () => {
                 blur-[120px]
                 ${
                   isDark
-                    ? "bg-blue-900/10"
-                    : "bg-[#E4F1FB]/80"
+                    ? "bg-orange-900/10"
+                    : "bg-[#FFEDD5]/80"
                 }
               `}
             />
@@ -2371,8 +2420,8 @@ const BlogPostDetail = () => {
                 blur-[120px]
                 ${
                   isDark
-                    ? "bg-cyan-900/10"
-                    : "bg-[#EAF4FC]/80"
+                    ? "bg-orange-900/10"
+                    : "bg-[#FFF7ED]/80"
                 }
               `}
             />
@@ -2382,8 +2431,8 @@ const BlogPostDetail = () => {
               style={{
                 backgroundImage:
                   isDark
-                    ? "repeating-linear-gradient(90deg, rgba(110,180,220,0.025) 0px, rgba(110,180,220,0.025) 1px, transparent 1px, transparent 42px)"
-                    : "repeating-linear-gradient(90deg, rgba(29,92,134,0.035) 0px, rgba(29,92,134,0.035) 1px, transparent 1px, transparent 42px)",
+                    ? "repeating-linear-gradient(90deg, rgba(251,146,60,0.025) 0px, rgba(251,146,60,0.025) 1px, transparent 1px, transparent 42px)"
+                    : "repeating-linear-gradient(90deg, rgba(234,88,12,0.035) 0px, rgba(234,88,12,0.035) 1px, transparent 1px, transparent 42px)",
               }}
             />
           </div>
@@ -2465,8 +2514,8 @@ const BlogPostDetail = () => {
                   font-bold
                   ${
                     isDark
-                      ? "bg-blue-950/30 text-[#66B8EA]"
-                      : "bg-[#EAF4FC] text-[#1D5C86]"
+                      ? "bg-orange-950/30 text-[#FB923C]"
+                      : "bg-[#FFF7ED] text-[#EA580C]"
                   }
                 `}
               >
@@ -2834,7 +2883,7 @@ const BlogPostDetail = () => {
                       ${
                         isDark
                           ? "bg-[#101924] text-[#9AA9BA] hover:bg-[#172333]"
-                          : "bg-[#F8FBFD] text-[#5B6B82] hover:bg-[#EAF4FC]"
+                          : "bg-[#F8FBFD] text-[#5B6B82] hover:bg-[#FFF7ED]"
                       }
                     `}
                   >
@@ -2875,7 +2924,7 @@ const BlogPostDetail = () => {
                       ${
                         isDark
                           ? "bg-[#101924] text-[#9AA9BA] hover:bg-[#172333]"
-                          : "bg-[#F8FBFD] text-[#5B6B82] hover:bg-[#EAF4FC]"
+                          : "bg-[#F8FBFD] text-[#5B6B82] hover:bg-[#FFF7ED]"
                       }
                     `}
                   >
@@ -2891,6 +2940,34 @@ const BlogPostDetail = () => {
               </div>
 
               {/* CONTENT */}
+
+              {Array.isArray(post.toc) &&
+                post.toc.length >= 3 && (
+                  <nav
+                    aria-label="Table of contents"
+                    className={`mx-5 mt-7 rounded-2xl border p-5 sm:mx-8 lg:mx-10 ${borderColor} ${cardBg}`}
+                  >
+                    <h2 className={`text-sm font-bold ${primaryText}`}>
+                      In this article
+                    </h2>
+
+                    <ul className="mt-3 space-y-1.5">
+                      {post.toc.map((item) => (
+                        <li
+                          key={item.id}
+                          className={item.level === 3 ? "ml-4" : ""}
+                        >
+                          <a
+                            href={`#${item.id}`}
+                            className={`text-sm font-medium hover:underline ${blueText}`}
+                          >
+                            {item.text}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                )}
 
               <div className="px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
                 <div
@@ -2963,6 +3040,37 @@ const BlogPostDetail = () => {
                     )}
                   </div>
                 </div>
+              )}
+
+              {/* RELATED ARTICLES */}
+
+              {relatedPosts.length > 0 && (
+                <nav
+                  aria-label="Related articles"
+                  className={`border-t px-5 py-6 sm:px-8 lg:px-10 ${borderColor}`}
+                >
+                  <h2 className={`text-sm font-bold ${primaryText}`}>
+                    Related articles
+                  </h2>
+
+                  <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {relatedPosts.map((item) => (
+                      <li key={item.slug}>
+                        <Link
+                          to={`/blog/${item.slug}`}
+                          className={`block rounded-2xl border p-4 transition hover:border-[#FDBA74] ${borderColor} ${cardBg}`}
+                        >
+                          <span className={`text-sm font-bold ${primaryText}`}>
+                            {item.title}
+                          </span>
+                          <span className={`mt-1 block text-xs leading-5 ${secondaryText}`}>
+                            {truncateText(item.excerpt, 110)}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
               )}
 
               {/* ARTICLE FOOTER */}
@@ -3737,6 +3845,11 @@ const BlogPostDetail = () => {
 
       <style>
         {`
+          .tt-blog-content h2,
+          .tt-blog-content h3 {
+            scroll-margin-top: 96px;
+          }
+
           .tt-blog-content {
             color: ${
               isDark
@@ -3843,8 +3956,8 @@ const BlogPostDetail = () => {
           .tt-blog-content a {
             color: ${
               isDark
-                ? "#66B8EA"
-                : "#1D5C86"
+                ? "#FB923C"
+                : "#EA580C"
             };
 
             text-decoration:
@@ -3880,8 +3993,8 @@ const BlogPostDetail = () => {
           .tt-blog-content li::marker {
             color: ${
               isDark
-                ? "#66B8EA"
-                : "#2E86C1"
+                ? "#FB923C"
+                : "#F97316"
             };
           }
 
@@ -3892,8 +4005,8 @@ const BlogPostDetail = () => {
             border-left:
               4px solid ${
                 isDark
-                  ? "#3C8DBD"
-                  : "#2E86C1"
+                  ? "#F97316"
+                  : "#F97316"
               };
 
             border-radius:
@@ -3955,8 +4068,8 @@ const BlogPostDetail = () => {
 
             color: ${
               isDark
-                ? "#8BD0F5"
-                : "#174E72"
+                ? "#FDBA74"
+                : "#9A3412"
             };
 
             padding:

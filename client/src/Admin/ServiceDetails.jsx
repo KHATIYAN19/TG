@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useSelector } from 'react-redux';
 import toast, { Toaster } from "react-hot-toast";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { 
   ArrowLeft, FileText, IndianRupee, Calendar, Clock, 
   ExternalLink, Upload, Loader2, X, ReceiptIndianRupee, 

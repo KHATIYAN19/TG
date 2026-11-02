@@ -8,6 +8,14 @@ import sendMail from '../utils/MailSender.js';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const escapeHtml = (value = '') =>
+    String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 export const createContactMessage = asyncHandler(async (req, res) => {
     const { name, email, contactNumber, service, message } = req.body;
 
@@ -46,8 +54,8 @@ export const createContactMessage = asyncHandler(async (req, res) => {
     try {
         userHtmlTemplate = await fs.readFile(userTemplatePath, 'utf8');
         userHtmlTemplate = userHtmlTemplate
-            .replace('{{name}}', name.split(' ')[0]) // Use first name for a more personal touch
-            .replace('{{service}}', service);
+            .replace('{{name}}', escapeHtml(name.split(' ')[0])) // Use first name for a more personal touch
+            .replace('{{service}}', escapeHtml(service));
     } catch (error) {
         console.error('Error reading user email template or replacing placeholders:', error);
         // Continue execution, do not block response due to email error

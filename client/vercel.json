@@ -1,25 +1,403 @@
 {
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
-    { "source": "/((?!assets/).*)", "destination": "/" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
+      "source": "/llms.txt",
+      "destination": "/api/llms"
+    },
+    {
+      "source": "/rss.xml",
+      "destination": "/api/rss"
+    },
+    {
+      "source": "/learn",
+      "destination": "/api/page?p=/learn"
+    },
+    {
+      "source": "/books",
+      "destination": "/api/page?p=/books"
+    },
+    {
+      "source": "/book",
+      "destination": "/api/page?p=/book"
+    },
+    {
+      "source": "/book/system-design/hld",
+      "destination": "/api/page?p=/book/system-design/hld"
+    },
+    {
+      "source": "/book/system-design/lld",
+      "destination": "/api/page?p=/book/system-design/lld"
+    },
+    {
+      "source": "/book/system-design/hld-lld/combo",
+      "destination": "/api/page?p=/book/system-design/hld-lld/combo"
+    },
+    {
+      "source": "/book/java-interview-handbook",
+      "destination": "/api/page?p=/book/java-interview-handbook"
+    },
+    {
+      "source": "/book/springboot-interview-handbook",
+      "destination": "/api/page?p=/book/springboot-interview-handbook"
+    },
+    {
+      "source": "/book/genai/google-adk",
+      "destination": "/api/page?p=/book/genai/google-adk"
+    },
+    {
+      "source": "/book/genai/mcp",
+      "destination": "/api/page?p=/book/genai/mcp"
+    },
+    {
+      "source": "/book/genai/rag",
+      "destination": "/api/page?p=/book/genai/rag"
+    },
+    {
+      "source": "/resources",
+      "destination": "/prerendered/resources.html"
+    },
+    {
+      "source": "/resources/hld",
+      "destination": "/prerendered/resources/hld.html"
+    },
+    {
+      "source": "/resources/hld/cache",
+      "destination": "/prerendered/resources/hld/cache.html"
+    },
+    {
+      "source": "/resources/hld/load-balancing",
+      "destination": "/prerendered/resources/hld/load-balancing.html"
+    },
+    {
+      "source": "/resources/hld/database",
+      "destination": "/prerendered/resources/hld/database.html"
+    },
+    {
+      "source": "/resources/hld/message-queue",
+      "destination": "/prerendered/resources/hld/message-queue.html"
+    },
+    {
+      "source": "/resources/hld/rate-limiting",
+      "destination": "/prerendered/resources/hld/rate-limiting.html"
+    },
+    {
+      "source": "/resources/hld/api-gateway",
+      "destination": "/prerendered/resources/hld/api-gateway.html"
+    },
+    {
+      "source": "/resources/sql",
+      "destination": "/prerendered/resources/sql.html"
+    },
+    {
+      "source": "/resources/apis",
+      "destination": "/prerendered/resources/apis.html"
+    },
+    {
+      "source": "/interviews",
+      "destination": "/api/interviews"
+    },
+    {
+      "source": "/interview/create",
+      "destination": "/shell.html"
+    },
+    {
+      "source": "/interview/:slug",
+      "destination": "/api/interview?slug=:slug"
+    },
+    {
+      "source": "/about",
+      "destination": "/prerendered/about.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/prerendered/contact.html"
+    },
+    {
+      "source": "/carrers",
+      "destination": "/prerendered/carrers.html"
+    },
+    {
+      "source": "/mock-interviews",
+      "destination": "/prerendered/mock-interviews.html"
+    },
+    {
+      "source": "/others/book/how-to-sell-ebook",
+      "destination": "/prerendered/others/book/how-to-sell-ebook.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/prerendered/privacy-policy.html"
+    },
+    {
+      "source": "/terms-of-service",
+      "destination": "/prerendered/terms-of-service.html"
+    },
+    {
+      "source": "/refund-policy",
+      "destination": "/prerendered/refund-policy.html"
+    },
+    {
+      "source": "/portfolio",
+      "destination": "/api/portfolio"
+    },
+    {
+      "source": "/portfolio/:slug",
+      "destination": "/api/portfolio?slug=:slug"
+    },
+    {
+      "source": "/blogs",
+      "destination": "/api/blogs"
+    },
+    {
+      "source": "/blog/:slug",
+      "destination": "/api/blog?slug=:slug"
+    },
+    {
+      "source": "/((?!assets/|api/).*)",
+      "destination": "/shell.html"
+    }
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
       ]
     },
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
       ]
+    },
+    {
+      "source": "/admin/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/campaign",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/blog-manage",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/portfolio-manage",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/contact-query",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/contact-details/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/employee/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/clients/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/interest",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/profile",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/set-password",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/review/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/submit-review/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/payment/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/mock-interviews/success",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/mock-interviews/failed",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/mock-interviews/payment-status",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/interview/create",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/shell.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/interviews/:slug",
+      "destination": "/interview/:slug",
+      "permanent": true
     }
   ]
 }

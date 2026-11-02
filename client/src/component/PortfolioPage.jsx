@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -36,6 +37,22 @@ function PortfolioPage() {
 
   return (
     <>
+      <Helmet>
+              <title>Our Portfolio: Web, GenAI &amp; Marketing Projects | Target Trek</title>
+              <meta name="description" content="Explore Target Trek projects across web development, GenAI, social media marketing and content marketing, with the results delivered for clients." />
+              <meta name="keywords" content="target trek portfolio, web development projects, GenAI projects, digital marketing case studies" />
+              <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+              <link rel="canonical" href="https://www.targettrek.in/portfolio" />
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="Target Trek" />
+              <meta property="og:locale" content="en_IN" />
+              <meta property="og:title" content="Our Portfolio: Web, GenAI &amp; Marketing Projects | Target Trek" />
+              <meta property="og:description" content="Explore Target Trek projects across web development, GenAI, social media marketing and content marketing, with the results delivered for clients." />
+              <meta property="og:url" content="https://www.targettrek.in/portfolio" />
+              <meta name="twitter:card" content="summary" />
+              <meta name="twitter:title" content="Our Portfolio: Web, GenAI &amp; Marketing Projects | Target Trek" />
+              <meta name="twitter:description" content="Explore Target Trek projects across web development, GenAI, social media marketing and content marketing, with the results delivered for clients." />
+            </Helmet>
       <Toaster position="top-center" reverseOrder={false} />
       <div className="min-h-screen bg-gradient-to-b from-blue-50 via-gray-50 to-white py-20 px-4 sm:px-6 lg:px-8 font-sans">
         <div className="max-w-7xl mx-auto">

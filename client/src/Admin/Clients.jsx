@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { Plus, Users, Mail, Phone, Building, Search, X, FileText, MapPin, Loader2 } from "lucide-react";
 import BASE_URL from "../utils/Url";
 import { useSelector } from 'react-redux';

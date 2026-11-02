@@ -312,8 +312,8 @@ const StatCard = ({
 }) => {
   const palettes = {
     blue: isDark
-      ? "bg-blue-950/25 text-blue-300"
-      : "bg-blue-50 text-blue-700",
+      ? "bg-orange-950/25 text-orange-300"
+      : "bg-orange-50 text-orange-700",
 
     emerald: isDark
       ? "bg-emerald-950/25 text-emerald-300"
@@ -332,8 +332,8 @@ const StatCard = ({
       : "bg-rose-50 text-rose-700",
 
     cyan: isDark
-      ? "bg-cyan-950/25 text-cyan-300"
-      : "bg-cyan-50 text-cyan-700",
+      ? "bg-orange-950/25 text-orange-300"
+      : "bg-orange-50 text-orange-700",
   };
 
   return (
@@ -352,7 +352,7 @@ const StatCard = ({
         ${
           isDark
             ? "border-[#1E2C3D] bg-[#0C131D] hover:border-[#29415B]"
-            : "border-[#E1E9F1] bg-white hover:border-[#BFDDF2] hover:shadow-sm"
+            : "border-[#E1E9F1] bg-white hover:border-[#FED7AA] hover:shadow-sm"
         }
       `}
     >
@@ -453,8 +453,8 @@ const StatusBadge = ({
       : "bg-amber-50 text-amber-700 border-amber-200",
 
     featured: isDark
-      ? "bg-blue-950/30 text-blue-300 border-blue-900/40"
-      : "bg-blue-50 text-blue-700 border-blue-200",
+      ? "bg-orange-950/30 text-orange-300 border-orange-900/40"
+      : "bg-orange-50 text-orange-700 border-orange-200",
 
     editor: isDark
       ? "bg-violet-950/30 text-violet-300 border-violet-900/40"
@@ -543,8 +543,8 @@ const Pagination = ({
 
   const activeButton =
     isDark
-      ? "border-[#66B8EA] bg-[#1D5C86] text-white"
-      : "border-[#1D5C86] bg-[#1D5C86] text-white";
+      ? "border-[#FB923C] bg-[#EA580C] text-white"
+      : "border-[#EA580C] bg-[#EA580C] text-white";
 
   return (
     <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
@@ -835,8 +835,8 @@ const ConfirmationModal = ({
                       ? "bg-red-950/30 text-red-300"
                       : "bg-red-50 text-red-600"
                     : isDark
-                    ? "bg-blue-950/30 text-blue-300"
-                    : "bg-blue-50 text-blue-700"
+                    ? "bg-orange-950/30 text-orange-300"
+                    : "bg-orange-50 text-orange-700"
                 }
               `}
             >
@@ -959,7 +959,7 @@ const ConfirmationModal = ({
               ${
                 destructive
                   ? "bg-red-600 hover:bg-red-700"
-                  : "bg-[#1D5C86] hover:bg-[#246F9F]"
+                  : "bg-[#EA580C] hover:bg-[#C2410C]"
               }
             `}
           >
@@ -1137,7 +1137,7 @@ const BlogDetailsModal = ({
             <div className="flex min-h-[300px] items-center justify-center">
               <Loader2
                 size={30}
-                className="animate-spin text-[#2E86C1]"
+                className="animate-spin text-[#F97316]"
               />
             </div>
           ) : !blog ? (
@@ -2197,8 +2197,8 @@ const AdminBlogManagementPage =
 
     const blueText =
       isDark
-        ? "text-[#66B8EA]"
-        : "text-[#1D5C86]";
+        ? "text-[#FB923C]"
+        : "text-[#EA580C]";
 
     const inputClasses = `
       h-11
@@ -2209,9 +2209,9 @@ const AdminBlogManagementPage =
       text-sm
       outline-none
       transition
-      focus:border-[#2E86C1]
+      focus:border-[#F97316]
       focus:ring-4
-      focus:ring-[#2E86C1]/10
+      focus:ring-[#F97316]/10
       ${borderColor}
       ${
         isDark
@@ -3601,8 +3601,8 @@ const AdminBlogManagementPage =
                     ${borderColor}
                     ${
                       isDark
-                        ? "bg-blue-950/20 text-[#66B8EA]"
-                        : "bg-[#EAF4FC] text-[#1D5C86]"
+                        ? "bg-orange-950/20 text-[#FB923C]"
+                        : "bg-[#FFF7ED] text-[#EA580C]"
                     }
                   `}
                 >
@@ -3688,6 +3688,33 @@ const AdminBlogManagementPage =
                 </button>
 
                 <Link
+                  to="/admin/blog-agent"
+                  className="
+                    inline-flex
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    border
+                    border-[#FDBA74]
+                    bg-[#FFF7ED]
+                    px-4
+                    py-2.5
+                    text-sm
+                    font-bold
+                    text-[#C2410C]
+                    transition
+                    hover:bg-[#FFEDD5]
+                  "
+                >
+                  <Sparkles
+                    size={17}
+                  />
+
+                  AI Writer
+                </Link>
+
+                <Link
                   to="/admin/add-blog"
                   className="
                     inline-flex
@@ -3695,14 +3722,14 @@ const AdminBlogManagementPage =
                     justify-center
                     gap-2
                     rounded-xl
-                    bg-[#1D5C86]
+                    bg-[#EA580C]
                     px-4
                     py-2.5
                     text-sm
                     font-bold
                     text-white
                     transition
-                    hover:bg-[#246F9F]
+                    hover:bg-[#C2410C]
                   "
                 >
                   <PlusCircle
@@ -3750,7 +3777,7 @@ const AdminBlogManagementPage =
               {loadingOverview && (
                 <Loader2
                   size={17}
-                  className="animate-spin text-[#2E86C1]"
+                  className="animate-spin text-[#F97316]"
                 />
               )}
             </div>
@@ -4307,7 +4334,7 @@ const AdminBlogManagementPage =
                         ${
                           statusFilter ===
                           "all"
-                            ? "border-transparent bg-[#1D5C86] text-white"
+                            ? "border-transparent bg-[#EA580C] text-white"
                             : `${borderColor} ${primaryBg} ${secondaryText}`
                         }
                       `}
@@ -4391,7 +4418,7 @@ const AdminBlogManagementPage =
                         font-bold
                         ${
                           featuredOnly
-                            ? "border-transparent bg-blue-600 text-white"
+                            ? "border-transparent bg-orange-600 text-white"
                             : `${borderColor} ${primaryBg} ${secondaryText}`
                         }
                       `}
@@ -4557,8 +4584,8 @@ const AdminBlogManagementPage =
                       rounded-2xl
                       ${
                         isDark
-                          ? "bg-[#101924] text-[#66B8EA]"
-                          : "bg-[#EAF4FC] text-[#1D5C86]"
+                          ? "bg-[#101924] text-[#FB923C]"
+                          : "bg-[#FFF7ED] text-[#EA580C]"
                       }
                     `}
                   >
@@ -4644,7 +4671,7 @@ const AdminBlogManagementPage =
                             ${
                               isDark
                                 ? "bg-[#0C131D] hover:border-[#29415B]"
-                                : "bg-white hover:border-[#BFDDF2] hover:shadow-md"
+                                : "bg-white hover:border-[#FED7AA] hover:shadow-md"
                             }
                           `}
                         >
@@ -4809,7 +4836,7 @@ const AdminBlogManagementPage =
                                   ${
                                     isDark
                                       ? "bg-[#101924] text-[#9AA9BA] hover:text-white"
-                                      : "bg-[#F8FBFD] text-[#5B6B82] hover:text-[#1D5C86]"
+                                      : "bg-[#F8FBFD] text-[#5B6B82] hover:text-[#EA580C]"
                                   }
                                 `}
                                 title="View all details"
@@ -5257,7 +5284,7 @@ const AdminBlogManagementPage =
                                         ${borderColor}
                                         ${
                                           blog.isFeatured
-                                            ? "bg-blue-600 text-white"
+                                            ? "bg-orange-600 text-white"
                                             : `${primaryBg} ${mutedText}`
                                         }
                                       `}
@@ -5393,8 +5420,8 @@ const AdminBlogManagementPage =
                                       ${borderColor}
                                       ${
                                         isDark
-                                          ? "bg-blue-950/20 text-blue-300"
-                                          : "bg-blue-50 text-blue-700"
+                                          ? "bg-orange-950/20 text-orange-300"
+                                          : "bg-orange-50 text-orange-700"
                                       }
                                     `}
                                   >

@@ -69,10 +69,10 @@ const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
 
 const SEO_TITLE =
-  "Master RAG Pipeline for GenAI Interviews – Python & LangChain Ebook | Target Trek";
+  "RAG Pipeline Ebook: Python & LangChain Guide | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Master Retrieval-Augmented Generation for GenAI interviews with Python and LangChain. Learn chunking, embeddings, vector databases, hybrid search, reranking, evaluation, security, production RAG and system design.";
+  "Master RAG with Python and LangChain: chunking, embeddings, vector databases, hybrid search, reranking, evaluation and production RAG.";
 
 // ======================================================
 // UTILITIES

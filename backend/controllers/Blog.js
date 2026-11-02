@@ -31,7 +31,7 @@ const MAX_ADMIN_LIMIT = 100;
 |--------------------------------------------------------------------------
 */
 
-const parseBoolean = (
+export const parseBoolean = (
   value,
   defaultValue = false
 ) => {
@@ -83,7 +83,7 @@ const parseBoolean = (
 |
 */
 
-const parseArrayField = (
+export const parseArrayField = (
   value
 ) => {
   if (
@@ -171,7 +171,7 @@ const escapeRegex = (
 |--------------------------------------------------------------------------
 */
 
-const sanitizePlainText = (
+export const sanitizePlainText = (
   value = ""
 ) => {
   return sanitizeHtml(
@@ -219,7 +219,7 @@ const sanitizePlainText = (
 |
 */
 
-const sanitizeBlogHtml = (
+export const sanitizeBlogHtml = (
   html = ""
 ) => {
   return sanitizeHtml(
@@ -402,7 +402,7 @@ const sanitizeBlogHtml = (
 |--------------------------------------------------------------------------
 */
 
-const normalizeSlug = (
+export const normalizeSlug = (
   value = ""
 ) => {
   return String(value)
@@ -432,7 +432,7 @@ const normalizeSlug = (
 |--------------------------------------------------------------------------
 */
 
-const isValidHttpUrl = (
+export const isValidHttpUrl = (
   value
 ) => {
   if (!value) {
@@ -1114,6 +1114,7 @@ export const createBlogPost =
               ),
 
             seo,
+
           });
 
         const savedPost =
@@ -1420,6 +1421,63 @@ export const getAllPublishedBlogPosts =
 
 /*
 |--------------------------------------------------------------------------
+| HEADING ANCHORS + TABLE OF CONTENTS
+|--------------------------------------------------------------------------
+|
+| Adds stable id attributes to h2/h3 headings (if missing) and returns a
+| table of contents. Applied only to the public response; stored content is
+| not modified.
+|
+*/
+
+const addHeadingAnchors = (html = "") => {
+  const toc = [];
+  const used = new Set();
+
+  const content = String(html).replace(
+    /<h([23])([^>]*)>([\s\S]*?)<\/h\1>/gi,
+    (match, level, attrs, inner) => {
+      const text = sanitizePlainText(inner);
+
+      if (!text) {
+        return match;
+      }
+
+      const existing = /\sid="([^"]+)"/i.exec(attrs);
+
+      let id =
+        existing?.[1] ||
+        normalizeSlug(text).slice(0, 80) ||
+        "section";
+
+      const base = id;
+      let n = 2;
+
+      while (used.has(id)) {
+        id = `${base}-${n++}`;
+      }
+
+      used.add(id);
+
+      toc.push({
+        id,
+        text,
+        level: Number(level),
+      });
+
+      const cleanAttrs = existing
+        ? attrs
+        : `${attrs} id="${id}"`;
+
+      return `<h${level}${cleanAttrs}>${inner}</h${level}>`;
+    }
+  );
+
+  return { content, toc };
+};
+
+/*
+|--------------------------------------------------------------------------
 | PUBLIC - GET BLOG BY SLUG
 |--------------------------------------------------------------------------
 */
@@ -1466,16 +1524,76 @@ export const getBlogPostBySlug =
           });
       }
 
+      const { content, toc } =
+        addHeadingAnchors(
+          post.content
+        );
+
       return res
         .status(200)
         .json({
           success: true,
 
-          data:
-            post,
+          data: {
+            ...post,
+            content,
+            toc,
+          },
         });
     }
   );
+
+/*
+|--------------------------------------------------------------------------
+| VIEW COUNTING HELPERS
+|--------------------------------------------------------------------------
+*/
+
+const BOT_UA =
+  /bot|crawl|spider|slurp|facebookexternalhit|preview|headless|lighthouse|pagespeed|monitor|uptime|curl|wget|python-requests|axios\/|node-fetch|go-http/i;
+
+/*
+ * Fallback de-duplication when Redis is unavailable, so a Redis outage
+ * never stops views from counting. Per-instance, 24h TTL, bounded size.
+ */
+const memoryViews = new Map();
+const MEMORY_VIEWS_MAX = 20000;
+
+const claimViewInMemory = (
+  key
+) => {
+  const now = Date.now();
+  const expiresAt = memoryViews.get(key);
+
+  if (expiresAt && expiresAt > now) {
+    return false;
+  }
+
+  if (
+    memoryViews.size >=
+    MEMORY_VIEWS_MAX
+  ) {
+    for (const [k, exp] of memoryViews) {
+      if (exp <= now) {
+        memoryViews.delete(k);
+      }
+    }
+
+    if (
+      memoryViews.size >=
+      MEMORY_VIEWS_MAX
+    ) {
+      memoryViews.clear();
+    }
+  }
+
+  memoryViews.set(
+    key,
+    now + BLOG_VIEW_TTL * 1000
+  );
+
+  return true;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1541,20 +1659,15 @@ export const recordBlogView =
       }
 
       /*
-       * This visitor ID can later
-       * be provided by the client.
-       *
-       * We never store it raw.
+       * Crawlers that execute JavaScript (Googlebot, link previews,
+       * uptime monitors…) are not readers.
        */
 
-      const visitorId =
-        String(
-          req.get(
-            "x-blog-visitor-id"
-          ) || ""
-        ).trim();
-
-      if (!visitorId) {
+      if (
+        BOT_UA.test(
+          req.get("user-agent") || ""
+        )
+      ) {
         return res
           .status(200)
           .json({
@@ -1564,11 +1677,24 @@ export const recordBlogView =
 
             views:
               blog.views,
-
-            message:
-              "Visitor identifier not provided.",
           });
       }
+
+      /*
+       * Visitor ID comes from the browser (x-blog-visitor-id). If it is
+       * missing (blocked / stripped by a proxy), fall back to a hash of
+       * IP + user agent so views still count. Never stored raw.
+       */
+
+      const visitorId =
+        String(
+          req.get(
+            "x-blog-visitor-id"
+          ) || ""
+        ).trim() ||
+        `ip:${req.ip}|${req.get(
+          "user-agent"
+        ) || ""}`;
 
       if (
         visitorId.length >
@@ -1619,16 +1745,37 @@ export const recordBlogView =
          * expire after 24 hours.
          */
 
-        const redisResult =
-          await redis.set(
-            redisKey,
-            "1",
-            {
-              nx: true,
-              ex:
-                BLOG_VIEW_TTL,
-            }
+        let redisResult;
+
+        try {
+          redisResult =
+            await redis.set(
+              redisKey,
+              "1",
+              {
+                nx: true,
+                ex:
+                  BLOG_VIEW_TTL,
+              }
+            );
+
+          redisKeyCreated =
+            Boolean(redisResult);
+        } catch (redisError) {
+          /*
+           * Redis misconfigured or down: do NOT silently stop counting.
+           */
+
+          console.error(
+            "Blog view Redis error (using in-memory fallback):",
+            redisError?.message
           );
+
+          redisResult =
+            claimViewInMemory(
+              redisKey
+            );
+        }
 
         /*
          * Redis returns null when
@@ -1647,9 +1794,6 @@ export const recordBlogView =
                 blog.views,
             });
         }
-
-        redisKeyCreated =
-          true;
 
         /*
          * Atomic Mongo increment.

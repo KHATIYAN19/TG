@@ -18,7 +18,7 @@
 //   Target,
 //   Share2
 // } from "lucide-react";
-// import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet-async";
 
 // const ContentMarketingPage = () => {
 //   const [faqOpen, setFaqOpen] = useState(null);
@@ -273,7 +273,7 @@ import {
   ShieldCheck,
   LineChart
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 const ContentMarketingPage = () => {
   const [faqOpen, setFaqOpen] = useState(null);

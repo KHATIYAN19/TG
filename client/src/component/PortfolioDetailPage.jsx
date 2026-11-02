@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 import toast, { Toaster } from 'react-hot-toast';
 import { Trash2, Eye, EyeOff, CalendarDays, Loader2, AlertTriangle, FileQuestion, ArrowLeft } from 'lucide-react';
 import BASE_URL from '../utils/Url';
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
@@ -201,6 +201,7 @@ function PortfolioDetailPage() {
     <>
       <Helmet>
         <title>{item?.title || 'Portfolio Details'} - Target Trek</title>
+        <link rel="canonical" href={`https://www.targettrek.in/portfolio/${item?.slug || slug}`} />
         <meta name="description" content={item?.description?.substring(0, 160) || 'Explore the details of our featured portfolio project.'} />
         <meta property="og:title" content={`${item?.title || 'Portfolio Details'} - Target Trek`} />
         <meta property="og:description" content={item?.description?.substring(0, 160) || 'Explore the details of our featured portfolio project.'} />

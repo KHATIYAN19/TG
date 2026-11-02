@@ -48,16 +48,17 @@ import {
 // =====================================================
 
 const SITE_URL = "https://www.targettrek.in";
-const PAGE_URL = `${SITE_URL}/learn`;
+// "/" and "/learn" render this same page; "/" is the canonical home URL.
+const PAGE_URL = `${SITE_URL}/`;
 
 const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
 
 const SEO_TITLE =
-  "Learn Software Engineering, System Design & GenAI | Target Trek";
+  "Learn System Design, Java LLD & GenAI | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Explore software engineering resources at Target Trek. Learn System Design HLD, Java LLD, backend architecture, GenAI, and technical interview preparation through books, free resources, and interview experiences.";
+  "Learn System Design HLD, Java LLD, backend architecture and GenAI with Target Trek ebooks, free resources and real interview experiences.";
 
 const EASE = [0.22, 1, 0.36, 1];
 

@@ -5,7 +5,7 @@
 //   useState,
 // } from "react";
 
-// import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet-async";
 // import { Link, useNavigate } from "react-router-dom";
 // import { toast } from "react-hot-toast";
 
@@ -2847,7 +2847,7 @@ import React, {
   useState,
 } from "react";
 
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
@@ -2883,13 +2883,13 @@ import BASE_URL from "../utils/Url.js";
 const SITE_URL = "https://www.targettrek.in";
 const SITE_NAME = "Target Trek";
 
-const PAGE_URL = `${SITE_URL}/interview`;
+const PAGE_URL = `${SITE_URL}/interviews`;
 
 const SEO_TITLE =
-  "Software Engineering Interview Experiences | SDE, Backend, AI & System Design";
+  "Software Engineering Interview Experiences | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Read real software engineering interview experiences from engineers interviewing at top companies. Explore DSA, LLD, HLD, backend, AI, GenAI, system design, interview rounds, compensation and hiring experiences.";
+  "Real interview experiences from engineers at top companies: DSA, LLD, HLD, backend, GenAI and system design rounds, questions and results.";
 
 const THEME_STORAGE_KEY = "theme";
 

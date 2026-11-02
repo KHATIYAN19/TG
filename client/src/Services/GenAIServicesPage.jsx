@@ -24,7 +24,7 @@ import {
   ShoppingCart,
   Building2
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 const GenAIPage = () => {
   const [faqOpen, setFaqOpen] = useState(null);

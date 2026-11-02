@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import BASE_URL from "../utils/Url.js";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
+import { Helmet } from "react-helmet-async";
 
 const API_BASE = String(BASE_URL || "").replace(/\/+$/, "");
 
@@ -640,6 +641,22 @@ export default function HowToEarnMoneyEbook() {
 
   return (
     <div className={`${bg} ${text} min-h-screen overflow-x-hidden transition-colors duration-300`}>
+      <Helmet>
+              <title>How to Sell Ebooks Online: Create, Price &amp; Market | Target Trek</title>
+              <meta name="description" content="Learn how to find a profitable ebook idea, create your first digital product, set its price, build a sales page and market it online." />
+              <meta name="keywords" content="how to sell ebooks online, create an ebook, sell digital products, ebook business, ebook pricing, ebook marketing" />
+              <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+              <link rel="canonical" href="https://www.targettrek.in/others/book/how-to-sell-ebook" />
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="Target Trek" />
+              <meta property="og:locale" content="en_IN" />
+              <meta property="og:title" content="How to Sell Ebooks Online: Create, Price &amp; Market | Target Trek" />
+              <meta property="og:description" content="Learn how to find a profitable ebook idea, create your first digital product, set its price, build a sales page and market it online." />
+              <meta property="og:url" content="https://www.targettrek.in/others/book/how-to-sell-ebook" />
+              <meta name="twitter:card" content="summary" />
+              <meta name="twitter:title" content="How to Sell Ebooks Online: Create, Price &amp; Market | Target Trek" />
+              <meta name="twitter:description" content="Learn how to find a profitable ebook idea, create your first digital product, set its price, build a sales page and market it online." />
+            </Helmet>
       <style>{`
         @keyframes pulseGlow {
           0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,.35); }

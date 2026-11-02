@@ -9,19 +9,40 @@ import sendMail from "./MailSender.js";
      scheduleEbookEmail() only queues work with
      setImmediate(), so the redirect to the success page
      is sent first.
-   - Large PDFs: attachments are grouped into several
-     emails so no single email exceeds MAX_MAIL_BYTES.
-     A PDF bigger than MAX_ATTACHMENT_BYTES is sent as a
-     download link instead of an attachment.
+   - Large PDFs: the mail provider (Mailtrap) takes a whole
+     message, base64-encoded, in one request and limits its
+     size, so big PDFs cannot be attached. Any PDF larger than
+     MAX_ATTACHMENT_BYTES is sent as a download link instead
+     (its size is checked first, without downloading it).
+     Small PDFs are attached and grouped so no single email
+     exceeds the limit.
+   - If a send WITH attachments is rejected for any reason, it is
+     retried once with download links only, so the buyer still
+     gets their books.
    - Each successfully mailed book is recorded, so a retry
      after a partial failure does not resend those books.
 ===================================================== */
 
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 
-// Base64 inflates attachments by ~33%; most inboxes cap near 25MB.
-const MAX_MAIL_BYTES = 15 * 1024 * 1024;
-const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
+const MB = 1024 * 1024;
+
+/*
+ * Largest PDF (and largest total attachment size per email) that is
+ * actually attached. Base64 inflates files by ~33% and the provider
+ * limits the whole message, so the default is a conservative 5MB.
+ * Override with EBOOK_EMAIL_MAX_ATTACHMENT_MB (0 = always send links).
+ */
+const configuredAttachMb = Number(
+  process.env.EBOOK_EMAIL_MAX_ATTACHMENT_MB
+);
+
+const MAX_ATTACHMENT_BYTES =
+  (Number.isFinite(configuredAttachMb) && configuredAttachMb >= 0
+    ? configuredAttachMb
+    : 5) * MB;
+
+const MAX_MAIL_BYTES = MAX_ATTACHMENT_BYTES;
 
 const DOWNLOAD_TIMEOUT_MS = 90 * 1000;
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -93,6 +114,27 @@ const resolvePurchasedBooks = async (order) => {
    Download a PDF (size-checked)
 ----------------------------------------------------- */
 
+// Size from a HEAD request, so big files are never downloaded just to
+// be linked. Returns null when the size cannot be determined.
+const probeSize = async (url) => {
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(15 * 1000),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const size = Number(response.headers?.get?.("content-length"));
+
+    return Number.isFinite(size) && size > 0 ? size : null;
+  } catch {
+    return null;
+  }
+};
+
 const downloadPdf = async (url) => {
   const response = await fetch(url, {
     signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
@@ -105,16 +147,45 @@ const downloadPdf = async (url) => {
   return Buffer.from(await response.arrayBuffer());
 };
 
-const safeFileName = (book) => {
-  let name = String(book.fileName || book.title || book.slug || "ebook")
-    .replace(/[\\/:*?"<>|]+/g, "-")
-    .trim();
+/*
+ * Attachment names MUST match what the payment success page uses for
+ * the same book (see getPdfFileName in client/src/payment/paymentSuccess.jsx),
+ * so a customer sees one consistent name everywhere:
+ *
+ *   admin "Display File Name"  ->  slug  ->  title
+ *
+ * with special characters removed and spaces turned into dashes.
+ */
+const cleanFileName = (value) =>
+  String(value || "Target-Trek-Ebook")
+    .replace(/[^a-zA-Z0-9 _.-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/^\.+|\.+$/g, "")
+    .substring(0, 90) || "Target-Trek-Ebook";
 
-  if (!name.toLowerCase().endsWith(".pdf")) {
-    name += ".pdf";
+const pdfFileNameFor = (book) => {
+  const name = String(
+    book?.fileName || book?.slug || book?.title || "Target-Trek-Ebook"
+  ).replace(/\.pdf$/i, "");
+
+  return `${cleanFileName(name)}.pdf`;
+};
+
+// Two books in one email must never share an attachment name.
+const uniqueFileName = (name, used) => {
+  const base = name.replace(/\.pdf$/i, "");
+
+  let finalName = `${base}.pdf`;
+  let number = 2;
+
+  while (used.has(finalName.toLowerCase())) {
+    finalName = `${base}-${number}.pdf`;
+    number += 1;
   }
 
-  return name;
+  used.add(finalName.toLowerCase());
+
+  return finalName;
 };
 
 /* -----------------------------------------------------
@@ -404,6 +475,9 @@ export const deliverEbookEmail = async (
     let mailsSent = isAdmin ? 0 : order.ebookEmail?.mailsSent || 0;
     let part = 0;
 
+    // Attachment names already used in this order's emails.
+    const usedNames = new Set();
+
     const newGroup = () => ({ attached: [], linked: [], files: [], bytes: 0 });
     let current = newGroup();
 
@@ -411,23 +485,45 @@ export const deliverEbookEmail = async (
     const sendGroup = async (group) => {
       part += 1;
 
-      const { html, text } = buildEmail({
-        order,
-        attached: group.attached,
-        linked: group.linked,
-        part,
-        multiple: todo.length > 1,
-      });
-
-      await sendMail(
-        recipient,
+      const subject =
         todo.length > 1
           ? `Your Target Trek ebooks - order ${order.orderId} (part ${part})`
-          : `Your Target Trek ebook - order ${order.orderId}`,
-        text,
-        html,
-        { attachments: group.files, replyTo: SUPPORT_EMAIL }
-      );
+          : `Your Target Trek ebook - order ${order.orderId}`;
+
+      const deliver = (g) => {
+        const { html, text } = buildEmail({
+          order,
+          attached: g.attached,
+          linked: g.linked,
+          part,
+          multiple: todo.length > 1,
+        });
+
+        return sendMail(recipient, subject, text, html, {
+          attachments: g.files,
+          replyTo: SUPPORT_EMAIL,
+        });
+      };
+
+      try {
+        await deliver(group);
+      } catch (error) {
+        // Nothing to fall back from if no files were attached.
+        if (!group.files.length) {
+          throw error;
+        }
+
+        console.error(
+          "[EBOOK EMAIL] send with attachments failed, retrying with download links:",
+          error.message
+        );
+
+        await deliver({
+          attached: [],
+          linked: [...group.attached, ...group.linked],
+          files: [],
+        });
+      }
 
       sentIds.push(...[...group.attached, ...group.linked].map((b) => b._id));
       mailsSent += 1;
@@ -445,7 +541,21 @@ export const deliverEbookEmail = async (
 
     // One PDF in memory at a time per group; full groups are sent
     // immediately so memory stays bounded for large bundles.
-    for (const book of todo) {
+    // Check every file's size at once (cheap HEAD requests), so only
+    // files small enough to attach are ever downloaded.
+    const sizes = await Promise.all(
+      todo.map((book) => probeSize(book.pdfUrl))
+    );
+
+    for (const [index, book] of todo.entries()) {
+      // Too big to attach: link it, without downloading.
+      const knownSize = sizes[index];
+
+      if (knownSize !== null && knownSize > MAX_ATTACHMENT_BYTES) {
+        current.linked.push(book);
+        continue;
+      }
+
       const buffer = await downloadPdf(book.pdfUrl);
 
       if (buffer.length > MAX_ATTACHMENT_BYTES) {
@@ -463,7 +573,7 @@ export const deliverEbookEmail = async (
 
       current.attached.push(book);
       current.files.push({
-        filename: safeFileName(book),
+        filename: uniqueFileName(pdfFileNameFor(book), usedNames),
         content: buffer,
         contentType: "application/pdf",
       });

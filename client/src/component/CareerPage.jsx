@@ -21,7 +21,7 @@
 //   Zap,
 //   Globe
 // } from "lucide-react";
-// import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet-async";
 
 // const CareerPage = () => {
 //   const [searchTerm, setSearchTerm] = useState("");
@@ -339,7 +339,7 @@ import {
   Upload, ChevronRight, Building2, DollarSign, Calendar, Layers, 
   Award, Wallet, Globe, Zap, Sparkles, User, Mail, Phone, Link as LinkIcon
 } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 
 const CareerPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -396,8 +396,21 @@ const CareerPage = () => {
   return (
     <div className="bg-[#fcfcfd] text-slate-900 font-sans min-h-screen selection:bg-blue-100">
       <Helmet>
-        <title>Careers | Target Trek</title>
-      </Helmet>
+              <title>Careers at Target Trek: Engineering &amp; Marketing Jobs</title>
+              <meta name="description" content="Join Target Trek. Browse open engineering and marketing roles and apply to build developer learning products with us." />
+              <meta name="keywords" content="target trek careers, software engineering jobs, developer jobs, marketing jobs" />
+              <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+              <link rel="canonical" href="https://www.targettrek.in/carrers" />
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="Target Trek" />
+              <meta property="og:locale" content="en_IN" />
+              <meta property="og:title" content="Careers at Target Trek: Engineering &amp; Marketing Jobs" />
+              <meta property="og:description" content="Join Target Trek. Browse open engineering and marketing roles and apply to build developer learning products with us." />
+              <meta property="og:url" content="https://www.targettrek.in/carrers" />
+              <meta name="twitter:card" content="summary" />
+              <meta name="twitter:title" content="Careers at Target Trek: Engineering &amp; Marketing Jobs" />
+              <meta name="twitter:description" content="Join Target Trek. Browse open engineering and marketing roles and apply to build developer learning products with us." />
+            </Helmet>
 
       {/* --- HERO --- */}
       <section className="pt-32 pb-12 bg-white border-b border-slate-100">

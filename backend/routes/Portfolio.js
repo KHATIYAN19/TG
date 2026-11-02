@@ -9,13 +9,14 @@ import {
 } from '../controllers/Portfolio.js';
 import {auth,isAdmin,isEmployee,isUser} from  "../Middleware/auth.js"
 
+import { requireRealImage } from "../Middleware/imageSignature.js";
 import multer from 'multer';
 const storage = multer.diskStorage({}); 
 const uploadMiddleware = multer({ storage:multer.diskStorage({}),limits:{fileSize: 5 * 1024 * 1024 } }); 
 
 const router = express.Router();
 
-router.post('/',  uploadMiddleware.single('image'),auth,isUser, createPortfolioItem); 
+router.post('/', auth,isUser, uploadMiddleware.single('image'), requireRealImage, createPortfolioItem); 
 router.get('/',auth,isUser, getAllPortfolioItems);
 router.get('/published', getPublishedPortfolioItems);
 router.delete('/:id', auth,isAdmin,deletePortfolioItem);

@@ -4,6 +4,9 @@ import Coupon from "../models/Coupon.js";
 import Book from "../models/Book.js";
 import Order from "../models/Order.js";
 
+const escapeRegexInput = (value) =>
+  String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 
 const roundAmount = (amount) => {
   return Math.round((Number(amount) + Number.EPSILON) * 100) / 100;
@@ -847,7 +850,7 @@ export const getAllCoupons = async (
         {
           code: {
             $regex:
-              search.trim(),
+              escapeRegexInput(search.trim()),
 
             $options:
               "i",
@@ -857,7 +860,7 @@ export const getAllCoupons = async (
         {
           name: {
             $regex:
-              search.trim(),
+              escapeRegexInput(search.trim()),
 
             $options:
               "i",

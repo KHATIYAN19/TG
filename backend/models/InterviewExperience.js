@@ -1134,7 +1134,7 @@ interviewExperienceSchema.pre(
       !this.seo.canonicalPath
     ) {
       this.seo.canonicalPath =
-        `/interviews/${this.slug}`;
+        `/interview/${this.slug}`;
     }
 
     if (

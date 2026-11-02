@@ -27,10 +27,17 @@ import {
 } from "../controllers/Blog.js";
 
 import {
+  streamBlogAgent,
+  saveAgentBlog,
+  discardAgentCover,
+} from "../controllers/blogAgentController.js";
+
+import {
   auth,
   isAdmin,
   isUser,
 } from "../Middleware/auth.js";
+import { requireRealImage } from "../Middleware/imageSignature.js";
 
 const router =
   express.Router();
@@ -104,7 +111,35 @@ router.post(
   uploadMiddleware.single(
     "imageFile"
   ),
+  requireRealImage,
   createBlogPost
+);
+
+/*
+|--------------------------------------------------------------------------
+| AI WRITER (admin only) – keep above /admin/:id
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+  "/admin/agent/stream",
+  auth,
+  isAdmin,
+  streamBlogAgent
+);
+
+router.post(
+  "/admin/agent/save",
+  auth,
+  isAdmin,
+  saveAgentBlog
+);
+
+router.delete(
+  "/admin/agent/cover",
+  auth,
+  isAdmin,
+  discardAgentCover
 );
 
 router.get(
@@ -142,6 +177,7 @@ router.patch(
   uploadMiddleware.single(
     "imageFile"
   ),
+  requireRealImage,
   updateBlogPost
 );
 
@@ -203,6 +239,7 @@ router.post(
   uploadMiddleware.single(
     "imageFile"
   ),
+  requireRealImage,
   createBlogPost
 );
 

@@ -7,11 +7,12 @@ import {
 } from '../controllers/Interest.js';
 
 import {auth,isAdmin,isEmployee,isUser} from  "../Middleware/auth.js"
+import { publicFormLimiter } from "../Middleware/rateLimiter.js";
 const router = express.Router();
 
-router.post('/add', addInterest);
-router.delete('/delete/:id', auth,deleteInterest);
-router.get('/all',auth, getAllInterests);
-router.get('/deleted-all',auth, getAllDeletedInterests);
+router.post('/add', publicFormLimiter, addInterest);
+router.delete('/delete/:id', auth,isUser,deleteInterest);
+router.get('/all',auth,isUser, getAllInterests);
+router.get('/deleted-all',auth,isUser, getAllDeletedInterests);
 
 export default router;

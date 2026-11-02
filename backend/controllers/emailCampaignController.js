@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import EmailCampaign from "../models/EmailCampaign.js";
 import sendMail from "../utils/MailSender.js";
 
+const escapeRegexInput = (value) =>
+  String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const normalizeEmails = (emails) => {
   if (!emails) {
     return [];
@@ -310,14 +313,14 @@ export const getAllEmailCampaigns = async (req, res) => {
       filter.$or = [
         {
           subject: {
-            $regex: String(req.query.search),
+            $regex: escapeRegexInput(req.query.search),
             $options: "i",
           },
         },
 
         {
           "recipients.email": {
-            $regex: String(req.query.search),
+            $regex: escapeRegexInput(req.query.search),
             $options: "i",
           },
         },
