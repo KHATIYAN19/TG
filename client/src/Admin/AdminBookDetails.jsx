@@ -2544,6 +2544,7 @@ const EMPTY_FORM = {
   isActive: true,
   isFeatured: false,
   showInMainBooks: false,
+  sendEbookEmailOnPurchase: false,
 };
 
 const EMPTY_SUMMARY = {
@@ -2728,6 +2729,7 @@ const createFormFromBook = (book) => ({
   isActive: book?.isActive !== false,
   isFeatured: book?.isFeatured === true,
   showInMainBooks: book?.showInMainBooks === true,
+  sendEbookEmailOnPurchase: book?.sendEbookEmailOnPurchase === true,
 });
 
 const getErrorMessage = (result, fallback) =>
@@ -3681,6 +3683,7 @@ export default function AdminBookDetails() {
         "isActive",
         "isFeatured",
         "showInMainBooks",
+        "sendEbookEmailOnPurchase",
       ]) {
         data.append(field, String(form[field]));
       }
@@ -3935,6 +3938,17 @@ export default function AdminBookDetails() {
                     }`}
                   >
                     Show in Main Books: {book.showInMainBooks ? "Yes" : "No"}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      book.sendEbookEmailOnPurchase
+                        ? "bg-sky-500/10 text-sky-500"
+                        : "bg-slate-500/10 text-slate-400"
+                    }`}
+                  >
+                    PDF Email After Purchase:{" "}
+                    {book.sendEbookEmailOnPurchase ? "Enabled" : "Disabled"}
                   </span>
                 </div>
 
@@ -4693,6 +4707,7 @@ export default function AdminBookDetails() {
                     ["isPublished", "Published"],
                     ["isFeatured", "Featured"],
                     ["showInMainBooks", "Show in Main Books"],
+                    ["sendEbookEmailOnPurchase", "Email PDF after purchase"],
                   ].map(([key, label]) => (
                     <label
                       key={key}
@@ -4702,6 +4717,11 @@ export default function AdminBookDetails() {
                         <span className={`block text-sm font-bold ${ui.text}`}>
                           {label}
                         </span>
+                        {key === "sendEbookEmailOnPurchase" && (
+                          <span className={`mt-1 block text-xs ${ui.secondary}`}>
+                            Emails the PDF(s) to the buyer after payment (all included books for combos). Sent in the background.
+                          </span>
+                        )}
                         {key === "showInMainBooks" && (
                           <span className={`mt-1 block text-xs ${ui.secondary}`}>
                             Controls whether this book appears in the Main Books section of the storefront.

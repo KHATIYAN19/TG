@@ -3,6 +3,7 @@ import Book from "../models/Book.js";
 import Order from "../models/Order.js";
 import { buildAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
+import { scheduleEbookEmail } from "../utils/ebookEmailDelivery.js";
 import User from "../models/User.js";
 import {
     generateCashfreeOrderId,
@@ -291,6 +292,9 @@ const markCashfreePaymentSuccessful = async ({
 
     if (updatedOrder) {
         await incrementPurchaseCounters(updatedOrder);
+
+        // Background PDF email; not awaited.
+        scheduleEbookEmail(updatedOrder);
 
         return {
             order: updatedOrder,

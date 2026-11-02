@@ -154,6 +154,7 @@ const INITIAL_FORM = {
 
   isFeatured: false,
   showInMainBooks: false,
+  sendEbookEmailOnPurchase: false,
 
 };
 
@@ -370,6 +371,7 @@ const normalizeBook = (record) => {
     isActive: record.isActive !== false,
     isFeatured: record.isFeatured === true,
     showInMainBooks: record.showInMainBooks === true,
+    sendEbookEmailOnPurchase: record.sendEbookEmailOnPurchase === true,
 
   };
 
@@ -2751,6 +2753,7 @@ export default function AddBook() {
     "isActive",
     "isFeatured",
     "showInMainBooks",
+    "sendEbookEmailOnPurchase",
 
     ]) {
 
@@ -4836,6 +4839,14 @@ export default function AddBook() {
                 description="Include this product in the Main Books section."
                 name="showInMainBooks"
                 checked={formData.showInMainBooks}
+                onChange={handleChange}
+              />
+
+              <Toggle
+                label="Email PDF after purchase"
+                description="Automatically email the PDF(s) to the buyer after successful payment (for combos, all included books). Sent in the background."
+                name="sendEbookEmailOnPurchase"
+                checked={formData.sendEbookEmailOnPurchase}
                 onChange={handleChange}
               />
 

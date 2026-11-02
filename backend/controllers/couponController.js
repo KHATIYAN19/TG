@@ -20,6 +20,43 @@ const getAdminName = (req) => {
 };
 
 
+/**
+ * Single source of truth for discount maths, used by both coupon
+ * validation and the "available coupons" listing.
+ */
+const computeDiscount = (coupon, originalAmount) => {
+  let discountAmount = 0;
+
+  if (coupon.discountType === "PERCENTAGE") {
+    discountAmount =
+      (originalAmount * coupon.discountValue) / 100;
+
+    if (
+      coupon.maxDiscountAmount !== null &&
+      coupon.maxDiscountAmount !== undefined
+    ) {
+      discountAmount = Math.min(
+        discountAmount,
+        coupon.maxDiscountAmount
+      );
+    }
+  }
+
+  if (coupon.discountType === "FIXED") {
+    discountAmount = coupon.discountValue;
+  }
+
+  discountAmount = roundAmount(
+    Math.min(discountAmount, originalAmount)
+  );
+
+  return {
+    discountAmount,
+    finalAmount: roundAmount(originalAmount - discountAmount),
+  };
+};
+
+
 export const validateCouponForPayment = async ({
   couponCode,
   book,
@@ -216,61 +253,10 @@ export const validateCouponForPayment = async ({
   }
 
 
-  let discountAmount = 0;
-
-
-  if (
-    coupon.discountType ===
-    "PERCENTAGE"
-  ) {
-    discountAmount =
-      (originalAmount *
-        coupon.discountValue) /
-      100;
-
-
-    if (
-      coupon.maxDiscountAmount !==
-        null &&
-      coupon.maxDiscountAmount !==
-        undefined
-    ) {
-      discountAmount =
-        Math.min(
-          discountAmount,
-          coupon.maxDiscountAmount
-        );
-    }
-  }
-
-
-  if (
-    coupon.discountType ===
-    "FIXED"
-  ) {
-    discountAmount =
-      coupon.discountValue;
-  }
-
-
-  discountAmount =
-    Math.min(
-      discountAmount,
-      originalAmount
-    );
-
-
-  discountAmount =
-    roundAmount(
-      discountAmount
-    );
-
-
-  const finalAmount =
-    roundAmount(
-      originalAmount -
-        discountAmount
-    );
+  const { discountAmount, finalAmount } = computeDiscount(
+    coupon,
+    originalAmount
+  );
 
 
   if (finalAmount <= 0) {
@@ -484,6 +470,8 @@ export const createCoupon = async (
       applicableBooks,
 
       appliesToAllBooks,
+
+      showOnPaymentPage,
 
       usageLimit,
 
@@ -721,6 +709,11 @@ export const createCoupon = async (
         appliesToAllBooks:
           Boolean(
             appliesToAllBooks
+          ),
+
+        showOnPaymentPage:
+          Boolean(
+            showOnPaymentPage
           ),
 
         usageLimit:
@@ -1093,6 +1086,7 @@ export const updateCoupon = async (
       "minimumOrderAmount",
       "applicableBooks",
       "appliesToAllBooks",
+      "showOnPaymentPage",
       "usageLimit",
       "perUserLimit",
       "validFrom",
@@ -1338,5 +1332,226 @@ export const deleteCoupon = async (
         message:
           "Unable to delete coupon.",
       });
+  }
+};
+
+
+/* =====================================================
+   PUBLIC: COUPONS AVAILABLE FOR A BOOK (checkout page)
+
+   GET /api/coupon/available?bookId=...&amount=...&email=...
+
+   bookId  required
+   amount  optional - current price to filter against
+           (defaults to the book's price)
+   email   optional - hides coupons this customer has
+           already used up
+===================================================== */
+
+export const getAvailableCoupons = async (req, res) => {
+  try {
+    const { bookId, amount, email } = req.query;
+
+    res.set("Cache-Control", "no-store");
+
+    if (!bookId || !mongoose.Types.ObjectId.isValid(String(bookId))) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid bookId is required.",
+      });
+    }
+
+    const book = await Book.findOne({
+      _id: bookId,
+      isPublished: true,
+      isActive: true,
+    })
+      .select("_id price currency")
+      .lean();
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found or unavailable.",
+      });
+    }
+
+    const requestedAmount = Number(amount);
+
+    const price =
+      Number.isFinite(requestedAmount) && requestedAmount > 0
+        ? roundAmount(requestedAmount)
+        : roundAmount(book.price);
+
+    const now = new Date();
+
+    const candidates = await Coupon.find({
+      isActive: true,
+      showOnPaymentPage: true,
+      $and: [
+        {
+          $or: [
+            { validFrom: null },
+            { validFrom: { $lte: now } },
+          ],
+        },
+        {
+          $or: [
+            { validTill: null },
+            { validTill: { $gte: now } },
+          ],
+        },
+        {
+          $or: [
+            { appliesToAllBooks: true },
+            { applicableBooks: book._id },
+          ],
+        },
+      ],
+    })
+      .limit(50)
+      .lean();
+
+    let usable = candidates.filter((coupon) => {
+      if (
+        coupon.usageLimit !== null &&
+        coupon.usageLimit !== undefined &&
+        (coupon.usedCount || 0) >= coupon.usageLimit
+      ) {
+        return false;
+      }
+
+      if (
+        coupon.minimumOrderAmount &&
+        price < coupon.minimumOrderAmount
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Hide coupons this customer has already used up.
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (normalizedEmail && usable.length) {
+      const usage = await Order.aggregate([
+        {
+          $match: {
+            "customer.email": normalizedEmail,
+            "coupon.couponId": {
+              $in: usable.map((coupon) => coupon._id),
+            },
+            "coupon.applied": true,
+            orderStatus: "PAID",
+            "payment.status": "SUCCESS",
+          },
+        },
+        { $group: { _id: "$coupon.couponId", count: { $sum: 1 } } },
+      ]);
+
+      const usedMap = new Map(
+        usage.map((row) => [String(row._id), row.count])
+      );
+
+      usable = usable.filter(
+        (coupon) =>
+          coupon.perUserLimit === null ||
+          coupon.perUserLimit === undefined ||
+          (usedMap.get(String(coupon._id)) || 0) <
+            coupon.perUserLimit
+      );
+    }
+
+    const data = usable
+      .map((coupon) => {
+        const { discountAmount, finalAmount } = computeDiscount(
+          coupon,
+          price
+        );
+
+        return {
+          code: coupon.code,
+          name: coupon.name,
+          description: coupon.description,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          maxDiscountAmount: coupon.maxDiscountAmount,
+          minimumOrderAmount: coupon.minimumOrderAmount || 0,
+          validTill: coupon.validTill,
+          discountAmount,
+          finalAmount,
+        };
+      })
+      .filter((coupon) => coupon.finalAmount > 0)
+      .sort((a, b) => b.discountAmount - a.discountAmount);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        amount: price,
+        currency: book.currency || "INR",
+        coupons: data,
+      },
+    });
+  } catch (error) {
+    console.error("Get available coupons error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load available coupons.",
+    });
+  }
+};
+
+
+/* =====================================================
+   ADMIN: PERMANENT (HARD) DELETE
+
+   DELETE /api/coupon/admin/:id/permanent
+
+   Removes the coupon document for good. Past orders keep
+   their own coupon snapshot (code, name, discount), and
+   per-customer usage limits are counted from orders, so
+   neither is affected.
+===================================================== */
+
+export const permanentlyDeleteCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid coupon ID.",
+      });
+    }
+
+    const coupon = await Coupon.findByIdAndDelete(id).lean();
+
+    if (!coupon) {
+      return res.status(404).json({
+        success: false,
+        message: "Coupon not found.",
+      });
+    }
+
+    console.log(
+      `[COUPON HARD DELETE] ${coupon.code} (${id}) by ${getAdminName(req)}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Coupon ${coupon.code} was permanently deleted.`,
+      data: { _id: coupon._id, code: coupon.code },
+    });
+  } catch (error) {
+    console.error("Permanent delete coupon error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to permanently delete coupon.",
+    });
   }
 };

@@ -7,6 +7,7 @@ import helmet from "helmet";
 import dns from "node:dns/promises";
 
 import connectDB from "./utils/dbConnection.js";
+import { startEbookEmailSweeper } from "./utils/ebookEmailDelivery.js";
 
 /* =====================================================
    EXISTING ROUTES
@@ -711,6 +712,7 @@ const startServer = async () => {
     await connectDB();
 
     startAnalyticsJobs();
+    startEbookEmailSweeper();
 
     app.listen(PORT, () => {
       console.log(

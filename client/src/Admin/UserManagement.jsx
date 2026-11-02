@@ -3074,6 +3074,9 @@ const CREATE_USER_ROUTE = "/admin/signup";
 const USER_PAGE_SIZE = 10;
 const DETAIL_PAGE_SIZE = 15;
 
+// Activities shown per user in the admin details view.
+const ACTIVITY_PREVIEW_LIMIT = 5;
+
 const ROLES = [
   { value: "admin", label: "Administrator" },
   { value: "Employee", label: "Employee" },
@@ -4544,14 +4547,17 @@ function UserActivities({
   apiConfig,
   dark,
 }) {
-  const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
 
   const [activities, setActivities] = useState([]);
-  const [pagination, setPagination] = useState({});
+  const [total, setTotal] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [confirmDelete, setConfirmDelete] =
+    useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -4561,14 +4567,16 @@ function UserActivities({
       setError("");
 
       try {
+        // Only the latest few activities are shown. The server
+        // enforces the same limit regardless of this value.
         const { data } = await axios.get(
           `${API.users}/${user._id}/activities`,
           {
             ...apiConfig,
             signal: controller.signal,
             params: {
-              page,
-              limit: DETAIL_PAGE_SIZE,
+              page: 1,
+              limit: ACTIVITY_PREVIEW_LIMIT,
             },
           }
         );
@@ -4580,17 +4588,21 @@ function UserActivities({
           );
         }
 
-        setActivities(
+        const list =
           data.activities ??
-            data.data?.activities ??
-            []
+          data.data?.activities ??
+          [];
+
+        const meta =
+          data.pagination ??
+          data.data?.pagination ??
+          {};
+
+        setActivities(
+          list.slice(0, ACTIVITY_PREVIEW_LIMIT)
         );
 
-        setPagination(
-          data.pagination ??
-            data.data?.pagination ??
-            {}
-        );
+        setTotal(Number(meta.total) || list.length);
       } catch (error) {
         if (!axios.isCancel(error)) {
           setError(
@@ -4610,29 +4622,128 @@ function UserActivities({
     load();
 
     return () => controller.abort();
-  }, [user._id, apiConfig, page, revision]);
+  }, [user._id, apiConfig, revision]);
+
+  const deleteActivities = async () => {
+    if (deleting) return;
+
+    setDeleting(true);
+
+    try {
+      const { data } = await axios.delete(
+        `${API.users}/${user._id}/activities`,
+        apiConfig
+      );
+
+      if (!data?.success) {
+        throw new Error(
+          data?.message ||
+            "Unable to delete activities."
+        );
+      }
+
+      toast.success(
+        data.message || "Activities deleted."
+      );
+
+      setConfirmDelete(false);
+      setRevision((value) => value + 1);
+    } catch (error) {
+      toast.error(
+        errorText(
+          error,
+          "Unable to delete activities."
+        )
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Panel
       dark={dark}
       title="Account activities"
-      subtitle="Login, security and account events"
+      subtitle={`Latest ${ACTIVITY_PREVIEW_LIMIT} login, security and account events`}
       icon={Activity}
       action={
-        <Button
-          dark={dark}
-          disabled={loading}
-          onClick={() => setRevision((v) => v + 1)}
-        >
-          <RefreshCw size={14} />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            dark={dark}
+            disabled={loading || deleting}
+            onClick={() => setRevision((v) => v + 1)}
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </Button>
+
+          <Button
+            dark={dark}
+            danger
+            disabled={
+              loading ||
+              deleting ||
+              total === 0 ||
+              confirmDelete
+            }
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 size={14} />
+            Delete activities
+          </Button>
+        </div>
       }
     >
       {error && (
         <p className="mb-4 text-[12px] text-red-500">
           {error}
         </p>
+      )}
+
+      {confirmDelete && (
+        <div
+          role="alertdialog"
+          className="mb-4 rounded-xl border border-red-500/30 bg-red-500/5 p-4"
+        >
+          <h4 className="text-[13px] font-semibold">
+            Delete all activities for{" "}
+            {user.name || user.email || "this user"}?
+          </h4>
+
+          <p className="mt-2 text-[11px] opacity-65">
+            This permanently removes all {total}{" "}
+            recorded activit
+            {total === 1 ? "y" : "ies"} for this
+            account, not just the {ACTIVITY_PREVIEW_LIMIT}{" "}
+            shown here. It cannot be undone.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              dark={dark}
+              disabled={deleting}
+              onClick={() => setConfirmDelete(false)}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              danger
+              disabled={deleting}
+              onClick={deleteActivities}
+            >
+              {deleting ? (
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
+              ) : (
+                <Trash2 size={15} />
+              )}
+              Yes, delete permanently
+            </Button>
+          </div>
+        </div>
       )}
 
       {loading ? (
@@ -4688,16 +4799,11 @@ function UserActivities({
             </div>
           ))}
 
-          <div className="pt-4">
-            <Pager
-              page={page}
-              pages={Number(pagination.pages) || 1}
-              total={Number(pagination.total) || 0}
-              onChange={setPage}
-              dark={dark}
-              disabled={loading}
-            />
-          </div>
+          <p className="pt-2 text-center text-[11px] opacity-55">
+            Showing the latest {activities.length} of{" "}
+            {total} recorded activit
+            {total === 1 ? "y" : "ies"}
+          </p>
         </div>
       )}
     </Panel>

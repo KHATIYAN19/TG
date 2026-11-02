@@ -24,6 +24,7 @@ import {
 
 import {
   getUserActivities,
+  clearUserActivities,
 } from "../controllers/activityController.js";
 
 const router = express.Router();
@@ -74,6 +75,11 @@ router.post(
 router.get(
   "/:userId/activities",
   getUserActivities
+);
+
+router.delete(
+  "/:userId/activities",
+  clearUserActivities
 );
 
 export default router;

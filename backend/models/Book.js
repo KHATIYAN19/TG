@@ -145,6 +145,14 @@ const bookSchema = new mongoose.Schema(
       default: false,
     },
 
+    // When true, the PDF(s) are emailed to the buyer automatically
+    // after a verified successful payment. For bundles this setting
+    // lives on the bundle itself and attaches every included book.
+    sendEbookEmailOnPurchase: {
+      type: Boolean,
+      default: false,
+    },
+
     stats: {
       views: {
         type: Number,

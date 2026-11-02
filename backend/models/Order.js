@@ -563,6 +563,47 @@ const orderSchema = new mongoose.Schema(
     },
 
     /* ==========================================
+       EBOOK PDF EMAIL DELIVERY
+       (sent in the background after payment)
+    ========================================== */
+
+    ebookEmail: {
+      status: {
+        type: String,
+        enum: [
+          "NONE",
+          "PENDING",
+          "SENDING",
+          "SENT",
+          "PARTIAL",
+          "FAILED",
+          "SKIPPED",
+        ],
+        default: "NONE",
+        index: true,
+      },
+
+      trigger: {
+        type: String,
+        enum: ["auto", "admin", null],
+        default: null,
+      },
+
+      attempts: { type: Number, default: 0, min: 0 },
+      lockedAt: { type: Date, default: null },
+      lastAttemptAt: { type: Date, default: null },
+      sentAt: { type: Date, default: null },
+      sentBy: { type: String, default: null },
+      sentTo: { type: String, default: null },
+      sentBookIds: {
+        type: [mongoose.Schema.Types.ObjectId],
+        default: [],
+      },
+      mailsSent: { type: Number, default: 0, min: 0 },
+      lastError: { type: String, default: null },
+    },
+
+    /* ==========================================
        PAYMENT VERIFICATION
     ========================================== */
 

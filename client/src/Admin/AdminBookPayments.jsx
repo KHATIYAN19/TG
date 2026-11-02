@@ -6666,6 +6666,8 @@ function ActionMenu({
 
   onAccess,
 
+  onEbookPdfs,
+
   onExtend,
 
   onRevoke,
@@ -6677,6 +6679,8 @@ function ActionMenu({
   onDelete,
 
   sendingAccess,
+
+  sendingEbook,
 
   extending,
 
@@ -6823,6 +6827,48 @@ function ActionMenu({
                 )}
 
                 Send Book Access
+              </button>
+
+
+              <button
+                type="button"
+
+                disabled={
+                  sendingEbook ||
+
+                  order.ebookEmail?.status ===
+                    "SENDING"
+                }
+
+                onClick={() =>
+                  onEbookPdfs(
+                    order
+                  )
+                }
+
+                className="tt-menu-item"
+              >
+                {sendingEbook ||
+                order.ebookEmail?.status ===
+                  "SENDING" ? (
+                  <Loader2
+                    className="h-4 w-4 animate-spin"
+                  />
+                ) : (
+                  <Mail
+                    className="h-4 w-4"
+                  />
+                )}
+
+                {order.ebookEmail?.status ===
+                "SENT"
+                  ? "Resend Ebook PDFs (sent)"
+                  : order.ebookEmail?.status ===
+                      "FAILED" ||
+                    order.ebookEmail?.status ===
+                      "PARTIAL"
+                  ? "Retry Ebook PDFs (failed)"
+                  : "Email Ebook PDFs"}
               </button>
 
 
@@ -7007,6 +7053,8 @@ function PaymentCard({
 
   onAccess,
 
+  onEbookPdfs,
+
   onExtend,
 
   onRevoke,
@@ -7018,6 +7066,8 @@ function PaymentCard({
   onDelete,
 
   sendingAccess,
+
+  sendingEbook,
 
   extending,
 
@@ -7259,6 +7309,10 @@ function PaymentCard({
                 onAccess
               }
 
+              onEbookPdfs={
+                onEbookPdfs
+              }
+
               onExtend={
                 onExtend
               }
@@ -7281,6 +7335,10 @@ function PaymentCard({
 
               sendingAccess={
                 sendingAccess
+              }
+
+              sendingEbook={
+                sendingEbook
               }
 
               extending={
@@ -8617,6 +8675,15 @@ export default function AdminBookPayments() {
   const [
     sendingAccessOrderId,
     setSendingAccessOrderId,
+  ] =
+    useState(
+      null
+    );
+
+
+  const [
+    sendingEbookOrderId,
+    setSendingEbookOrderId,
   ] =
     useState(
       null
@@ -9961,6 +10028,118 @@ export default function AdminBookPayments() {
 
       } finally {
         setSendingAccessOrderId(
+          null
+        );
+      }
+    };
+
+
+  /* =======================================================
+     EMAIL EBOOK PDFs (sent in the background by the server)
+  ======================================================= */
+
+  const handleSendEbookPdfs =
+    async (
+      order
+    ) => {
+      if (
+        !order?._id
+      ) {
+        toast.error(
+          "Order ID is missing."
+        );
+
+        return;
+      }
+
+
+      setMenuOrderId(
+        null
+      );
+
+
+      try {
+        setSendingEbookOrderId(
+          order._id
+        );
+
+
+        const response =
+          await fetch(
+            `${BASE_URL}/api/admin/notification/orders/${encodeURIComponent(
+              order._id
+            )}/send-ebook-pdfs`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Accept:
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
+
+
+        const result =
+          await readResponse(
+            response
+          );
+
+
+        if (
+          !response.ok ||
+
+          result?.success ===
+            false
+        ) {
+          throw new Error(
+            result?.message ||
+
+            "Unable to send ebook PDFs."
+          );
+        }
+
+
+        toast.success(
+          result?.message ||
+
+          "Ebook PDFs are being emailed."
+        );
+
+
+        /* The server sends in the background; refresh
+           the status shortly and again after a while. */
+        setTimeout(
+          () =>
+            fetchPayments(
+              page
+            ),
+          4000
+        );
+
+        setTimeout(
+          () =>
+            fetchPayments(
+              page
+            ),
+          30000
+        );
+
+      } catch (
+        error
+      ) {
+        toast.error(
+          error?.message ||
+
+          "Unable to send ebook PDFs."
+        );
+
+      } finally {
+        setSendingEbookOrderId(
           null
         );
       }
@@ -13043,6 +13222,10 @@ export default function AdminBookPayments() {
                       handleSendAccessMail
                     }
 
+                    onEbookPdfs={
+                      handleSendEbookPdfs
+                    }
+
                     onExtend={
                       openExtendAccess
                     }
@@ -13087,6 +13270,11 @@ export default function AdminBookPayments() {
 
                     sendingAccess={
                       sendingAccessOrderId ===
+                      order._id
+                    }
+
+                    sendingEbook={
+                      sendingEbookOrderId ===
                       order._id
                     }
 

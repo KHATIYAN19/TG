@@ -86,6 +86,11 @@ const CouponDetails = () => {
     useState(false);
 
   const [
+    permanentConfirmText,
+    setPermanentConfirmText,
+  ] = useState("");
+
+  const [
     showDeleteConfirm,
     setShowDeleteConfirm,
   ] = useState(false);
@@ -291,6 +296,11 @@ const CouponDetails = () => {
       isActive:
         Boolean(
           couponData.isActive
+        ),
+
+      showOnPaymentPage:
+        Boolean(
+          couponData.showOnPaymentPage
         ),
     };
   };
@@ -660,6 +670,9 @@ const CouponDetails = () => {
 
           isActive:
             formData.isActive,
+
+          showOnPaymentPage:
+            formData.showOnPaymentPage,
         };
 
 
@@ -730,13 +743,17 @@ const CouponDetails = () => {
 
 
   const handleDelete =
-    async () => {
+    async (permanent = false) => {
       try {
         setDeleting(true);
 
         const response =
           await fetch(
-            `${BASE_URL}/api/coupon/admin/${id}`,
+            `${BASE_URL}/api/coupon/admin/${id}${
+              permanent
+                ? "/permanent"
+                : ""
+            }`,
             {
               method:
                 "DELETE",
@@ -1102,11 +1119,15 @@ const CouponDetails = () => {
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  setPermanentConfirmText(
+                    ""
+                  );
+
                   setShowDeleteConfirm(
                     true
-                  )
-                }
+                  );
+                }}
                 className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-100"
               >
                 <Trash2
@@ -1584,6 +1605,37 @@ const CouponDetails = () => {
             </label>
 
 
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
+
+              <input
+                type="checkbox"
+                name="showOnPaymentPage"
+                checked={
+                  Boolean(
+                    formData.showOnPaymentPage
+                  )
+                }
+                onChange={
+                  handleInputChange
+                }
+                className="h-4 w-4 rounded accent-orange-500"
+              />
+
+              <div>
+
+                <p className="text-sm font-bold text-slate-800">
+                  Show on payment page
+                </p>
+
+                <p className="text-xs text-slate-500">
+                  List this coupon on checkout for eligible books and prices so customers can apply it in one click.
+                </p>
+
+              </div>
+
+            </label>
+
+
             <div className="flex justify-end gap-3 border-t border-slate-100 pt-6">
 
               <button
@@ -2010,29 +2062,113 @@ const CouponDetails = () => {
 
 
             <h2 className="mt-5 text-xl font-bold text-slate-900">
-              Delete this coupon?
+              Remove this coupon?
             </h2>
 
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Are you sure you want to delete{" "}
+              Choose what to do with{" "}
               <strong className="text-slate-800">
                 {coupon.code}
               </strong>
-              ? Customers will no longer be able to use this coupon.
+              .
             </p>
 
 
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="mt-4 space-y-3">
 
-              <p className="text-xs font-medium leading-5 text-amber-700">
-                Previous orders that used this coupon will keep their stored coupon information.
-              </p>
+              <div className="rounded-xl border border-slate-200 p-4">
+
+                <p className="text-sm font-bold text-slate-800">
+                  Disable (recommended)
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Customers can no longer use it. You can turn it back on any time.
+                </p>
+
+                <button
+                  type="button"
+                  disabled={
+                    deleting
+                  }
+                  onClick={() =>
+                    handleDelete(
+                      false
+                    )
+                  }
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3.5 py-2 text-sm font-bold text-orange-700 transition hover:bg-orange-100 disabled:opacity-50"
+                >
+                  Disable coupon
+                </button>
+
+              </div>
+
+
+              <div className="rounded-xl border border-red-200 bg-red-50/50 p-4">
+
+                <p className="text-sm font-bold text-red-700">
+                  Delete permanently
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-red-700/80">
+                  Removes the coupon from the database for good. Past orders keep their own copy of the coupon details. This cannot be undone.
+                </p>
+
+                <input
+                  value={
+                    permanentConfirmText
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setPermanentConfirmText(
+                      event.target
+                        .value
+                    )
+                  }
+                  placeholder={`Type ${coupon.code} to confirm`}
+                  className="mt-3 w-full rounded-lg border border-red-200 bg-white px-3 py-2 font-mono text-sm uppercase outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                />
+
+                <button
+                  type="button"
+                  disabled={
+                    deleting ||
+                    permanentConfirmText
+                      .trim()
+                      .toUpperCase() !==
+                      coupon.code
+                  }
+                  onClick={() =>
+                    handleDelete(
+                      true
+                    )
+                  }
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+
+                  {deleting ? (
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Trash2
+                      size={16}
+                    />
+                  )}
+
+                  Delete forever
+
+                </button>
+
+              </div>
 
             </div>
 
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-5 flex justify-end">
 
               <button
                 type="button"
@@ -2047,39 +2183,6 @@ const CouponDetails = () => {
                 className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Cancel
-              </button>
-
-
-              <button
-                type="button"
-                disabled={
-                  deleting
-                }
-                onClick={
-                  handleDelete
-                }
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
-              >
-
-                {deleting ? (
-                  <>
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
-
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2
-                      size={17}
-                    />
-
-                    Yes, Delete
-                  </>
-                )}
-
               </button>
 
             </div>

@@ -369,6 +369,11 @@ const normalizeCreateData = (body) => {
       false
     ),
 
+    sendEbookEmailOnPurchase: parseBoolean(
+      body.sendEbookEmailOnPurchase,
+      false
+    ),
+
     // NEW: Included books for combo products
     includedBooks: parseArray(
       body.includedBooks
@@ -1720,6 +1725,7 @@ export const updateBookByBookId =
       "isActive",
       "isFeatured",
       "showInMainBooks",
+      "sendEbookEmailOnPurchase",
     ];
 
     for (const key of booleanFields) {

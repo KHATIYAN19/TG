@@ -59,6 +59,14 @@ const couponSchema = new mongoose.Schema(
       default: false,
     },
 
+    // When true (and the coupon is otherwise valid), the coupon is listed
+    // on the checkout page so customers can apply it with one click.
+    showOnPaymentPage: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     usageLimit: {
       type: Number,
       default: null,

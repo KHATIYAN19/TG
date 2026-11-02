@@ -5,6 +5,7 @@ import {
   resendBookAccessMail,
   revokeBookAccess,
   extendBookAccess,
+  sendEbookPdfs,
 } from "../controllers/orderMailSender.js";
 
 import {
@@ -28,6 +29,13 @@ router.post(
   auth,
   isAdmin,
   resendBookAccessMail
+);
+
+router.post(
+  "/orders/:orderId/send-ebook-pdfs",
+  auth,
+  isAdmin,
+  sendEbookPdfs
 );
 
 router.patch(

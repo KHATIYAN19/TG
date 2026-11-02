@@ -1179,6 +1179,9 @@ export const getBookPayments = async (req, res) => {
           refund:
             order.refund || null,
 
+          ebookEmail:
+            order.ebookEmail || null,
+
           pendingMail:
             order.pendingMail || null,
 
@@ -1612,6 +1615,7 @@ const safeAdminPayment = (order) => {
       "reason",
     ]),
 
+    ebookEmail: order.ebookEmail || null,
     pendingMail: order.pendingMail || null,
 
     access: pickFields(order.access, [

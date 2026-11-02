@@ -4,6 +4,7 @@ import Book from "../models/Book.js";
 import Order from "../models/Order.js";
 import { buildAttribution, publicAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
+import { scheduleEbookEmail } from "../utils/ebookEmailDelivery.js";
 
 import {
   PAYU_KEY,
@@ -1048,6 +1049,10 @@ export const payUSuccess = async (
       }
 
 
+      // Queue PDF email in the background (never awaited), so the
+      // redirect below is not delayed by large attachments.
+      scheduleEbookEmail(updatedOrder);
+
       return res.redirect(
         successRedirect(
           rawAccessToken,
@@ -1416,6 +1421,16 @@ export const payUFailure = async (
 // };
 
 
+const maskEmail = (email) => {
+  const [user = "", domain = ""] = String(email || "").split("@");
+
+  if (!user || !domain) {
+    return "";
+  }
+
+  return `${user.slice(0, 2)}${"*".repeat(Math.max(user.length - 2, 2))}@${domain}`;
+};
+
 export const getPurchasedBookAccess = async (req, res) => {
   try {
     const { token } = req.query;
@@ -1490,7 +1505,7 @@ export const getPurchasedBookAccess = async (req, res) => {
       .select(
         "_id title slug subtitle description " +
         "resourceType coverPageUrl pdfUrl fileName " +
-        "includedBooks isActive"
+        "includedBooks isActive sendEbookEmailOnPurchase"
       )
       .lean();
 
@@ -1697,6 +1712,14 @@ export const getPurchasedBookAccess = async (req, res) => {
           amount: order.payment?.amount ?? null,
           currency:
             order.book?.currency || "INR"
+        },
+
+        // Whether the PDF(s) will also be emailed to the buyer.
+        // Only the masked address is exposed.
+        emailDelivery: {
+          enabled:
+            purchasedProduct.sendEbookEmailOnPurchase === true,
+          maskedEmail: maskEmail(order.customer?.email)
         },
 
         // Ad attribution stored at checkout time

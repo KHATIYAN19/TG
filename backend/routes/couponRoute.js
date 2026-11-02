@@ -7,6 +7,8 @@ import {
   getCouponById,
   updateCoupon,
   deleteCoupon,
+  getAvailableCoupons,
+  permanentlyDeleteCoupon,
 } from "../controllers/couponController.js";
 
 import {auth,isAdmin} from "../Middleware/auth.js";
@@ -14,6 +16,12 @@ import {auth,isAdmin} from "../Middleware/auth.js";
 
 const router =
   express.Router();
+
+
+router.get(
+  "/available",
+  getAvailableCoupons
+);
 
 
 router.post(
@@ -51,6 +59,14 @@ router.put(
   auth,
   isAdmin,
   updateCoupon
+);
+
+
+router.delete(
+  "/admin/:id/permanent",
+  auth,
+  isAdmin,
+  permanentlyDeleteCoupon
 );
 
 

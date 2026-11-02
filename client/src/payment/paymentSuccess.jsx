@@ -2257,6 +2257,35 @@ export default function PaymentSuccess() {
                       </span>
                     </p>
                   )}
+
+                  {purchase.emailDelivery?.enabled && (
+                    <p
+                      className={`
+                        mt-2 inline-flex items-start gap-1.5
+                        rounded-lg px-2.5 py-1.5
+                        text-xs font-semibold
+                        ${
+                          isDark
+                            ? "bg-orange-500/15 text-orange-300"
+                            : "bg-orange-50 text-orange-700"
+                        }
+                      `}
+                    >
+                      <Mail
+                        size={14}
+                        className="mt-0.5 shrink-0"
+                      />
+                      <span>
+                        You will also get an email with your
+                        {isBundle ? " PDFs" : " PDF"}
+                        {purchase.emailDelivery.maskedEmail
+                          ? ` at ${purchase.emailDelivery.maskedEmail}`
+                          : ""}
+                        . It can take a few minutes &ndash; check
+                        your spam folder too.
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
 
