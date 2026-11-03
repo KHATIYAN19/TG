@@ -280,6 +280,33 @@ export const unsuspendProfile = handle(async (req, res) => {
   res.json({ success: true, message: "Profile reinstated", data: { status: restored } });
 }, "Unable to reinstate");
 
+/* Hide / show a profile in the arena on a member's behalf. */
+export const hideProfile = handle(async (req, res) => {
+  objectId.parse(req.params.id);
+  const profile = await ArenaProfile.findOneAndUpdate(
+    { _id: req.params.id },
+    { $set: { hidden: true, hiddenBy: "admin", hiddenAt: new Date() } },
+    { new: true }
+  );
+  if (!profile) throw new ArenaError(404, "NOT_FOUND", "Profile not found");
+
+  await audit(req.user.id, "profile_hidden", { targetType: "profile", targetId: profile._id, summary: `Hid ${profile.alias} from the arena` });
+  res.json({ success: true, message: "Profile hidden from the arena" });
+}, "Unable to hide the profile");
+
+export const unhideProfile = handle(async (req, res) => {
+  objectId.parse(req.params.id);
+  const profile = await ArenaProfile.findOneAndUpdate(
+    { _id: req.params.id },
+    { $set: { hidden: false, hiddenBy: null, hiddenAt: null } },
+    { new: true }
+  );
+  if (!profile) throw new ArenaError(404, "NOT_FOUND", "Profile not found");
+
+  await audit(req.user.id, "profile_unhidden", { targetType: "profile", targetId: profile._id, summary: `Showed ${profile.alias} in the arena again` });
+  res.json({ success: true, message: "Profile is visible again" });
+}, "Unable to show the profile");
+
 /* ------------------------------- matches ------------------------------- */
 export const dissolveMatch = handle(async (req, res) => {
   objectId.parse(req.params.id);

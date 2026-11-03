@@ -217,7 +217,12 @@ export const matchMessages = handle(async (req, res) => {
       hasMore: total > rows.length && rows.length === limit,
       messages: rows.reverse().map((m) => {
         const p = byUser.get(String(m.sender));
-        return { id: String(m._id), senderUserId: String(m.sender), senderName: p?.name ?? "Unknown", senderAlias: p?.alias ?? "", text: m.text, createdAt: m.createdAt };
+        return {
+          id: String(m._id), senderUserId: String(m.sender), senderName: p?.name ?? "Unknown", senderAlias: p?.alias ?? "",
+          text: m.text, createdAt: m.createdAt,
+          deleted: Boolean(m.deletedAt), edited: Boolean(m.editedAt),
+          reactions: (m.reactions ?? []).map((r) => r.emoji),
+        };
       }),
     },
   });

@@ -6,6 +6,7 @@ import { useArena } from "../ArenaContext";
 import { http, errMsg, inr } from "../api";
 import { Button, Card, EmptyState, Modal, Spinner, Toggle } from "../ui";
 import { BugReportButton } from "../BugReport";
+import DeleteAccount from "../DeleteAccount";
 
 const ROWS = [
   ["name", "My real name", "Your buddy sees your name instead of your anonymous ID."],
@@ -39,7 +40,12 @@ export default function SettingsPage() {
   }, [canCancel]);
 
   if (!profile) {
-    return <EmptyState icon={UserRound} title="Create your profile first">Settings become available once you have a profile.</EmptyState>;
+    return (
+      <div className="space-y-6">
+        <EmptyState icon={UserRound} title="Create your profile first">Settings become available once you have a profile.</EmptyState>
+        <DeleteAccount />
+      </div>
+    );
   }
 
   const dirty = JSON.stringify(share) !== JSON.stringify(profile.shareSettings);
@@ -146,6 +152,8 @@ export default function SettingsPage() {
         </div>
         <BugReportButton className="inline-flex items-center gap-2 rounded-xl bg-stone-900 dk:bg-[#1c1612] px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800" />
       </Card>
+
+      <DeleteAccount />
 
       <Modal open={confirmCancel} onClose={() => setConfirmCancel(false)} title="Cancel your entry?"
         footer={<><Button variant="ghost" onClick={() => setConfirmCancel(false)}>Keep my entry</Button><Button variant="danger" loading={cancelling} onClick={cancel}>Yes, cancel</Button></>}>

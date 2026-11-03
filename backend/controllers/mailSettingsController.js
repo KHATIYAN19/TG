@@ -48,9 +48,11 @@ export const updateMail = async (req, res) => {
       return fail(
         res,
         400,
-        input.provider === "resend"
-          ? "RESEND_API_KEY is not set on the server, so Resend can't be selected yet."
-          : "MAILTRAP_TOKEN is not set on the server, so Mailtrap can't be selected yet.",
+        {
+          resend: "RESEND_API_KEY is not set on the server, so Resend can't be selected yet.",
+          ses: `Amazon SES isn't fully set up on the server yet (missing: ${(status.providers.ses.missing || []).join(", ") || "settings"}), so it can't be selected.`,
+          mailtrap: "MAILTRAP_TOKEN is not set on the server, so Mailtrap can't be selected yet.",
+        }[input.provider],
         "PROVIDER_NOT_CONFIGURED"
       );
     }

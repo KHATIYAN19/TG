@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Search, X } from "lucide-react";
 
 import { adminHttp as api, errMsg } from "../api";
@@ -162,18 +163,63 @@ const STATUS_TONE = {
 };
 export const StatusBadge = ({ status, children }) => <Badge tone={STATUS_TONE[status] ?? "slate"}>{children ?? humanize(status)}</Badge>;
 
-/* Destructive actions get an explicit, plain-language confirmation. */
-export function ConfirmModal({ open, onClose, title, children, confirmLabel = "Delete permanently", onConfirm, busy }) {
+/*
+  Destructive actions get an explicit, plain-language confirmation.
+  `confirmWord` (e.g. "DELETE") makes the admin TYPE it first: used for deletes
+  that can't be undone and remove a lot (members, matches, payments, chats).
+*/
+export function ConfirmModal({ open, onClose, title, children, confirmLabel = "Delete permanently", onConfirm, busy, confirmWord }) {
+  const [typed, setTyped] = useState("");
+  useEffect(() => { if (!open) setTyped(""); }, [open]);
+  const blocked = Boolean(confirmWord) && typed.trim() !== confirmWord;
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={title}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="danger" loading={busy} onClick={onConfirm}>{confirmLabel}</Button></>}
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="danger" loading={busy} disabled={blocked} onClick={onConfirm}>{confirmLabel}</Button></>}
     >
       {children}
+      {confirmWord && (
+        <label className="mt-4 block text-sm">
+          <span className="font-medium text-[#29201b] dk:text-[#fff7ed]">Type <code className="rounded bg-rose-50 px-1.5 py-0.5 font-bold text-rose-700 dk:bg-rose-500/10 dk:text-rose-300">{confirmWord}</code> to confirm</span>
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            className="mt-1.5 w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-[#29201b] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-100 dk:border-[#5a4336] dk:bg-[#241b15] dk:text-[#fff7ed]"
+          />
+        </label>
+      )}
     </Modal>
   );
+}
+
+/* Runs one DELETE call with a busy flag, a toast and a reload. */
+export function useDeleter(reload) {
+  const [del, setDel] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (url, fallbackMessage = "Deleted") => {
+    setBusy(true);
+    try {
+      const { data } = await api.delete(url);
+      toast.success(data?.message || fallbackMessage, { duration: 5000 });
+      setDel(null);
+      if (reload) reload();
+      return true;
+    } catch (e) {
+      toast.error(errMsg(e));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return { del, setDel, busy, run };
 }
 
 export { api, errMsg };

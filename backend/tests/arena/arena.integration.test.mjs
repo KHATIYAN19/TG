@@ -14,6 +14,7 @@ process.env.UPSTASH_REDIS_REST_TOKEN = "x";
 process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.CASHFREE_APP_ID = "TEST_APP"; process.env.CASHFREE_SECRET_KEY = "cfsk_test_secret"; process.env.CASHFREE_ENV = "sandbox";
 process.env.ARENA_PAYMENT_GATEWAY = "cashfree";
+process.env.RESEND_API_KEY = "";               // tests must never use the real Resend key from .env (dotenv will not override a set variable)
 
 const { MongoMemoryReplSet } = await import("mongodb-memory-server");
 const mongoose = (await import(`${B}/node_modules/mongoose/index.js`)).default;
@@ -568,10 +569,12 @@ const { endMatch: endM } = await import(`${B}/services/arena/matchService.js`);
 /* capture every "[arena:mail] <subject>" attempt (mail is unconfigured in tests, so each send logs its subject) */
 const mailLog = [];
 const realErr = console.error;
+// mail is fire-and-forget and reads the provider setting from MongoDB first, so wait for it to settle
 const captureMail = async (fn) => {
+  await new Promise((r) => setTimeout(r, 1200));   // let mail from EARLIER tests finish logging, so it isn't counted here
   mailLog.length = 0;
   console.error = (...a) => { const line = a.join(" "); if (line.startsWith("[arena:mail]")) mailLog.push(line.replace("[arena:mail] ", "").split(" ")[0] + " " + line.split("] ")[1]?.split(" ").slice(0, 6).join(" ")); };
-  try { await fn(); await new Promise((r) => setTimeout(r, 300)); } finally { console.error = realErr; }
+  try { await fn(); await new Promise((r) => setTimeout(r, 1200)); } finally { console.error = realErr; }
   return [...mailLog];
 };
 

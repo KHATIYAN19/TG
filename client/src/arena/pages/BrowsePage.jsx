@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { EyeOff, Flag, Filter, Search, Send, ShieldBan, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
+import { Eye, EyeOff, Flag, Filter, Search, Send, ShieldBan, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
 
 import { useArena } from "../ArenaContext";
 import { http, errMsg, errCode, TOPICS, LEVELS, SLOTS, COMPANY_TYPES, LANGUAGES } from "../api";
@@ -161,6 +161,22 @@ export default function BrowsePage() {
           </div>
         </div>
       </div>
+
+      {me.profile?.hidden && (
+        <div role="status" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dk:border-amber-500/40 dk:bg-amber-500/10 dk:text-amber-200">
+          <p className="flex items-start gap-2"><EyeOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>{me.profile.hiddenBy === "admin"
+              ? "The Target Trek team has hidden your profile. Nobody can find you right now."
+              : "Your profile is hidden. Nobody can find you in the arena, and you can't send requests until you show it again."}</span>
+          </p>
+          {me.profile.hiddenBy !== "admin" && (
+            <Button size="sm" onClick={async () => {
+              try { await http.put("/visibility", { hidden: false }); toast.success("Your profile is visible again", { id: "arena-visibility" }); await refresh(); }
+              catch (e) { toast.error(errMsg(e), { id: "arena-visibility" }); }
+            }}><Eye className="h-3.5 w-3.5" aria-hidden /> Show my profile</Button>
+          )}
+        </div>
+      )}
 
       <Card className="mb-6 p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-700 dk:text-[#ead9cc]"><Filter className="h-4 w-4" aria-hidden /> Filters</div>

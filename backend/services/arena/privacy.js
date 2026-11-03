@@ -125,6 +125,8 @@ export const ownerView = (p) => ({
   contact: p.contact,
   shareSettings: p.shareSettings,
   status: p.status,
+  hidden: p.hidden === true,
+  hiddenBy: p.hidden === true ? p.hiddenBy ?? "user" : null,
   activatedAt: p.activatedAt,
   suspendedReason: p.status === "suspended" ? p.suspendedReason : null,
 });

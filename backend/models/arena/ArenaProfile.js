@@ -97,6 +97,12 @@ const profileSchema = new Schema(
       default: "draft",
       index: true,
     },
+    // Temporarily invisible in the arena (not browsable, can't receive new
+    // requests). Independent of `status`, so it survives matching/unmatching.
+    hidden: { type: Boolean, default: false },
+    hiddenBy: { type: String, enum: ["user", "admin", null], default: null },
+    hiddenAt: { type: Date, default: null },
+
     statusBeforeSuspend: { type: String, default: null },
     suspendedReason: { type: String, default: null, maxlength: 500 },
     suspendedAt: { type: Date, default: null },
@@ -112,6 +118,7 @@ const profileSchema = new Schema(
 // Arena browse query.
 profileSchema.index({ status: 1, topics: 1, level: 1, activatedAt: -1 });
 profileSchema.index({ status: 1, skills: 1 });
+profileSchema.index({ status: 1, hidden: 1, activatedAt: -1 });
 
 export default mongoose.models.ArenaProfile ||
   mongoose.model("ArenaProfile", profileSchema);

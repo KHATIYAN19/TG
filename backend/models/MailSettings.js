@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
-export const MAIL_PROVIDERS = ["mailtrap", "resend"];
+export const MAIL_PROVIDERS = ["mailtrap", "resend", "ses"];
 
 /*
   Singleton document: which email provider the whole backend sends through.
@@ -15,7 +15,7 @@ const mailSettingsSchema = new Schema(
     provider: { type: String, enum: MAIL_PROVIDERS, default: "mailtrap" },
 
     // If the chosen provider fails (limit reached, outage, bad key…),
-    // try the other one before giving up.
+    // try the other configured providers before giving up.
     fallbackEnabled: { type: Boolean, default: true },
 
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },

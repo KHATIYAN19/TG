@@ -131,7 +131,7 @@ const PRIORITY_ROUTES = [
     name: "Email Provider",
     icon: Mail,
     description:
-      "Choose whether the site sends email through Mailtrap or Resend, switch instantly, enable automatic failover and send a test email.",
+      "Choose whether the site sends email through Mailtrap, Resend or Amazon SES, switch instantly, enable automatic failover and send a test email.",
     category: "Interviews",
     keywords:
       "email mail provider mailtrap resend smtp limit failover test",

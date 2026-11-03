@@ -1,6 +1,4 @@
 import { WebSocketServer } from "ws";
-import sanitizeHtml from "sanitize-html";
-
 import ArenaMatch from "../../models/arena/ArenaMatch.js";
 import ArenaMessage from "../../models/arena/ArenaMessage.js";
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
@@ -9,6 +7,7 @@ import redis from "../../utils/redis.js";
 import { auth } from "../../Middleware/auth.js";
 import { authKeys } from "../authStateService.js";
 import { registerSocket, unregisterSocket, emitToUser } from "./hub.js";
+import { cleanText, messageView, MAX_TEXT } from "./chat.js";
 
 /*
   REAL-TIME CHAT  (ws://…/ws/arena)
@@ -18,7 +17,8 @@ import { registerSocket, unregisterSocket, emitToUser } from "./hub.js";
                       {type:"message", text}
                       {type:"typing"}
     server → client   {type:"ready", matchId}
-                      {type:"message", id, from:"me"|"buddy", text, createdAt}
+                      {type:"message", id, from:"me"|"buddy", text, createdAt, editableUntil, reactions}
+                      {type:"message_updated", message}   (edited / deleted / reacted)
                       {type:"typing"}
                       {type:"error", code, message}
                       {type:"matched" | "match_ended" | "share_updated" |
@@ -40,7 +40,6 @@ const AUTH_TIMEOUT_MS = 5_000;
 const HEARTBEAT_MS = 30_000;
 const REVALIDATE_MS = 60_000;
 const MAX_PAYLOAD = 4 * 1024;
-const MAX_TEXT = 1000;
 const RATE_WINDOW_MS = 10_000;
 const RATE_MAX = 12;
 
@@ -59,10 +58,7 @@ const authenticate = (token) =>
     auth(req, res, () => resolve(req));
   });
 
-const clean = (text) =>
-  sanitizeHtml(String(text ?? ""), { allowedTags: [], allowedAttributes: {} })
-    .replace(/\s+\n/g, "\n")
-    .trim();
+const clean = cleanText;
 
 const send = (ws, payload) => {
   if (ws.readyState === 1) ws.send(JSON.stringify(payload));
@@ -159,10 +155,10 @@ export const attachArenaSocket = (server, { isOriginAllowed = () => true, path =
       const buddyId = match.users.find((u) => String(u) !== String(ctx.userId));
 
       const saved = await ArenaMessage.create({ match: match._id, sender: ctx.userId, text });
-      const base = { type: "message", id: String(saved._id), text, createdAt: saved.createdAt };
 
-      emitToUser(ctx.userId, { ...base, from: "me" });
-      emitToUser(buddyId, { ...base, from: "buddy" });
+      // Each member gets their own view (mine / editableUntil / reactions).
+      emitToUser(ctx.userId, { type: "message", from: "me", ...messageView(saved, ctx.userId) });
+      emitToUser(buddyId, { type: "message", from: "buddy", ...messageView(saved, buddyId) });
     };
 
     ws.on("message", async (raw) => {

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Handshake, MessageSquare, X } from "lucide-react";
+import { Handshake, MessageSquare, Trash2, X } from "lucide-react";
 
 import { Badge, Button, EmptyState, Modal, Spinner, cx } from "../ui";
 import ChatModal from "./ChatModal";
-import { MUTED, Pager, Person, SearchBox, StatusBadge, StatusPills, Table, Td, api, errMsg, fmtDateTime, humanize, useDebounced, useList } from "./shared";
+import { ConfirmModal, MUTED, Pager, Person, SearchBox, StatusBadge, StatusPills, Table, Td, api, errMsg, fmtDateTime, humanize, useDebounced, useDeleter, useList } from "./shared";
 
 const OPTIONS = [["", "All"], ["active", "Active now"], ["ended", "Ended"], ["dissolved", "Dissolved by admin"]];
 
@@ -18,6 +18,7 @@ export default function MatchesTab({ userFilter, clearUserFilter }) {
   const [target, setTarget] = useState(null);
   const [restore, setRestore] = useState([]);
   const [busy, setBusy] = useState(false);
+  const { del, setDel, busy: deleting, run } = useDeleter(reload);
 
   const dissolve = async () => {
     setBusy(true);
@@ -68,6 +69,7 @@ export default function MatchesTab({ userFilter, clearUserFilter }) {
                   <div className="flex flex-col items-end gap-2">
                     <Button size="sm" variant="outline" onClick={() => setChat(m.id)}><MessageSquare className="h-3.5 w-3.5" /> View chat</Button>
                     {m.status === "active" && <Button size="sm" variant="danger" onClick={() => { setTarget(m); setRestore([]); }}>Dissolve</Button>}
+                    <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10" onClick={() => setDel(m)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
                   </div>
                 </Td>
               </tr>
@@ -77,7 +79,12 @@ export default function MatchesTab({ userFilter, clearUserFilter }) {
         </>
       )}
 
-      <ChatModal matchId={chat} onClose={() => setChat(null)} />
+      <ChatModal matchId={chat} onClose={() => setChat(null)} onChanged={reload} />
+
+      <ConfirmModal open={Boolean(del)} onClose={() => setDel(null)} title="Delete this match permanently?" confirmWord="DELETE" busy={deleting} onConfirm={() => run(`/matches/${del.id}`)}>
+        <p>The match and its <strong>whole chat ({del?.messageCount ?? 0} message{del?.messageCount === 1 ? "" : "s"})</strong> are removed from the database. It can't be undone.</p>
+        {del?.status === "active" && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dk:bg-amber-500/10 dk:text-amber-200">This match is running. It is dissolved first, so both members go back to the arena, and the match doesn't count against either of them.</p>}
+      </ConfirmModal>
 
       <Modal open={Boolean(target)} onClose={() => setTarget(null)} title="Dissolve this match?"
         footer={<><Button variant="ghost" onClick={() => setTarget(null)}>Cancel</Button><Button variant="danger" loading={busy} onClick={dissolve}>Dissolve</Button></>}>

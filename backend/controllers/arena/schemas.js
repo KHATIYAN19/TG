@@ -121,6 +121,17 @@ export const profileSchema = z.object({
   }).default({}),
 });
 
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Enter your password").max(128),
+  confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm" }) }),
+});
+
+export const visibilitySchema = z.object({ hidden: z.boolean() });
+
+export const editMessageSchema = z.object({ text: z.string().max(5000) });
+
+export const reactionSchema = z.object({ emoji: z.string().max(16).nullable() });
+
 export const shareSettingsSchema = z.object({
   name: z.boolean(),
   email: z.boolean(),

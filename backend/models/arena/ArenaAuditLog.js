@@ -18,6 +18,14 @@ export const AUDIT_ACTIONS = [
   "match_dissolved",
   "repair_run",
   "settings_updated",
+  "profile_hidden",
+  "profile_unhidden",
+  "payment_deleted",
+  "member_deleted",
+  "request_deleted",
+  "match_deleted",
+  "chat_cleared",
+  "message_deleted",
 ];
 
 const auditSchema = new Schema(

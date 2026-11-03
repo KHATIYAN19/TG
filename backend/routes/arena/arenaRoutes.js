@@ -6,6 +6,8 @@ import { arenaSignupLimiter, arenaPasswordLimiter, arenaWriteLimiter } from "../
 import { signup, verifySignup, resendSignupOtp, forgotPassword, resetPassword } from "../../controllers/arena/authController.js";
 import * as member from "../../controllers/arena/memberController.js";
 import * as pay from "../../controllers/arena/paymentController.js";
+import * as chat from "../../controllers/arena/chatController.js";
+import { deleteMyAccount } from "../../controllers/arena/accountController.js";
 
 const router = express.Router();
 
@@ -21,8 +23,10 @@ router.post("/password/reset", arenaPasswordLimiter, resetPassword);
 router.use(auth);
 
 router.get("/me", member.me);
+router.delete("/account", arenaWriteLimiter, deleteMyAccount);
 router.put("/profile", arenaWriteLimiter, member.upsertProfile);
 router.put("/share-settings", arenaWriteLimiter, member.updateShareSettings);
+router.put("/visibility", arenaWriteLimiter, member.setVisibility);
 
 router.get("/browse", member.browse);
 
@@ -35,6 +39,9 @@ router.post("/requests/:id/withdraw", arenaWriteLimiter, member.withdraw);
 router.get("/match", member.getMatch);
 router.get("/match/messages", member.matchMessages);
 router.post("/match/end", arenaWriteLimiter, member.endMyMatch);
+router.patch("/match/messages/:id", arenaWriteLimiter, chat.edit);
+router.delete("/match/messages/:id", arenaWriteLimiter, chat.remove);
+router.put("/match/messages/:id/reaction", arenaWriteLimiter, chat.react);
 
 router.get("/blocks", member.listBlocks);
 router.post("/blocks", arenaWriteLimiter, member.block);

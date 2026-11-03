@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -429,6 +430,17 @@ export default function ArenaLanding() {
   const blobY2 = useTransform(scrollY, [0, 900], [0, 120]);
 
   const signedIn = useSelector((s) => Boolean(s.auth.token));
+
+  // Shown once, right after "Delete my account" finished and the page reloaded here.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("arena:accountDeleted")) {
+        sessionStorage.removeItem("arena:accountDeleted");
+        toast.success("Your account has been deleted. You're welcome back any time.", { id: "arena-account-deleted", duration: 7000 });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const [info, setInfo] = useState(null);
   const [stage, setStage] = useState(null); // none | draft | active | matched | suspended
   const [open, setOpen] = useState(0);

@@ -16,9 +16,11 @@ import { gatewayName } from "../../services/arena/gateway.js";
 import { healPaidMembers } from "../../services/arena/activation.js";
 import { acceptRequest, endMatch, expireStaleRequests } from "../../services/arena/matchService.js";
 import { emitToUser } from "../../services/arena/hub.js";
+import { messageView } from "../../services/arena/chat.js";
 import {
   profileSchema,
   shareSettingsSchema,
+  visibilitySchema,
   browseQuerySchema,
   sendRequestSchema,
   blockSchema,
@@ -65,7 +67,7 @@ export const publicInfo = handle(async (_req, res) => {
   const now = new Date();
 
   const [activeMembers, couponLive] = await Promise.all([
-    ArenaProfile.countDocuments({ status: "active" }),
+    ArenaProfile.countDocuments({ status: "active", hidden: { $ne: true } }),
     ArenaCoupon.exists({
       active: true,
       $and: [
@@ -232,6 +234,27 @@ export const updateShareSettings = handle(async (req, res) => {
   res.json({ success: true, data: profile.shareSettings });
 }, "Unable to update sharing");
 
+/* Hide / show my profile in the arena (a temporary, reversible switch). */
+export const setVisibility = handle(async (req, res) => {
+  const { hidden } = visibilitySchema.parse(req.body);
+  const profile = await requireProfile(req);
+
+  if (!["active", "matched"].includes(profile.status)) {
+    throw new ArenaError(409, "NOT_IN_ARENA", "You can hide your profile once you've joined the arena");
+  }
+
+  if (!hidden && profile.hidden && profile.hiddenBy === "admin") {
+    throw new ArenaError(403, "HIDDEN_BY_ADMIN", "The Target Trek team hid your profile. Please contact support to bring it back.");
+  }
+
+  profile.hidden = hidden;
+  profile.hiddenBy = hidden ? "user" : null;
+  profile.hiddenAt = hidden ? new Date() : null;
+  await profile.save();
+
+  res.json({ success: true, message: hidden ? "Your profile is hidden" : "Your profile is visible again", data: ownerView(profile) });
+}, "Unable to change your visibility");
+
 /* ---------------------------------------------------------------
    BROWSE (anonymous cards)
 --------------------------------------------------------------- */
@@ -257,7 +280,7 @@ export const browse = handle(async (req, res) => {
   const pastBuddyUsers = pastMatches.flatMap((m) => m.users).filter((u) => String(u) !== String(req.user.id));
 
   const exclude = [me._id, ...(await blockedProfileIds(req.user.id))];
-  const filter = { status: "active", _id: { $nin: exclude }, user: { $nin: pastBuddyUsers } };
+  const filter = { status: "active", hidden: { $ne: true }, _id: { $nin: exclude }, user: { $nin: pastBuddyUsers } };
   // Include profiles saved before multi-topic existed (they still carry `topic`).
   if (q.topic) filter.$or = [{ topics: q.topic }, { topic: q.topic }];
   if (q.language) filter.languages = q.language;
@@ -331,7 +354,12 @@ export const sendRequest = handle(async (req, res) => {
     throw new ArenaError(402, "ENTRY_REQUIRED", "Join the arena to send requests");
   }
 
-  const target = await ArenaProfile.findOne({ _id: toProfileId, status: "active" });
+  if (me.hidden) {
+    throw new ArenaError(403, "PROFILE_HIDDEN", "Your profile is hidden. Show it again to send requests.");
+  }
+
+  // Hidden members can't be found or requested.
+  const target = await ArenaProfile.findOne({ _id: toProfileId, status: "active", hidden: { $ne: true } });
   if (!target || String(target._id) === String(me._id)) {
     throw new ArenaError(404, "NOT_AVAILABLE", "This member isn't available");
   }
@@ -539,12 +567,7 @@ export const matchMessages = handle(async (req, res) => {
     success: true,
     data: {
       hasMore,
-      messages: page.map((m) => ({
-        id: String(m._id),
-        mine: String(m.sender) === String(req.user.id),
-        text: m.text,
-        createdAt: m.createdAt,
-      })),
+      messages: page.map((m) => messageView(m, req.user.id)),
     },
   });
 }, "Unable to load messages");

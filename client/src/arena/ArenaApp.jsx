@@ -1,10 +1,12 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Compass, CreditCard, Inbox, MessageCircle, Settings2, UserRound, Wifi, WifiOff } from "lucide-react";
+import toast from "react-hot-toast";
+import { Compass, CreditCard, Eye, EyeOff, Inbox, MessageCircle, Settings2, UserRound, Wifi, WifiOff } from "lucide-react";
 
 import { ArenaProvider, useArena } from "./ArenaContext";
+import { http, errMsg } from "./api";
 import { BugReportButton } from "./BugReport";
 import { useArenaChrome } from "./chrome";
 import { Badge, Spinner, cx } from "./ui";
@@ -15,6 +17,55 @@ const BrowsePage = lazy(() => import("./pages/BrowsePage"));
 const RequestsPage = lazy(() => import("./pages/RequestsPage"));
 const BuddyPage = lazy(() => import("./pages/BuddyPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+
+/*
+  Temporarily hide / show my profile. Hidden = nobody can find or request me,
+  and I can't send requests either. Existing partnerships carry on.
+  If the team hid the profile, only the team can bring it back.
+*/
+function VisibilityButton({ profile }) {
+  const { refresh } = useArena();
+  const [busy, setBusy] = useState(false);
+  const hidden = profile.hidden === true;
+  const byAdmin = hidden && profile.hiddenBy === "admin";
+
+  const toggle = async () => {
+    if (byAdmin || busy) return;
+    setBusy(true);
+    try {
+      const { data } = await http.put("/visibility", { hidden: !hidden });
+      toast.success(data.message, { id: "arena-visibility" });
+      await refresh();
+    } catch (e) {
+      toast.error(errMsg(e), { id: "arena-visibility" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const label = byAdmin ? "Hidden by the Target Trek team" : hidden ? "Profile hidden. Click to show it again" : "Hide my profile from the arena for now";
+  const Icon = hidden ? EyeOff : Eye;
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={busy || byAdmin}
+      title={label}
+      aria-label={label}
+      aria-pressed={hidden}
+      className={cx(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+        hidden
+          ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dk:border-amber-500/40 dk:bg-amber-500/10 dk:text-amber-200"
+          : "border-stone-300 bg-white text-stone-600 hover:border-orange-400 hover:text-orange-700 dk:border-[#5a4336] dk:bg-[#241b15] dk:text-[#d6c4b8] dk:hover:text-orange-300"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden />
+      <span>{hidden ? "Hidden" : "Visible"}</span>
+    </button>
+  );
+}
 
 function Shell() {
   const { me, loading, error, socketState } = useArena();
@@ -77,6 +128,7 @@ function Shell() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <BugReportButton className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] px-3 py-1 text-xs font-semibold text-stone-600 dk:text-[#d6c4b8] hover:border-orange-400 hover:text-orange-700 dk:hover:text-orange-300" />
+            {paid && me?.profile && <VisibilityButton profile={me.profile} />}
             {me?.profile && (
               <Badge tone={me.profile.status === "matched" ? "emerald" : me.profile.status === "active" ? "brand" : me.profile.status === "suspended" ? "rose" : "slate"}>
                 {me.profile.alias} · {me.profile.status === "draft" ? "payment pending" : me.profile.status}

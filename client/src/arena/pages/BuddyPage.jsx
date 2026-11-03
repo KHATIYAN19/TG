@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Lock, Linkedin, Mail, MessageCircle, Phone, Send, ShieldBan, Flag, UserRound, LogOut } from "lucide-react";
+import { Check, Lock, Linkedin, Mail, MessageCircle, MoreHorizontal, Pencil, Phone, Send, ShieldBan, SmilePlus, Flag, Trash2, UserRound, LogOut, X } from "lucide-react";
 
 import { useArena } from "../ArenaContext";
 import { http, errMsg } from "../api";
@@ -27,6 +27,167 @@ const dayLabel = (d) => {
   return diff === 0 ? "Today" : diff === 1 ? "Yesterday" : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 };
 
+/* Keep in step with the server (services/arena/chat.js). */
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🎉", "🔥"];
+
+/* Re-renders on a timer so the "edit / delete for N more minutes" window closes by itself. */
+function useNow(ms = 15000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return now;
+}
+
+const minutesLeft = (until, now) => Math.max(0, Math.ceil((new Date(until).getTime() - now) / 60000));
+
+/*
+  One message's action menu: react with an emoji, and (own messages, first
+  5 minutes only) edit or delete. Fixed-position so the scrolling chat never clips it.
+*/
+function MessageMenu({ message, canEdit, left, onReact, onEdit, onDelete, now }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const [confirming, setConfirming] = useState(false);
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const toggle = () => {
+    if (open) return setOpen(false);
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) {
+      const width = 240;
+      const above = r.top > 150;
+      setPos({
+        top: above ? undefined : r.bottom + 6,
+        bottom: above ? window.innerHeight - r.top + 6 : undefined,
+        left: Math.min(Math.max(8, left ? r.left : r.right - width), window.innerWidth - width - 8),
+        width,
+      });
+    }
+    setConfirming(false);
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => {
+      if (e.type === "keydown" && e.key !== "Escape") return;
+      if (e.type === "mousedown" && (menuRef.current?.contains(e.target) || btnRef.current?.contains(e.target))) return;
+      setOpen(false);
+      if (e.type === "keydown") btnRef.current?.focus();
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    window.addEventListener("resize", close);
+    document.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+
+  const mineReaction = message.reactions.find((r) => r.mine)?.emoji;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-label="Message options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={cx(
+          "grid h-7 w-7 shrink-0 place-items-center self-center rounded-full text-stone-400 transition hover:bg-orange-100 hover:text-orange-700 focus-visible:opacity-100 dk:text-[#8f7c70] dk:hover:bg-orange-500/15 dk:hover:text-orange-300",
+          open ? "opacity-100" : "opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
+        )}
+      >
+        <MoreHorizontal className="h-4 w-4" aria-hidden />
+      </button>
+
+      {open && pos && (
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ position: "fixed", top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 80 }}
+          className="rounded-2xl border border-[#f0ded0] bg-white p-2 shadow-xl dk:border-[#443127] dk:bg-[#241b15]"
+        >
+          <div className="grid grid-cols-8 gap-0.5" role="group" aria-label="React with an emoji">
+            {REACTION_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                role="menuitem"
+                aria-label={`React ${emoji}`}
+                aria-pressed={mineReaction === emoji}
+                onClick={() => { setOpen(false); onReact(emoji); }}
+                className={cx("grid h-8 place-items-center rounded-lg text-lg transition hover:scale-125 hover:bg-orange-50 dk:hover:bg-orange-500/15", mineReaction === emoji && "bg-orange-100 dk:bg-orange-500/25")}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          {canEdit && (
+            <div className="mt-2 border-t border-[#f0ded0] pt-2 dk:border-[#443127]">
+              <p className="px-2 pb-1 text-[11px] text-stone-500 dk:text-[#b9a79c]">You can edit or delete for {minutesLeft(message.editableUntil, now)} more min</p>
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); onEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-stone-700 hover:bg-orange-50 dk:text-[#ead9cc] dk:hover:bg-orange-500/10">
+                <Pencil className="h-4 w-4" aria-hidden /> Edit message
+              </button>
+              {confirming ? (
+                <div className="flex items-center gap-2 rounded-lg bg-rose-50 px-2 py-1.5 dk:bg-rose-500/10">
+                  <span className="flex-1 text-xs font-semibold text-rose-700 dk:text-rose-300">Delete for everyone?</span>
+                  <button type="button" onClick={() => setConfirming(false)} className="rounded-md px-2 py-1 text-xs text-stone-600 hover:bg-white dk:text-[#d6c4b8]">No</button>
+                  <button type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(); }} className="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700">Delete</button>
+                </div>
+              ) : (
+                <button type="button" role="menuitem" onClick={() => setConfirming(true)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10">
+                  <Trash2 className="h-4 w-4" aria-hidden /> Delete message
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* Inline editor that replaces the bubble text while editing. */
+function EditBox({ initial, onSave, onCancel, saving }) {
+  const [value, setValue] = useState(initial);
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.focus(); ref.current?.setSelectionRange(initial.length, initial.length); }, [initial]);
+  const submit = () => { const v = value.trim(); if (v && v !== initial) onSave(v); else if (v === initial) onCancel(); };
+
+  return (
+    <div className="w-64 max-w-full sm:w-80">
+      <textarea
+        ref={ref}
+        value={value}
+        rows={Math.min(6, Math.max(2, value.split("\n").length))}
+        maxLength={1000}
+        aria-label="Edit message"
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+          if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        }}
+        className="w-full resize-none rounded-lg border border-orange-300 bg-white px-2.5 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+      />
+      <div className="mt-1.5 flex justify-end gap-1.5">
+        <button type="button" onClick={onCancel} disabled={saving} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-orange-100 hover:bg-white/15"><X className="h-3 w-3" aria-hidden /> Cancel</button>
+        <button type="button" onClick={submit} disabled={saving || !value.trim()} className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-xs font-bold text-orange-700 hover:bg-orange-50 disabled:opacity-60"><Check className="h-3 w-3" aria-hidden /> Save</button>
+      </div>
+      <p className="mt-1 text-right text-[10px] text-orange-100">Enter to save · Esc to cancel</p>
+    </div>
+  );
+}
+
 function Chat({ matchId, buddyName, onMatchEnded }) {
   const { subscribe, sendFrame, socketState } = useArena();
   const [messages, setMessages] = useState(null);
@@ -35,6 +196,9 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [savingId, setSavingId] = useState(null);
+  const now = useNow();
   const endRef = useRef(null);
   const scrollRef = useRef(null);
   const topRef = useRef(null);
@@ -95,9 +259,22 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
   useEffect(() => subscribe((frame) => {
     if (frame.type === "message") {
       setMessages((list) => (list && !list.some((m) => m.id === frame.id)
-        ? [...list, { id: frame.id, mine: frame.from === "me", text: frame.text, createdAt: frame.createdAt }]
+        ? [...list, {
+            id: frame.id, mine: frame.from === "me", text: frame.text, createdAt: frame.createdAt,
+            deleted: Boolean(frame.deleted), edited: Boolean(frame.edited),
+            editableUntil: frame.editableUntil ?? null, reactions: frame.reactions ?? [],
+          }]
         : list));
       if (frame.from !== "me") setTyping(false);
+    } else if (frame.type === "message_updated") {
+      // edited / deleted / reacted: replace by id, keeping scroll position
+      setMessages((list) => list && list.map((m) => (m.id === frame.message.id ? frame.message : m)));
+      if (frame.message.deleted) setEditingId((id) => (id === frame.message.id ? null : id));
+    } else if (frame.type === "message_removed") {
+      setMessages((list) => list && list.filter((m) => m.id !== frame.id));
+    } else if (frame.type === "chat_cleared") {
+      setMessages([]);
+      setHasMore(false);
     } else if (frame.type === "typing") {
       setTyping(true);
       clearTimeout(typingTimer.current);
@@ -118,6 +295,31 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
       endRef.current?.scrollIntoView({ behavior: first ? "auto" : "smooth", block: "end" });
     }
   }, [messages, typing]);
+
+  const replace = (updated) => setMessages((list) => list && list.map((m) => (m.id === updated.id ? updated : m)));
+
+  const react = async (m, emoji) => {
+    try { const { data } = await http.put(`/match/messages/${m.id}/reaction`, { emoji }); replace(data.data); }
+    catch (e) { toast.error(errMsg(e), { id: "arena-chat-action" }); }
+  };
+
+  const saveEdit = async (m, value) => {
+    setSavingId(m.id);
+    try {
+      const { data } = await http.patch(`/match/messages/${m.id}`, { text: value });
+      replace(data.data);
+      setEditingId(null);
+    } catch (e) {
+      toast.error(errMsg(e), { id: "arena-chat-action" });
+      // the 5 minutes ran out while typing: leave edit mode
+      if (["WINDOW_CLOSED", "ALREADY_DELETED"].includes(e?.response?.data?.code)) setEditingId(null);
+    } finally { setSavingId(null); }
+  };
+
+  const remove = async (m) => {
+    try { const { data } = await http.delete(`/match/messages/${m.id}`); replace(data.data); toast.success("Message deleted", { id: "arena-chat-action" }); }
+    catch (e) { toast.error(errMsg(e), { id: "arena-chat-action" }); }
+  };
 
   const send = () => {
     const value = text.trim();
@@ -171,13 +373,49 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
         ) : grouped.map((m) => m.divider ? (
           <div key={m.key} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-400 dk:text-[#8f7c70]">{m.divider}</div>
         ) : (
-          <div key={m.id} className={cx("flex", m.mine ? "justify-end" : "justify-start")}>
-            <div className={cx("max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm shadow-sm", m.mine ? "rounded-br-md bg-orange-600 text-white" : "rounded-bl-md bg-white dk:bg-[#241b15] text-stone-800 dk:text-[#ffedd5] ring-1 ring-[#f0ded0] dk:ring-[#443127]")}>
-              {m.text}
-              <span className={cx("mt-1 block text-right text-[10px]", m.mine ? "text-orange-200" : "text-stone-400 dk:text-[#8f7c70]")}>
-                {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </span>
+          <div key={m.id} className={cx("group flex items-start gap-1", m.mine ? "flex-row-reverse" : "flex-row")}>
+            <div className={cx("flex min-w-0 max-w-[80%] flex-col", m.mine ? "items-end" : "items-start")}>
+              <div className={cx("whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm shadow-sm", m.mine ? "rounded-br-md bg-orange-600 text-white" : "rounded-bl-md bg-white dk:bg-[#241b15] text-stone-800 dk:text-[#ffedd5] ring-1 ring-[#f0ded0] dk:ring-[#443127]", m.deleted && "italic opacity-70")}>
+                {editingId === m.id ? (
+                  <EditBox initial={m.text} saving={savingId === m.id} onCancel={() => setEditingId(null)} onSave={(v) => saveEdit(m, v)} />
+                ) : m.deleted ? (
+                  <span>🚫 {m.mine ? "You deleted this message" : "This message was deleted"}</span>
+                ) : m.text}
+                <span className={cx("mt-1 flex items-center justify-end gap-1.5 text-[10px]", m.mine ? "text-orange-200" : "text-stone-400 dk:text-[#8f7c70]")}>
+                  {m.edited && <span>edited</span>}
+                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+
+              {m.reactions?.length > 0 && (
+                <div className="-mt-1.5 flex flex-wrap gap-1 px-1" aria-label="Reactions">
+                  {m.reactions.map((r) => (
+                    <button
+                      key={r.emoji}
+                      type="button"
+                      aria-pressed={r.mine}
+                      aria-label={`${r.emoji} ${r.count}${r.mine ? ", your reaction. Click to remove" : ""}`}
+                      onClick={() => react(m, r.emoji)}
+                      className={cx("inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs shadow-sm transition", r.mine ? "border-orange-400 bg-orange-50 text-orange-800 dk:border-orange-400/60 dk:bg-orange-500/20 dk:text-orange-100" : "border-[#f0ded0] bg-white text-stone-700 hover:border-orange-300 dk:border-[#443127] dk:bg-[#241b15] dk:text-[#ead9cc]")}
+                    >
+                      <span>{r.emoji}</span>{r.count > 1 && <span className="font-semibold tabular-nums">{r.count}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {!m.deleted && editingId !== m.id && (
+              <MessageMenu
+                message={m}
+                left={!m.mine}
+                now={now}
+                canEdit={m.mine && Boolean(m.editableUntil) && new Date(m.editableUntil).getTime() > now}
+                onReact={(emoji) => react(m, emoji)}
+                onEdit={() => setEditingId(m.id)}
+                onDelete={() => remove(m)}
+              />
+            )}
           </div>
         ))}
         <div ref={endRef} />

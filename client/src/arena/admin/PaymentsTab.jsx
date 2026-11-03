@@ -1,9 +1,9 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Download, Gift, Wallet } from "lucide-react";
+import { Download, Gift, Trash2, Wallet } from "lucide-react";
 
 import { Badge, Button, Card, EmptyState, Spinner, cx, inputClass } from "../ui";
-import { MUTED, Pager, Person, SearchBox, StatusBadge, Table, Td, api, errMsg, fmtDateTime, rupees2, useDebounced, useList } from "./shared";
+import { ConfirmModal, MUTED, Pager, Person, SearchBox, StatusBadge, Table, Td, api, errMsg, fmtDateTime, rupees2, useDebounced, useDeleter, useList } from "./shared";
 
 const STATUSES = [["", "All statuses"], ["paid", "Paid (active)"], ["in_match", "In a match"], ["consumed", "All matches used"], ["cancelled", "Cancelled / refunded"], ["pending_payment", "Awaiting payment"], ["expired", "Abandoned"]];
 
@@ -27,7 +27,8 @@ export default function PaymentsTab() {
   const [exporting, setExporting] = useState(false);
   const dq = useDebounced(f.q);
   const params = { ...f, q: dq, page, pageSize: 25 };
-  const [{ loading, data, error }] = useList("/payments", params);
+  const [{ loading, data, error }, reload] = useList("/payments", params);
+  const { del, setDel, busy: deleting, run } = useDeleter(reload);
 
   const set = (k) => (e) => { setPage(1); setF((x) => ({ ...x, [k]: e.target.value })); };
 
@@ -87,7 +88,7 @@ export default function PaymentsTab() {
         <EmptyState icon={Wallet} title="No payments match these filters" />
       ) : (
         <>
-          <Table dense head={["Date", "Member", "Order & payment ID", "Gateway", { label: "List", right: true }, { label: "Discount", right: true }, { label: "Paid", right: true }, "Matches", "Status", { label: "Fee kept", right: true }, { label: "Refunded", right: true }]}>
+          <Table dense head={["Date", "Member", "Order & payment ID", "Gateway", { label: "List", right: true }, { label: "Discount", right: true }, { label: "Paid", right: true }, "Matches", "Status", { label: "Fee kept", right: true }, { label: "Refunded", right: true }, ""]}>
             {data.items.map((p) => (
               <tr key={p.id} className={p.complimentary ? "bg-amber-50/40 dk:bg-amber-500/5" : undefined}>
                 <Td className="whitespace-nowrap text-xs">{fmtDateTime(p.paidAt || p.createdAt)}</Td>
@@ -109,12 +110,24 @@ export default function PaymentsTab() {
                 <Td><StatusBadge status={p.status} />{p.cancelledAt && <p className={cx("mt-1 text-[11px]", MUTED)}>{fmtDateTime(p.cancelledAt)}</p>}</Td>
                 <Td className="text-right">{p.status === "cancelled" ? <><Money paise={p.feePaise} /><p className={cx("text-[11px]", MUTED)}>{p.cancellationFeePercent}%</p></> : <span className={MUTED}>—</span>}</Td>
                 <Td className="text-right">{p.status === "cancelled" ? <Money paise={p.refundPaise} negative /> : <span className={MUTED}>—</span>}</Td>
+                <Td className="text-right">
+                  <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10" aria-label={`Delete payment ${p.orderId || p.id} permanently`} onClick={() => setDel(p)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
+                </Td>
               </tr>
             ))}
           </Table>
           <Pager page={page} setPage={setPage} total={data.total} pageSize={data.pageSize} />
         </>
       )}
+      <ConfirmModal open={Boolean(del)} onClose={() => setDel(null)} title="Delete this payment permanently?" confirmWord="DELETE" busy={deleting} onConfirm={() => run(`/payments/${del.id}`)}>
+        <p>The payment record of <strong>{rupees2(del?.paidPaise)}</strong> for <strong>{del?.member?.name}</strong>{del?.orderId ? <> (order <span className="break-all font-mono text-xs">{del.orderId}</span>)</> : null} is removed from the database and from your revenue totals.</p>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-stone-600 dk:text-[#d6c4b8]">
+          <li><strong>Nothing is refunded.</strong> This does not contact Cashfree/Razorpay. Refund in the gateway first if the member is owed money.</li>
+          <li>If it was their only usable entry, they go back to the payment step and leave the arena.</li>
+          <li>A payment that is powering a live match can't be deleted: dissolve or delete the match first.</li>
+        </ul>
+      </ConfirmModal>
+
       <p className={cx("text-xs", MUTED)}>Amounts are in INR. “Collected” counts paid, in-match, used-up and cancelled entries; pending and abandoned checkouts are excluded. Free (admin-granted) entries show ₹0.00 and can never be refunded.</p>
     </div>
   );

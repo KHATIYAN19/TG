@@ -18,12 +18,17 @@ const PROVIDERS = [
     name: "Resend",
     note: "Needs RESEND_API_KEY on the server and a verified sending domain in Resend.",
   },
+  {
+    key: "ses",
+    name: "Amazon SES",
+    note: "Needs AMAZON_ACCESS_KEY_ID, AMAZON_SECRET_ACCESS_KEY and AMAZON_REGION on the server, and a verified sender in SES. New SES accounts can only email verified addresses until AWS approves production access.",
+  },
 ];
 
 const MUTED = "text-stone-500 dk:text-[#b9a79c]";
 const when = (d) => (d ? new Date(d).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—");
 
-function ProviderCard({ meta, selected, active, configured, stats, from, testing, onSelect, onTest, testTo, setTestTo }) {
+function ProviderCard({ meta, selected, active, configured, missing, region, stats, from, testing, onSelect, onTest, testTo, setTestTo }) {
   return (
     <Card className={cx("p-5 transition", selected && "ring-2 ring-orange-500")}>
       <div className="flex items-start justify-between gap-3">
@@ -43,11 +48,12 @@ function ProviderCard({ meta, selected, active, configured, stats, from, testing
         </label>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {active && <Badge tone="emerald">In use now</Badge>}
-          <Badge tone={configured ? "slate" : "rose"}>{configured ? "Key found" : "Key missing"}</Badge>
+          <Badge tone={configured ? "slate" : "rose"}>{configured ? "Key found" : missing?.length ? "Setup incomplete" : "Key missing"}</Badge>
         </div>
       </div>
 
-      {from && configured && <p className={cx("mt-3 text-xs", MUTED)}>Sends from: <span className="font-semibold">{from}</span></p>}
+      {from && configured && <p className={cx("mt-3 text-xs", MUTED)}>Sends from: <span className="font-semibold">{from}</span>{region ? <> · region <span className="font-semibold">{region}</span></> : null}</p>}
+      {!configured && missing?.length > 0 && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dk:bg-amber-500/10 dk:text-amber-200">Still needed on the server: <span className="font-mono font-semibold">{missing.join(", ")}</span></p>}
 
       <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
         {[["Sent", stats.sent], ["Failed", stats.failed], ["Last sent", stats.lastSentAt ? when(stats.lastSentAt) : "—"]].map(([k, v]) => (
@@ -92,7 +98,7 @@ export default function AdminMailSettings() {
   const [fallback, setFallback] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState("");
-  const [testTo, setTestTo] = useState({ mailtrap: "", resend: "" });
+  const [testTo, setTestTo] = useState({ mailtrap: "", resend: "", ses: "" });
 
   const apply = useCallback((d) => {
     setData(d);
@@ -143,12 +149,12 @@ export default function AdminMailSettings() {
         <meta name="robots" content="noindex" />
       </Helmet>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-orange-600 text-white"><Mail className="h-6 w-6" aria-hidden /></span>
           <div>
             <h1 className="text-2xl font-bold text-[#29201b] dk:text-[#fff7ed]">Email provider</h1>
-            <p className={cx("text-sm", MUTED)}>Choose how the whole site sends email: signup codes, book delivery, interview bookings and everything else. Changes apply within seconds, no redeploy.</p>
+            <p className={cx("text-sm", MUTED)}>Choose how the whole site sends email (Mailtrap, Resend or Amazon SES): signup codes, book delivery, interview bookings and everything else. Changes apply within seconds, no redeploy.</p>
           </div>
         </div>
 
@@ -163,7 +169,7 @@ export default function AdminMailSettings() {
 
         {data && (
           <div className="mt-6 space-y-6">
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {PROVIDERS.map((meta) => (
                 <ProviderCard
                   key={meta.key}
@@ -171,6 +177,8 @@ export default function AdminMailSettings() {
                   selected={choice === meta.key}
                   active={data.provider === meta.key}
                   configured={data.providers[meta.key].configured}
+                  missing={data.providers[meta.key].missing}
+                  region={data.providers[meta.key].region}
                   from={data.providers[meta.key].from}
                   stats={data.stats[meta.key]}
                   testing={testing === meta.key}
@@ -187,7 +195,7 @@ export default function AdminMailSettings() {
                 checked={fallback}
                 onChange={setFallback}
                 label="Automatic failover"
-                description="If the chosen provider fails (daily limit reached, outage, bad key), the email is retried through the other provider so nothing is lost."
+                description="If the chosen provider fails (daily limit reached, outage, bad key), the email is retried through the other providers, one after another, so nothing is lost."
               />
               <p className={cx("mt-3 text-xs", MUTED)}>Failovers since this server started: <span className="font-semibold">{data.stats.fallbacks}</span></p>
             </Card>

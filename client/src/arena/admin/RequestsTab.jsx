@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ArrowRight, Inbox, MessageSquare } from "lucide-react";
+import { ArrowRight, Inbox, MessageSquare, Trash2 } from "lucide-react";
 
 import { Button, EmptyState, Spinner, cx } from "../ui";
 import ChatModal from "./ChatModal";
-import { MUTED, Pager, Person, SearchBox, StatusBadge, StatusPills, Table, Td, fmtDateTime, humanize, useDebounced, useList } from "./shared";
+import { ConfirmModal, MUTED, Pager, Person, SearchBox, StatusBadge, StatusPills, Table, Td, fmtDateTime, humanize, useDebounced, useDeleter, useList } from "./shared";
 
 const OPTIONS = [["", "All"], ["pending", "Pending"], ["accepted", "Accepted"], ["rejected", "Rejected"], ["withdrawn", "Withdrawn"], ["cancelled", "Cancelled"], ["expired", "Expired"]];
 
@@ -20,8 +20,9 @@ export default function RequestsTab() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const dq = useDebounced(q);
-  const [{ loading, data, error }] = useList("/requests", { status, q: dq, page });
+  const [{ loading, data, error }, reload] = useList("/requests", { status, q: dq, page });
   const [chat, setChat] = useState(null);
+  const { del, setDel, busy, run } = useDeleter(reload);
 
   return (
     <div className="space-y-4">
@@ -44,6 +45,7 @@ export default function RequestsTab() {
                 <Td className="whitespace-nowrap text-right">
                   {r.matchId && <Button size="sm" variant="outline" onClick={() => setChat(r.matchId)}><MessageSquare className="h-3.5 w-3.5" /> View chat</Button>}
                   {r.matchId && <p className={cx("mt-1 text-[11px]", MUTED)}>partnership {humanize(r.matchStatus)}</p>}
+                  <Button size="sm" variant="ghost" className="mt-2 text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10" onClick={() => setDel(r)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
                 </Td>
               </tr>
             ))}
@@ -52,6 +54,11 @@ export default function RequestsTab() {
         </>
       )}
       <ChatModal matchId={chat} onClose={() => setChat(null)} />
+
+      <ConfirmModal open={Boolean(del)} onClose={() => setDel(null)} title="Delete this request permanently?" busy={busy} onConfirm={() => run(`/requests/${del.id}`)}>
+        <p>This {del?.status} request{del?.message ? " and its intro message" : ""} is removed from the database for both members. It can't be undone.</p>
+        {del?.status === "accepted" && <p className="mt-2 text-xs text-stone-500 dk:text-[#b9a79c]">The partnership it created is <strong>not</strong> affected. Use Matches to remove that.</p>}
+      </ConfirmModal>
     </div>
   );
 }

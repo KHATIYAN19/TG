@@ -1,9 +1,9 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Gift, History, Minus, Plus } from "lucide-react";
+import { Eye, EyeOff, Gift, History, Minus, Plus, Trash2 } from "lucide-react";
 
 import { Badge, Button, EmptyState, Field, Modal, Spinner, cx, inputClass } from "../ui";
-import { MUTED, Pager, SearchBox, StatusBadge, Table, Td, api, errMsg, rupees2, useDebounced, useList } from "./shared";
+import { ConfirmModal, MUTED, Pager, SearchBox, StatusBadge, Table, Td, api, errMsg, rupees2, useDebounced, useDeleter, useList } from "./shared";
 
 const MAX = 20;
 
@@ -108,9 +108,14 @@ export default function MembersTab({ openHistory }) {
   const [suspendTarget, setSuspendTarget] = useState(null);
   const [reason, setReason] = useState("");
   const [manage, setManage] = useState(null);
+  const { del, setDel, busy: deleting, run } = useDeleter(reload);
 
   const suspend = async () => {
     try { await api.post(`/profiles/${suspendTarget.id}/suspend`, { reason }); toast.success("Suspended"); setSuspendTarget(null); setReason(""); reload(); }
+    catch (e) { toast.error(errMsg(e)); }
+  };
+  const setHidden = async (m, hide) => {
+    try { await api.post(`/profiles/${m.id}/${hide ? "hide" : "unhide"}`); toast.success(hide ? "Hidden from the arena" : "Visible in the arena again"); reload(); }
     catch (e) { toast.error(errMsg(e)); }
   };
   const unsuspend = async (id) => {
@@ -137,7 +142,7 @@ export default function MembersTab({ openHistory }) {
                   <Td><p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{m.realName}</p><p className={cx("text-xs", MUTED)}>{m.alias}</p></Td>
                   <Td><p className="break-all">{m.account?.email ?? m.contact?.email}</p><p className={cx("text-xs", MUTED)}>{m.account?.mobile ?? m.contact?.phone}</p></Td>
                   <Td>{m.topics?.join(", ")} · {m.level}<p className={cx("text-xs", MUTED)}>{[m.designation, m.companyName].filter(Boolean).join(" @ ") || m.skills.slice(0, 4).join(", ")}</p></Td>
-                  <Td><StatusBadge status={m.status} />{m.suspendedReason && <p className="mt-1 max-w-[14rem] text-xs text-rose-600">{m.suspendedReason}</p>}</Td>
+                  <Td><StatusBadge status={m.status} />{m.hidden && <Badge tone="amber" className="ml-1.5"><EyeOff className="h-3 w-3" /> hidden{m.hiddenBy === "admin" ? " by admin" : " by member"}</Badge>}{m.suspendedReason && <p className="mt-1 max-w-[14rem] text-xs text-rose-600">{m.suspendedReason}</p>}</Td>
                   <Td className="min-w-[10rem]">
                     {e && ["paid", "in_match", "consumed"].includes(e.status) ? (
                       <>
@@ -153,9 +158,13 @@ export default function MembersTab({ openHistory }) {
                     <div className="flex flex-col items-end gap-2">
                       <Button size="sm" onClick={() => setManage(m)}><Gift className="h-3.5 w-3.5" /> {e && ["paid", "in_match", "consumed"].includes(e.status) ? "Manage matches" : "Give matches"}</Button>
                       <Button size="sm" variant="outline" onClick={() => openHistory({ userId: m.user, label: m.realName })}><History className="h-3.5 w-3.5" /> Match history</Button>
+                      {["active", "matched"].includes(m.status) && (m.hidden
+                        ? <Button size="sm" variant="outline" onClick={() => setHidden(m, false)}><Eye className="h-3.5 w-3.5" /> Show in arena</Button>
+                        : <Button size="sm" variant="outline" onClick={() => setHidden(m, true)}><EyeOff className="h-3.5 w-3.5" /> Hide from arena</Button>)}
                       {m.status === "suspended"
                         ? <Button size="sm" variant="outline" onClick={() => unsuspend(m.id)}>Reinstate</Button>
                         : <Button size="sm" variant="danger" onClick={() => setSuspendTarget(m)}>Suspend</Button>}
+                      <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10" onClick={() => setDel(m)}><Trash2 className="h-3.5 w-3.5" /> Delete member</Button>
                     </div>
                   </Td>
                 </tr>
@@ -167,6 +176,16 @@ export default function MembersTab({ openHistory }) {
       )}
 
       {manage && <ManageMatches key={manage.id} member={manage} onClose={() => setManage(null)} onDone={() => { setManage(null); reload(); }} />}
+
+      <ConfirmModal open={Boolean(del)} onClose={() => setDel(null)} title={`Delete ${del?.realName} permanently?`} confirmWord="DELETE" confirmLabel="Delete member forever" busy={deleting} onConfirm={() => run(`/members/${del.user}`)}>
+        <p>This removes <strong>{del?.realName}</strong> ({del?.account?.email ?? del?.contact?.email}) from the database, together with:</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-stone-600 dk:text-[#d6c4b8]">
+          <li>their account, login sessions and arena profile</li>
+          <li>every payment, request, match and chat message they were part of</li>
+          <li>their reports, blocks, bug reports and coupon uses</li>
+        </ul>
+        <p className="mt-3 text-xs text-stone-600 dk:text-[#d6c4b8]">If they're in a live match, the buddy is moved back to the arena and the match doesn't count against them. <strong>Payments are not refunded</strong> (nothing is sent to Cashfree/Razorpay) and this can't be undone. Orders or books they bought elsewhere on the site are not touched.</p>
+      </ConfirmModal>
 
       <Modal open={Boolean(suspendTarget)} onClose={() => setSuspendTarget(null)} title={`Suspend ${suspendTarget?.realName}?`}
         footer={<><Button variant="ghost" onClick={() => setSuspendTarget(null)}>Cancel</Button><Button variant="danger" disabled={reason.trim().length < 3} onClick={suspend}>Suspend</Button></>}>
