@@ -41,6 +41,14 @@ import BookReviewRoute from "./routes/bookReviewRoute.js";
 
 import affiliateRoutes from "./routes/affiliateRoutes.js";
 
+/* Prep Buddy Arena */
+import arenaRoutes from "./routes/arena/arenaRoutes.js";
+import arenaAdminRoutes from "./routes/arena/arenaAdminRoutes.js";
+import { attachArenaSocket } from "./services/arena/socket.js";
+import { sweepAbandonedEntries } from "./services/arena/entryService.js";
+import { healPaidMembers } from "./services/arena/activation.js";
+import { migrateLegacyArenaData } from "./services/arena/migrate.js";
+
 
 import { auth, isAdmin } from "./Middleware/auth.js";
 import { sanitizeInput } from "./Middleware/sanitizeInput.js";
@@ -177,13 +185,25 @@ const allowedOrigins = new Set(
   ].filter(Boolean)
 );
 
+/*
+  In development, Vite hops to the next free port (5174, 5175, …) when
+  5173 is busy. Accept any localhost port so that doesn't surface as a
+  CORS error. Production only ever trusts the explicit list above.
+*/
+const LOCAL_DEV_ORIGIN =
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d{2,5})?$/;
+
+const isOriginAllowed = (origin) =>
+  allowedOrigins.has(origin) ||
+  (!isProduction && LOCAL_DEV_ORIGIN.test(origin));
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) {
       return callback(null, true);
     }
 
-    if (allowedOrigins.has(origin)) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
 
@@ -410,7 +430,7 @@ app.use((req, res, next) => {
 
   if (
     origin &&
-    !allowedOrigins.has(origin)
+    !isOriginAllowed(origin)
   ) {
     return res.status(403).json({
       success: false,
@@ -460,6 +480,14 @@ app.use(
   "/api/admin/users",
   adminUserRoutes
 );
+
+/* =====================================================
+   PREP BUDDY ARENA
+   Public signup + member API, and admin API.
+===================================================== */
+
+app.use("/api/arena", arenaRoutes);
+app.use("/api/admin/arena", arenaAdminRoutes);
 
 /* =====================================================
    EXISTING PAYMENT ROUTES
@@ -727,10 +755,24 @@ const startServer = async () => {
   try {
     await connectDB();
 
+    // Bring data written by older versions up to the current shape (idempotent).
+    await migrateLegacyArenaData().catch((error) =>
+      console.error("[arena] legacy data migration failed:", error.message)
+    );
+
     startAnalyticsJobs();
     startEbookEmailSweeper();
 
-    app.listen(PORT, () => {
+    // Release abandoned arena checkouts (and their coupon reservations).
+    const arenaMaintenance = () =>
+      Promise.all([sweepAbandonedEntries(), healPaidMembers()]).catch((error) =>
+        console.error("[arena] maintenance failed:", error.message)
+      );
+    arenaMaintenance(); // also repairs anything stuck before this start-up
+    const arenaSweeper = setInterval(arenaMaintenance, 10 * 60 * 1000);
+    arenaSweeper.unref();
+
+    const server = app.listen(PORT, () => {
       console.log(
         `Target Trek Backend running on port ${PORT}`
       );
@@ -751,10 +793,17 @@ const startServer = async () => {
       );
 
       console.log(
+        "Prep Buddy Arena routes registered"
+      );
+
+      console.log(
         "Interview Cashfree webhook:",
         INTERVIEW_CASHFREE_WEBHOOK
       );
     });
+
+    // Real-time chat for matched buddies (ws://host/ws/arena).
+    attachArenaSocket(server, { isOriginAllowed });
   } catch (error) {
     console.error(
       "Failed to start Target Trek Backend:",

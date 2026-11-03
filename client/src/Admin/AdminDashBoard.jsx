@@ -127,6 +127,18 @@ const PRIORITY_ROUTES = [
     priority: 5,
   },
   {
+    path: "/admin/arena",
+    name: "Prep Buddy Arena",
+    icon: Users,
+    description:
+      "Set the arena entry price and cancellation fee, manage members, requests, matches, reports, coupons and payments.",
+    category: "Interviews",
+    keywords:
+      "prep buddy arena members matches requests price cancellation fee coupons reports suspend",
+    featured: true,
+    priority: 5,
+  },
+  {
     path: "/campaign",
     name: "Email Campaigns",
     icon: Send,

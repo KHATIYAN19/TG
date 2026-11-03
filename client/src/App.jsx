@@ -94,6 +94,18 @@ const InterviewDetailPage = lazy(() =>
 const Resources = lazy(() =>
   import("./component/Resources.jsx")
 );
+const ArenaLanding = lazy(() =>
+  import("./arena/ArenaLanding.jsx")
+);
+const ArenaAuth = lazy(() =>
+  import("./arena/ArenaAuth.jsx")
+);
+const ArenaApp = lazy(() =>
+  import("./arena/ArenaApp.jsx")
+);
+const AdminArena = lazy(() =>
+  import("./arena/AdminArena.jsx")
+);
 const BookReview = lazy(() =>
   import("./component/BookReview")
 );
@@ -541,7 +553,27 @@ function App() {
         "authLogoutReason",
         reason
       );
-      window.location.replace(LOGIN_URL);
+      // Prep Buddy Arena members sign back in on the arena's own login
+      // (and return to the page they were on), not the admin login.
+      const onArena =
+        window.location.pathname.startsWith("/prep-buddy");
+      if (
+        onArena &&
+        window.location.pathname.startsWith(
+          "/prep-buddy/app"
+        )
+      ) {
+        sessionStorage.setItem(
+          "arena:returnTo",
+          window.location.pathname +
+            window.location.search
+        );
+      }
+      window.location.replace(
+        onArena
+          ? "/prep-buddy/signup?mode=login"
+          : LOGIN_URL
+      );
     },
     [dispatch]
   );
@@ -808,6 +840,30 @@ function App() {
           <Route
             path="/interview/:slug"
             element={<InterviewDetailPage />}
+          />
+          {/* ========================================
+              PREP BUDDY ARENA
+              Landing + signup are public. The member app
+              redirects to signup/login when signed out, and
+              every API call is authorised server-side.
+          ======================================== */}
+          <Route
+            path="/prep-buddy"
+            element={<ArenaLanding />}
+          />
+          <Route
+            path="/prep-buddy/signup"
+            element={<ArenaAuth />}
+          />
+          <Route
+            path="/prep-buddy/app/*"
+            element={<ArenaApp />}
+          />
+          <Route
+            path="/admin/arena"
+            element={requireAdmin(
+              <AdminArena />
+            )}
           />
           {/* ========================================
               RESOURCES

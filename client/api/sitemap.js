@@ -33,6 +33,7 @@ const STATIC_PAGES = [
   "/refund-policy",
   "/blogs",
   "/interviews",
+  "/prep-buddy",
 ];
 
 const xmlEsc = (s) =>

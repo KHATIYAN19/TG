@@ -35,7 +35,12 @@ export const authConfig = {
 
   maxOtpAttempts: intEnv("MAX_OTP_ATTEMPTS", 5),
   maxLoginAttempts: intEnv("MAX_LOGIN_ATTEMPTS", 5),
+  // Privileged accounts (admin / affiliate / employee) keep a short lock so
+  // an attacker cannot lock the owner out for a day.
   lockMinutes: intEnv("ACCOUNT_LOCK_MINUTES", 15),
+  // Members: 5 wrong passwords in a row blocks the account for 24 hours.
+  // The block lifts by itself when the time is up (no cron needed).
+  userLockMinutes: intEnv("USER_LOCK_MINUTES", 1440),
 
   secureCookies: process.env.COOKIE_SECURE !== "false",
 

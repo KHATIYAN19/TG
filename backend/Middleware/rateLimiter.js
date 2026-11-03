@@ -400,3 +400,61 @@ export const publicFormLimiter = createMiddleware(
     failClosed: false,
   }
 );
+
+/* =====================================================
+   PREP BUDDY ARENA
+===================================================== */
+
+// Signup / email-OTP endpoints: strict, per IP, fail closed.
+const arenaSignupRateLimit = createRateLimiter(
+  "arena-signup",
+  12,
+  "15 m"
+);
+
+export const arenaSignupLimiter = createMiddleware(
+  arenaSignupRateLimit,
+  {
+    failClosed: true,
+  }
+);
+
+// Authenticated write actions (requests, blocks, reports,
+// payments): per user, not per IP, so shared campus
+// networks are not punished.
+const arenaWriteRateLimit = createRateLimiter(
+  "arena-write",
+  30,
+  "1 m"
+);
+
+export const arenaWriteLimiter = createMiddleware(
+  arenaWriteRateLimit,
+  {
+    failClosed: false,
+    getIdentifier: (req) =>
+      req.user?.id || getClientIp(req),
+  }
+);
+
+// Forgot-password endpoints (request code + reset): per IP, fail closed.
+const arenaPasswordRateLimit = createRateLimiter(
+  "arena-password",
+  10,
+  "15 m"
+);
+
+export const arenaPasswordLimiter = createMiddleware(
+  arenaPasswordRateLimit,
+  {
+    failClosed: true,
+  }
+);
+
+// Signup / resend / forgot-password OTP emails: 5 codes per 24 hours,
+// counted separately per IP, per email and per mobile number.
+export const arenaOtpRateLimit = createRateLimiter(
+  "arena-otp",
+  5,
+  "24 h"
+);

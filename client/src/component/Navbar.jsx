@@ -3276,11 +3276,11 @@ const MockInterviewCTA = memo(
           "group inline-flex shrink-0",
           "items-center justify-center",
           "gap-2 rounded-xl",
-          "bg-orange-600 text-white",
-          "font-bold shadow-sm",
-          "shadow-orange-600/20",
+          "text-white font-bold shadow-sm",
+          isDark
+            ? "bg-orange-500 shadow-orange-500/30 hover:bg-orange-400"
+            : "bg-orange-600 shadow-orange-600/20 hover:bg-orange-700",
           "transition-all duration-150",
-          "hover:bg-orange-700",
           "focus-visible:outline-none",
           "focus-visible:ring-2",
           "focus-visible:ring-orange-400",
@@ -3294,12 +3294,12 @@ const MockInterviewCTA = memo(
             "ring-offset-[#16110f]"
         )}
       >
-        <CalendarCheck2
+        <Users
           size={compact ? 16 : 17}
         />
 
         <span className="whitespace-nowrap">
-          Mock Interviews
+          Prep Buddy
         </span>
 
         {!compact && (
@@ -3754,6 +3754,11 @@ const DesktopNavigation = memo(
             selected: interviewsActive,
           },
           {
+            title: "Mock Interviews",
+            path: ROUTES.mockInterviews,
+            selected: mockActive,
+          },
+          {
             title: "Resources",
             path: ROUTES.resources,
             selected:
@@ -3792,11 +3797,9 @@ const DesktopNavigation = memo(
           {isLearn && (
             <MockInterviewCTA
               isDark={isDark}
-              active={mockActive}
+              active={active("/prep-buddy")}
               onClick={() =>
-                onNavigate(
-                  ROUTES.mockInterviews
-                )
+                onNavigate("/prep-buddy")
               }
             />
           )}
@@ -3834,12 +3837,10 @@ const DesktopNavigation = memo(
 
               <MockInterviewCTA
                 isDark={isDark}
-                active={mockActive}
+                active={active("/prep-buddy")}
                 compact
                 onClick={() =>
-                  onNavigate(
-                    ROUTES.mockInterviews
-                  )
+                  onNavigate("/prep-buddy")
                 }
               />
             </>
@@ -4000,12 +4001,10 @@ const MobileHeader = memo(
             isDark={isDark}
             active={routeMatches(
               pathname,
-              ROUTES.mockInterviews
+              "/prep-buddy"
             )}
             onClick={() =>
-              onNavigate(
-                ROUTES.mockInterviews
-              )
+              onNavigate("/prep-buddy")
             }
           />
         </div>
@@ -4192,18 +4191,17 @@ const MobileDrawer = memo(
             <button
               type="button"
               onClick={() =>
-                navigateAndClose(
-                  ROUTES.mockInterviews
-                )
+                navigateAndClose("/prep-buddy")
               }
               className={cx(
                 "mb-3 flex w-full items-center",
                 "gap-3 rounded-2xl",
-                "bg-orange-600 px-4 py-4",
+                "px-4 py-4",
                 "text-left text-white",
-                "shadow-sm shadow-orange-600/20",
-                "transition-colors",
-                "hover:bg-orange-700"
+                "shadow-sm transition-colors",
+                isDark
+                  ? "bg-orange-500 shadow-orange-500/30 hover:bg-orange-400"
+                  : "bg-orange-600 shadow-orange-600/20 hover:bg-orange-700"
               )}
             >
               <span
@@ -4213,16 +4211,16 @@ const MobileDrawer = memo(
                   "rounded-xl bg-white/15"
                 )}
               >
-                <CalendarCheck2 size={21} />
+                <Users size={21} />
               </span>
 
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-extrabold">
-                  Mock Interviews
+                  Prep Buddy
                 </span>
 
                 <span className="mt-1 block text-xs text-orange-100">
-                  Practice technical interviews
+                  Find a partner to prepare with
                 </span>
               </span>
 
@@ -4265,6 +4263,16 @@ const MobileDrawer = memo(
                   onClick={onClose}
                 >
                   Interview Experiences
+                </DrawerLink>
+
+                <DrawerLink
+                  to={ROUTES.mockInterviews}
+                  icon={CalendarCheck2}
+                  isDark={isDark}
+                  active={active(ROUTES.mockInterviews)}
+                  onClick={onClose}
+                >
+                  Mock Interviews
                 </DrawerLink>
 
                 <DrawerLink

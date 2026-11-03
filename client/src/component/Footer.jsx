@@ -5,16 +5,13 @@ import React, {
 } from "react";
 
 import {
-  ArrowRight,
   ArrowUpRight,
   BookOpen,
-  CalendarDays,
   Code2,
   Headphones,
   Mail,
   Rocket,
   ShieldCheck,
-  Video,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -34,8 +31,6 @@ const GENERAL_EMAIL =
 const SUPPORT_EMAIL =
   "supporttargettrek@gmail.com";
 
-const MOCK_INTERVIEW_ROUTE =
-  "/mock-interviews";
 
 /* =========================================================
    NAVIGATION DATA
@@ -461,76 +456,6 @@ export default function Footer() {
                 : "repeating-linear-gradient(90deg,rgba(234,88,12,.035) 0px,rgba(234,88,12,.035) 1px,transparent 1px,transparent 44px)",
           }}
         />
-      </div>
-
-      {/* ===============================================
-          MOCK INTERVIEW CTA STRIP
-      =============================================== */}
-
-      <div
-        className={`
-          relative border-t
-          ${border}
-        `}
-      >
-        <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-          <div
-            className={`
-              relative overflow-hidden
-              rounded-[24px] border
-              p-6 sm:p-8
-              ${
-                isDark
-                  ? "border-orange-900/60 bg-gradient-to-r from-[#382114] to-[#241a14]"
-                  : "border-orange-200 bg-gradient-to-r from-[#ffedd5] to-[#fff6ed]"
-              }
-            `}
-          >
-            <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-orange-400/15 blur-3xl" />
-
-            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-600 text-white">
-                  <Video size={23} />
-                </div>
-
-                <div>
-                  <p className={`text-[11px] font-extrabold uppercase tracking-[0.15em] ${accentText}`}>
-                    Target Trek Mock Interviews
-                  </p>
-
-                  <h2 className="mt-2 text-xl font-black tracking-tight sm:text-2xl">
-                    Turn preparation into interview confidence.
-                  </h2>
-
-                  <p className={`mt-2 max-w-2xl text-sm leading-7 ${secondaryText}`}>
-                    Practice DSA, LLD, HLD, GenAI
-                    and project discussions in a
-                    live, personalized technical
-                    mock interview.
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                to={MOCK_INTERVIEW_ROUTE}
-                className="
-                  inline-flex min-h-[48px]
-                  shrink-0 items-center
-                  justify-center gap-2
-                  rounded-xl bg-orange-600
-                  px-6 py-3 text-sm
-                  font-extrabold text-white
-                  transition hover:bg-orange-700
-                "
-              >
-                <CalendarDays size={18} />
-                Book Mock Interview
-                <ArrowRight size={17} />
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ===============================================

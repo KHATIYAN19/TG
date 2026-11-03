@@ -437,6 +437,13 @@ const userSchema = new Schema(
       default: true,
     },
 
+    // Set when the user proves ownership of the email
+    // address (self-signup OTP). Null for legacy accounts.
+    emailVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+
     /* =========================================
        LOGIN INFORMATION
     ========================================= */

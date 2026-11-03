@@ -31,6 +31,7 @@ import {
 import {
   authKeys,
   assertUserAuthMatches,
+  getUserAuth,
   registerSessionAuth,
   revokeSessionAuth,
   invalidateUserAuth,
@@ -44,6 +45,42 @@ const fail = (res, status, message, code) =>
     message,
     ...(code ? { code } : {}),
   });
+
+const PRIVILEGED_ROLES = new Set([
+  "admin",
+  "affiliate",
+  "Employee",
+]);
+
+const lockMinutesFor = user =>
+  PRIVILEGED_ROLES.has(user.role)
+    ? authConfig.lockMinutes
+    : authConfig.userLockMinutes;
+
+const lockLabel = minutes =>
+  minutes >= 60 && minutes % 60 === 0
+    ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}`
+    : `${minutes} minute${minutes === 1 ? "" : "s"}`;
+
+// 429 with a machine code and the exact unlock time so the UI can
+// show a live countdown. The lock lifts by itself at lockedUntil.
+const lockedResponse = (res, lockedUntil) => {
+  const retryAfter = Math.max(
+    1,
+    Math.ceil((new Date(lockedUntil).getTime() - Date.now()) / 1000)
+  );
+
+  res.set("Retry-After", String(retryAfter));
+
+  return res.status(429).json({
+    success: false,
+    code: "ACCOUNT_LOCKED",
+    message:
+      "Too many wrong passwords. Your account is locked for security and will unlock automatically. You can also reset your password with an email code.",
+    lockedUntil: new Date(lockedUntil).toISOString(),
+    retryAfter,
+  });
+};
 
 const safeUser = user => {
   const obj = user.toObject
@@ -106,7 +143,7 @@ const sendLoginOtp = async (user, code) => {
   await sendMail(user.email, subject, text, html);
 };
 
-const createPendingSession = async (
+export const createPendingSession = async (
   user,
   req
 ) => UserSession.create({
@@ -152,7 +189,7 @@ const unlockOtp = async lock => {
   );
 };
 
-const completeLogin = async ({
+export const completeLogin = async ({
   req,
   res,
   user,
@@ -278,7 +315,7 @@ export const login = async (req, res) => {
       user.lockedUntil &&
       user.lockedUntil > new Date()
     ) {
-      return fail(res, 429, "Account temporarily locked");
+      return lockedResponse(res, user.lockedUntil);
     }
 
     if (!eligible(user)) {
@@ -291,38 +328,73 @@ export const login = async (req, res) => {
     );
 
     if (!matched) {
+      // Atomic increment so parallel guesses cannot slip past the limit.
+      const updated = await User.findOneAndUpdate(
+        { _id: user._id },
+        { $inc: { failedLoginAttempts: 1 } },
+        { new: true }
+      ).select("+failedLoginAttempts");
+
       const attempts =
-        (user.failedLoginAttempts || 0) + 1;
+        updated?.failedLoginAttempts ?? 1;
 
       const shouldLock =
         attempts >= authConfig.maxLoginAttempts;
 
-      await User.updateOne(
-        { _id: user._id },
-        {
-          $set: {
-            failedLoginAttempts: shouldLock
-              ? 0
-              : attempts,
-            lockedUntil: shouldLock
-              ? minutesFromNow(authConfig.lockMinutes)
-              : null,
-          },
-        }
-      );
+      let lockedUntil = null;
 
       if (shouldLock) {
+        lockedUntil = minutesFromNow(lockMinutesFor(user));
+
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              failedLoginAttempts: 0,
+              lockedUntil,
+            },
+          }
+        );
+
         await invalidateUserAuth(user._id);
       }
 
       await logActivity({
         req,
         user: user._id,
-        action: "LOGIN_FAILED",
+        action: shouldLock
+          ? "ACCOUNT_LOCKED"
+          : "LOGIN_FAILED",
         result: "failure",
       });
 
-      return fail(res, 401, "Invalid credentials");
+      if (shouldLock) {
+        return lockedResponse(res, lockedUntil);
+      }
+
+      const attemptsLeft =
+        authConfig.maxLoginAttempts - attempts;
+
+      return res.status(401).json({
+        success: false,
+        code: "INVALID_CREDENTIALS",
+        message:
+          attemptsLeft <= 2
+            ? `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left before your account is locked for ${lockLabel(lockMinutesFor(user))}.`
+            : "Invalid credentials",
+        attemptsLeft,
+      });
+    }
+
+    // A lock deletes the cached auth state so no session can be used
+    // while locked. Once the lock has expired and the password is right,
+    // rebuild it from MongoDB, otherwise the member could never sign in
+    // again after the automatic unlock.
+    if (
+      user.lockedUntil &&
+      !(await getUserAuth(user._id))
+    ) {
+      await provisionUserAuth(user);
     }
 
     await assertUserAuthMatches(user);
@@ -353,7 +425,12 @@ export const login = async (req, res) => {
     //     session,
     //   });
     // }
+    // No OTP at login: a correct password signs the user in.
+    // (Email codes are used only to verify a NEW signup.)
+    // To bring login OTPs back for everyone, set LOGIN_OTP_ENABLED=true.
+    // Admin and affiliate accounts have always skipped the OTP.
     if (
+      process.env.LOGIN_OTP_ENABLED !== "true" ||
       user.role === "admin" ||
       user.role === "affiliate"
     ) {

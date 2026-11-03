@@ -43,6 +43,7 @@ import ReactDOM from "react-dom/client";
 
 import App from "./App.jsx";
 import "./index.css";
+import "./styles/forms.css";
 
 // Components
 import ScrollTop from "./component/ScrollTop.jsx";
