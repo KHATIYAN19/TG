@@ -71,6 +71,7 @@ import {
 
 import authRoutes from "./routes/authRoutes.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
+import mailSettingsRoutes from "./routes/mailSettingsRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
 /* =====================================================
@@ -488,6 +489,7 @@ app.use(
 
 app.use("/api/arena", arenaRoutes);
 app.use("/api/admin/arena", arenaAdminRoutes);
+app.use("/api/admin/mail", mailSettingsRoutes);
 
 /* =====================================================
    EXISTING PAYMENT ROUTES

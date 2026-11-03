@@ -106,6 +106,9 @@ const ArenaApp = lazy(() =>
 const AdminArena = lazy(() =>
   import("./arena/AdminArena.jsx")
 );
+const AdminMailSettings = lazy(() =>
+  import("./Admin/AdminMailSettings.jsx")
+);
 const BookReview = lazy(() =>
   import("./component/BookReview")
 );
@@ -863,6 +866,12 @@ function App() {
             path="/admin/arena"
             element={requireAdmin(
               <AdminArena />
+            )}
+          />
+          <Route
+            path="/admin/mail"
+            element={requireAdmin(
+              <AdminMailSettings />
             )}
           />
           {/* ========================================

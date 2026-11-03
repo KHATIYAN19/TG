@@ -19,6 +19,13 @@ export const adminHttp = axios.create({
   timeout: 20000,
 });
 
+// Admin-only: choose the email provider (Mailtrap / Resend) at runtime.
+export const mailHttp = axios.create({
+  baseURL: `${API_ROOT}/api/admin/mail`,
+  withCredentials: true,
+  timeout: 30000,
+});
+
 const getToken = () => store.getState().auth.token || localStorage.getItem("token") || "";
 
 /*
@@ -61,7 +68,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp]) {
+for (const instance of [http, adminHttp, mailHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
@@ -69,7 +76,7 @@ for (const instance of [http, adminHttp]) {
       return config;
     }
     // No session: don't even send a protected request that can only fail.
-    if (instance === adminHttp || !isPublicCall(config)) return Promise.reject(sessionError());
+    if (instance !== http || !isPublicCall(config)) return Promise.reject(sessionError());
     return config;
   });
 

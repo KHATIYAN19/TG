@@ -40,6 +40,7 @@ process.env.UPSTASH_REDIS_REST_URL = `http://127.0.0.1:${redisServer.address().p
 process.env.UPSTASH_REDIS_REST_TOKEN = "fake";
 process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.ARENA_PAYMENT_GATEWAY = "cashfree";
+process.env.MAILTRAP_TOKEN = "fake-token-for-tests";   // Mailtrap "configured" but will fail: no real account
 
 const { default: express } = await import(`${B}/node_modules/express/index.js`);
 const { default: cookieParser } = await import(`${B}/node_modules/cookie-parser/index.js`);
@@ -76,6 +77,8 @@ const otpHits = new Map();                                 // same contract as U
 arenaOtpRateLimit.limit = async (key) => { const l = (otpHits.get(key) ?? []).filter((x) => Date.now() - x < 86400000); if (l.length >= 5) return { success: false, reset: l[0] + 86400000 }; l.push(Date.now()); otpHits.set(key, l); return { success: true, reset: Date.now() + 86400000 }; };
 app.use("/api/arena", arenaRouter);
 app.use("/api/admin/arena", adminRouter);
+const mailRouter = await m("routes/mailSettingsRoutes.js");
+app.use("/api/admin/mail", mailRouter);
 const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
 const BASE = `http://127.0.0.1:${server.address().port}`;
 
@@ -479,6 +482,100 @@ await t("OTP LIMIT: signup codes and reset codes are counted in SEPARATE buckets
   assert.equal(otpHits.has(`email:${u.email}`), false, "reset must not spend the signup quota");
 });
 console.error = origLog;
+
+
+/* ================= MAIL PROVIDER: runtime switch (Mailtrap / Resend) ================= */
+const origFetch = globalThis.fetch;
+const resendCalls = []; let resendReply = { status: 200, body: { id: "re_test_123" } };
+globalThis.fetch = async (url, init) => {
+  if (String(url).startsWith("https://api.resend.com/")) {
+    resendCalls.push({ url: String(url), headers: init.headers, body: JSON.parse(init.body) });
+    return new Response(JSON.stringify(resendReply.body), { status: resendReply.status, headers: { "content-type": "application/json" } });
+  }
+  return origFetch(url, init);
+};
+const origLogs = [console.log, console.warn, console.error]; console.log = console.warn = console.error = () => {};
+const { default: sendMail } = await import(`${B}/utils/MailSender.js`);
+const MailSettings = await m("models/MailSettings.js");
+const { getMailSettings } = await import(`${B}/services/mail/mailSettings.js`);
+const mailAdmin = await makeUser("MailAdmin", { paid: null, role: "admin" });
+const mailNormal = await makeUser("MailNormal", { paid: null });
+const MAIL = "/api/admin/mail";
+
+await t("MAIL API: signed-out → 401, member → 403 (admin only)", async () => {
+  assert.equal((await api("GET", MAIL)).status, 401);
+  assert.equal((await api("GET", MAIL, { token: mailNormal.token })).status, 403);
+  assert.equal((await api("PUT", MAIL, { token: mailNormal.token, body: { provider: "resend" } })).status, 403);
+  assert.equal((await api("POST", `${MAIL}/test`, { token: mailNormal.token, body: { provider: "resend" } })).status, 403);
+});
+await t("MAIL: default provider is Mailtrap (current behaviour unchanged)", async () => {
+  const r = await api("GET", MAIL, { token: mailAdmin.token });
+  assert.equal(r.status, 200); assert.equal(r.body.data.provider, "mailtrap"); assert.equal(r.body.data.fallbackEnabled, true);
+  assert.equal(r.body.data.providers.mailtrap.configured, true);
+});
+await t("MAIL: cannot select Resend while RESEND_API_KEY is missing", async () => {
+  delete process.env.RESEND_API_KEY;
+  const r = await api("PUT", MAIL, { token: mailAdmin.token, body: { provider: "resend" } });
+  assert.equal(r.status, 400); assert.equal(r.body.code, "PROVIDER_NOT_CONFIGURED");
+});
+await t("MAIL: validation rejects unknown providers / empty body", async () => {
+  process.env.RESEND_API_KEY = "re_fake_key";
+  assert.equal((await api("PUT", MAIL, { token: mailAdmin.token, body: { provider: "sendgrid" } })).status, 400);
+  assert.equal((await api("PUT", MAIL, { token: mailAdmin.token, body: {} })).status, 400);
+});
+await t("MAIL: admin switches to Resend at runtime; sendMail() then goes through Resend with the SAME arguments", async () => {
+  const r = await api("PUT", MAIL, { token: mailAdmin.token, body: { provider: "resend" } });
+  assert.equal(r.status, 200); assert.equal(r.body.data.provider, "resend");
+  assert.equal(r.body.data.history[0].from, "mailtrap"); assert.equal(r.body.data.history[0].to, "resend");
+  resendCalls.length = 0;
+  const info = await sendMail("a@x.com", "Subj", "plain", "<b>html</b>", { replyTo: "help@x.com", attachments: [{ filename: "invite.ics", content: Buffer.from("BEGIN:VCALENDAR").toString("base64"), contentType: "text/calendar" }, { filename: "book.pdf", content: Buffer.from("PDFDATA"), contentType: "application/pdf" }] });
+  assert.equal(info.messageId, "re_test_123"); assert.equal(info.provider, "resend");
+  const c = resendCalls[0];
+  assert.equal(c.headers.Authorization, "Bearer re_fake_key");
+  assert.deepEqual(c.body.to, ["a@x.com"]); assert.equal(c.body.subject, "Subj"); assert.equal(c.body.text, "plain"); assert.equal(c.body.html, "<b>html</b>"); assert.equal(c.body.reply_to, "help@x.com");
+  assert.match(c.body.from, /no-reply@targettrek\.in/);
+  assert.equal(c.body.attachments[0].content, Buffer.from("BEGIN:VCALENDAR").toString("base64"), "ICS stays base64 (not double-encoded)");
+  assert.equal(Buffer.from(c.body.attachments[1].content, "base64").toString(), "PDFDATA", "Buffers become base64");
+});
+await t("MAIL: change reaches the sender within the cache window and is persisted in MongoDB", async () => {
+  assert.equal((await MailSettings.findOne({ key: "global" })).provider, "resend");
+  assert.equal((await getMailSettings()).provider, "resend");
+});
+await t("MAIL: Resend fails + fallback ON → mail still delivered via Mailtrap attempt, error from primary surfaces only if both fail", async () => {
+  resendReply = { status: 429, body: { name: "daily_quota_exceeded", message: "Daily quota exceeded" } };
+  resendCalls.length = 0;
+  // Mailtrap has a fake token → it fails too, so both fail and the PRIMARY (Resend) error is reported.
+  await assert.rejects(sendMail("a@x.com", "S", "t", "<p>h</p>"), (e) => /quota/i.test(e.message));
+  assert.equal(resendCalls.filter((c) => c.body.subject === "S").length, 1);   // other calls = earlier fire-and-forget mails falling over, which is the feature working
+});
+await t("MAIL: fallback ON from Mailtrap → falls over to Resend when Mailtrap is rejected/limited", async () => {
+  await api("PUT", MAIL, { token: mailAdmin.token, body: { provider: "mailtrap", fallbackEnabled: true } });
+  resendReply = { status: 200, body: { id: "re_fallback_1" } }; resendCalls.length = 0;
+  const info = await sendMail("a@x.com", "S", "t", "<p>h</p>");
+  assert.equal(info.messageId, "re_fallback_1"); assert.equal(resendCalls.filter((c) => c.body.subject === "S").length, 1);
+  const st = (await api("GET", MAIL, { token: mailAdmin.token })).body.data.stats;
+  assert.ok(st.fallbacks >= 1 && st.mailtrap.failed >= 1);
+});
+await t("MAIL: fallback OFF → the chosen provider's error is thrown, other provider NOT tried", async () => {
+  await api("PUT", MAIL, { token: mailAdmin.token, body: { provider: "mailtrap", fallbackEnabled: false } });
+  resendCalls.length = 0;
+  await assert.rejects(sendMail("a@x.com", "S", "t", "<p>h</p>"));
+  assert.equal(resendCalls.filter((c) => c.body.subject === "S").length, 0);
+});
+await t("MAIL: test-send goes through ONE provider and reports success / the provider's own error", async () => {
+  resendReply = { status: 200, body: { id: "re_test_ok" } };
+  const ok = await api("POST", `${MAIL}/test`, { token: mailAdmin.token, body: { provider: "resend", to: "me@x.com" } });
+  assert.equal(ok.status, 200); assert.equal(ok.body.data.messageId, "re_test_ok"); assert.equal(ok.body.data.to, "me@x.com");
+  resendReply = { status: 403, body: { name: "validation_error", message: "The targettrek.in domain is not verified" } };
+  const bad = await api("POST", `${MAIL}/test`, { token: mailAdmin.token, body: { provider: "resend", to: "me@x.com" } });
+  assert.equal(bad.status, 502); assert.equal(bad.body.code, "TEST_SEND_FAILED"); assert.match(bad.body.message, /not verified/);
+});
+await t("MAIL: removing the Resend key makes the page refuse Resend again and sendMail with Mailtrap unchanged", async () => {
+  delete process.env.RESEND_API_KEY;
+  const r = await api("POST", `${MAIL}/test`, { token: mailAdmin.token, body: { provider: "resend" } });
+  assert.equal(r.status, 400);
+});
+globalThis.fetch = origFetch; [console.log, console.warn, console.error] = origLogs;
 
 console.log("\n" + results.map((r) => `${r[0]}  ${r[1]}${r[2] ? "\n      → " + r[2] : ""}`).join("\n"));
 const failed = results.filter((r) => r[0] === "FAIL").length;

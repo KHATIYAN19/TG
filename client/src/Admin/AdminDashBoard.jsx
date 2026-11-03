@@ -127,6 +127,18 @@ const PRIORITY_ROUTES = [
     priority: 5,
   },
   {
+    path: "/admin/mail",
+    name: "Email Provider",
+    icon: Mail,
+    description:
+      "Choose whether the site sends email through Mailtrap or Resend, switch instantly, enable automatic failover and send a test email.",
+    category: "Interviews",
+    keywords:
+      "email mail provider mailtrap resend smtp limit failover test",
+    featured: false,
+    priority: 6,
+  },
+  {
     path: "/admin/arena",
     name: "Prep Buddy Arena",
     icon: Users,
