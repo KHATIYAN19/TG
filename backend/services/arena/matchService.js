@@ -8,13 +8,85 @@ import User from "../../models/User.js";
 import { ArenaError } from "./errors.js";
 import { runInTransaction } from "./transaction.js";
 import { emitToUser, disconnectUser } from "./hub.js";
-import { sendMatchedMail } from "./mail.js";
+import { sendMatchedMail, sendUnmatchedMail } from "./mail.js";
 
 const opts = (session) => (session ? { session } : {});
 
-const emailsFor = async (userIds) => {
-  const users = await User.find({ _id: { $in: userIds } }).select("email").lean();
-  return users.map((u) => u.email);
+/*
+  Everything the match emails need, per member: their account name + email, their
+  buddy's ANONYMOUS id and public focus, and how many matches their entry has left.
+  Real names / contact details of the buddy are never put in an email.
+*/
+const loadMailContext = async (match) => {
+  const [users, profiles, entries] = await Promise.all([
+    User.find({ _id: { $in: match.users } }).select("name email").lean(),
+    ArenaProfile.find({ _id: { $in: match.profiles } }).select("user alias topics level status").lean(),
+    ArenaEntry.find({ _id: { $in: match.entries.filter(Boolean) } }).select("user matchesAllowed matchesUsed").lean(),
+  ]);
+
+  const userBy = new Map(users.map((u) => [String(u._id), u]));
+  const entryBy = new Map(entries.map((e) => [String(e.user), e]));
+
+  return profiles
+    .map((mine) => {
+      const buddy = profiles.find((p) => String(p.user) !== String(mine.user));
+      const entry = entryBy.get(String(mine.user));
+      const account = userBy.get(String(mine.user));
+      return {
+        userId: String(mine.user),
+        profileId: String(mine._id),
+        email: account?.email,
+        name: account?.name,
+        profileStatus: mine.status,
+        buddyAlias: buddy?.alias,
+        buddyTopics: buddy?.topics ?? [],
+        buddyLevel: buddy?.level,
+        matchesLeft: entry ? Math.max(0, entry.matchesAllowed - entry.matchesUsed) : null,
+      };
+    })
+    .filter((c) => c.email);
+};
+
+const notifyMatched = async (match) => {
+  const context = await loadMailContext(match);
+  for (const c of context) {
+    sendMatchedMail(c.email, {
+      name: c.name,
+      buddyAlias: c.buddyAlias,
+      buddyTopics: c.buddyTopics,
+      buddyLevel: c.buddyLevel,
+      matchesLeft: c.matchesLeft,
+    });
+  }
+};
+
+/*
+  Tell both members their partnership ended. The wording depends on who ended it,
+  from EACH member's point of view, and never reveals a block or a report to the
+  other member.
+*/
+const notifyEnded = async (match, { byUserId, reason, restore, skipUserIds = [] }) => {
+  const context = await loadMailContext(match);
+
+  for (const c of context) {
+    if (skipUserIds.map(String).includes(c.userId)) continue;
+
+    const actor = byUserId && String(byUserId) === c.userId;
+    const variant =
+      reason === "user_ended" ? (actor ? "ended_by_you" : "ended_by_buddy")
+      : reason === "blocked" ? (actor ? "blocked_by_you" : "ended")
+      : reason === "admin_dissolved" ? "ended_by_team"
+      : "ended";
+
+    sendUnmatchedMail(c.email, {
+      name: c.name,
+      buddyAlias: c.buddyAlias,
+      variant,
+      matchesLeft: c.matchesLeft,
+      backInArena: c.profileStatus === "active",
+      notCounted: restore.has(c.profileId),
+    });
+  }
 };
 
 /**
@@ -121,7 +193,7 @@ export const acceptRequest = async ({ requestId, userId }) => {
   for (const uid of match.users) {
     emitToUser(uid, { type: "matched", matchId: String(match._id) });
   }
-  emailsFor(match.users).then((list) => list.forEach(sendMatchedMail));
+  notifyMatched(match).catch((error) => console.error("[arena:mail] matched context failed:", error.message));
 
   return match;
 };
@@ -134,7 +206,7 @@ export const acceptRequest = async ({ requestId, userId }) => {
  * Everyone returns to the arena if their entry still has matches left,
  * otherwise to `draft` (a new entry is needed to connect again).
  */
-export const endMatch = async ({ matchId, byUserId = null, reason, restoreProfileIds = [] }) => {
+export const endMatch = async ({ matchId, byUserId = null, reason, restoreProfileIds = [], skipEmailUserIds = [] }) => {
   const restore = new Set(restoreProfileIds.map(String));
 
   const ended = await runInTransaction(async (session) => {
@@ -199,6 +271,10 @@ export const endMatch = async ({ matchId, byUserId = null, reason, restoreProfil
     emitToUser(uid, { type: "match_ended", matchId: String(ended._id), reason });
     disconnectUser(uid, 4004, "Match ended");
   }
+
+  notifyEnded(ended, { byUserId, reason, restore, skipUserIds: skipEmailUserIds }).catch((error) =>
+    console.error("[arena:mail] ended context failed:", error.message)
+  );
 
   return ended;
 };

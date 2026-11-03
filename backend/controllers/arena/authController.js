@@ -11,6 +11,7 @@ import { createPendingSession, completeLogin } from "../authController.js";
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { sendSignupOtp, sendPasswordResetOtp } from "../../services/arena/mail.js";
 import { enforceOtpLimit } from "../../services/arena/otpLimit.js";
+import { assertNotLocked, recordAttempt, clearEmailCounter } from "../../services/authLocks.js";
 import { signupSchema, verifySignupSchema, resendSignupSchema, forgotPasswordSchema, resetPasswordSchema } from "./schemas.js";
 
 /*
@@ -48,12 +49,20 @@ const assertNotRegistered = async ({ email, mobile }) => {
 
 export const signup = handle(async (req, res) => {
   const data = signupSchema.parse(req.body);
+
+  // 10 wrong codes / resends per 24 h locks this email and this IP for 24 h.
+  const who = { email: data.email, ip: req.ip };
+  await assertNotLocked("signup", who);
+
   await assertNotRegistered(data);
 
   const existing = await redis.get(pendingKey(data.email));
   if (existing && Date.now() - existing.sentAt < RESEND_COOLDOWN_MS) {
     throw new ArenaError(429, "OTP_COOLDOWN", "Please wait a minute before requesting another code.", { retryAfter: cooldownLeft(existing) });
   }
+
+  // Submitting the form again while a code is already pending is a resend.
+  if (existing) await recordAttempt("signup", who);
 
   // 5 codes / 24 h per IP, email and mobile. Counted only when we really send.
   await enforceOtpLimit({ ip: req.ip, email: data.email, mobile: data.mobile });
@@ -88,14 +97,21 @@ export const signup = handle(async (req, res) => {
 export const resendSignupOtp = handle(async (req, res) => {
   const { email } = resendSignupSchema.parse(req.body);
 
+  const who = { email, ip: req.ip };
+  await assertNotLocked("signup", who);
+
   const pending = await redis.get(pendingKey(email));
   if (!pending) {
+    await recordAttempt("signup", who);
     throw new ArenaError(404, "SIGNUP_EXPIRED", "Your signup session expired. Please start again.");
   }
 
+  // Too-early clicks are answered with the timer and are not counted.
   if (Date.now() - pending.sentAt < RESEND_COOLDOWN_MS) {
     throw new ArenaError(429, "OTP_COOLDOWN", "Please wait a minute before requesting another code.", { retryAfter: cooldownLeft(pending) });
   }
+
+  await recordAttempt("signup", who);
   if (pending.resends >= MAX_RESENDS) {
     await redis.del(pendingKey(email));
     throw new ArenaError(429, "OTP_RESEND_LIMIT", "Too many codes requested. Please start again.");
@@ -118,18 +134,25 @@ export const resendSignupOtp = handle(async (req, res) => {
 export const verifySignup = handle(async (req, res) => {
   const { email, otp } = verifySignupSchema.parse(req.body);
 
+  const who = { email, ip: req.ip };
+  await assertNotLocked("signup", who);
+
+  // Every failed check below counts toward the 24-hour lock (10 per day).
   const pending = await redis.get(pendingKey(email));
   if (!pending) {
+    await recordAttempt("signup", who);
     throw new ArenaError(404, "SIGNUP_EXPIRED", "Your code expired. Please sign up again.");
   }
 
   if (pending.attempts >= authConfig.maxOtpAttempts) {
     await redis.del(pendingKey(email));
+    await recordAttempt("signup", who);
     throw new ArenaError(429, "OTP_ATTEMPTS", "Too many wrong attempts. Please sign up again.");
   }
 
   if (!secureEqual(otpHash(email, otp), pending.otpHash)) {
     await redis.set(pendingKey(email), { ...pending, attempts: pending.attempts + 1 }, { ex: PENDING_TTL });
+    await recordAttempt("signup", who);
     throw new ArenaError(400, "OTP_INVALID", "That code isn't correct.");
   }
 
@@ -158,6 +181,8 @@ export const verifySignup = handle(async (req, res) => {
     }
     throw error;
   }
+
+  await clearEmailCounter("signup", email);
 
   const user = await User.findById(created._id).select("+tokenVersion");
   await provisionUserAuth(user);
@@ -201,12 +226,19 @@ const BAD_CODE = "That code is invalid or has expired. Request a new one.";
 export const forgotPassword = handle(async (req, res) => {
   const { email } = forgotPasswordSchema.parse(req.body);
 
+  // 5 wrong codes / resends per 24 h locks this email and this IP for 24 h.
+  const who = { email, ip: req.ip };
+  await assertNotLocked("reset", who);
+
   const existing = await redis.get(resetKey(email));
   if (existing && Date.now() - existing.sentAt < RESEND_COOLDOWN_MS) {
     throw new ArenaError(429, "OTP_COOLDOWN", "Please wait a minute before requesting another code.", {
       retryAfter: cooldownLeft(existing),
     });
   }
+
+  // A code already exists for this email, so this request is a RESEND (counted).
+  if (existing) await recordAttempt("reset", who);
 
   // 5 codes / 24 h per IP and per email, counted whether or not the account exists.
   await enforceOtpLimit({ ip: req.ip, email, scope: "reset" });
@@ -245,18 +277,25 @@ export const forgotPassword = handle(async (req, res) => {
 export const resetPassword = handle(async (req, res) => {
   const { email, otp, password } = resetPasswordSchema.parse(req.body);
 
+  const who = { email, ip: req.ip };
+  await assertNotLocked("reset", who);
+
+  // Every failed code check counts toward the 24-hour lock (5 per day).
   const record = await redis.get(resetKey(email));
   if (!record || !record.userId) {
+    await recordAttempt("reset", who);
     throw new ArenaError(400, "OTP_INVALID", BAD_CODE);
   }
 
   if (record.attempts >= authConfig.maxOtpAttempts) {
     await redis.del(resetKey(email));
+    await recordAttempt("reset", who);
     throw new ArenaError(429, "OTP_ATTEMPTS", "Too many wrong attempts. Please request a new code.");
   }
 
   if (!secureEqual(otpHash(`reset:${email}`, otp), record.otpHash)) {
     await redis.set(resetKey(email), { ...record, attempts: record.attempts + 1 }, { ex: RESET_TTL });
+    await recordAttempt("reset", who);
     throw new ArenaError(400, "OTP_INVALID", "That code isn't correct.", {
       attemptsLeft: Math.max(0, authConfig.maxOtpAttempts - record.attempts - 1),
     });
@@ -291,6 +330,8 @@ export const resetPassword = handle(async (req, res) => {
       lockedUntil: null,
     },
   });
+
+  await clearEmailCounter("reset", email);
 
   await logActivity({
     req,

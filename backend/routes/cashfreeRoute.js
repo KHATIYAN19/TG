@@ -1,4 +1,5 @@
 import express from "express";
+import * as PB from "../Middleware/publicBudgets.js";
 import {
     createCashfreePayment,
     cashfreeReturn,
@@ -10,11 +11,14 @@ const router = express.Router();
 
 router.post(
     "/create",
+    PB.payCreateHourly,
+    PB.payCreateDaily,
     createCashfreePayment
 );
 
 router.get(
     "/return",
+    PB.payVerifyHourly,
     cashfreeReturn
 );
 
@@ -25,6 +29,7 @@ router.post(
 
 router.get(
     "/status/:orderId",
+    PB.payStatusTenMin,
     getCashfreePaymentStatus
 );
 

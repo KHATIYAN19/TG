@@ -101,7 +101,9 @@ const createRateLimiter = (
       requests,
       window
     ),
-    analytics: true,
+    // Analytics would add extra Redis commands to EVERY limited request;
+    // nothing reads them, so it is off to keep Redis cost down.
+    analytics: false,
     prefix: `targettrek:ratelimit:${prefix}`,
   });
 };

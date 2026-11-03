@@ -2,6 +2,8 @@ import User from "../../models/User.js";
 import { audit } from "../../models/arena/ArenaAuditLog.js";
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { purgeChat, purgeMessage, purgeRequest, purgeMatch, purgeEntry, purgeUser } from "../../services/arena/purge.js";
+import { clearLocks } from "../../services/authLocks.js";
+import { syncUserAuth } from "../../services/authStateService.js";
 import { objectId } from "./schemas.js";
 
 /* Admin: permanent deletes. Each one is written to the activity log. */
@@ -116,3 +118,41 @@ export const deleteMember = handle(async (req, res) => {
 
   res.json({ success: true, message: "Member and all their data permanently deleted", data: counts });
 }, "Unable to delete the member");
+
+/*
+  Lift the 24-hour locks for a customer who got caught by them (support tool):
+  sign-up / password-reset / login-by-network locks for an email and/or an IP,
+  and the account's own "5 wrong passwords" lock.
+*/
+export const clearLocksFor = handle(async (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase().slice(0, 120) : "";
+  const ip = typeof req.body?.ip === "string" ? req.body.ip.trim().slice(0, 64) : "";
+
+  if (!email && !ip) {
+    throw new ArenaError(400, "NOTHING_TO_UNLOCK", "Enter an email address or an IP address.");
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new ArenaError(400, "BAD_EMAIL", "Enter a valid email address.");
+  }
+
+  const keys = await clearLocks({ email, ip });
+
+  let accountUnlocked = false;
+  if (email) {
+    const user = await User.findOne({ email }).select("_id").lean();
+    if (user) {
+      await User.collection.updateOne({ _id: user._id }, { $set: { failedLoginAttempts: 0, lockedUntil: null } });
+      await syncUserAuth(user._id).catch(() => {});
+      accountUnlocked = true;
+    }
+  }
+
+  await audit(req.user.id, "locks_cleared", {
+    targetType: "lock",
+    targetId: email || ip,
+    summary: `Lifted locks for ${[email, ip].filter(Boolean).join(" and ")}`,
+    meta: { email: email || null, ip: ip || null, keys, accountUnlocked },
+  });
+
+  res.json({ success: true, message: "Locks lifted. They can try again now.", data: { keys, accountUnlocked } });
+}, "Unable to lift the locks");

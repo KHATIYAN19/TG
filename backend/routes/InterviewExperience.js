@@ -27,6 +27,7 @@ import {
   isAdmin,
 } from "../Middleware/auth.js";
 import { publicFormLimiter } from "../Middleware/rateLimiter.js";
+import * as PB from "../Middleware/publicBudgets.js";
 
 const router =
   express.Router();
@@ -49,6 +50,7 @@ const router =
 router.post(
   "/",
   publicFormLimiter,
+  PB.formDaily,
   addInterviewExperience
 );
 

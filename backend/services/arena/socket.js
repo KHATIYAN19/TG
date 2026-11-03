@@ -42,6 +42,16 @@ const REVALIDATE_MS = 60_000;
 const MAX_PAYLOAD = 4 * 1024;
 const RATE_WINDOW_MS = 10_000;
 const RATE_MAX = 12;
+// Per-member daily ceiling on live chat messages (in memory: free, resets by itself).
+const DAILY_MAX = Number(process.env.ARENA_CHAT_DAILY_LIMIT) > 0 ? Number(process.env.ARENA_CHAT_DAILY_LIMIT) : 2000;
+const daily = new Map(); // userId -> { day, count }
+const underDailyCap = (userId) => {
+  const day = new Date().toISOString().slice(0, 10);
+  const entry = daily.get(userId);
+  if (!entry || entry.day !== day) { daily.set(userId, { day, count: 1 }); return true; }
+  entry.count += 1;
+  return entry.count <= DAILY_MAX;
+};
 
 /* Reuse the REST auth middleware for the first-frame token check. */
 const authenticate = (token) =>
@@ -140,6 +150,7 @@ export const attachArenaSocket = (server, { isOriginAllowed = () => true, path =
       ctx.sent = ctx.sent.filter((t) => now - t < RATE_WINDOW_MS);
       if (ctx.sent.length >= RATE_MAX) return fail(ws, "RATE_LIMITED", "You're sending messages too fast");
       ctx.sent.push(now);
+      if (!underDailyCap(String(ctx.userId))) return fail(ws, "DAILY_LIMIT", "You've reached today's chat message limit. It resets tomorrow.");
 
       const text = clean(frame.text);
       if (!text) return;

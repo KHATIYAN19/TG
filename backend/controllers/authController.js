@@ -28,6 +28,10 @@ import {
   logActivity,
 } from "../utils/authUtils.js";
 
+import { ArenaError } from "../services/arena/errors.js";
+import { otpEmail, supportEmail } from "../services/mail/templates.js";
+import { assertNotLocked, recordAttempt } from "../services/authLocks.js";
+
 import {
   authKeys,
   assertUserAuthMatches,
@@ -82,6 +86,34 @@ const lockedResponse = (res, lockedUntil) => {
   });
 };
 
+/*
+  NETWORK-WIDE LOGIN LOCK
+  Besides the per-account lock (5 wrong passwords = 24 h), a network (IP) that
+  racks up too many failed logins across ANY accounts is locked for 24 h
+  (LOGIN_IP_FAIL_LIMIT, default 30/day). Stops password spraying.
+*/
+const sendIpLock = (res, error) => {
+  res.set("Retry-After", String(error.extra?.retryAfter || 86400));
+  return res.status(error.status).json({
+    success: false,
+    code: error.code,
+    message: error.message,
+    ...error.extra,
+  });
+};
+
+// Count one failed login for this IP. Returns the lock error if THIS failure
+// tipped the IP over the limit, otherwise null.
+const countIpFailure = async req => {
+  try {
+    await recordAttempt("login_ip", { ip: req.ip });
+    return null;
+  } catch (error) {
+    if (error instanceof ArenaError && error.code === "LOGIN_IP_LOCKED") return error;
+    throw error;
+  }
+};
+
 const safeUser = user => {
   const obj = user.toObject
     ? user.toObject()
@@ -123,24 +155,16 @@ const eligible = user =>
   !user.mustChangePassword;
 
 const sendLoginOtp = async (user, code) => {
-  const subject = "Target Trek Login OTP";
+  const { subject, text, html } = otpEmail({
+    purpose: "login",
+    name: user.name,
+    otp: code,
+    minutes: authConfig.otpMinutes,
+  });
 
-  const text =
-    `Your Target Trek login OTP is ${code}. ` +
-    `It expires in ${authConfig.otpMinutes} minutes.`;
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;padding:24px">
-      <h2>Target Trek Login Verification</h2>
-      <p>Your one-time verification code is:</p>
-      <h1 style="letter-spacing:6px">${code}</h1>
-      <p>Expires in ${authConfig.otpMinutes} minutes.</p>
-      <p>If you did not attempt to log in,
-      you can ignore this email.</p>
-    </div>
-  `;
-
-  await sendMail(user.email, subject, text, html);
+  await sendMail(user.email, subject, text, html, {
+    replyTo: supportEmail(),
+  });
 };
 
 export const createPendingSession = async (
@@ -305,10 +329,20 @@ export const login = async (req, res) => {
       return fail(res, 400, "Invalid login request");
     }
 
+    try {
+      await assertNotLocked("login_ip", { ip: req.ip });
+    } catch (error) {
+      if (error instanceof ArenaError) return sendIpLock(res, error);
+      throw error;
+    }
+
     const user = await findLoginUser(identifier);
 
     if (!user) {
-      return fail(res, 401, "Invalid credentials");
+      const tipped = await countIpFailure(req);
+      return tipped
+        ? sendIpLock(res, tipped)
+        : fail(res, 401, "Invalid credentials");
     }
 
     if (
@@ -368,8 +402,14 @@ export const login = async (req, res) => {
         result: "failure",
       });
 
+      const ipTipped = await countIpFailure(req);
+
       if (shouldLock) {
         return lockedResponse(res, lockedUntil);
+      }
+
+      if (ipTipped) {
+        return sendIpLock(res, ipTipped);
       }
 
       const attemptsLeft =

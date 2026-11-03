@@ -12,6 +12,7 @@ import {
 } from "../controllers/couponController.js";
 
 import {auth,isAdmin} from "../Middleware/auth.js";
+import * as PB from "../Middleware/publicBudgets.js";
 
 
 const router =
@@ -20,12 +21,14 @@ const router =
 
 router.get(
   "/available",
+  PB.couponList,
   getAvailableCoupons
 );
 
 
 router.post(
   "/validate",
+  PB.couponValidate,
   validateCoupon
 );
 

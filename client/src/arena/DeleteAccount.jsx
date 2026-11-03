@@ -1,12 +1,38 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { AlertTriangle, BanknoteX, MessageCircle, Trash2 } from "lucide-react";
+import { AlertTriangle, BanknoteX, Check, Circle, Eye, EyeOff, MessageCircle, Trash2 } from "lucide-react";
 
 import { logout } from "../Redux/authSlice";
 import { useArena } from "./ArenaContext";
 import { http, errMsg, errCode } from "./api";
-import { Button, Card, Field, Modal, inputClass } from "./ui";
+import { Button, Card, Field, Modal, cx, inputClass } from "./ui";
+
+/* Password box with a show / hide eye, so a typo can be spotted before it counts. */
+function PasswordBox({ id, value, onChange, invalid, autoComplete, label }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={show ? "text" : "password"}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={onChange}
+        aria-invalid={invalid ? "true" : "false"}
+        className={cx(inputClass(invalid), "pr-11")}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? `Hide ${label}` : `Show ${label}`}
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center text-stone-400 hover:text-stone-600 dk:text-[#8f7c70] dk:hover:text-[#d6c4b8]"
+      >
+        {show ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
+    </div>
+  );
+}
 
 /*
   "Delete my account" (Settings).
@@ -24,6 +50,7 @@ export default function DeleteAccount() {
 
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [typed, setTyped] = useState("");
   const [understood, setUnderstood] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,18 +60,29 @@ export default function DeleteAccount() {
     if (busy) return;
     setOpen(false);
     setPassword("");
+    setConfirmPassword("");
     setTyped("");
     setUnderstood(false);
     setError({ code: "", message: "" });
   };
 
-  const ready = password.length > 0 && typed === "DELETE" && understood;
+  // Each requirement is checked on its own so the person can SEE what is still missing.
+  const checks = [
+    { ok: password.length > 0, label: "Enter your password" },
+    { ok: password.length > 0 && confirmPassword === password, label: "Enter the same password again" },
+    { ok: typed.trim().toUpperCase() === "DELETE", label: "Type DELETE" },
+    { ok: understood, label: "Tick the box: no refund, permanent" },
+  ];
+  const ready = checks.every((c) => c.ok);
+  const mismatch = confirmPassword.length > 0 && confirmPassword !== password;
+  const wrongWord = typed.trim().length > 0 && typed.trim().toUpperCase() !== "DELETE";
 
   const submit = async () => {
+    if (!ready || busy) return;
     setBusy(true);
     setError({ code: "", message: "" });
     try {
-      await http.delete("/account", { data: { password, confirm: "DELETE" } });
+      await http.delete("/account", { data: { password, confirmPassword, confirm: "DELETE" } });
       // The signed-in area redirects to the login page the moment the session
       // disappears, so finish with a full page load of the landing page instead.
       // The landing page shows the confirmation once.
@@ -113,18 +151,31 @@ export default function DeleteAccount() {
           </p>
         )}
 
-        <div className="mt-4 space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="mt-4 space-y-4" noValidate>
           <Field label="Your password" htmlFor="del-password" error={error.code === "WRONG_PASSWORD" ? "That password isn't correct." : undefined}>
-            <input id="del-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass(error.code === "WRONG_PASSWORD")} />
+            <PasswordBox id="del-password" label="password" autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); if (error.code === "WRONG_PASSWORD") setError({ code: "", message: "" }); }} invalid={error.code === "WRONG_PASSWORD"} />
           </Field>
-          <Field label="Type DELETE to confirm" htmlFor="del-confirm">
-            <input id="del-confirm" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={typed} onChange={(e) => setTyped(e.target.value)} className={inputClass(false)} />
+          <Field label="Confirm your password" htmlFor="del-password2" error={mismatch ? "Passwords don't match." : undefined} hint={!mismatch && confirmPassword && confirmPassword === password ? "Passwords match." : undefined}>
+            <PasswordBox id="del-password2" label="confirmation password" autoComplete="current-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} invalid={mismatch} />
+          </Field>
+          <Field label="Type DELETE to confirm" htmlFor="del-confirm" error={wrongWord ? "Type the word DELETE." : undefined}>
+            <input id="del-confirm" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={typed} onChange={(e) => setTyped(e.target.value)} aria-invalid={wrongWord ? "true" : "false"} className={inputClass(wrongWord)} />
           </Field>
           <label className="flex cursor-pointer items-start gap-2.5 text-sm">
             <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} className="mt-0.5 h-4 w-4 accent-rose-600" />
             <span>I understand my account will be deleted permanently and I will <strong>not</strong> get any refund.</span>
           </label>
-        </div>
+
+          <ul aria-label="What is still needed" className="space-y-1 rounded-xl bg-stone-50 px-3.5 py-3 text-xs dk:bg-[#1c1612]">
+            {checks.map((c) => (
+              <li key={c.label} className={cx("flex items-center gap-2", c.ok ? "text-emerald-700 dk:text-emerald-400" : "text-stone-500 dk:text-[#b9a79c]")}>
+                {c.ok ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Circle className="h-3.5 w-3.5" aria-hidden />}
+                <span className={c.ok ? "font-semibold" : ""}>{c.label}</span>
+                <span className="sr-only">{c.ok ? " (done)" : " (still needed)"}</span>
+              </li>
+            ))}
+          </ul>
+        </form>
       </Modal>
     </Card>
   );

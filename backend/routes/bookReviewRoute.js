@@ -1,4 +1,5 @@
 import express from "express";
+import * as PB from "../Middleware/publicBudgets.js";
 
 import {
   createBookReviewLink,
@@ -40,6 +41,7 @@ router.get(
 
 router.post(
   "/link/:token",
+  PB.reviewLinkHourly,
   submitBookReview
 );
 

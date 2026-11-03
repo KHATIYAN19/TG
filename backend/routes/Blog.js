@@ -1,4 +1,5 @@
 import express from "express";
+import * as PB from "../Middleware/publicBudgets.js";
 import multer from "multer";
 
 import {
@@ -95,6 +96,7 @@ router.get(
 
 router.post(
   "/:slug/view",
+  PB.blogViewTenMin,
   recordBlogView
 );
 

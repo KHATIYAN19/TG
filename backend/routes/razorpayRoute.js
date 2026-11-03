@@ -1,4 +1,5 @@
 import express from "express";
+import * as PB from "../Middleware/publicBudgets.js";
 
 import {
   createRazorpayPayment,
@@ -16,6 +17,8 @@ const router = express.Router();
 
 router.post(
   "/create",
+  PB.payCreateHourly,
+  PB.payCreateDaily,
   createRazorpayPayment
 );
 
@@ -36,6 +39,7 @@ router.post(
 
 router.post(
   "/verify",
+  PB.payVerifyHourly,
   verifyRazorpayPayment
 );
 

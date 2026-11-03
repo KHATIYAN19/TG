@@ -673,6 +673,16 @@ export const sendMailWith = async (provider, ...args) => {
 ===================================================== */
 
 const sendMail = async (...args) => {
+  // Safety switch for tests / dry runs: never contact a provider.
+  if (process.env.MAIL_DISABLE_SEND === "true") {
+    // Tests may collect what WOULD have been sent: set globalThis.__MAIL_OUTBOX = [].
+    if (Array.isArray(globalThis.__MAIL_OUTBOX)) {
+      const [to, subject, text, html, options] = args;
+      globalThis.__MAIL_OUTBOX.push({ to, subject, text, html, options });
+    }
+    throw new Error("Mail sending is disabled (MAIL_DISABLE_SEND=true)");
+  }
+
   const settings = await getMailSettings();
 
   const primary = PROVIDERS[settings.provider]

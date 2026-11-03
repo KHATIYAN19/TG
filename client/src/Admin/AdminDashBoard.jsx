@@ -1,35 +1,32 @@
-
-import React, {
+import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 
+import { useArenaChrome } from "../arena/chrome";
+
 import {
-  Activity,
   ArrowRight,
   BarChart3,
   BookOpen,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   CircleDollarSign,
   CircleUserRound,
   Clock3,
   CreditCard,
   FileText,
-  Filter,
   Gift,
   Grid2X2,
   Handshake,
-  Heart,
   Image,
   LayoutDashboard,
   List,
@@ -39,15 +36,11 @@ import {
   PlusCircle,
   Search,
   Send,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
   Star,
   TicketPercent,
   UserCog,
   UserPlus,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 
@@ -132,10 +125,10 @@ const PRIORITY_ROUTES = [
     icon: Mail,
     description:
       "Choose whether the site sends email through Mailtrap, Resend or Amazon SES, switch instantly, enable automatic failover and send a test email.",
-    category: "Interviews",
+    category: "Platform",
     keywords:
       "email mail provider mailtrap resend smtp limit failover test",
-    featured: false,
+    featured: true,
     priority: 6,
   },
   {
@@ -144,10 +137,22 @@ const PRIORITY_ROUTES = [
     icon: Users,
     description:
       "Set the arena entry price and cancellation fee, manage members, requests, matches, reports, coupons and payments.",
-    category: "Interviews",
+    category: "Prep Buddy",
     keywords:
       "prep buddy arena members matches requests price cancellation fee coupons reports suspend",
     featured: true,
+    priority: 5,
+  },
+  {
+    path: "/admin/arena?tab=accounts",
+    name: "Arena Accounts",
+    icon: UserCog,
+    description:
+      "See every deleted account and every sign-up that never created a profile, and clean them up.",
+    category: "Prep Buddy",
+    keywords:
+      "deleted accounts signed up no profile incomplete signups cleanup users",
+    featured: false,
     priority: 5,
   },
   {
@@ -392,11 +397,13 @@ const CATEGORY_ORDER = [
   "Books & Products",
   "Finance & Revenue",
   "Interviews",
+  "Prep Buddy",
   "Marketing",
   "Users & Access",
   "Content & Publishing",
   "Reviews & Support",
   "Business Operations",
+  "Platform",
 ];
 
 /* ==========================================================
@@ -549,357 +556,195 @@ const cx = (...items) =>
   items.filter(Boolean).join(" ");
 
 /* ==========================================================
-   DASHBOARD CARD
+   COMPACT DASHBOARD UI
+
+   One short tile per tool (icon, name, one-line summary), grouped
+   by area, with search, category chips, favourites and recents.
+   Priority tools come first in an "Essentials" group.
 ========================================================== */
 
-function DashboardCard({
+const GRID =
+  "grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
+
+const LAYOUT_KEY = "targettrek_admin_layout";
+
+function Tile({
   route,
-  index,
   colors,
   isFavorite,
   onFavorite,
   onOpen,
-  layout = "grid",
-  prominent = false,
+  list = false,
+  accent = false,
 }) {
   const Icon = route.icon;
 
-  const isList = layout === "list";
-
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      transition={{
-        duration: 0.2,
-        delay: Math.min(index * 0.018, 0.15),
-      }}
-      className="min-w-0"
-    >
-      <div
+    <div className="group relative min-w-0">
+      <Link
+        to={route.path}
+        onClick={() => onOpen(route.path)}
+        title={route.description}
         className={cx(
-          "group relative h-full overflow-hidden rounded-2xl border",
-          "transition-all duration-200 hover:-translate-y-0.5",
-          "hover:shadow-[0_12px_28px_rgba(0,0,0,0.07)]",
-          isList ? "p-4" : "p-5",
-          prominent && "ring-1"
+          "flex items-center gap-3 rounded-xl border pr-10 transition-colors",
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+          "hover:border-[var(--tile-hover)]",
+          list ? "px-3 py-2" : "px-3 py-3"
         )}
         style={{
           backgroundColor: colors.panel,
-          borderColor: prominent
-            ? colors.orangeSoft
-            : colors.border,
-          "--tw-ring-color": prominent
-            ? colors.orangeSoft
-            : "transparent",
+          borderColor: accent ? colors.orange : colors.border,
+          outlineColor: colors.orange,
+          "--tile-hover": colors.orange,
         }}
       >
-        {prominent && (
-          <div
-            className="absolute inset-x-0 top-0 h-1"
-            style={{ backgroundColor: colors.orange }}
-          />
-        )}
-
-        <div
-          className={cx(
-            "flex h-full gap-4",
-            isList ? "items-center" : "flex-col"
-          )}
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
+          style={{
+            backgroundColor: colors.orangeSoft,
+            color: colors.orangeText,
+          }}
+          aria-hidden="true"
         >
-          {/* TOP */}
+          <Icon size={19} />
+        </span>
 
-          <div
-            className={cx(
-              "flex items-start justify-between gap-3",
-              isList && "shrink-0"
-            )}
+        <span className="min-w-0 flex-1">
+          <span
+            className="block truncate text-[14px] font-bold leading-5"
+            style={{ color: colors.text }}
           >
-            <Link
-              to={route.path}
-              onClick={() => onOpen(route.path)}
-              aria-label={`Open ${route.name}`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
-              style={{
-                backgroundColor: colors.orangeSoft,
-                color: colors.orangeText,
-              }}
-            >
-              <Icon size={21} strokeWidth={1.9} />
-            </Link>
+            {route.name}
+          </span>
 
-            {!isList && (
-              <button
-                type="button"
-                onClick={() => onFavorite(route.path)}
-                title={
-                  isFavorite
-                    ? "Remove favorite"
-                    : "Add favorite"
-                }
-                aria-label={`${
-                  isFavorite ? "Remove" : "Add"
-                } ${route.name} ${
-                  isFavorite ? "from" : "to"
-                } favorites`}
-                className="rounded-lg p-2 transition-transform hover:scale-110"
-                style={{
-                  color: isFavorite
-                    ? colors.orangeDark
-                    : colors.muted,
-                }}
-              >
-                <Star
-                  size={17}
-                  fill={
-                    isFavorite ? colors.orange : "none"
-                  }
-                />
-              </button>
-            )}
-          </div>
-
-          {/* CONTENT */}
-
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span
-                className="rounded-md px-2.5 py-1 text-[10px] font-bold"
-                style={{
-                  backgroundColor: colors.subtle,
-                  color: colors.muted,
-                }}
-              >
-                {route.category}
-              </span>
-
-              {prominent && !isList && (
-                <span
-                  className="rounded-md px-2 py-1 text-[10px] font-extrabold"
-                  style={{
-                    backgroundColor: colors.orangeSoft,
-                    color: colors.orangeText,
-                  }}
-                >
-                  Priority Tool
-                </span>
-              )}
-            </div>
-
-            <Link
-              to={route.path}
-              onClick={() => onOpen(route.path)}
-              className="block text-[15px] font-extrabold transition-colors hover:text-[#E9812B]"
-              style={{ color: colors.text }}
-            >
-              {route.name}
-            </Link>
-
-            <p
-              className={cx(
-                "mt-2 text-[12px] leading-[1.8]",
-                isList && "line-clamp-2"
-              )}
+          {!list && (
+            <span
+              className="mt-0.5 line-clamp-2 text-[12px] leading-[17px]"
               style={{ color: colors.muted }}
             >
               {route.description}
-            </p>
-          </div>
+            </span>
+          )}
+        </span>
+      </Link>
 
-          {/* BOTTOM */}
-
-          <div
-            className={cx(
-              "flex items-center justify-between gap-3",
-              isList
-                ? "shrink-0"
-                : "border-t pt-4"
-            )}
-            style={{ borderColor: colors.divider }}
-          >
-            {!isList && (
-              <span
-                className="text-[11px] font-semibold"
-                style={{ color: colors.muted }}
-              >
-                {prominent ? "Quick Access" : "Workspace Tool"}
-              </span>
-            )}
-
-            {isList && (
-              <button
-                type="button"
-                onClick={() => onFavorite(route.path)}
-                title="Toggle favorite"
-                className="rounded-lg p-2"
-                style={{
-                  color: isFavorite
-                    ? colors.orangeDark
-                    : colors.muted,
-                }}
-              >
-                <Star
-                  size={16}
-                  fill={
-                    isFavorite ? colors.orange : "none"
-                  }
-                />
-              </button>
-            )}
-
-            <Link
-              to={route.path}
-              onClick={() => onOpen(route.path)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold"
-              style={{ color: colors.orangeDark }}
-            >
-              Open
-              <ArrowRight
-                size={15}
-                className="transition-transform group-hover:translate-x-1"
-              />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+      <button
+        type="button"
+        onClick={() => onFavorite(route.path)}
+        aria-label={
+          isFavorite
+            ? `Remove ${route.name} from favourites`
+            : `Add ${route.name} to favourites`
+        }
+        aria-pressed={isFavorite}
+        className={cx(
+          "absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg transition-opacity",
+          "focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2",
+          isFavorite
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
+        )}
+        style={{
+          color: isFavorite ? colors.orangeDark : colors.muted,
+          outlineColor: colors.orange,
+        }}
+      >
+        <Star
+          size={15}
+          fill={isFavorite ? "currentColor" : "none"}
+        />
+      </button>
+    </div>
   );
 }
 
-/* ==========================================================
-   DISABLED CARD
-
-   No Link or onClick.
-========================================================== */
-
-function DisabledCard({ route, colors }) {
+function DisabledTile({ route, colors }) {
   const Icon = route.icon;
 
   return (
     <div
+      className="flex items-center gap-3 rounded-xl border border-dashed px-3 py-3 opacity-70"
+      style={{ borderColor: colors.border }}
       aria-disabled="true"
-      className="relative rounded-2xl border p-5 opacity-60"
-      style={{
-        backgroundColor: colors.panel,
-        borderColor: colors.border,
-      }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div
-          className="flex h-11 w-11 items-center justify-center rounded-xl"
-          style={{
-            backgroundColor: colors.subtle,
-            color: colors.muted,
-          }}
-        >
-          <Icon size={21} />
-        </div>
-
-        <span
-          className="rounded-lg border px-2.5 py-1 text-[10px] font-extrabold uppercase"
-          style={{
-            borderColor: colors.border,
-            backgroundColor: colors.subtle,
-            color: colors.muted,
-          }}
-        >
-          Disabled
-        </span>
-      </div>
-
-      <h3
-        className="mt-5 text-base font-extrabold"
-        style={{ color: colors.text }}
-      >
-        {route.name}
-      </h3>
-
-      <p
-        className="mt-2 text-xs leading-6"
-        style={{ color: colors.muted }}
-      >
-        {route.description}
-      </p>
-
-      <div
-        className="mt-5 flex items-center gap-2 border-t pt-4 text-xs font-semibold"
+      <span
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
         style={{
-          borderColor: colors.divider,
+          backgroundColor: colors.subtle,
           color: colors.muted,
         }}
+        aria-hidden="true"
       >
-        <LockKeyhole size={14} />
-        Currently unavailable
-      </div>
+        <Icon size={19} />
+      </span>
+
+      <span className="min-w-0">
+        <span
+          className="block truncate text-[14px] font-bold"
+          style={{ color: colors.muted }}
+        >
+          {route.name}
+        </span>
+        <span
+          className="line-clamp-2 text-[12px] leading-[17px]"
+          style={{ color: colors.muted }}
+        >
+          {route.description}
+        </span>
+      </span>
     </div>
   );
 }
 
-/* ==========================================================
-   SECTION HEADING
-========================================================== */
-
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  colors,
-  count,
-}) {
+function Section({ title, count, colors, children }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        {eyebrow && (
-          <p
-            className="text-[10px] font-extrabold uppercase tracking-[0.14em]"
-            style={{ color: colors.orangeText }}
-          >
-            {eyebrow}
-          </p>
-        )}
-
+    <section className="mt-6">
+      <div className="mb-2.5 flex items-center gap-3">
         <h2
-          className="mt-1 text-xl font-black tracking-tight sm:text-2xl"
-          style={{ color: colors.text }}
+          className="text-[11px] font-extrabold uppercase tracking-[0.14em]"
+          style={{ color: colors.muted }}
         >
           {title}
         </h2>
 
-        {description && (
-          <p
-            className="mt-1 text-xs leading-6 sm:text-sm"
-            style={{ color: colors.muted }}
-          >
-            {description}
-          </p>
-        )}
-      </div>
-
-      {count !== undefined && (
         <span
-          className="rounded-full border px-3 py-1.5 text-xs font-bold"
+          className="rounded-full px-2 py-0.5 text-[10px] font-bold"
           style={{
-            backgroundColor: colors.panel,
-            borderColor: colors.border,
-            color: colors.muted,
+            backgroundColor: colors.orangeSoft,
+            color: colors.orangeText,
           }}
         >
-          {count} tools
+          {count}
         </span>
-      )}
-    </div>
+
+        <span
+          className="h-px flex-1"
+          style={{ backgroundColor: colors.divider }}
+        />
+      </div>
+
+      {children}
+    </section>
   );
 }
 
-/* ==========================================================
-   ADMIN DASHBOARD
-========================================================== */
+const matchesQuery = (route, query) =>
+  !query ||
+  [
+    route.name,
+    route.description,
+    route.category,
+    route.keywords,
+    route.path,
+  ]
+    .join(" ")
+    .toLowerCase()
+    .includes(query);
 
 export default function AdminDashboard() {
-  const user = useSelector((state) => state.auth?.user);
+  useArenaChrome();
 
+  const user = useSelector((state) => state.auth?.user);
   const { isDark } = useSyncedTheme();
 
   const colors = useMemo(
@@ -907,95 +752,81 @@ export default function AdminDashboard() {
     [isDark]
   );
 
-  /* --------------------------------------------------------
-     STATE
-  -------------------------------------------------------- */
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] =
-    useState("All");
-
-  const [quickFilter, setQuickFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("default");
-  const [layout, setLayout] = useState("grid");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
+  const [quick, setQuick] = useState("all"); // all | favorites | recent
+  const [list, setList] = useState(() => {
+    try {
+      return localStorage.getItem(LAYOUT_KEY) === "list";
+    } catch {
+      return false;
+    }
+  });
 
   const [favorites, setFavorites] = useState(() =>
     readArray(FAVORITES_KEY)
   );
-
   const [recent, setRecent] = useState(() =>
     readArray(RECENT_KEY)
   );
+
+  const searchRef = useRef(null);
 
   /* --------------------------------------------------------
      ROLE / PERMISSIONS
   -------------------------------------------------------- */
 
-  const role = String(user?.role || "")
-    .trim()
-    .toLowerCase();
-
+  const role = String(user?.role || "").trim().toLowerCase();
   const isAdmin = role === "admin";
   const isEmployee = role === "employee";
-
   const authorized = isAdmin || isEmployee;
 
-  const currentRoutes = useMemo(() => {
+  const routes = useMemo(() => {
     if (isAdmin) return ADMIN_ROUTES;
     if (isEmployee) return EMPLOYEE_ROUTES;
     return [];
   }, [isAdmin, isEmployee]);
 
-  const currentPaths = useMemo(
-    () => new Set(currentRoutes.map((route) => route.path)),
-    [currentRoutes]
+  const paths = useMemo(
+    () => new Set(routes.map((r) => r.path)),
+    [routes]
   );
 
-  const currentPriorityRoutes = useMemo(
-    () =>
-      PRIORITY_ROUTES.filter((route) =>
-        currentPaths.has(route.path)
-      ),
-    [currentPaths]
+  const priority = useMemo(
+    () => PRIORITY_ROUTES.filter((r) => paths.has(r.path)),
+    [paths]
   );
 
-  const currentOtherRoutes = useMemo(
-    () =>
-      OTHER_ADMIN_ROUTES.filter((route) =>
-        currentPaths.has(route.path)
-      ),
-    [currentPaths]
+  const others = useMemo(
+    () => OTHER_ADMIN_ROUTES.filter((r) => paths.has(r.path)),
+    [paths]
   );
 
   const validFavorites = useMemo(
-    () =>
-      favorites.filter((path) =>
-        currentPaths.has(path)
-      ),
-    [favorites, currentPaths]
+    () => favorites.filter((p) => paths.has(p)),
+    [favorites, paths]
   );
 
   const validRecent = useMemo(
-    () =>
-      recent.filter((path) =>
-        currentPaths.has(path)
-      ),
-    [recent, currentPaths]
+    () => recent.filter((p) => paths.has(p)),
+    [recent, paths]
   );
 
   const categories = useMemo(
     () =>
-      CATEGORY_ORDER.filter((category) =>
-        currentRoutes.some(
-          (route) => route.category === category
-        )
+      CATEGORY_ORDER.filter((name) =>
+        routes.some((r) => r.category === name)
       ),
-    [currentRoutes]
+    [routes]
+  );
+
+  const byPath = useMemo(
+    () => new Map(routes.map((r) => [r.path, r])),
+    [routes]
   );
 
   /* --------------------------------------------------------
-     FAVORITES
+     ACTIONS
   -------------------------------------------------------- */
 
   const toggleFavorite = useCallback((path) => {
@@ -1009,10 +840,6 @@ export default function AdminDashboard() {
     });
   }, []);
 
-  /* --------------------------------------------------------
-     RECENTLY OPENED
-  -------------------------------------------------------- */
-
   const trackOpen = useCallback((path) => {
     setRecent((previous) => {
       const next = [
@@ -1025,169 +852,98 @@ export default function AdminDashboard() {
     });
   }, []);
 
-  /* --------------------------------------------------------
-     FILTER AND SORT OTHER TOOLS
+  const chooseLayout = (asList) => {
+    setList(asList);
+    try {
+      localStorage.setItem(LAYOUT_KEY, asList ? "list" : "grid");
+    } catch {
+      // Layout choice is a convenience only.
+    }
+  };
 
-     Priority tools remain separate and always appear at top
-     in their predefined order in the normal dashboard view.
+  // "/" jumps to the search box (unless you're already typing).
+  useEffect(() => {
+    const onKey = (event) => {
+      const el = document.activeElement;
+      const typing =
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT" ||
+          el.isContentEditable);
+
+      if (event.key === "/" && !typing) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  /* --------------------------------------------------------
+     WHAT TO SHOW
   -------------------------------------------------------- */
 
-  const filteredRoutes = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  const q = query.trim().toLowerCase();
+  const browsing = !q && category === "All" && quick === "all";
 
-    let routes = currentOtherRoutes.filter((route) => {
-      const matchesSearch =
-        !query ||
-        [
-          route.name,
-          route.description,
-          route.category,
-          route.keywords,
-          route.path,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesCategory =
-        selectedCategory === "All" ||
-        route.category === selectedCategory;
-
-      let matchesQuick = true;
-
-      if (quickFilter === "favorites") {
-        matchesQuick = validFavorites.includes(route.path);
-      }
-
-      if (quickFilter === "recent") {
-        matchesQuick = validRecent.includes(route.path);
-      }
-
-      if (quickFilter === "featured") {
-        matchesQuick = Boolean(route.featured);
-      }
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesQuick
-      );
-    });
-
-    if (sortBy === "az") {
-      routes = [...routes].sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
-    }
-
-    if (sortBy === "za") {
-      routes = [...routes].sort((a, b) =>
-        b.name.localeCompare(a.name)
-      );
-    }
-
-    if (sortBy === "category") {
-      routes = [...routes].sort((a, b) =>
-        a.category.localeCompare(b.category) ||
-        a.name.localeCompare(b.name)
-      );
-    }
-
-    if (sortBy === "recent") {
-      routes = [...routes].sort((a, b) => {
-        const aIndex = validRecent.indexOf(a.path);
-        const bIndex = validRecent.indexOf(b.path);
-
-        return (
-          (aIndex < 0 ? 999 : aIndex) -
-          (bIndex < 0 ? 999 : bIndex)
-        );
-      });
-    }
-
-    return routes;
-  }, [
-    currentOtherRoutes,
-    searchQuery,
-    selectedCategory,
-    quickFilter,
-    sortBy,
-    validFavorites,
-    validRecent,
-  ]);
-
-  const visiblePriority = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return currentPriorityRoutes.filter((route) => {
-      const searchMatches =
-        !query ||
-        [
-          route.name,
-          route.description,
-          route.category,
-          route.keywords,
-          route.path,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const categoryMatches =
-        selectedCategory === "All" ||
-        selectedCategory === route.category;
-
-      const quickMatches =
-        quickFilter === "all" ||
-        (quickFilter === "favorites" &&
-          validFavorites.includes(route.path)) ||
-        (quickFilter === "recent" &&
-          validRecent.includes(route.path)) ||
-        (quickFilter === "featured" && route.featured);
-
-      return (
-        searchMatches &&
-        categoryMatches &&
-        quickMatches
-      );
-    });
-  }, [
-    currentPriorityRoutes,
-    searchQuery,
-    selectedCategory,
-    quickFilter,
-    validFavorites,
-    validRecent,
-  ]);
-
-  const groupedRoutes = useMemo(
+  const results = useMemo(
     () =>
-      categories
-        .map((category) => ({
-          category,
-          routes: filteredRoutes.filter(
-            (route) => route.category === category
-          ),
-        }))
-        .filter((group) => group.routes.length > 0),
-    [filteredRoutes, categories]
+      [...priority, ...others].filter((route) => {
+        if (!matchesQuery(route, q)) return false;
+        if (category !== "All" && route.category !== category)
+          return false;
+        if (
+          quick === "favorites" &&
+          !validFavorites.includes(route.path)
+        )
+          return false;
+        if (quick === "recent" && !validRecent.includes(route.path))
+          return false;
+        return true;
+      }),
+    [priority, others, q, category, quick, validFavorites, validRecent]
   );
 
-  const totalVisible =
-    visiblePriority.length + filteredRoutes.length;
+  const grouped = useMemo(() => {
+    const source = browsing ? others : results;
 
-  const hasFilters =
-    Boolean(searchQuery.trim()) ||
-    selectedCategory !== "All" ||
-    quickFilter !== "all" ||
-    sortBy !== "default";
+    return categories
+      .map((name) => ({
+        name,
+        items: source.filter((r) => r.category === name),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [browsing, others, results, categories]);
 
-  const resetFilters = () => {
-    setSearchQuery("");
-    setSelectedCategory("All");
-    setQuickFilter("all");
-    setSortBy("default");
+  const recentRoutes = validRecent
+    .map((path) => byPath.get(path))
+    .filter(Boolean)
+    .slice(0, 6);
+
+  const categoryCount = (name) =>
+    routes.filter((r) => r.category === name).length;
+
+  const reset = () => {
+    setQuery("");
+    setCategory("All");
+    setQuick("all");
   };
+
+  const tile = (route, extra = {}) => (
+    <Tile
+      key={route.path}
+      route={route}
+      colors={colors}
+      isFavorite={validFavorites.includes(route.path)}
+      onFavorite={toggleFavorite}
+      onOpen={trackOpen}
+      list={list}
+      {...extra}
+    />
+  );
 
   /* ========================================================
      ACCESS DENIED
@@ -1202,7 +958,7 @@ export default function AdminDashboard() {
         </Helmet>
 
         <main
-          className="mt-16 flex min-h-[75vh] items-center justify-center px-4"
+          className="flex min-h-[75vh] items-center justify-center px-4 pt-[calc(var(--arena-nav-h,5rem)+1rem)]"
           style={{
             backgroundColor: colors.page,
             color: colors.text,
@@ -1216,7 +972,7 @@ export default function AdminDashboard() {
             }}
           >
             <div
-              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+              className="mx-auto grid h-14 w-14 place-items-center rounded-2xl"
               style={{
                 backgroundColor: colors.redSoft,
                 color: colors.red,
@@ -1225,16 +981,14 @@ export default function AdminDashboard() {
               <LockKeyhole size={26} />
             </div>
 
-            <h1 className="mt-5 text-2xl font-black">
-              Access Denied
-            </h1>
+            <h1 className="mt-5 text-2xl font-black">Access Denied</h1>
 
             <p
               className="mt-3 text-sm leading-6"
               style={{ color: colors.muted }}
             >
-              You need an authorized administrator or employee
-              account to access this workspace.
+              You need an authorized administrator or employee account
+              to access this workspace.
             </p>
 
             <Link
@@ -1265,581 +1019,277 @@ export default function AdminDashboard() {
           {isAdmin ? "Admin Dashboard" : "Employee Dashboard"}
           {" | Target Trek"}
         </title>
-
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
       <main
-        className="mt-16 min-h-screen pb-20 pt-6 transition-colors sm:pt-8"
+        className="min-h-screen pb-16 pt-[calc(var(--arena-nav-h,5rem)+1rem)] transition-colors"
         style={{
           backgroundColor: colors.page,
           color: colors.text,
         }}
       >
-        <div className="mx-auto max-w-[1550px] px-3 sm:px-6 lg:px-8">
-          {/* ============================================
-              HERO
-          ============================================ */}
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          {/* ---------- title + search ---------- */}
+          <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p
+                className="text-[11px] font-extrabold uppercase tracking-[0.16em]"
+                style={{ color: colors.orangeText }}
+              >
+                {isAdmin ? "Administrator" : "Employee"}
+              </p>
 
-          <section
-            className="relative overflow-hidden rounded-3xl border"
-            style={{
-              backgroundColor: colors.panel,
-              borderColor: colors.border,
-            }}
-          >
-            <div
-              className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full blur-3xl"
-              style={{
-                backgroundColor: colors.orangeSoft,
-                opacity: 0.7,
-              }}
-            />
+              <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-[28px]">
+                {isAdmin ? "Admin" : "Employee"}{" "}
+                <span style={{ color: colors.orangeDark }}>
+                  Dashboard
+                </span>
+              </h1>
 
-            <div className="relative p-5 sm:p-8 lg:p-9">
-              <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-                <div className="max-w-2xl">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider"
-                      style={{
-                        backgroundColor: colors.orangeSoft,
-                        color: colors.orangeText,
-                      }}
-                    >
-                      <ShieldCheck size={13} />
-                      {isAdmin ? "Administrator" : "Employee"}
-                    </span>
-
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold"
-                      style={{
-                        backgroundColor: colors.subtle,
-                        color: colors.muted,
-                      }}
-                    >
-                      <Sparkles size={13} />
-                      Target Trek Workspace
-                    </span>
-                  </div>
-
-                  <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
-                    {isAdmin ? "Admin" : "Employee"}{" "}
-                    <span style={{ color: colors.orangeDark }}>
-                      Dashboard
-                    </span>
-                  </h1>
-
-                  <p
-                    className="mt-3 max-w-xl text-sm leading-7"
-                    style={{ color: colors.muted }}
-                  >
-                    Manage your books, finance, payments, coupons,
-                    mock interviews, campaigns and platform
-                    operations from one place.
-                  </p>
-
-                  {user?.name && (
-                    <p
-                      className="mt-4 text-sm font-semibold"
-                      style={{ color: colors.muted }}
-                    >
-                      Welcome back,{" "}
-                      <span
-                        className="font-extrabold"
-                        style={{ color: colors.orangeDark }}
-                      >
-                        {user.name}
-                      </span>
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:w-[360px]">
-                  {[
-                    {
-                      title: "Active Tools",
-                      value: currentRoutes.length,
-                      icon: Grid2X2,
-                    },
-                    {
-                      title: "Favorites",
-                      value: validFavorites.length,
-                      icon: Star,
-                    },
-                    {
-                      title: "Categories",
-                      value: categories.length,
-                      icon: Filter,
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.title}
-                      className="min-w-0 rounded-2xl border p-3 sm:p-4"
-                      style={{
-                        borderColor: colors.border,
-                        backgroundColor: colors.subtle,
-                      }}
-                    >
-                      <item.icon
-                        size={18}
-                        style={{ color: colors.orangeDark }}
-                      />
-
-                      <p className="mt-3 text-2xl font-black">
-                        {item.value}
-                      </p>
-
-                      <p
-                        className="mt-1 text-[10px] font-semibold"
-                        style={{ color: colors.muted }}
-                      >
-                        {item.title}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <p
+                className="mt-1 text-[13px]"
+                style={{ color: colors.muted }}
+              >
+                {user?.name ? `Welcome back, ${user.name}. ` : ""}
+                {routes.length} tools across {categories.length} areas.
+              </p>
             </div>
-          </section>
 
-          {/* ============================================
-              PRIORITY TOOLS
-
-              ALWAYS ABOVE OTHER WORKSPACE TOOLS
-          ============================================ */}
-
-          {visiblePriority.length > 0 && (
-            <section className="mt-7">
-              <SectionHeading
-                eyebrow="Quick Access"
-                title="Essential Management Tools"
-                description={
-                  isAdmin
-                    ? "Your six primary administration tools, arranged by priority."
-                    : "Your most useful available tools."
-                }
-                count={visiblePriority.length}
-                colors={colors}
+            <div className="relative w-full lg:max-w-sm">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"
+                style={{ color: colors.muted }}
+                aria-hidden="true"
               />
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-                {visiblePriority.map((route, index) => (
-                  <DashboardCard
-                    key={route.path}
-                    route={route}
-                    index={index}
-                    colors={colors}
-                    prominent
-                    isFavorite={validFavorites.includes(
-                      route.path
-                    )}
-                    onFavorite={toggleFavorite}
-                    onOpen={trackOpen}
-                    layout="grid"
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search tools   ( press / )"
+                aria-label="Search dashboard tools"
+                className="h-11 w-full rounded-xl border pl-10 pr-10 text-sm outline-none transition focus:border-[var(--focus)]"
+                style={{
+                  backgroundColor: colors.input,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                  "--focus": colors.orange,
+                }}
+              />
 
-          {/* ============================================
-              SEARCH / FILTER BAR
-          ============================================ */}
-
-          <section
-            className="sticky top-16 z-20 mt-7 rounded-2xl border p-3 shadow-sm backdrop-blur sm:p-4"
-            style={{
-              backgroundColor: colors.panel,
-              borderColor: colors.border,
-            }}
-          >
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <div className="relative w-full lg:max-w-md">
-                <Search
-                  size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg"
                   style={{ color: colors.muted }}
-                />
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+          </header>
 
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) =>
-                    setSearchQuery(e.target.value)
-                  }
-                  placeholder="Search dashboard tools..."
-                  className="h-11 w-full rounded-xl border pl-10 pr-4 text-sm outline-none transition focus:border-[#F28C38]"
-                  style={{
-                    backgroundColor: colors.input,
-                    borderColor: colors.inputBorder,
-                    color: colors.text,
-                  }}
-                />
-              </div>
+          {/* ---------- chips + view toggle ---------- */}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div
+              className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-1 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+              role="tablist"
+              aria-label="Filter by area"
+            >
+              {[
+                ["All", routes.length],
+                ...categories.map((name) => [name, categoryCount(name)]),
+              ].map(([name, count]) => {
+                const on = category === name;
 
-              <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-                {[
-                  ["all", "All"],
-                  ["favorites", "Favorites"],
-                  ["recent", "Recent"],
-                  ["featured", "Featured"],
-                ].map(([value, label]) => (
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setCategory(name)}
+                    className="shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition-colors"
+                    style={{
+                      borderColor: on ? colors.orange : colors.border,
+                      backgroundColor: on ? colors.orange : colors.panel,
+                      color: on ? "#1B1B1B" : colors.muted,
+                    }}
+                  >
+                    {name}
+                    <span className="ml-1.5 opacity-70">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5 sm:ml-auto">
+              {[
+                ["all", "All"],
+                ["favorites", `Favourites ${validFavorites.length}`],
+                ["recent", "Recent"],
+              ].map(([value, label]) => {
+                const on = quick === value;
+
+                return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setQuickFilter(value)}
-                    className="rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors"
+                    aria-pressed={on}
+                    onClick={() => setQuick(value)}
+                    className="rounded-lg border px-2.5 py-1.5 text-xs font-bold"
                     style={{
-                      borderColor:
-                        quickFilter === value
-                          ? colors.orange
-                          : colors.border,
-                      backgroundColor:
-                        quickFilter === value
-                          ? colors.orange
-                          : colors.subtle,
-                      color:
-                        quickFilter === value
-                          ? "#1B1B1B"
-                          : colors.muted,
+                      borderColor: on ? colors.orange : colors.border,
+                      backgroundColor: on ? colors.orangeSoft : "transparent",
+                      color: on ? colors.orangeText : colors.muted,
                     }}
                   >
                     {label}
                   </button>
-                ))}
+                );
+              })}
 
+              <span
+                className="mx-1 h-5 w-px"
+                style={{ backgroundColor: colors.divider }}
+                aria-hidden="true"
+              />
+
+              {[
+                [false, Grid2X2, "Grid view"],
+                [true, List, "List view"],
+              ].map(([asList, ViewIcon, label]) => (
                 <button
+                  key={label}
                   type="button"
-                  onClick={() =>
-                    setShowAdvanced((prev) => !prev)
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold"
+                  onClick={() => chooseLayout(asList)}
+                  aria-label={label}
+                  aria-pressed={list === asList}
+                  className="grid h-8 w-8 place-items-center rounded-lg border"
                   style={{
-                    backgroundColor: colors.input,
+                    borderColor: list === asList ? colors.orange : colors.border,
+                    backgroundColor:
+                      list === asList ? colors.orangeSoft : "transparent",
+                    color:
+                      list === asList ? colors.orangeText : colors.muted,
+                  }}
+                >
+                  <ViewIcon size={15} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ---------- recently opened ---------- */}
+          {browsing && recentRoutes.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                className="text-[11px] font-extrabold uppercase tracking-[0.14em]"
+                style={{ color: colors.muted }}
+              >
+                Jump back in
+              </span>
+
+              {recentRoutes.map((route) => (
+                <Link
+                  key={route.path}
+                  to={route.path}
+                  onClick={() => trackOpen(route.path)}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  style={{
                     borderColor: colors.border,
+                    backgroundColor: colors.panel,
                     color: colors.text,
                   }}
                 >
-                  <SlidersHorizontal size={15} />
-                  Filters
-                  <ChevronDown
-                    size={14}
-                    className={
-                      showAdvanced ? "rotate-180" : ""
-                    }
+                  <route.icon
+                    size={13}
+                    style={{ color: colors.orangeDark }}
+                    aria-hidden="true"
                   />
-                </button>
-              </div>
+                  {route.name}
+                </Link>
+              ))}
             </div>
+          )}
 
-            <AnimatePresence>
-              {showAdvanced && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div
-                    className="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3"
-                    style={{ borderColor: colors.divider }}
-                  >
-                    <div>
-                      <label
-                        className="mb-2 block text-xs font-bold"
-                        style={{ color: colors.muted }}
-                      >
-                        Category
-                      </label>
-
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) =>
-                          setSelectedCategory(e.target.value)
-                        }
-                        className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
-                        style={{
-                          backgroundColor: colors.input,
-                          borderColor: colors.inputBorder,
-                          color: colors.text,
-                        }}
-                      >
-                        <option value="All">
-                          All Categories
-                        </option>
-
-                        {categories.map((category) => (
-                          <option
-                            key={category}
-                            value={category}
-                          >
-                            {category}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        className="mb-2 block text-xs font-bold"
-                        style={{ color: colors.muted }}
-                      >
-                        Sort Other Tools
-                      </label>
-
-                      <select
-                        value={sortBy}
-                        onChange={(e) =>
-                          setSortBy(e.target.value)
-                        }
-                        className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
-                        style={{
-                          backgroundColor: colors.input,
-                          borderColor: colors.inputBorder,
-                          color: colors.text,
-                        }}
-                      >
-                        <option value="default">
-                          Default Order
-                        </option>
-                        <option value="az">A to Z</option>
-                        <option value="za">Z to A</option>
-                        <option value="category">
-                          Category
-                        </option>
-                        <option value="recent">
-                          Recently Opened
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        className="mb-2 block text-xs font-bold"
-                        style={{ color: colors.muted }}
-                      >
-                        Display Style
-                      </label>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          ["grid", Grid2X2, "Grid"],
-                          ["list", List, "List"],
-                        ].map(([value, Icon, label]) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setLayout(value)}
-                            className="flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-xs font-bold"
-                            style={{
-                              backgroundColor:
-                                layout === value
-                                  ? colors.orangeSoft
-                                  : colors.input,
-                              borderColor:
-                                layout === value
-                                  ? colors.orange
-                                  : colors.inputBorder,
-                              color:
-                                layout === value
-                                  ? colors.orangeText
-                                  : colors.text,
-                            }}
-                          >
-                            <Icon size={15} />
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="flex items-center gap-2 text-xs font-bold"
-                      style={{
-                        color: colors.orangeText,
-                      }}
-                    >
-                      <X size={14} />
-                      Reset All Filters
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </section>
-
-          {/* ============================================
-              OTHER MANAGEMENT TOOLS
-          ============================================ */}
-
-          <section className="mt-8">
-            <SectionHeading
-              eyebrow="Workspace"
-              title="Other Management Tools"
-              description="Access publishing, users, support, analytics and additional platform operations."
-              count={filteredRoutes.length}
+          {/* ---------- tools ---------- */}
+          {browsing && priority.length > 0 && (
+            <Section
+              title="Essentials"
+              count={priority.length}
               colors={colors}
-            />
-
-            {groupedRoutes.length > 0 ? (
-              <div className="space-y-8">
-                {groupedRoutes.map((group) => (
-                  <div key={group.category}>
-                    <div className="mb-3 flex items-center gap-3">
-                      <h3
-                        className="text-sm font-extrabold"
-                        style={{ color: colors.text }}
-                      >
-                        {group.category}
-                      </h3>
-
-                      <div
-                        className="h-px flex-1"
-                        style={{
-                          backgroundColor: colors.divider,
-                        }}
-                      />
-
-                      <span
-                        className="text-xs font-bold"
-                        style={{ color: colors.muted }}
-                      >
-                        {group.routes.length}
-                      </span>
-                    </div>
-
-                    <div
-                      className={cx(
-                        "grid gap-3",
-                        layout === "grid"
-                          ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                          : "grid-cols-1 lg:grid-cols-2"
-                      )}
-                    >
-                      {group.routes.map((route, index) => (
-                        <DashboardCard
-                          key={route.path}
-                          route={route}
-                          index={index}
-                          colors={colors}
-                          layout={layout}
-                          isFavorite={validFavorites.includes(
-                            route.path
-                          )}
-                          onFavorite={toggleFavorite}
-                          onOpen={trackOpen}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+            >
+              <div className={GRID}>
+                {priority.map((route) => tile(route, { accent: true }))}
               </div>
-            ) : totalVisible === 0 ? (
-              <div
-                className="rounded-2xl border px-5 py-14 text-center"
+            </Section>
+          )}
+
+          {grouped.map((group) => (
+            <Section
+              key={group.name}
+              title={group.name}
+              count={group.items.length}
+              colors={colors}
+            >
+              <div className={GRID}>
+                {group.items.map((route) => tile(route))}
+              </div>
+            </Section>
+          ))}
+
+          {!browsing && results.length === 0 && (
+            <div
+              className="mt-8 rounded-2xl border border-dashed px-6 py-12 text-center"
+              style={{ borderColor: colors.border }}
+            >
+              <p className="text-base font-bold">No tools match</p>
+
+              <p
+                className="mt-1 text-sm"
+                style={{ color: colors.muted }}
+              >
+                Try a different word, or clear the filters.
+              </p>
+
+              <button
+                type="button"
+                onClick={reset}
+                className="mt-4 rounded-xl px-4 py-2 text-sm font-bold"
                 style={{
-                  backgroundColor: colors.panel,
-                  borderColor: colors.border,
+                  backgroundColor: colors.orange,
+                  color: "#1B1B1B",
                 }}
               >
-                <Search
-                  size={27}
-                  className="mx-auto"
-                  style={{ color: colors.orangeDark }}
-                />
+                Clear filters
+              </button>
+            </div>
+          )}
 
-                <h3 className="mt-4 text-lg font-extrabold">
-                  No Tools Found
-                </h3>
-
-                <p
-                  className="mt-2 text-sm"
-                  style={{ color: colors.muted }}
-                >
-                  Try changing your search or filters.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold"
-                  style={{
-                    backgroundColor: colors.orange,
-                    color: "#1B1B1B",
-                  }}
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <div
-                className="rounded-xl border p-6 text-center text-sm"
-                style={{
-                  backgroundColor: colors.panel,
-                  borderColor: colors.border,
-                  color: colors.muted,
-                }}
-              >
-                No additional tools match your current filters.
-              </div>
-            )}
-          </section>
-
-          {/* ============================================
-              DISABLED FEATURES — BOTTOM
-
-              Admin only.
-              Bookings and Booking Slots are not clickable.
-          ============================================ */}
-
-          {isAdmin && (
-            <section className="mt-12">
-              <SectionHeading
-                eyebrow="Inactive Modules"
-                title="Disabled Features"
-                description="These legacy modules are temporarily disabled and cannot be opened from this dashboard."
-                count={DISABLED_ROUTES.length}
-                colors={colors}
-              />
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* ---------- unavailable ---------- */}
+          {browsing && isAdmin && DISABLED_ROUTES.length > 0 && (
+            <Section
+              title="Unavailable"
+              count={DISABLED_ROUTES.length}
+              colors={colors}
+            >
+              <div className={GRID}>
                 {DISABLED_ROUTES.map((route) => (
-                  <DisabledCard
+                  <DisabledTile
                     key={route.path}
                     route={route}
                     colors={colors}
                   />
                 ))}
               </div>
-            </section>
+            </Section>
           )}
-
-          {/* ============================================
-              PAGE STATUS
-          ============================================ */}
-
-          <div
-            className="mt-10 flex flex-col gap-2 border-t pt-5 text-xs sm:flex-row sm:items-center sm:justify-between"
-            style={{
-              borderColor: colors.divider,
-              color: colors.muted,
-            }}
-          >
-            <span>
-              Target Trek Administration Workspace
-            </span>
-
-            <span>
-              {currentRoutes.length} active tools
-              {isAdmin &&
-                ` · ${DISABLED_ROUTES.length} disabled modules`}
-            </span>
-          </div>
         </div>
       </main>
     </>

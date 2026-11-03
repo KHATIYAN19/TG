@@ -1,6 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, Gift, History, Minus, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Gift, History, Minus, Plus, Trash2, Unlock } from "lucide-react";
 
 import { Badge, Button, EmptyState, Field, Modal, Spinner, cx, inputClass } from "../ui";
 import { ConfirmModal, MUTED, Pager, SearchBox, StatusBadge, Table, Td, api, errMsg, rupees2, useDebounced, useDeleter, useList } from "./shared";
@@ -99,6 +99,39 @@ function ManageMatches({ member, onClose, onDone }) {
   );
 }
 
+/* ------------------------ lift a customer's 24-hour lock ------------------------ */
+function UnlockBox() {
+  const [email, setEmail] = useState("");
+  const [ip, setIp] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const { data } = await api.post("/locks/clear", { ...(email.trim() ? { email: email.trim() } : {}), ...(ip.trim() ? { ip: ip.trim() } : {}) });
+      toast.success(data.data?.accountUnlocked ? "Unlocked, including their account password lock" : data.message, { duration: 6000 });
+      setEmail("");
+      setIp("");
+    } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  return (
+    <details className="rounded-2xl border border-[#f0ded0] bg-white p-4 dk:border-[#443127] dk:bg-[#241b15]">
+      <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#29201b] dk:text-[#fff7ed]">
+        <Unlock className="h-4 w-4 text-orange-600" aria-hidden /> Unlock a customer
+        <span className={cx("ml-1 text-xs font-normal", MUTED)}>locked out of sign-up, password reset or login?</span>
+      </summary>
+      <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <input type="email" aria-label="Customer email" placeholder="Their email address" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass(false)} />
+        <input aria-label="IP address" placeholder="Network (IP) address, optional" value={ip} onChange={(e) => setIp(e.target.value)} className={inputClass(false)} />
+        <Button type="submit" loading={busy} disabled={!email.trim() && !ip.trim()}>Lift locks</Button>
+      </form>
+      <p className={cx("mt-2 text-xs", MUTED)}>Clears the 24-hour sign-up, password-reset and network login locks for that email / IP, and the account&apos;s &quot;5 wrong passwords&quot; lock. Written to the activity log.</p>
+    </details>
+  );
+}
+
 /* ----------------------------------- tab ----------------------------------- */
 export default function MembersTab({ openHistory }) {
   const [filters, setFilters] = useState({ q: "", status: "" });
@@ -124,6 +157,7 @@ export default function MembersTab({ openHistory }) {
 
   return (
     <div className="space-y-4">
+      <UnlockBox />
       <div className="flex flex-wrap gap-3">
         <SearchBox value={filters.q} onChange={(v) => { setPage(1); setFilters((f) => ({ ...f, q: v })); }} placeholder="Search name, email, phone, member ID, skill" className="min-w-[16rem] flex-1 sm:max-w-sm" />
         <select value={filters.status} onChange={(e) => { setPage(1); setFilters((f) => ({ ...f, status: e.target.value })); }} className={cx(inputClass(false), "max-w-[12rem]")} aria-label="Status">

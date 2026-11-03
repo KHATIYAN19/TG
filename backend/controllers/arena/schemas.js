@@ -121,10 +121,16 @@ export const profileSchema = z.object({
   }).default({}),
 });
 
-export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Enter your password").max(128),
-  confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm" }) }),
-});
+export const deleteAccountSchema = z
+  .object({
+    password: z.string().min(1, "Enter your password").max(128),
+    confirmPassword: z.string().max(128),
+    confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm" }) }),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords don't match",
+  });
 
 export const visibilitySchema = z.object({ hidden: z.boolean() });
 

@@ -1,5 +1,6 @@
 
 import express from "express";
+import * as PB from "../Middleware/publicBudgets.js";
 
 import {
   auth,
@@ -55,21 +56,26 @@ router.get(
 
 router.post(
   "/bookings",
+  PB.bookingCreateHourly,
+  PB.bookingCreateDaily,
   createInterviewBooking
 );
 
 router.post(
   "/bookings/:id/payment",
+  PB.bookingStep,
   createInterviewPayment
 );
 
 router.post(
   "/bookings/:id/reconcile",
+  PB.bookingStep,
   reconcileInterviewPayment
 );
 
 router.get(
   "/bookings/:id/status",
+  PB.bookingStatus,
   getBookingStatus
 );
 

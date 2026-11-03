@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BadgeIndianRupee, Bug, Flag, Handshake, Inbox, ScrollText, Settings2, Ticket, Users, Wallet } from "lucide-react";
+import { BadgeIndianRupee, Bug, Flag, Handshake, Inbox, ScrollText, Settings2, Ticket, UserX, Users, Wallet } from "lucide-react";
 
 import { adminHttp as api, errMsg, inr } from "./api";
 import { Badge, Button, Card, EmptyState, Field, Modal, Spinner, Toggle, inputClass, cx } from "./ui";
@@ -14,10 +15,12 @@ import PaymentsTab from "./admin/PaymentsTab";
 import ReportsTab from "./admin/ReportsTab";
 import BugsTab from "./admin/BugsTab";
 import AuditTab from "./admin/AuditTab";
+import AccountsTab from "./admin/AccountsTab";
 
 const TABS = [
   ["overview", "Overview & settings", Settings2],
   ["members", "Members", Users],
+  ["accounts", "Accounts", UserX],
   ["requests", "Requests", Inbox],
   ["matches", "Matches", Handshake],
   ["payments", "Payments", Wallet],
@@ -228,7 +231,9 @@ function Coupons() {
 
 export default function AdminArena() {
   useArenaChrome();
-  const [tab, setTab] = useState("overview");
+  const [params] = useSearchParams();
+  // /admin/arena?tab=accounts opens that tab directly (the admin dashboard links here).
+  const [tab, setTab] = useState(() => (TABS.some(([key]) => key === params.get("tab")) ? params.get("tab") : "overview"));
   const [matchUser, setMatchUser] = useState(null); // { userId, label } → show one member's match history
 
   const openHistory = (u) => { setMatchUser(u); setTab("matches"); };
@@ -237,6 +242,7 @@ export default function AdminArena() {
   const panel = {
     overview: <Overview />,
     members: <MembersTab openHistory={openHistory} />,
+    accounts: <AccountsTab />,
     requests: <RequestsTab />,
     matches: <MatchesTab key={matchUser?.userId ?? "all"} userFilter={matchUser} clearUserFilter={() => setMatchUser(null)} />,
     payments: <PaymentsTab />,

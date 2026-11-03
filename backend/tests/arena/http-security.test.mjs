@@ -10,12 +10,28 @@ const B = new URL("../../", import.meta.url).pathname.replace(/\/$/, "");
 
 /* ---------- fake Upstash Redis (REST) so the REAL auth middleware runs ---------- */
 const store = new Map();
+const expiry = new Map();                  // key -> expires-at (ms on the fake clock)
+const clock = { offset: 0, now() { return Date.now() + this.offset; }, advance(ms) { this.offset += ms; } };
+const alive = (k) => {
+  const e = expiry.get(k);
+  if (e !== undefined && e <= clock.now()) { store.delete(k); expiry.delete(k); }
+  return store.has(k);
+};
 const exec = (cmd) => {
   const [op, ...args] = cmd; const o = String(op).toLowerCase();
-  if (o === "mget") return { result: args.map((k) => store.get(k) ?? null) };
-  if (o === "get") return { result: store.get(args[0]) ?? null };
-  if (o === "set") { store.set(args[0], args[1]); return { result: "OK" }; }
-  if (o === "del") { args.forEach((k) => store.delete(k)); return { result: args.length }; }
+  if (o === "mget") return { result: args.map((k) => (alive(k) ? store.get(k) : null)) };
+  if (o === "get") return { result: alive(args[0]) ? store.get(args[0]) : null };
+  if (o === "set") {
+    const [k, v, ...opts] = args; const flags = opts.map((x) => String(x).toLowerCase());
+    if (flags.includes("nx") && alive(k)) return { result: null };
+    store.set(k, v); expiry.delete(k);
+    const ex = flags.indexOf("ex"); if (ex >= 0) expiry.set(k, clock.now() + Number(opts[ex + 1]) * 1000);
+    return { result: "OK" };
+  }
+  if (o === "del") { let n = 0; args.forEach((k) => { if (alive(k)) n += 1; store.delete(k); expiry.delete(k); }); return { result: n }; }
+  if (o === "incr") { const v = (alive(args[0]) ? Number(store.get(args[0])) : 0) + 1; store.set(args[0], String(v)); return { result: v }; }
+  if (o === "expire") { if (!alive(args[0])) return { result: 0 }; expiry.set(args[0], clock.now() + Number(args[1]) * 1000); return { result: 1 }; }
+  if (o === "ttl") { if (!alive(args[0])) return { result: -2 }; const e = expiry.get(args[0]); return { result: e === undefined ? -1 : Math.ceil((e - clock.now()) / 1000) }; }
   return { error: "unsupported in fake" };            // rate limiters then fail-open (as designed)
 };
 const redisServer = http.createServer((req, res) => {
@@ -40,6 +56,7 @@ process.env.UPSTASH_REDIS_REST_URL = `http://127.0.0.1:${redisServer.address().p
 process.env.UPSTASH_REDIS_REST_TOKEN = "fake";
 process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.ARENA_PAYMENT_GATEWAY = "cashfree";
+process.env.LOGIN_IP_FAIL_LIMIT = "100000";   // the many deliberate wrong passwords below must not trip the per-network lock (tested separately)
 process.env.RESEND_API_KEY = "";
 for (const k of ["AMAZON_ACCESS_KEY_ID", "AMAZON_SECRET_ACCESS_KEY", "AMAZON_REGION", "AMAZON_SES_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_DEFAULT_REGION", "AMAZON_SESSION_TOKEN", "AWS_SESSION_TOKEN", "AMAZON_SES_FROM_EMAIL", "AMAZON_SES_CONFIGURATION_SET"]) process.env[k] = "";   // never use real mail credentials from .env in tests               // tests must never use the real Resend key from .env (dotenv will not override a set variable)
 process.env.MAILTRAP_TOKEN = "fake-token-for-tests";   // Mailtrap "configured" but will fail: no real account
@@ -72,14 +89,15 @@ const { hashPassword } = await import(`${B}/utils/authUtils.js`);
 const { provisionUserAuth } = await import(`${B}/services/authStateService.js`);
 app.post("/api/auth/login", authCtl.login);                // the rate limiter is bypassed here; it needs real Redis
 const { forgotPassword, resetPassword } = await import(`${B}/controllers/arena/authController.js`);
-const { signup: signupHandler, verifySignup: verifySignupHandler } = await import(`${B}/controllers/arena/authController.js`);
+const { signup: signupHandler, verifySignup: verifySignupHandler, resendSignupOtp: resendSignupHandler } = await import(`${B}/controllers/arena/authController.js`);
 app.post("/api/arena/signup", signupHandler);              // route limiter needs real Redis; handler logic is real
 app.post("/api/arena/signup/verify", verifySignupHandler);
+app.post("/api/arena/signup/resend", resendSignupHandler);
 app.post("/api/arena/password/forgot", forgotPassword);   // route limiter needs real Redis; handler limits are real
 app.post("/api/arena/password/reset", resetPassword);
 const { arenaOtpRateLimit } = await import(`${B}/Middleware/rateLimiter.js`);
 const otpHits = new Map();                                 // same contract as Upstash: 5 per 24 h per key
-arenaOtpRateLimit.limit = async (key) => { const l = (otpHits.get(key) ?? []).filter((x) => Date.now() - x < 86400000); if (l.length >= 5) return { success: false, reset: l[0] + 86400000 }; l.push(Date.now()); otpHits.set(key, l); return { success: true, reset: Date.now() + 86400000 }; };
+arenaOtpRateLimit.limit = async (key) => { const l = (otpHits.get(key) ?? []).filter((x) => clock.now() - x < 86400000); if (l.length >= 5) return { success: false, reset: l[0] + 86400000 }; l.push(clock.now()); otpHits.set(key, l); return { success: true, reset: clock.now() + 86400000 }; };
 app.use("/api/arena", arenaRouter);
 app.use("/api/admin/arena", adminRouter);
 const mailRouter = await m("routes/mailSettingsRoutes.js");
@@ -408,7 +426,8 @@ const plantCode = (email, otp, extra = {}) => {      // we can't read the email,
 };
 let ipN = 0;
 const forgot = (email, ip = `10.1.${Math.floor(++ipN / 250)}.${ipN % 250 + 1}`) => api("POST", "/api/arena/password/forgot", { body: { email }, ip });
-const reset = (email, otp, password = "N3w!Passw0rd", confirmPassword = password) => api("POST", "/api/arena/password/reset", { body: { email, otp, password, confirmPassword } });
+let ipM = 0;
+const reset = (email, otp, password = "N3w!Passw0rd", confirmPassword = password, ip = `10.2.${Math.floor(++ipM / 250)}.${ipM % 250 + 1}`) => api("POST", "/api/arena/password/reset", { body: { email, otp, password, confirmPassword }, ip });
 const origLog = console.error; console.error = () => {};
 
 await t("FORGOT: known and unknown emails get the IDENTICAL answer (no account enumeration)", async () => {
@@ -431,12 +450,14 @@ await t("FORGOT: admin/affiliate/employee accounts can't be reset this way (and 
   assert.equal((await forgot(a.email)).status, 200);
   assert.equal((await reset(a.email, "123456")).body.code, "OTP_INVALID");
 });
-await t("RESET: wrong code → 400 with attemptsLeft; 5 wrong burn the code, even the right one then fails", async () => {
+await t("RESET: wrong codes → 400 with attemptsLeft; the 5th wrong one LOCKS the email for 24 h (even the right code is refused); after 24 h the old code has expired anyway", async () => {
   const u = await loginUser("normal"); await forgot(u.email); plantCode(u.email, "424242");
-  for (let i = 1; i <= 5; i++) { const r = await reset(u.email, "111111"); assert.equal(r.status, 400); assert.equal(r.body.attemptsLeft, 5 - i); }
-  const burnt = await reset(u.email, "424242");
-  assert.equal(burnt.status, 429); assert.equal(burnt.body.code, "OTP_ATTEMPTS");
-  assert.equal((await reset(u.email, "424242")).body.code, "OTP_INVALID");
+  for (let i = 1; i <= 4; i++) { const r = await reset(u.email, "111111"); assert.equal(r.status, 400); assert.equal(r.body.attemptsLeft, 5 - i); }
+  const fifth = await reset(u.email, "111111");
+  assert.equal(fifth.status, 429); assert.equal(fifth.body.code, "RESET_LOCKED"); assert.ok(fifth.body.retryAfter > 86000);
+  assert.equal((await reset(u.email, "424242")).body.code, "RESET_LOCKED", "right code refused while locked");
+  clock.advance(25 * 3600e3);                                                         // 24 h later
+  assert.equal((await reset(u.email, "424242")).body.code, "OTP_INVALID", "unlocked, but the 10-minute code has long expired");
 });
 await t("RESET: right code sets the password, old password stops working, new one logs in", async () => {
   const u = await loginUser("normal"); await forgot(u.email); plantCode(u.email, "424242");
@@ -718,7 +739,8 @@ await t("ADMIN DELETE: every permanent delete is written to the activity log", a
 /* ================= DELETE MY ACCOUNT ================= */
 const GOOD_PW = "Str0ng!Pass#1";
 const withPassword = async (u) => { await User.updateOne({ _id: u.user._id }, { $set: { password: await hashPassword(GOOD_PW) } }); return u; };
-const DEL = (token, body) => api("DELETE", "/api/arena/account", { token, body });
+// By default the confirmation field repeats the password, like the real form does.
+const DEL = (token, body) => api("DELETE", "/api/arena/account", { token, body: body && body.password !== undefined && !("confirmPassword" in body) ? { ...body, confirmPassword: body.password } : body });
 const OTP_KEY = (email) => `arena:signup:${email}`;
 
 await t("DELETE ACCOUNT: needs a session; password + typed DELETE are both required", async () => {
@@ -728,6 +750,16 @@ await t("DELETE ACCOUNT: needs a session; password + typed DELETE are both requi
   assert.equal((await DEL(u.token, { password: GOOD_PW, confirm: "delete" })).status, 400);
   assert.equal((await DEL(u.token, { confirm: "DELETE" })).status, 400);
   assert.ok(await User.findById(u.user._id), "nothing happens on a malformed request");
+});
+await t("DELETE ACCOUNT: the two password fields must match (server-side too); nothing is deleted on a mismatch or a missing confirmation", async () => {
+  const u = await withPassword(await makeUser("DelMatch"));
+  const mismatch = await DEL(u.token, { password: GOOD_PW, confirmPassword: GOOD_PW + "x", confirm: "DELETE" });
+  assert.equal(mismatch.status, 400); assert.match(JSON.stringify(mismatch.body), /match/i);
+  assert.equal((await DEL(u.token, { password: GOOD_PW, confirm: "DELETE", confirmPassword: "" })).status, 400);
+  const missing = await api("DELETE", "/api/arena/account", { token: u.token, body: { password: GOOD_PW, confirm: "DELETE" } });
+  assert.equal(missing.status, 400, "the confirmation field is required");
+  assert.ok(await User.findById(u.user._id) && await Profile.findById(u.profile._id), "still there");
+  assert.equal((await DEL(u.token, { password: GOOD_PW, confirm: "DELETE" })).status, 200, "matching passwords go through");
 });
 await t("DELETE ACCOUNT: wrong password is refused with attempts left; 5 wrong in a row locks deletion for a while; nothing is deleted", async () => {
   const u = await withPassword(await makeUser("DelW"));
@@ -786,6 +818,248 @@ await t("DELETE ACCOUNT: the same email + mobile can sign up AGAIN and verify (u
   const fresh = await User.findOne({ email }); assert.ok(fresh && !fresh.isDeleted && fresh.mobile === mobile);
   assert.notEqual(String(fresh._id), String(u.user._id), "a brand-new account, no old data");
   assert.equal(await Profile.countDocuments({ user: fresh._id }), 0);
+});
+
+
+/* ================= RATE LIMITS & LOCKS (cost + abuse budgets) ================= */
+const E = (n) => `lock${n}${Date.now() % 100000}@t.com`;
+const MOB = (() => { let m = 0; return () => `9777${String(100000 + ++m + (Date.now() % 1000) * 7).slice(-6)}`; })();
+const signupAs = (email, ip, mobile = MOB()) => api("POST", "/api/arena/signup", { body: { name: "Lock User", email, mobile, password: "Str0ng!Pass#1", confirmPassword: "Str0ng!Pass#1" }, ip });
+const verifyAs = (email, otp, ip) => api("POST", "/api/arena/signup/verify", { body: { email, otp }, ip });
+const resendAs = (email, ip) => api("POST", "/api/arena/signup/resend", { body: { email }, ip });
+const ageRecord = (key) => { const r = JSON.parse(store.get(key)); store.set(key, JSON.stringify({ ...r, sentAt: Date.now() - 120000 })); };   // skip the 60 s cooldown
+const origErr2 = console.error; console.error = () => {};
+
+await t("SIGNUP LOCK: 10 wrong codes in a day lock the EMAIL and the IP for 24 h; the 10th answers 429 SIGNUP_LOCKED", async () => {
+  const e = E(1), ip = "10.50.0.1"; assert.equal((await signupAs(e, ip)).status, 201);
+  const seen = [];
+  for (let i = 1; i <= 10; i++) { const r = await verifyAs(e, "000000", ip); seen.push(r.body.code || r.status); }
+  assert.deepEqual(seen.slice(0, 5), ["OTP_INVALID", "OTP_INVALID", "OTP_INVALID", "OTP_INVALID", "OTP_INVALID"], "seen=" + seen.join(","));
+  assert.equal(seen[9], "SIGNUP_LOCKED", seen.join(","));
+  const locked = await verifyAs(e, "000000", ip);
+  assert.equal(locked.status, 429); assert.equal(locked.body.code, "SIGNUP_LOCKED"); assert.ok(locked.body.retryAfter > 86000 && locked.body.retryAfter <= 86400); assert.ok(locked.body.lockedUntil);
+  const x1 = await signupAs(e, "10.50.0.77"); assert.equal(x1.body.code, "SIGNUP_LOCKED", "same email from another network: " + JSON.stringify(x1.body));
+  const x2 = await resendAs(e, "10.50.0.78"); assert.equal(x2.body.code, "SIGNUP_LOCKED", JSON.stringify(x2.body));
+  const x3 = await signupAs(E(2), ip); assert.equal(x3.body.code, "SIGNUP_LOCKED", "another email from the SAME network: " + JSON.stringify(x3.body));
+  assert.equal((await signupAs(E(3), "10.50.0.99")).status, 201, "a different email on a different network is unaffected");
+});
+await t("SIGNUP LOCK: it lifts by itself after 24 hours", async () => {
+  const e = E(4), ip = "10.50.1.1"; await signupAs(e, ip);
+  for (let i = 0; i < 10; i++) await verifyAs(e, "000000", ip);
+  assert.equal((await signupAs(e, ip)).body.code, "SIGNUP_LOCKED");
+  clock.advance(24 * 3600e3 + 5000);
+  assert.equal((await signupAs(e, ip)).status, 201, "unlocked, and a fresh signup works");
+});
+await t("SIGNUP LOCK: 10 resends (any outcome) in a day lock it too; too-early clicks (60 s) are NOT counted", async () => {
+  const e = E(5), ip = "10.50.2.1"; assert.equal((await signupAs(e, ip)).status, 201);
+  for (let i = 0; i < 3; i++) assert.equal((await resendAs(e, ip)).body.code, "OTP_COOLDOWN");     // not counted
+  const codes = [];
+  for (let i = 1; i <= 10; i++) { ageRecord(`arena:signup:${e}`); const r = await resendAs(e, ip); codes.push(r.body.code || r.status); }
+  assert.equal(codes[9], "SIGNUP_LOCKED", codes.join(","));
+  assert.ok(codes.slice(0, 9).every((c) => c !== "SIGNUP_LOCKED"), "locks only on the 10th");
+  assert.equal((await resendAs(e, "10.50.2.2")).body.code, "SIGNUP_LOCKED");
+});
+await t("SIGNUP LOCK: a successful signup clears the email's counter (IP counter keeps counting)", async () => {
+  const e = E(6), ip = "10.50.3.1"; await signupAs(e, ip);
+  for (let i = 0; i < 3; i++) await verifyAs(e, "000000", ip);
+  assert.ok(store.has(`tt:cnt:signup:email:${e}`) && store.has(`tt:cnt:signup:ip:${ip}`));
+  const rec = JSON.parse(store.get(`arena:signup:${e}`)); store.set(`arena:signup:${e}`, JSON.stringify({ ...rec, attempts: 0, otpHash: hashToken(`${e}:424242:${process.env.JWT_SECRET}`) }));
+  assert.equal((await verifyAs(e, "424242", ip)).status, 200);
+  assert.ok(!store.has(`tt:cnt:signup:email:${e}`), "email counter cleared"); assert.ok(store.has(`tt:cnt:signup:ip:${ip}`), "IP counter stays");
+});
+
+await t("RESET LOCK: 5 resends in a day lock the email and the IP (the first request is not a resend)", async () => {
+  const u = await loginUser("normal"), ip = "10.60.0.1";
+  assert.equal((await forgot(u.email, ip)).status, 200);                                         // request #1: not counted
+  const codes = [];
+  for (let i = 1; i <= 5; i++) { ageRecord(`arena:reset:${u.email}`); const r = await forgot(u.email, ip); codes.push(r.body.code || r.status); }
+  assert.deepEqual(codes.slice(0, 4), [200, 200, 200, 200]); assert.equal(codes[4], "RESET_LOCKED", codes.join(","));
+  assert.equal((await forgot(u.email, "10.60.0.9")).body.code, "RESET_LOCKED", "email locked from any network");
+  assert.equal((await forgot((await loginUser("normal")).email, ip)).body.code, "RESET_LOCKED", "the network is locked too");
+  assert.equal((await reset(u.email, "123456", undefined, undefined, "10.60.0.10")).body.code, "RESET_LOCKED", "and resetting is blocked");
+  clock.advance(24 * 3600e3 + 5000);
+  const again = await forgot(u.email, ip); assert.equal(again.status, 200, "unlocked after 24 h: " + JSON.stringify(again.body));
+});
+await t("RESET LOCK: a successful reset clears the email's counter", async () => {
+  const u = await loginUser("normal"), ip = "10.60.1.1"; await forgot(u.email, ip); plantCode(u.email, "424242");
+  for (let i = 0; i < 3; i++) await reset(u.email, "111111", undefined, undefined, ip);
+  assert.ok(store.has(`tt:cnt:reset:email:${u.email}`));
+  assert.equal((await reset(u.email, "424242", undefined, undefined, ip)).status, 200);
+  assert.ok(!store.has(`tt:cnt:reset:email:${u.email}`));
+});
+
+await t("LOGIN: a NETWORK with too many failed logins (any accounts) is locked for 24 h; other networks and the 24 h expiry are unaffected", async () => {
+  process.env.LOGIN_IP_FAIL_LIMIT = "6";
+  try {
+    const good = await loginUser("normal"); const ip = "10.70.0.1";
+    const out = [];
+    for (let i = 1; i <= 6; i++) { const r = await api("POST", "/api/auth/login", { body: { identifier: `nobody${i}@t.com`, password: "Wrong!Pass#9" }, ip }); out.push(r.body.code || r.status); }
+    assert.equal(out[5], "LOGIN_IP_LOCKED", out.join(","));
+    const blocked = await api("POST", "/api/auth/login", { body: { identifier: good.email, password: GOOD_PW }, ip });
+    assert.equal(blocked.status, 429); assert.equal(blocked.body.code, "LOGIN_IP_LOCKED"); assert.ok(blocked.body.retryAfter > 86000);
+    assert.equal((await api("POST", "/api/auth/login", { body: { identifier: good.email, password: GOOD_PW }, ip: "10.70.0.2" })).status, 200, "another network can log in");
+    clock.advance(24 * 3600e3 + 5000);
+    assert.equal((await api("POST", "/api/auth/login", { body: { identifier: good.email, password: GOOD_PW }, ip })).status, 200, "lock expired by itself");
+  } finally { process.env.LOGIN_IP_FAIL_LIMIT = "100000"; }
+});
+
+await t("ADMIN: lifting locks for an email / IP clears signup + reset + login-IP locks and the account's own lock; audited; admin only", async () => {
+  const e = E(7), ip = "10.80.0.1"; await signupAs(e, ip); for (let i = 0; i < 10; i++) await verifyAs(e, "000000", ip);
+  assert.equal((await signupAs(e, ip)).body.code, "SIGNUP_LOCKED");
+  const victim = await loginUser("normal"); for (let i = 0; i < 5; i++) await login(victim.email, "Wrong!Pass#9");
+  assert.equal((await login(victim.email, GOOD_PW)).status, 429);
+  assert.equal((await api("POST", `${AR}/locks/clear`, { token: normal.token, body: { email: e } })).status, 403);
+  assert.equal((await api("POST", `${AR}/locks/clear`, { token: admin.token, body: {} })).status, 400);
+  assert.equal((await api("POST", `${AR}/locks/clear`, { token: admin.token, body: { email: "not-an-email" } })).status, 400);
+  const r = await api("POST", `${AR}/locks/clear`, { token: admin.token, body: { email: e, ip } });
+  assert.equal(r.status, 200); assert.equal((await signupAs(e, ip)).status, 201);
+  const r2 = await api("POST", `${AR}/locks/clear`, { token: admin.token, body: { email: victim.email } });
+  assert.equal(r2.body.data.accountUnlocked, true); assert.equal((await login(victim.email, GOOD_PW)).status, 200);
+  assert.ok(await Audit.exists({ action: "locks_cleared" }));
+});
+
+/* ---- Prep Buddy: request spam budgets (per member) ---- */
+const reqBody = (profile) => ({ toProfileId: String(profile._id), message: "hello there friend" });
+const sendTo = (from, to) => api("POST", "/api/arena/requests", { token: from.token, body: reqBody(to.profile) });
+await t("REQUESTS: send → unsend → send loops against ONE member stop after 3 sends a day; other members and other senders are unaffected", async () => {
+  const a = await makeUser("LoopA"), b = await makeUser("LoopB"), c = await makeUser("LoopC"), d = await makeUser("LoopD");
+  for (let i = 1; i <= 3; i++) {
+    const s1 = await sendTo(a, b); assert.equal(s1.status, 201, `send ${i}: ${JSON.stringify(s1.body)}`);
+    assert.equal((await api("POST", `/api/arena/requests/${s1.body.data.id}/withdraw`, { token: a.token })).status, 200);
+  }
+  const fourth = await sendTo(a, b);
+  assert.equal(fourth.status, 429); assert.equal(fourth.body.code, "ARENA_LIMIT"); assert.match(fourth.body.message, /3 times today/); assert.ok(fourth.body.retryAfter > 80000);
+  assert.equal((await sendTo(a, c)).status, 201, "a different member is still fine");
+  assert.equal((await sendTo(d, b)).status, 201, "another sender may still write to b");
+  clock.advance(24 * 3600e3 + 5000);
+  assert.equal((await sendTo(a, b)).status, 201, "the next day it works again");
+});
+await t("REQUESTS: hourly and daily send caps; withdraw cap; answer cap (all per member, env-tunable)", async () => {
+  const me = await makeUser("CapMe"); const others = []; for (let i = 0; i < 4; i++) others.push(await makeUser(`CapO${i}`));
+  process.env.ARENA_REQ_HOURLY_LIMIT = "3"; process.env.ARENA_WITHDRAW_DAILY_LIMIT = "2";
+  try {
+    const ids = [];
+    for (let i = 0; i < 3; i++) { const r = await sendTo(me, others[i]); assert.equal(r.status, 201); ids.push(r.body.data.id); }
+    const over = await sendTo(me, others[3]); assert.equal(over.status, 429); assert.match(over.body.message, /too fast/);
+    assert.equal((await api("POST", `/api/arena/requests/${ids[0]}/withdraw`, { token: me.token })).status, 200);
+    assert.equal((await api("POST", `/api/arena/requests/${ids[1]}/withdraw`, { token: me.token })).status, 200);
+    const w3 = await api("POST", `/api/arena/requests/${ids[2]}/withdraw`, { token: me.token });
+    assert.equal(w3.status, 429); assert.match(w3.body.message, /withdrawn too many/);
+    clock.advance(3600e3 + 5000);
+    assert.equal((await sendTo(me, others[3])).status, 201, "the hourly window reset");
+    assert.equal((await api("POST", `/api/arena/requests/${ids[2]}/withdraw`, { token: me.token })).status, 429, "but the daily withdraw cap holds");
+  } finally { delete process.env.ARENA_REQ_HOURLY_LIMIT; delete process.env.ARENA_WITHDRAW_DAILY_LIMIT; }
+});
+await t("MEMBER BUDGETS: bug reports, reports, blocks, coupon checks and payment attempts all have per-member caps", async () => {
+  const m = await makeUser("Budgeted");
+  process.env.ARENA_BUG_DAILY_LIMIT = "2"; process.env.ARENA_COUPON_HOURLY_LIMIT = "2"; process.env.ARENA_CHECKOUT_HOURLY_LIMIT = "2";
+  try {
+    const bug = () => api("POST", "/api/arena/bugs", { token: m.token, body: { title: "Something broke", description: "It really did break here", category: "other", severity: "low" } });
+    await bug(); await bug(); const third = await bug();
+    assert.equal(third.status, 429); assert.equal(third.body.code, "ARENA_LIMIT");
+    const coupon = () => api("POST", "/api/arena/coupon/validate", { token: m.token, body: { code: "NOPE" } });
+    await coupon(); await coupon(); assert.equal((await coupon()).status, 429);
+    const checkout = () => api("POST", "/api/arena/entry/checkout", { token: m.token, body: {} });
+    await checkout(); await checkout(); assert.equal((await checkout()).status, 429);
+  } finally { for (const k of ["ARENA_BUG_DAILY_LIMIT", "ARENA_COUPON_HOURLY_LIMIT", "ARENA_CHECKOUT_HOURLY_LIMIT"]) delete process.env[k]; }
+});
+
+/* ---- public endpoints: cost budgets + the contact-messages security fix ---- */
+const contactRouter = await m("routes/Contact.js");
+const couponRouter = await m("routes/couponRoute.js");
+app.use("/messages", contactRouter); app.use("/api/coupon", couponRouter);
+await t("SECURITY: contact messages can no longer be read, deleted or answered without an admin/employee login", async () => {
+  for (const [method, path] of [["GET", "/messages/"], ["GET", "/messages/64b000000000000000000001"], ["DELETE", "/messages/64b000000000000000000001"], ["PATCH", "/messages/64b000000000000000000001/read"], ["POST", "/messages/64b000000000000000000001/reply"]]) {
+    assert.equal((await api(method, path, { body: method === "GET" || method === "DELETE" ? undefined : {} })).status, 401, `${method} ${path} signed-out`);
+    assert.equal((await api(method, path, { token: normal.token, body: method === "GET" || method === "DELETE" ? undefined : {} })).status, 403, `${method} ${path} as member`);
+  }
+  assert.equal((await api("GET", "/messages/", { token: admin.token })).status, 200, "the admin can still list them");
+});
+await t("PUBLIC LIMITS: coupon checks are capped per network (30 / 10 min by default), other networks unaffected", async () => {
+  process.env.COUPON_VALIDATE_LIMIT = "3";
+  try {
+    const hit = (ip) => api("POST", "/api/coupon/validate", { body: { code: "GUESS", amount: 100 }, ip });
+    for (let i = 0; i < 3; i++) assert.notEqual((await hit("10.90.0.1")).status, 429);
+    const over = await hit("10.90.0.1"); assert.equal(over.status, 429); assert.equal(over.body.code, "RATE_LIMITED"); assert.ok(over.body.retryAfter <= 600);
+    assert.notEqual((await hit("10.90.0.2")).status, 429);
+    clock.advance(11 * 60e3); assert.notEqual((await hit("10.90.0.1")).status, 429, "window passed");
+  } finally { delete process.env.COUPON_VALIDATE_LIMIT; }
+});
+await t("PUBLIC LIMITS: every unauthenticated money / booking / form / counter endpoint carries a budget limiter", async () => {
+  const covered = [];
+  const routers = [["routes/cashfreeRoute.js", "/payment/cashfree"], ["routes/payuRoutes.js", "/payment/payu"], ["routes/razorpayRoute.js", "/payment/razorpay"], ["routes/couponRoute.js", "/api/coupon"], ["routes/interviewRoutes.js", "/api/interviews"], ["routes/bookReviewRoute.js", "/api/book/review"], ["routes/Blog.js", "/blogs"], ["routes/Contact.js", "/messages"], ["routes/Interest.js", "/interest"], ["routes/Review.js", "/review"], ["routes/InterviewExperience.js", "/api/interview"]];
+  const MUST = new Set(["POST /payment/cashfree/create", "GET /payment/cashfree/status/:orderId", "GET /payment/cashfree/return", "POST /payment/payu/create", "POST /payment/payu/success", "POST /payment/payu/failure", "GET /payment/payu/access", "POST /payment/razorpay/create", "POST /payment/razorpay/verify", "POST /api/coupon/validate", "GET /api/coupon/available", "POST /api/interviews/bookings", "POST /api/interviews/bookings/:id/payment", "POST /api/interviews/bookings/:id/reconcile", "GET /api/interviews/bookings/:id/status", "POST /api/book/review/link/:token", "POST /blogs/:slug/view", "POST /messages/us", "POST /interest/add", "POST /review/:token", "POST /api/interview/"]);
+  for (const [file, mount] of routers) {
+    const router = await m(file);
+    for (const layer of router.stack) {
+      if (!layer.route) continue;
+      const hasBudget = layer.route.stack.some((s) => s.handle?.budgetName);
+      for (const method of Object.keys(layer.route.methods)) { const key = `${method.toUpperCase()} ${mount}${layer.route.path === "/" && mount !== "/messages" ? "/" : layer.route.path}`.replace(/\/\/$/, "/"); if (hasBudget) covered.push(key); }
+    }
+  }
+  const missing = [...MUST].filter((k) => !covered.includes(k) && !covered.includes(k.replace(/\/$/, "")));
+  assert.deepEqual(missing, [], `no budget limiter on: ${missing.join(", ")}`);
+});
+console.error = origErr2;
+
+
+/* ================= ADMIN: deleted accounts + sign-ups with no profile ================= */
+const ACC = (qs) => api("GET", `${AR}/accounts?${qs}`, { token: admin.token });
+await t("ACCOUNTS: admin only", async () => {
+  assert.equal((await api("GET", `${AR}/accounts?kind=deleted`)).status, 401);
+  assert.equal((await api("GET", `${AR}/accounts?kind=deleted`, { token: normal.token })).status, 403);
+  assert.equal((await ACC("kind=bogus")).status, 400);
+});
+await t("ACCOUNTS: deleted list shows self-deleted shells (anonymous, dated) and admin-deleted accounts (real details + who)", async () => {
+  const self = await withPassword(await makeUser("AccSelf"));
+  assert.equal((await DEL(self.token, { password: GOOD_PW, confirm: "DELETE" })).status, 200);
+  const byAdmin = await makeUser("AccByAdmin", { paid: null });
+  await User.updateOne({ _id: byAdmin.user._id }, { $set: { isDeleted: true, status: "inactive", deletedAt: new Date(), deletedBy: admin.user._id } });
+  const r = await ACC("kind=deleted&pageSize=100"); assert.equal(r.status, 200);
+  const mine = r.body.data.items.find((x) => x.id === String(self.user._id));
+  assert.ok(mine, "self-deleted account is listed"); assert.equal(mine.deletedBy, "member"); assert.equal(mine.anonymized, true); assert.equal(mine.name, "Deleted user");
+  assert.ok(!JSON.stringify(mine).includes(self.user.email), "the real email is not stored, so it can't be shown"); assert.ok(mine.deletedAt && mine.signedUpAt);
+  const other = r.body.data.items.find((x) => x.id === String(byAdmin.user._id));
+  assert.ok(other, "admin-deleted account is listed"); assert.equal(other.deletedBy, "admin"); assert.equal(other.deletedByName, admin.user.name); assert.equal(other.anonymized, false); assert.equal(other.email, byAdmin.user.email);
+  assert.ok(r.body.data.counts.deleted >= 2 && r.body.data.total >= 2);
+  assert.ok(r.body.data.items.every((x) => x.deletedAt), "every row has a deletion date");
+  const dates = r.body.data.items.map((x) => new Date(x.deletedAt).getTime()); assert.deepEqual(dates, [...dates].sort((a, b) => b - a), "newest deletion first");
+  const found = await ACC(`kind=deleted&q=${encodeURIComponent(byAdmin.user.email)}`); assert.deepEqual(found.body.data.items.map((x) => x.id), [String(byAdmin.user._id)]);
+  const byId = await ACC(`kind=deleted&q=${self.user._id}`); assert.equal(byId.body.data.total, 1, "a deleted shell can be found by its id");
+});
+await t("ACCOUNTS: 'signed up, no profile': arena sign-ups only by default; members with a profile, deleted accounts and staff never appear", async () => {
+  const lonely = await makeUser("AccLonely", { paid: null }); await User.collection.updateOne({ _id: lonely.user._id }, { $set: { emailVerifiedAt: new Date(Date.now() - 3 * 864e5), createdAt: new Date(Date.now() - 3 * 864e5) } });   // createdAt is immutable in the model, so write it directly
+  const buyer = await makeUser("AccBuyer", { paid: null });                                        // book buyer: no email verification, no profile
+  const member = await makeUser("AccMember"); await User.updateOne({ _id: member.user._id }, { $set: { emailVerifiedAt: new Date() } });
+  const draft = await makeUser("AccDraft", { paid: false }); await User.updateOne({ _id: draft.user._id }, { $set: { emailVerifiedAt: new Date() } });   // created a profile, hasn't paid
+  const staff = await makeUser("AccStaff", { paid: null, role: "Employee" }); await User.updateOne({ _id: staff.user._id }, { $set: { emailVerifiedAt: new Date() } });
+  const gone = await makeUser("AccGone", { paid: null }); await User.updateOne({ _id: gone.user._id }, { $set: { emailVerifiedAt: new Date(), isDeleted: true, status: "inactive", deletedAt: new Date() } });
+  const r = await ACC("kind=no_profile&pageSize=100"); assert.equal(r.status, 200);
+  const ids = new Set(r.body.data.items.map((x) => x.id));
+  assert.ok(ids.has(String(lonely.user._id)), "verified sign-up without a profile is listed");
+  for (const [who, label] of [[buyer, "book buyer (scope=arena)"], [member, "member with a profile"], [draft, "member with an unpaid profile"], [staff, "employee"], [gone, "deleted account"]]) assert.ok(!ids.has(String(who.user._id)), `${label} must not be listed`);
+  const row = r.body.data.items.find((x) => x.id === String(lonely.user._id));
+  assert.equal(row.verified, true); assert.equal(row.email, lonely.user.email); assert.ok(row.daysSinceSignup >= 3); assert.equal(row.source, "Prep Buddy sign-up");
+  const all = await ACC("kind=no_profile&scope=all&pageSize=100"); const allIds = new Set(all.body.data.items.map((x) => x.id));
+  assert.ok(allIds.has(String(buyer.user._id)) && allIds.has(String(lonely.user._id)), "scope=all also lists book buyers"); assert.ok(!allIds.has(String(member.user._id)) && !allIds.has(String(gone.user._id)));
+  assert.equal(all.body.data.items.find((x) => x.id === String(buyer.user._id)).verified, false);
+  assert.ok(all.body.data.counts.noProfile >= r.body.data.counts.noProfile);
+});
+await t("ACCOUNTS: no-profile list: search, paging, newest first, counts; a profile created later removes the account from it", async () => {
+  const tag = `zzacc${Date.now() % 100000}`; const made = [];
+  for (let i = 0; i < 5; i++) { const u = await makeUser(`${tag}${i}`, { paid: null }); await User.collection.updateOne({ _id: u.user._id }, { $set: { emailVerifiedAt: new Date(), createdAt: new Date(Date.now() - i * 3600e3) } }); made.push(u); }
+  const page1 = await ACC(`kind=no_profile&q=${tag}&pageSize=2&page=1`), page3 = await ACC(`kind=no_profile&q=${tag}&pageSize=2&page=3`);
+  assert.equal(page1.body.data.total, 5); assert.equal(page1.body.data.items.length, 2); assert.equal(page3.body.data.items.length, 1);
+  assert.equal(page1.body.data.items[0].id, String(made[0].user._id), "newest sign-up first");
+  assert.equal((await ACC(`kind=no_profile&q=${tag}3`)).body.data.total, 1);
+  await Profile.create({ user: made[0].user._id, alias: generateAlias(), realName: "Now Has Profile", topics: ["DSA"], level: "beginner", skills: ["arrays"], availability: ["weekday_evening"], companyType: "student", companyName: "X" });
+  assert.equal((await ACC(`kind=no_profile&q=${tag}`)).body.data.total, 4, "creating a profile removes them from the list");
+});
+await t("ACCOUNTS: an account in the no-profile list can be removed with the existing permanent-delete; it then shows nowhere", async () => {
+  const u = await makeUser("AccRemove", { paid: null }); await User.updateOne({ _id: u.user._id }, { $set: { emailVerifiedAt: new Date() } });
+  assert.equal((await api("DELETE", `${AR}/members/${u.user._id}`, { token: admin.token })).status, 200);
+  assert.ok(!(await ACC("kind=no_profile&pageSize=100")).body.data.items.some((x) => x.id === String(u.user._id)));
+  assert.ok(!(await ACC("kind=deleted&pageSize=100")).body.data.items.some((x) => x.id === String(u.user._id)), "a hard delete leaves nothing to list");
 });
 
 /* ================= MAIL PROVIDER: runtime switch (Mailtrap / Resend) ================= */

@@ -131,8 +131,9 @@ export function Modal({ open, onClose, title, children, footer, wide = false }) 
 
   if (!open) return null;
 
+  // z-[9995]: above the site's floating sale tab (9990) so it can't cover a pop-up's buttons, below toasts (9999).
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-[9995] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-stone-900/50 dk:bg-[#1c1612]/50 backdrop-blur-sm" onClick={onClose} />
       <div className={`relative max-h-sheet w-full overflow-y-auto rounded-t-3xl bg-white dk:bg-[#241b15] p-5 pb-safe shadow-2xl ${wide ? "sm:max-w-4xl" : "sm:max-w-lg"} sm:rounded-3xl sm:p-6`}>
         <div className="mb-4 flex items-start justify-between gap-4">

@@ -4,6 +4,7 @@ import { auth, isAdmin } from "../../Middleware/auth.js";
 import * as admin from "../../controllers/arena/adminController.js";
 import * as ops from "../../controllers/arena/adminOpsController.js";
 import * as purge from "../../controllers/arena/adminPurgeController.js";
+import { listAccounts } from "../../controllers/arena/adminAccountsController.js";
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.get("/stats", admin.stats);
 router.post("/repair", admin.repair);
 
 router.get("/profiles", admin.listProfiles);
+router.get("/accounts", listAccounts);
 router.post("/profiles/:id/suspend", admin.suspendProfile);
 router.post("/profiles/:id/unsuspend", admin.unsuspendProfile);
 router.post("/profiles/:id/hide", admin.hideProfile);
@@ -44,6 +46,7 @@ router.delete("/members/:userId", purge.deleteMember);
 
 router.post("/members/:id/matches", ops.adjustMatches);
 router.get("/audit", ops.listAudit);
+router.post("/locks/clear", purge.clearLocksFor);
 
 router.get("/bugs", admin.listBugs);
 router.put("/bugs/:id", admin.updateBug);

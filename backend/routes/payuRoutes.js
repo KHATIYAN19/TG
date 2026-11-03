@@ -1,4 +1,5 @@
 import express from "express";
+import * as PB from "../Middleware/publicBudgets.js";
 
 import {
   createPayUPayment,
@@ -11,21 +12,26 @@ const router = express.Router();
 
 router.post(
   "/create",
+  PB.payCreateHourly,
+  PB.payCreateDaily,
   createPayUPayment
 );
 
 router.post(
   "/success",
+  PB.payVerifyHourly,
   payUSuccess
 );
 
 router.post(
   "/failure",
+  PB.payVerifyHourly,
   payUFailure
 );
 
 router.get(
   "/access",
+  PB.payStatusTenMin,
   getPurchasedBookAccess
 );
 

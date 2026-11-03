@@ -15,6 +15,10 @@ process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.CASHFREE_APP_ID = "TEST_APP"; process.env.CASHFREE_SECRET_KEY = "cfsk_test_secret"; process.env.CASHFREE_ENV = "sandbox";
 process.env.ARENA_PAYMENT_GATEWAY = "cashfree";
 process.env.RESEND_API_KEY = "";               // tests must never use the real Resend key from .env (dotenv will not override a set variable)
+// SAFETY: tests must NEVER send real email. dotenv loads backend/.env and will not override a variable that is
+// already set (even to ""), so blank every mail credential here, before anything imports the mail sender.
+for (const k of ["MAILTRAP_TOKEN", "AMAZON_ACCESS_KEY_ID", "AMAZON_SECRET_ACCESS_KEY", "AMAZON_REGION", "AMAZON_SES_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_DEFAULT_REGION", "AMAZON_SESSION_TOKEN", "AWS_SESSION_TOKEN"]) process.env[k] = "";
+process.env.MAIL_DISABLE_SEND = "true";   // second lock: the sender refuses to contact any provider
 
 const { MongoMemoryReplSet } = await import("mongodb-memory-server");
 const mongoose = (await import(`${B}/node_modules/mongoose/index.js`)).default;
@@ -668,15 +672,80 @@ await t("EMAILS: payment, requests, cancellation and ending a match send NO emai
   assert.deepEqual(sent, [], `unexpected emails: ${sent.join(" | ")}`);
 });
 
-await t("EMAILS: accepting a request sends the 'matched' email to both members, and ending it sends nothing", async () => {
+await t("EMAILS: accepting sends 'matched' to both members; ending sends 'partnership ended' to both (nothing else)", async () => {
   const a = await makeMember("Mail4"), b = await makeMember("Mail5");
   const reqId2 = await reqTo(a, b);
   const sent = await captureMail(async () => {
     const match = await acceptRequest({ requestId: reqId2, userId: b.user._id });
     await endM({ matchId: match._id, byUserId: a.user._id, reason: "user_ended" });
   });
-  assert.equal(sent.length, 2, `expected 2 matched emails, got: ${sent.join(" | ")}`);
-  assert.ok(sent.every((l) => /matched/i.test(l)), sent.join(" | "));
+  assert.equal(sent.length, 4, `expected 2 matched + 2 ended emails, got: ${sent.join(" | ")}`);
+  assert.equal(sent.filter((l) => /matched/i.test(l)).length, 2, sent.join(" | "));
+  assert.equal(sent.filter((l) => /partnership/i.test(l)).length, 2, sent.join(" | "));
+});
+
+/* What the emails actually say: collected from the outbox (nothing is sent: MAIL_DISABLE_SEND is on). */
+const outboxFor = async (fn) => {
+  await new Promise((r) => setTimeout(r, 1200));           // let earlier fire-and-forget mail finish
+  globalThis.__MAIL_OUTBOX = [];
+  const err = console.error; console.error = () => {};
+  try { await fn(); await new Promise((r) => setTimeout(r, 1200)); } finally { console.error = err; }
+  const box = globalThis.__MAIL_OUTBOX; globalThis.__MAIL_OUTBOX = undefined;
+  return box;
+};
+const dig = (box, email) => box.find((m) => m.to === email);
+const visible = (m) => m.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+await t("EMAIL CONTENT: matched email names the buddy by ANONYMOUS id only, shows matches left, replies go to support", async () => {
+  const a = await makeMember("Mail6", { matches: 2 }), b = await makeMember("Mail7");
+  const reqId3 = await reqTo(a, b);
+  const box = await outboxFor(() => acceptRequest({ requestId: reqId3, userId: b.user._id }));
+  const toA = dig(box, a.user.email), toB = dig(box, b.user.email);
+  assert.ok(toA && toB, JSON.stringify(box.map((m) => m.to)));
+  const aliasB = (await Profile.findById(b.profile._id)).alias, aliasA = (await Profile.findById(a.profile._id)).alias;
+  assert.match(toA.subject, new RegExp(`matched with ${aliasB}`)); assert.match(toB.subject, new RegExp(`matched with ${aliasA}`));
+  assert.ok(visible(toA).includes(aliasB) && !visible(toA).includes(b.user.email) && !visible(toA).includes(b.user.mobile), "the buddy's real contact details never appear");
+  assert.match(visible(toA), /Matches left after this\s+1/, "a: 2 matches included, 1 used"); assert.match(visible(toB), /Matches left after this\s+0/, "b: 1 match included, 1 used");
+  assert.equal(toA.options.replyTo, "supporttargettrek@gmail.com"); assert.ok(toA.html.includes("mailto:supporttargettrek@gmail.com"));
+});
+
+await t("EMAIL CONTENT: unmatched wording per member: the one who ended it vs their buddy; next step depends on matches left", async () => {
+  const a = await makeMember("Mail8", { matches: 2 }), b = await makeMember("Mail9");
+  const match = await acceptRequest({ requestId: await reqTo(a, b), userId: b.user._id });
+  const box = await outboxFor(() => endM({ matchId: match._id, byUserId: a.user._id, reason: "user_ended" }));
+  const toA = dig(box, a.user.email), toB = dig(box, b.user.email);
+  assert.match(toA.subject, /partnership has ended/i);
+  assert.match(visible(toA), /You ended your partnership/); assert.match(visible(toA), /back in the arena/); assert.match(visible(toA), /1 match left/);
+  assert.match(visible(toB), /ended your partnership\. This happens/); assert.match(visible(toB), /used all the matches/, "b had 1 match, now spent");
+  assert.ok(toB.html.includes("Join the arena again") && toA.html.includes("Find a new buddy"));
+  assert.equal(toA.options.replyTo, "supporttargettrek@gmail.com");
+});
+
+await t("EMAIL CONTENT: a BLOCK is never revealed: the blocked member gets the neutral wording; the blocker's wording is their own", async () => {
+  const a = await makeMember("Mail10"), b = await makeMember("Mail11");
+  const match = await acceptRequest({ requestId: await reqTo(a, b), userId: b.user._id });
+  const box = await outboxFor(() => endM({ matchId: match._id, byUserId: a.user._id, reason: "blocked" }));
+  const toBlocker = dig(box, a.user.email), toBlocked = dig(box, b.user.email);
+  assert.match(visible(toBlocker), /You blocked your buddy/);
+  const words = visible(toBlocked) + " " + toBlocked.text;
+  assert.ok(!/\b(block(ed)?|report(ed)?)\b/i.test(words.replace(/Report or Block/g, "")), "the blocked member is never told");
+  assert.match(visible(toBlocked), /has ended/);
+});
+
+await t("EMAIL CONTENT: admin dissolve says 'the team ended it', and a member the admin restored is told it did not count", async () => {
+  const a = await makeMember("Mail12", { matches: 2 }), b = await makeMember("Mail13", { matches: 2 });
+  const match = await acceptRequest({ requestId: await reqTo(a, b), userId: b.user._id });
+  const box = await outboxFor(() => endM({ matchId: match._id, byUserId: null, reason: "admin_dissolved", restoreProfileIds: [String(a.profile._id)] }));
+  const toA = dig(box, a.user.email), toB = dig(box, b.user.email);
+  assert.match(visible(toA), /the Target Trek team ended your partnership/); assert.match(visible(toA), /did not count against your matches/); assert.match(visible(toA), /2 matches left/);
+  assert.ok(!/did not count against your matches/.test(visible(toB)), "only the restored member gets that note"); assert.match(visible(toB), /1 match left/);
+});
+
+await t("EMAIL CONTENT: skipEmailUserIds suppresses the email to an account that is being deleted", async () => {
+  const a = await makeMember("Mail14"), b = await makeMember("Mail15");
+  const match = await acceptRequest({ requestId: await reqTo(a, b), userId: b.user._id });
+  const box = await outboxFor(() => endM({ matchId: match._id, byUserId: null, reason: "admin_dissolved", skipEmailUserIds: [a.user._id] }));
+  assert.ok(!dig(box, a.user.email) && dig(box, b.user.email));
 });
 
 

@@ -14,6 +14,8 @@ import { API_ROOT, http, errMsg, errCode, retryAfterOf } from "./api";
 import { Button, Field, inputClass, cx } from "./ui";
 import { useArenaChrome } from "./chrome";
 
+const LOCK_CODES = ["SIGNUP_LOCKED", "RESET_LOCKED", "LOGIN_IP_LOCKED"];
+
 const passwordRule = z
   .string()
   .min(8, "At least 8 characters")
@@ -159,6 +161,20 @@ export default function ArenaAuth() {
   const [lockedUntil, setLockedUntil] = useState(0);
   const lockLeft = useRemaining(lockedUntil);
   const isLocked = lockLeft > 0;
+  // 24-hour locks from too many wrong codes / resends (sign-up, password reset) or failed logins from this network.
+  const [authLock, setAuthLock] = useState(null); // { until, message }
+  const authLockLeft = useRemaining(authLock?.until ?? 0);
+  const authLocked = authLockLeft > 0;
+  const applyLock = (error) => {
+    if (!LOCK_CODES.includes(errCode(error))) return false;
+    const data = error.response?.data ?? {};
+    setAuthLock({
+      until: data.lockedUntil ? new Date(data.lockedUntil).getTime() : Date.now() + (retryAfterOf(error) || 86400) * 1000,
+      message: errMsg(error),
+    });
+    setFormError("");
+    return true;
+  };
 
   const from = location.state?.from;
   const savedReturn = (() => {
@@ -204,7 +220,7 @@ export default function ArenaAuth() {
       }
       // OTP limit hit (5 codes / 24 h) or 60 s cooldown: show the wait and lock the button.
       if (["OTP_RATE_LIMIT", "OTP_COOLDOWN"].includes(errCode(error))) setCooldown(retryAfterOf(error));
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
     } finally {
       setBusy(false);
     }
@@ -219,7 +235,7 @@ export default function ArenaAuth() {
       const { data } = await http.post("/signup/verify", { email: pendingEmail, otp });
       finish(data);
     } catch (error) {
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
       if (["SIGNUP_EXPIRED", "OTP_ATTEMPTS"].includes(errCode(error))) setStep("signup");
     } finally {
       setBusy(false);
@@ -236,7 +252,7 @@ export default function ArenaAuth() {
       toast.success("New code sent", { id: "arena-otp-sent" });
     } catch (error) {
       if (["OTP_RATE_LIMIT", "OTP_COOLDOWN"].includes(errCode(error))) setCooldown(retryAfterOf(error));
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
     } finally {
       setBusy(false);
     }
@@ -265,7 +281,7 @@ export default function ArenaAuth() {
         setLockedUntil(until);
         setFormError("");
       } else {
-        setFormError(errMsg(error));
+        if (!applyLock(error)) setFormError(errMsg(error));
       }
     } finally {
       setBusy(false);
@@ -293,7 +309,7 @@ export default function ArenaAuth() {
         setOtp("");
         setStep("reset");
       }
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
       return false;
     } finally {
       setBusy(false);
@@ -318,7 +334,7 @@ export default function ArenaAuth() {
       setOtp("");
       setStep("login");
     } catch (error) {
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
       if (errCode(error) === "OTP_ATTEMPTS") setStep("forgot");
     } finally {
       setBusy(false);
@@ -333,7 +349,7 @@ export default function ArenaAuth() {
       const { data } = await authApi.post("/verify-otp", { challengeId, otp, rememberDevice: true });
       finish(data);
     } catch (error) {
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
     } finally {
       setBusy(false);
     }
@@ -346,7 +362,7 @@ export default function ArenaAuth() {
       setCooldown(60);
       toast.success("New code sent");
     } catch (error) {
-      setFormError(errMsg(error));
+      if (!applyLock(error)) setFormError(errMsg(error));
     } finally {
       setBusy(false);
     }
@@ -414,6 +430,14 @@ export default function ArenaAuth() {
               </div>
             )}
 
+            {authLocked && (
+              <div role="alert" className="mb-5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dk:bg-amber-500/10 dk:text-amber-200 dk:ring-amber-500/25">
+                <p className="flex items-center gap-2 font-semibold"><ShieldAlert className="h-4 w-4 shrink-0" aria-hidden /> Temporarily locked for your security</p>
+                <p className="mt-1.5">{authLock.message.replace(/\s*(It unlocks|Please try again)[^.]*\.?$/i, "").trim()}</p>
+                <p className="mt-1.5">Unlocks automatically in <span className="font-bold tabular-nums">{formatWait(authLockLeft)}</span>. If this is a mistake, contact support and we can unlock it.</p>
+              </div>
+            )}
+
             {formError && (
               <div role="alert" className="mb-5 rounded-xl bg-rose-50 dk:bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dk:text-rose-300 ring-1 ring-rose-100 dk:ring-rose-500/20">
                 {formError}
@@ -438,7 +462,7 @@ export default function ArenaAuth() {
                 <Field label="Confirm password" htmlFor="confirmPassword" error={signupForm.formState.errors.confirmPassword?.message}>
                   <PasswordInput id="confirmPassword" autoComplete="new-password" invalid={signupForm.formState.errors.confirmPassword} {...signupForm.register("confirmPassword")} />
                 </Field>
-                <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0} className="w-full">
+                <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0 || authLocked} className="w-full">
                   {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : "Send verification code"}
                 </Button>
                 <p className="text-center text-xs text-stone-500 dk:text-[#b9a79c]">
@@ -477,7 +501,7 @@ export default function ArenaAuth() {
                     Forgot password?
                   </button>
                 </div>
-                <Button type="submit" size="lg" loading={busy} disabled={isLocked} className="w-full">{isLocked ? `Locked · ${formatWait(lockLeft)}` : "Log in"}</Button>
+                <Button type="submit" size="lg" loading={busy} disabled={isLocked || authLocked} className="w-full">{isLocked ? `Locked · ${formatWait(lockLeft)}` : "Log in"}</Button>
               </form>
             )}
 
@@ -494,7 +518,7 @@ export default function ArenaAuth() {
                 <Field label="Email" htmlFor="forgot-email" error={forgotForm.formState.errors.email?.message}>
                   <input id="forgot-email" type="email" autoComplete="email" className={inputClass(forgotForm.formState.errors.email)} {...forgotForm.register("email")} />
                 </Field>
-                <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0} className="w-full">
+                <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0 || authLocked} className="w-full">
                   {cooldown > 0 ? waitLabel.replace("Resend", "Send again") : "Send reset code"}
                 </Button>
                 <button type="button" className="mx-auto block text-sm text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]" onClick={() => { setStep("login"); setFormError(""); }}>
@@ -525,7 +549,7 @@ export default function ArenaAuth() {
                   <PasswordInput id="reset-confirm" autoComplete="new-password" invalid={resetForm.formState.errors.confirmPassword} {...resetForm.register("confirmPassword")} />
                 </Field>
 
-                <Button type="submit" size="lg" loading={busy} disabled={otp.length !== 6} className="w-full">Change password</Button>
+                <Button type="submit" size="lg" loading={busy} disabled={otp.length !== 6 || authLocked} className="w-full">Change password</Button>
 
                 <div className="flex items-center justify-between text-sm">
                   <button type="button" className="text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]" onClick={() => { setStep("forgot"); setFormError(""); forgotForm.setValue("email", pendingEmail); }}>
@@ -533,7 +557,7 @@ export default function ArenaAuth() {
                   </button>
                   <button
                     type="button"
-                    disabled={cooldown > 0 || busy}
+                    disabled={cooldown > 0 || busy || authLocked}
                     onClick={resendReset}
                     className="font-semibold text-orange-600 dk:text-orange-400 disabled:cursor-not-allowed disabled:text-stone-400 dk:disabled:text-[#8f7c70]"
                   >
@@ -559,7 +583,7 @@ export default function ArenaAuth() {
 
                 <OtpInput value={otp} onChange={setOtp} disabled={busy} />
 
-                <Button size="lg" loading={busy} disabled={otp.length !== 6} onClick={step === "verify" ? onVerifySignup : onVerifyLogin} className="w-full">
+                <Button size="lg" loading={busy} disabled={otp.length !== 6 || authLocked} onClick={step === "verify" ? onVerifySignup : onVerifyLogin} className="w-full">
                   {step === "verify" ? "Verify & create account" : "Verify & log in"}
                 </Button>
 
@@ -568,7 +592,7 @@ export default function ArenaAuth() {
                     ← Change details
                   </button>
                   <button
-                    disabled={cooldown > 0 || busy}
+                    disabled={cooldown > 0 || busy || authLocked}
                     onClick={step === "verify" ? resend : resendLogin}
                     className="font-semibold text-orange-600 dk:text-orange-400 disabled:cursor-not-allowed disabled:text-stone-400 dk:disabled:text-[#8f7c70]"
                   >

@@ -175,6 +175,7 @@ export const purgeUser = async (userId, { mode = "hard", actorId = null } = {}) 
       byUserId: null,
       reason: "admin_dissolved",
       restoreProfileIds: buddyProfileId ? [String(buddyProfileId)] : [],
+      skipEmailUserIds: [user._id], // the account being deleted gets no email
     });
   }
 
