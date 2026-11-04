@@ -6,7 +6,7 @@ import UserSession from "../models/UserSession.js";
 import { locationFromRequest } from "../utils/geoLocation.js";
 
 import redis from "../utils/redis.js";
-import sendMail from "../utils/MailSender.js";
+import { deliverMail } from "../utils/MailSender.js";
 
 import {
   authConfig,
@@ -163,7 +163,8 @@ const sendLoginOtp = async (user, code) => {
     minutes: authConfig.otpMinutes,
   });
 
-  await sendMail(user.email, subject, text, html, {
+  // OTP: send live and directly (never through the queue).
+  await deliverMail(user.email, subject, text, html, {
     replyTo: supportEmail(),
   });
 };

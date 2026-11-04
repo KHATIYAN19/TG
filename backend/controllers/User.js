@@ -4,7 +4,7 @@ import validator from 'validator';
 import User from '../models/User.js';
 import fs from "fs";
 import  path from 'path';
-import sendMail from '../utils/MailSender.js';
+import sendMail, { deliverMail } from '../utils/MailSender.js';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -243,7 +243,7 @@ export const resendOtp = async (req, res) => {
 
       const subject = 'Your TargetTrek OTP';
       const plainText = `Your OTP is ${otp}. It will expire in 10 minutes.`;
-      await sendMail(user.email, subject, plainText, htmlTemplate);
+      await deliverMail(user.email, subject, plainText, htmlTemplate); // OTP: live, no queue
 
 
       res.status(200).json({ success: true, message: 'OTP resent successfully' });

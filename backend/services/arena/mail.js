@@ -1,4 +1,4 @@
-import sendMail from "../../utils/MailSender.js";
+import sendMail, { deliverMail } from "../../utils/MailSender.js";
 import { otpEmail, matchedEmail, unmatchedEmail, supportEmail } from "../mail/templates.js";
 
 /*
@@ -14,19 +14,21 @@ import { otpEmail, matchedEmail, unmatchedEmail, supportEmail } from "../mail/te
 */
 
 /* Mail must never break a request: log and move on. */
-const safeSend = async (to, mail) => {
+const safeSend = async (to, mail, { direct = false } = {}) => {
   try {
-    await sendMail(to, mail.subject, mail.text, mail.html, { replyTo: supportEmail() });
+    // OTP emails (direct) are sent live, never through the queue.
+    const send = direct ? deliverMail : sendMail;
+    await send(to, mail.subject, mail.text, mail.html, { replyTo: supportEmail() });
   } catch (error) {
     console.error("[arena:mail]", mail.subject, error.message);
   }
 };
 
 export const sendSignupOtp = (to, name, otp, minutes) =>
-  safeSend(to, otpEmail({ purpose: "signup", name, otp, minutes }));
+  safeSend(to, otpEmail({ purpose: "signup", name, otp, minutes }), { direct: true });
 
 export const sendPasswordResetOtp = (to, name, otp, minutes) =>
-  safeSend(to, otpEmail({ purpose: "reset", name, otp, minutes }));
+  safeSend(to, otpEmail({ purpose: "reset", name, otp, minutes }), { direct: true });
 
 /* data: { name, buddyAlias, buddyTopics, buddyLevel, matchesLeft } */
 export const sendMatchedMail = (to, data = {}) => safeSend(to, matchedEmail(data));

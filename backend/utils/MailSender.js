@@ -288,6 +288,14 @@ const sendViaMailtrap = async (
    domain must be verified in the Resend dashboard.
 ===================================================== */
 
+// Cleaned like the Mailtrap token: pasted values often carry quotes / spaces / "Bearer ".
+const getResendKey = () =>
+  String(process.env.RESEND_API_KEY || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/^Bearer\s+/i, "")
+    .trim();
+
 const RESEND_URL = "https://api.resend.com/emails";
 const RESEND_TIMEOUT_MS = 30_000;
 
@@ -337,7 +345,7 @@ const sendViaResend = async (
   htmlContent,
   options = {}
 ) => {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = getResendKey();
 
   if (!apiKey) {
     throw new Error("RESEND_API_KEY is missing");
@@ -631,7 +639,7 @@ const PROVIDERS = {
   },
   resend: {
     send: sendViaResend,
-    configured: () => Boolean(process.env.RESEND_API_KEY),
+    configured: () => Boolean(getResendKey()),
   },
   ses: {
     send: sendViaSes,
@@ -652,15 +660,30 @@ const stats = {
   fallbacks: 0,
 };
 
+/*
+  A provider that answers 401/403 (bad API key / no permission) will keep doing so,
+  so skip it for a few minutes instead of failing the first attempt of every email.
+*/
+const AUTH_COOLDOWN_MS = 5 * 60 * 1000;
+const authBlockedUntil = {};
+const isAuthError = (error) =>
+  [401, 403].includes(Number(error?.statusCode)) ||
+  /api key is invalid|invalid api key|unauthori[sz]ed|invalid.*token|security token|signature/i.test(String(error?.message || ""));
+
 const record = (name, ok, error) => {
   const s = stats[name];
   if (ok) {
+    delete authBlockedUntil[name];
     s.sent += 1;
     s.lastSentAt = new Date().toISOString();
   } else {
     s.failed += 1;
     s.lastError = String(error?.message || error).slice(0, 300);
     s.lastErrorAt = new Date().toISOString();
+    if (isAuthError(error)) {
+      authBlockedUntil[name] = Date.now() + AUTH_COOLDOWN_MS;
+      console.error(`[MAIL] ${name} rejected its credentials; skipping it for 5 minutes. Fix its key in .env.`);
+    }
   }
 };
 
@@ -747,16 +770,19 @@ export const deliverMail = async (...args) => {
     delay). Start with the chosen provider if it is configured, otherwise
     with the first configured one; the rest are the failover backups.
   */
-  const configured = ORDER.filter((name) => PROVIDERS[name].configured());
+  const all = ORDER.filter((name) => PROVIDERS[name].configured());
+  // Providers with rejected credentials go last (never dropped: better than sending nothing).
+  const healthy = all.filter((n) => !(authBlockedUntil[n] > Date.now()));
+  const configured = [...healthy, ...all.filter((n) => !healthy.includes(n))];
 
   if (!configured.length) {
     // Nothing configured: let the chosen provider produce its clear error.
     return sendMailWith(chosen, ...args);
   }
 
-  const primary = configured.includes(chosen) ? chosen : configured[0];
+  const primary = healthy.includes(chosen) ? chosen : configured[0];
 
-  if (primary !== chosen) {
+  if (primary !== chosen && !authBlockedUntil[chosen]) {
     console.warn(
       `[MAIL] "${chosen}" is selected but not configured; using "${primary}". ` +
         `Add its keys or pick another provider at /admin/mail.`
