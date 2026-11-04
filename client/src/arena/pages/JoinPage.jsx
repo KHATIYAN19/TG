@@ -8,6 +8,7 @@ import { http, errMsg, errCode, inr } from "../api";
 import { BackgroundLine, PracticeFacts, TargetCompanies, TopicBadges } from "../MemberBits";
 import { Button, Card, Spinner, cx } from "../ui";
 import { resolveGateway } from "../gateway";
+import OfferBanner from "../OfferBanner";
 import { ProfileForm } from "./ProfilePage";
 
 /* ------------------------------ payment SDKs ------------------------------ */
@@ -243,6 +244,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
           {couponError && <p role="alert" className="mt-1.5 text-xs font-medium text-rose-600 dk:text-rose-400">{couponError}</p>}
         </div>
 
+        {settings.cancelRefundEnabled && settings.cancellationFeePercent != null && (
         <div className="rounded-xl bg-orange-50/60 dk:bg-orange-500/10 p-4 text-sm text-stone-700 dk:text-[#ead9cc] ring-1 ring-orange-100 dk:ring-orange-500/20">
           <p className="flex items-center gap-2 font-semibold text-[#29201b] dk:text-[#fff7ed]"><ShieldCheck className="h-4 w-4 text-orange-600 dk:text-orange-400" aria-hidden /> Cancellation policy</p>
           <p className="mt-1.5">
@@ -250,11 +252,13 @@ function PaymentStep({ me, refresh, onProcessing }) {
             ({settings.cancellationFeePercent}% cancellation fee). Once a match is used, the entry isn't refundable.
           </p>
         </div>
+        )}
 
         <Button size="lg" className="w-full" onClick={pay} loading={paying} disabled={!settings.enabled}>
           {final === 0 ? "Join the arena for free" : `Pay ${inr(final)} & join`}
         </Button>
         {!settings.enabled && <p className="text-center text-xs text-amber-700 dk:text-amber-300">New entries are paused for now. Please check back soon.</p>}
+        <div className="flex justify-center"><OfferBanner offer={settings.offer} /></div>
         <p className="flex items-center justify-center gap-1.5 text-xs text-stone-500 dk:text-[#b9a79c]"><Lock className="h-3.5 w-3.5" aria-hidden /> {gw ? `Secure payment via ${gw.name}` : "Secure payment"} · your details are saved</p>
         {gw && final > 0 && <p className="text-center text-xs text-stone-500 dk:text-[#b9a79c]">Pay with {gw.methods.join(", ")}.</p>}
       </div>

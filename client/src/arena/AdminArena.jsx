@@ -41,6 +41,15 @@ function Stat({ label, value, sub, tone }) {
   );
 }
 
+// ISO string -> value for <input type="datetime-local"> in the admin's local time.
+const toLocalInput = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 function Overview() {
   const [stats, setStats] = useState(null);
   const [form, setForm] = useState(null);
@@ -77,6 +86,11 @@ function Overview() {
         requestExpiryDays: Number(form.requestExpiryDays),
         minMatchDaysBeforeEnd: Number(form.minMatchDaysBeforeEnd),
         matchesPerEntry: Number(form.matchesPerEntry),
+        cancelRefundEnabled: Boolean(form.cancelRefundEnabled),
+        accountDeletionEnabled: Boolean(form.accountDeletionEnabled),
+        offerEnabled: Boolean(form.offerEnabled),
+        offerText: form.offerText || "",
+        offerEndsAt: form.offerEndsAt ? new Date(form.offerEndsAt).toISOString() : null,
       });
       setForm(data.data);
       toast.success("Settings saved");
@@ -129,6 +143,8 @@ function Overview() {
         <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">Price, fee and matches-per-entry changes apply to <strong>new</strong> checkouts. Members who already paid keep the fee and the number of matches they bought.</p>
         <form onSubmit={save} className="mt-5 space-y-5">
           <Toggle label="Arena open" description="Turn off to pause new entries, requests and accepts. Existing chats keep working." checked={form.enabled} onChange={(v) => setForm((f) => ({ ...f, enabled: v }))} />
+          <Toggle label="Allow cancel & refund" description="Off: members can't cancel their entry, the admin “Refund” button is hidden, and the refund/fee wording disappears from the site and API. When you turn it back on, each member is refunded using the cancellation fee % that applied when they paid." checked={form.cancelRefundEnabled !== false} onChange={(v) => setForm((f) => ({ ...f, cancelRefundEnabled: v }))} />
+          <Toggle label="Allow members to delete their account" description="Off: the “Delete account” section is hidden in member settings and the server rejects the request." checked={form.accountDeletionEnabled !== false} onChange={(v) => setForm((f) => ({ ...f, accountDeletionEnabled: v }))} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Entry price (₹)" htmlFor="price" hint="0 makes entry free."><input id="price" type="number" min="0" max="50000" step="1" className={inputClass(false)} {...bind("entryPriceRupees")} /></Field>
             <Field label="Cancellation fee (%)" htmlFor="fee" hint="Kept when a member cancels before their first match."><input id="fee" type="number" min="0" max="100" step="1" className={inputClass(false)} {...bind("cancellationFeePercent")} /></Field>
@@ -136,6 +152,23 @@ function Overview() {
             <Field label="Max pending requests per member" htmlFor="maxreq"><input id="maxreq" type="number" min="1" max="100" className={inputClass(false)} {...bind("maxOutgoingRequests")} /></Field>
             <Field label="Request expiry (days)" htmlFor="exp"><input id="exp" type="number" min="1" max="90" className={inputClass(false)} {...bind("requestExpiryDays")} /></Field>
             <Field label="Min days before ending a match" htmlFor="mind" hint="0 = can end any time."><input id="mind" type="number" min="0" max="90" className={inputClass(false)} {...bind("minMatchDaysBeforeEnd")} /></Field>
+          </div>
+          <div className="space-y-4 rounded-2xl border border-orange-200 p-4 dk:border-orange-500/30">
+            <Toggle label="Limited-time offer" description="Shows your message (and a live countdown if you set an end date) under the pay button and in the landing-page pricing card." checked={Boolean(form.offerEnabled)} onChange={(v) => setForm((f) => ({ ...f, offerEnabled: v }))} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Offer ends at" htmlFor="offerEnds" hint="Your local time. Leave empty for no countdown. It hides itself automatically at this time.">
+                <div className="flex gap-2">
+                  <input id="offerEnds" type="datetime-local" className={inputClass(false)} value={toLocalInput(form.offerEndsAt)} onChange={(e) => setForm((f) => ({ ...f, offerEndsAt: e.target.value ? new Date(e.target.value).toISOString() : null }))} />
+                  {form.offerEndsAt && <Button type="button" variant="outline" onClick={() => setForm((f) => ({ ...f, offerEndsAt: null }))}>Clear</Button>}
+                </div>
+              </Field>
+              <Field label="Offer text" htmlFor="offerText" hint={`${(form.offerText || "").length}/300 · e.g. “Launch offer: use code FOUNDING for 50% off”`}>
+                <textarea id="offerText" rows={3} maxLength={300} className={inputClass(false)} value={form.offerText || ""} onChange={(e) => setForm((f) => ({ ...f, offerText: e.target.value }))} />
+              </Field>
+            </div>
+            {form.offerEnabled && form.offerEndsAt && new Date(form.offerEndsAt) <= new Date() && (
+              <p className="text-xs font-medium text-amber-700 dk:text-amber-300">This end time has already passed, so the offer is hidden from members.</p>
+            )}
           </div>
           <div className="flex justify-end"><Button type="submit" loading={saving}>Save settings</Button></div>
         </form>

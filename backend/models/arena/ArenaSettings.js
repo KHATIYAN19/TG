@@ -28,6 +28,20 @@ const settingsSchema = new Schema(
     // A matched pair may end the partnership only after this many days.
     minMatchDaysBeforeEnd: { type: Number, default: 0, min: 0, max: 90 },
 
+    // Admin kill-switches. When false the server refuses the action AND stops
+    // sending any related data (fee %, refund amounts) to members.
+    //   cancelRefundEnabled     – member "cancel entry & refund" and the admin "initiate refund"
+    //   accountDeletionEnabled  – member "delete my account"
+    // The fee % stored on each paid entry is never changed, so re-enabling later
+    // refunds each member by the % that applied when THEY paid.
+    cancelRefundEnabled: { type: Boolean, default: true },
+    accountDeletionEnabled: { type: Boolean, default: true },
+
+    // Limited-time offer banner (text + optional countdown) shown under the pay button.
+    offerEnabled: { type: Boolean, default: false },
+    offerEndsAt: { type: Date, default: null },
+    offerText: { type: String, trim: true, maxlength: 300, default: "" },
+
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
 
     // Bounded audit trail of changes (newest last).
@@ -56,6 +70,11 @@ export const ARENA_SETTING_DEFAULTS = {
   maxOutgoingRequests: 10,
   requestExpiryDays: 14,
   minMatchDaysBeforeEnd: 0,
+  cancelRefundEnabled: true,
+  accountDeletionEnabled: true,
+  offerEnabled: false,
+  offerEndsAt: null,
+  offerText: "",
 };
 
 const ArenaSettings =
@@ -78,12 +97,36 @@ export const getArenaSettings = async ({ fresh = false } = {}) => {
 
   const value = { ...ARENA_SETTING_DEFAULTS, ...doc };
   for (const key of Object.keys(ARENA_SETTING_DEFAULTS)) {
+    // offerEndsAt may legitimately be null ("no end date").
+    if (key === "offerEndsAt") continue;
     if (value[key] === undefined || value[key] === null) value[key] = ARENA_SETTING_DEFAULTS[key];
   }
 
   cache = { value, at: Date.now() };
   return value;
 };
+
+/*
+  What members may see of the offer. "active" is decided on the SERVER clock:
+  switched on, has text, and (no end date or the end date is still in the future).
+*/
+export const publicOffer = (s) => {
+  const endsAt = s.offerEndsAt ? new Date(s.offerEndsAt) : null;
+  const active =
+    Boolean(s.offerEnabled) &&
+    Boolean(String(s.offerText || "").trim() || endsAt) &&
+    (!endsAt || endsAt.getTime() > Date.now());
+  return {
+    active,
+    text: active ? String(s.offerText || "") : "",
+    endsAt: active && endsAt ? endsAt.toISOString() : null,
+    serverNow: new Date().toISOString(),
+  };
+};
+
+/* Server-side guards: throw the same shape the controllers use. */
+export const isCancelRefundEnabled = (s) => s.cancelRefundEnabled !== false;
+export const isAccountDeletionEnabled = (s) => s.accountDeletionEnabled !== false;
 
 export const invalidateArenaSettingsCache = () => {
   cache = { value: null, at: 0 };

@@ -42,7 +42,7 @@ function PasswordBox({ id, value, onChange, invalid, autoComplete, label }) {
     - a tick that they understand there is NO refund.
   An active partnership must be ended first.
 */
-export default function DeleteAccount() {
+export default function DeleteAccount({ refundsOn = false }) {
   const { me } = useArena();
   const dispatch = useDispatch();
 
@@ -107,7 +107,7 @@ export default function DeleteAccount() {
 
       <p className="mt-4 flex items-start gap-2.5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dk:bg-amber-500/10 dk:text-amber-200 dk:ring-amber-500/25">
         <BanknoteX className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-        <span><strong>No refund.</strong> Deleting your account does not refund anything you paid. If you only want your money back, cancel your entry instead (possible before your first match).</span>
+        <span><strong>No refund.</strong> Deleting your account does not refund anything you paid.{refundsOn ? " If you only want your money back, cancel your entry instead (possible before your first match)." : ""}</span>
       </p>
 
       {matched ? (

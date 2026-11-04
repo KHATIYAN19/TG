@@ -2,7 +2,12 @@ import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
-export const TOPICS = ["HLD", "LLD", "DSA", "GENAI", "JAVA"];
+export const TOPICS = [
+  "HLD", "LLD", "DSA", "GENAI", "JAVA",
+  "FRONTEND", "BACKEND", "FULLSTACK", "NODEJS", "PYTHON", "SQL",
+  "DEVOPS", "CLOUD", "SRE", "SDET", "MOBILE",
+  "DATAENG", "DATASCI", "CYBERSEC", "BEHAVIORAL",
+];
 export const LEVELS = ["beginner", "intermediate", "advanced"];
 export const SLOTS = [
   "weekday_morning",

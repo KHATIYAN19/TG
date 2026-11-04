@@ -33,7 +33,9 @@ export default function SettingsPage() {
 
   const entry = me.entry;
   const matchUsed = (entry?.matchesUsed ?? 0) > 0;
-  const canCancel = profile?.status === "active" && !matchUsed;
+  const refundsOn = Boolean(me.settings?.cancelRefundEnabled);
+  const deletionOn = Boolean(me.settings?.accountDeletionEnabled);
+  const canCancel = refundsOn && profile?.status === "active" && !matchUsed;
   useEffect(() => {
     if (!canCancel) return;
     http.get("/entry/cancel-preview").then(({ data }) => setPreview(data.data)).catch(() => setPreview(null));
@@ -43,7 +45,7 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6">
         <EmptyState icon={UserRound} title="Create your profile first">Settings become available once you have a profile.</EmptyState>
-        <DeleteAccount />
+        {deletionOn && <DeleteAccount refundsOn={refundsOn} />}
       </div>
     );
   }
@@ -121,6 +123,7 @@ export default function SettingsPage() {
         )}
       </Card>
 
+      {refundsOn && (
       <Card className="border-rose-200 dk:border-rose-500/25 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]"><AlertTriangle className="h-5 w-5 text-rose-500" aria-hidden /> Cancel my entry</h2>
         {profile.status === "matched" || matchUsed ? (
@@ -141,6 +144,7 @@ export default function SettingsPage() {
           <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">You don't have an active entry to cancel.</p>
         )}
       </Card>
+      )}
 
       <Card className="flex flex-wrap items-center justify-between gap-4 p-6">
         <div className="flex items-center gap-3">
@@ -153,12 +157,14 @@ export default function SettingsPage() {
         <BugReportButton className="inline-flex items-center gap-2 rounded-xl bg-stone-900 dk:bg-[#1c1612] px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800" />
       </Card>
 
-      <DeleteAccount />
+      {deletionOn && <DeleteAccount refundsOn={refundsOn} />}
 
+      {refundsOn && (
       <Modal open={confirmCancel} onClose={() => setConfirmCancel(false)} title="Cancel your entry?"
         footer={<><Button variant="ghost" onClick={() => setConfirmCancel(false)}>Keep my entry</Button><Button variant="danger" loading={cancelling} onClick={cancel}>Yes, cancel</Button></>}>
         <p>You'll leave the arena, your pending requests will be withdrawn, and <strong>{inr(preview?.refundPaise)}</strong> will be refunded to your original payment method in 5–7 working days. You'd need a new entry to rejoin.</p>
       </Modal>
+      )}
     </div>
   );
 }

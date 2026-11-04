@@ -9,6 +9,7 @@ import ArenaBugReport from "../../models/arena/ArenaBugReport.js";
 import ArenaSettings, {
   getArenaSettings,
   invalidateArenaSettingsCache,
+  publicOffer,
 } from "../../models/arena/ArenaSettings.js";
 
 import { ArenaError, handle } from "../../services/arena/errors.js";
@@ -60,13 +61,18 @@ export const updateSettings = handle(async (req, res) => {
   if (input.requestExpiryDays !== undefined) set.requestExpiryDays = input.requestExpiryDays;
   if (input.minMatchDaysBeforeEnd !== undefined) set.minMatchDaysBeforeEnd = input.minMatchDaysBeforeEnd;
   if (input.matchesPerEntry !== undefined) set.matchesPerEntry = input.matchesPerEntry;
+  if (input.cancelRefundEnabled !== undefined) set.cancelRefundEnabled = input.cancelRefundEnabled;
+  if (input.accountDeletionEnabled !== undefined) set.accountDeletionEnabled = input.accountDeletionEnabled;
+  if (input.offerEnabled !== undefined) set.offerEnabled = input.offerEnabled;
+  if (input.offerText !== undefined) set.offerText = input.offerText;
+  if (input.offerEndsAt !== undefined) set.offerEndsAt = input.offerEndsAt ? new Date(input.offerEndsAt) : null;
 
   if (!Object.keys(set).length) throw new ArenaError(400, "NO_CHANGES", "Nothing to update");
 
   const before = await getArenaSettings({ fresh: true });
   const changes = Object.fromEntries(
     Object.entries(set)
-      .filter(([k, v]) => before[k] !== v)
+      .filter(([k, v]) => (v instanceof Date ? (before[k] ? new Date(before[k]).getTime() : null) !== v.getTime() : before[k] !== v))
       .map(([k, v]) => [k, { from: before[k], to: v }])
   );
 

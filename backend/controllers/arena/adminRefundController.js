@@ -3,6 +3,7 @@ import { z } from "zod";
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
 import { audit } from "../../models/arena/ArenaAuditLog.js";
+import { getArenaSettings, isCancelRefundEnabled } from "../../models/arena/ArenaSettings.js";
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { gateway } from "../../services/arena/gateway.js";
 import { objectId } from "./schemas.js";
@@ -27,6 +28,9 @@ const refundSchema = z.object({
 });
 
 export const refundPayment = handle(async (req, res) => {
+  if (!isCancelRefundEnabled(await getArenaSettings({ fresh: true }))) {
+    throw new ArenaError(403, "FEATURE_DISABLED", "Refunds are switched off in the arena settings.");
+  }
   objectId.parse(req.params.id);
   const input = refundSchema.parse(req.body);
 

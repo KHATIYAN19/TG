@@ -4,7 +4,7 @@ import { labelOf, TOPICS, LEVELS, SLOTS, COMPANY_TYPES, LANGUAGES, SESSION_MODES
 import { Badge } from "./ui";
 
 /* Short label for a topic, e.g. "System Design (HLD)" → "HLD". */
-export const topicShort = (value) => TOPICS.find((t) => t.value === value)?.value ?? value;
+export const topicShort = (value) => (() => { const t = TOPICS.find((x) => x.value === value); return t ? t.short || t.value : value; })();
 
 export function TopicBadges({ topics = [], level }) {
   return (

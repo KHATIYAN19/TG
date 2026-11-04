@@ -1,6 +1,7 @@
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
 import ArenaMatch from "../../models/arena/ArenaMatch.js";
 import User from "../../models/User.js";
+import { getArenaSettings, isAccountDeletionEnabled } from "../../models/arena/ArenaSettings.js";
 import redis from "../../utils/redis.js";
 
 import { clearAuthCookies, logActivity, verifyPassword } from "../../utils/authUtils.js";
@@ -29,6 +30,9 @@ const PAYMENT_GRACE_MS = 30 * 60 * 1000;
 const wrongKey = (userId) => `arena:delete-account:wrong:${userId}`;
 
 export const deleteMyAccount = handle(async (req, res) => {
+  if (!isAccountDeletionEnabled(await getArenaSettings({ fresh: true }))) {
+    throw new ArenaError(403, "FEATURE_DISABLED", "Account deletion is not available right now. Please contact support.");
+  }
   const { password } = deleteAccountSchema.parse(req.body);
 
   const user = await User.findById(req.user.id).select("+password role isDeleted").lean();

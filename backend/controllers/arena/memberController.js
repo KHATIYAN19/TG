@@ -8,7 +8,7 @@ import ArenaReport from "../../models/arena/ArenaReport.js";
 import ArenaBugReport from "../../models/arena/ArenaBugReport.js";
 import User from "../../models/User.js";
 import ArenaCoupon from "../../models/arena/ArenaCoupon.js";
-import { getArenaSettings } from "../../models/arena/ArenaSettings.js";
+import { getArenaSettings, publicOffer, isCancelRefundEnabled, isAccountDeletionEnabled } from "../../models/arena/ArenaSettings.js";
 
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { publicCard, buddyView, ownerView, generateAlias, sharesTopic, FIELD_VISIBILITY } from "../../services/arena/privacy.js";
@@ -88,12 +88,15 @@ export const publicInfo = handle(async (_req, res) => {
 
       // Admin-controlled rules (live)
       entryPricePaise: settings.entryPricePaise,
-      cancellationFeePercent: settings.cancellationFeePercent,
+      // Fee % is only sent while cancel/refund is switched on.
+      cancelRefundEnabled: isCancelRefundEnabled(settings),
+      ...(isCancelRefundEnabled(settings) ? { cancellationFeePercent: settings.cancellationFeePercent } : {}),
       matchesPerEntry: settings.matchesPerEntry,
       requestExpiryDays: settings.requestExpiryDays,
       maxOutgoingRequests: settings.maxOutgoingRequests,
       minMatchDaysBeforeEnd: settings.minMatchDaysBeforeEnd,
       couponsAvailable: Boolean(couponLive),
+      offer: publicOffer(settings),
       paymentGateway: gatewayName(),
 
       // The one live arena number the landing page shows.
@@ -134,6 +137,8 @@ export const me = handle(async (req, res) => {
     ]);
 
     entry = openEntry;
+    // Never expose the stored fee % while cancel/refund is off.
+    if (entry && !isCancelRefundEnabled(settings)) delete entry.cancellationFeePercent;
     match = activeMatch ? { id: String(activeMatch._id), matchedAt: activeMatch.matchedAt } : null;
     counts = { incoming, outgoing };
   }
@@ -149,11 +154,14 @@ export const me = handle(async (req, res) => {
       settings: {
         enabled: settings.enabled,
         entryPricePaise: settings.entryPricePaise,
-        cancellationFeePercent: settings.cancellationFeePercent,
+        cancelRefundEnabled: isCancelRefundEnabled(settings),
+        accountDeletionEnabled: isAccountDeletionEnabled(settings),
+        ...(isCancelRefundEnabled(settings) ? { cancellationFeePercent: settings.cancellationFeePercent } : {}),
         matchesPerEntry: settings.matchesPerEntry,
         paymentGateway: gatewayName(),
         maxOutgoingRequests: settings.maxOutgoingRequests,
         minMatchDaysBeforeEnd: settings.minMatchDaysBeforeEnd,
+        offer: publicOffer(settings),
       },
     },
   });

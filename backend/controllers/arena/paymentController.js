@@ -2,7 +2,7 @@ import ArenaProfile from "../../models/arena/ArenaProfile.js";
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
 import ArenaRequest from "../../models/arena/ArenaRequest.js";
 import User from "../../models/User.js";
-import { getArenaSettings } from "../../models/arena/ArenaSettings.js";
+import { getArenaSettings, isCancelRefundEnabled } from "../../models/arena/ArenaSettings.js";
 
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { gateway } from "../../services/arena/gateway.js";
@@ -186,8 +186,16 @@ export const reconcile = handle(async (req, res) => {
   res.json({ success: true, data: { status: "pending_payment" } });
 }, "Unable to check payment");
 
+const assertCancelRefundEnabled = async () => {
+  const settings = await getArenaSettings({ fresh: true });
+  if (!isCancelRefundEnabled(settings)) {
+    throw new ArenaError(403, "FEATURE_DISABLED", "Cancelling an entry is not available right now.");
+  }
+};
+
 /* POST /entry/cancel – only before a match; keeps the configured fee */
 export const cancelEntry = handle(async (req, res) => {
+  await assertCancelRefundEnabled();
   const profile = await requireProfile(req.user.id);
 
   if (profile.status === "matched") throw new ArenaError(409, "ALREADY_MATCHED", "You can't cancel after you're matched");
@@ -256,6 +264,7 @@ export const cancelEntry = handle(async (req, res) => {
 
 /* GET /entry/cancel-preview – what a cancellation would cost right now */
 export const cancelPreview = handle(async (req, res) => {
+  await assertCancelRefundEnabled();
   const entry = await ArenaEntry.findOne({ user: req.user.id, status: "paid" }).lean();
   if (!entry) throw new ArenaError(404, "NOTHING_TO_CANCEL", "You don't have an active entry");
   if (entry.complimentary) {

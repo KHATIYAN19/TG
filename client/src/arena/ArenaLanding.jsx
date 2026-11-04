@@ -15,6 +15,7 @@ import { http, inr } from "./api";
 import { resolveGateway } from "./gateway";
 import { useArenaChrome } from "./chrome";
 import { Avatar, Badge, cx } from "./ui";
+import OfferBanner from "./OfferBanner";
 import "./landing.css";
 
 const SITE = "https://www.targettrek.in";
@@ -231,7 +232,7 @@ function HeroVisual() {
       <motion.div style={reduce ? { rotate: 2 } : { y: yB, rotate: rotB }} className="absolute bottom-0 right-0 z-10">
         <div className="arena-float-delay">
           <Tilt>
-            <SampleCard alias="Member-9TWPM" topics={["DSA", "LLD"]} level="Beginner" tone="emerald" company="Final-year student · 0 yrs" bio="Want weekly mock interviews and honest feedback." skills={["java", "design patterns", "oop"]} />
+            <SampleCard alias="Member-9TWPM" topics={["Frontend", "DSA"]} level="Beginner" tone="emerald" company="Final-year student · 0 yrs" bio="Want weekly mock interviews and honest feedback." skills={["react", "javascript", "arrays"]} />
           </Tilt>
         </div>
       </motion.div>
@@ -272,8 +273,8 @@ function Headline() {
 }
 
 /* ------------------------------------ tickers ------------------------------------ */
-const ROW_A = ["System Design", "Low-Level Design", "Data Structures", "GenAI & LLMs", "Java & Spring", "Mock interviews", "Behavioural rounds", "Resume review"];
-const ROW_B = ["Kafka", "Caching", "Sharding", "Rate limiting", "Design patterns", "Concurrency", "REST APIs", "Consistent hashing", "RAG", "Dynamic programming"];
+const ROW_A = ["System Design", "Frontend", "Backend", "DevOps", "SDET / QA", "Data Structures", "Low-Level Design", "GenAI & LLMs", "Mobile", "Cloud", "Data Engineering", "Java & Spring", "Mock interviews", "Behavioural rounds"];
+const ROW_B = ["React", "Kafka", "Caching", "Docker", "Kubernetes", "Playwright", "CI/CD", "REST APIs", "SQL", "Design patterns", "Concurrency", "RAG", "Terraform", "Dynamic programming"];
 
 function Marquee({ items, reverse, tone }) {
   const list = [...items, ...items];
@@ -459,11 +460,12 @@ export default function ArenaLanding() {
   const gw = resolveGateway(info?.paymentGateway);
   const priceRupees = info ? info.entryPricePaise / 100 : null;
   const price = info ? inr(info.entryPricePaise) : "…";
+  const refundsOn = Boolean(info?.cancelRefundEnabled) && info?.cancellationFeePercent != null;
   const fee = info?.cancellationFeePercent;
   const matches = info?.matchesPerEntry;
   const matchWord = matches === 1 ? "match" : "matches";
-  const feePaise = info ? Math.round((info.entryPricePaise * info.cancellationFeePercent) / 100) : 0;
-  const refundPaise = info ? info.entryPricePaise - feePaise : 0;
+  const feePaise = refundsOn ? Math.round((info.entryPricePaise * info.cancellationFeePercent) / 100) : 0;
+  const refundPaise = refundsOn ? info.entryPricePaise - feePaise : 0;
   const waiting = info?.activeMembers ?? 0;
 
   const cta = signedIn ? "/prep-buddy/app" : "/prep-buddy/signup";
@@ -474,8 +476,8 @@ export default function ArenaLanding() {
   const faq = [
     ["How does matching work?", "There's no algorithm choosing for you. You browse profiles, filter by topic, level, language and availability, and send a request with a short message. If they accept, you're matched. You can also accept requests sent to you."],
     ["What can other members see about me?", "Your anonymous ID plus everything in the “Public on your card” list above, including your company name, job title and experience. Your real name, email, phone and LinkedIn stay hidden until you match, and then only the ones you switch on."],
-    ["What does the entry fee include?", info ? `${price} is a one-time payment. It puts your profile in the arena and includes ${matches} ${matchWord}${matches > 1 ? ", one after another" : ""}. This number comes from our admin settings, so what you see here is what you get.` : "A one-time payment that puts your profile in the arena and includes a set number of matches, shown in the pricing section."],
-    ["Can I get a refund?", info ? `Yes, until you use your first match. Cancel before that and you get back ${100 - fee}% of what you paid. For ${price} that's ${inr(refundPaise)}. We keep ${fee}% (${inr(feePaise)}). Once a match is used the entry isn't refundable.` : "Yes, before your first match, minus a small cancellation fee shown in the pricing section."],
+    ["What does the entry fee include?", info ? `${price} is a one-time payment. It puts your profile in the arena and includes ${matches} ${matchWord}${matches > 1 ? ", one after another" : ""}.` : "A one-time payment that puts your profile in the arena and includes a set number of matches, shown in the pricing section."],
+    ...(info && !refundsOn ? [] : [["Can I get a refund?", info ? `Yes, until you use your first match. Cancel before that and you get back ${100 - fee}% of what you paid. For ${price} that's ${inr(refundPaise)}. We keep ${fee}% (${inr(feePaise)}). Once a match is used the entry isn't refundable.` : "Yes, before your first match, minus a small cancellation fee shown in the pricing section."]]),
     ["Can I be matched with more than one person?", info ? `${matches > 1 ? `Yes, up to ${matches} per entry, but never at the same time.` : "One match per entry."} While you're matched you can't send or accept other requests. You also can't be re-paired with someone you've already matched with.` : "Not at the same time. Extra matches in an entry happen one after another."],
     ["What happens to my requests?", info ? `A request expires after ${info.requestExpiryDays} days if nobody answers. You can have up to ${info.maxOutgoingRequests} pending requests at once. When you match, all your other pending requests are cancelled automatically.` : "Requests expire after a set number of days and are cancelled automatically when you match."],
     ["Is my payment safe?", gw ? `Payments are processed by ${gw.name} (${gw.methods.join(", ")}). We never see or store your card details.` : "Payments are processed by our payment gateway. We never see or store your card details."],
@@ -490,7 +492,7 @@ export default function ArenaLanding() {
         "@type": "Service",
         name: "Prep Buddy Arena",
         provider: { "@type": "Organization", name: "Target Trek", url: SITE },
-        description: "Find an interview-preparation buddy for system design, DSA and more. Anonymous profiles, mutual acceptance and private chat.",
+        description: "Find an interview-preparation buddy for system design, frontend, backend, DevOps, SDET, DSA and more. Anonymous profiles, mutual acceptance and private chat.",
         areaServed: "IN",
         ...(info ? { offers: { "@type": "Offer", priceCurrency: "INR", price: String(info.entryPricePaise / 100), url: URL } } : {}),
       },
@@ -501,7 +503,7 @@ export default function ArenaLanding() {
     <main className={cx(PAGE_BG, H, "pt-[var(--arena-nav-h,4rem)]")}>
       <Helmet>
         <title>Prep Buddy Arena – Find an Interview Preparation Partner | Target Trek</title>
-        <meta name="description" content={`Find a serious interview-prep buddy for system design, LLD, DSA and GenAI. Anonymous profiles, mutual acceptance and private chat.${info ? ` One-time ${price}, ${matches} ${matchWord} included.` : ""}`} />
+        <meta name="description" content={`Find a serious interview-prep buddy for system design, frontend, backend, DevOps, SDET, DSA and GenAI. Anonymous profiles, mutual acceptance and private chat.${info ? ` One-time ${price}, ${matches} ${matchWord} included.` : ""}`} />
         <link rel="canonical" href={URL} />
         <meta property="og:title" content="Prep Buddy Arena – Find your interview preparation partner" />
         <meta property="og:description" content="Browse profiles, match by mutual consent, and practise together." />
@@ -528,12 +530,13 @@ export default function ArenaLanding() {
             <Headline />
             <Reveal delay={0.55}>
               <p className={cx("mt-6 max-w-xl text-lg", P)}>
-                Match with someone as serious as you are for system design, LLD, DSA or GenAI. See each member's role, company and experience, connect only when both agree, and practise together in a private chat.
+                Match with someone as serious as you are for system design, frontend, backend, DevOps, SDET, DSA or GenAI. See each member's role, company and experience, connect only when both agree, and practise together in a private chat.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link to={cta} className={BTN}>{ctaLabel} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden /></Link>
                 <a href="#visibility" className="text-sm font-semibold text-orange-700 transition-colors hover:text-orange-900 dk:text-orange-300">See exactly what's shown ↓</a>
               </div>
+              <OfferBanner offer={info?.offer} className="mt-4" />
 
               <ul className={cx("mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm", P)}>
                 <li className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-emerald-600" aria-hidden /> One-time {price}</li>
@@ -682,12 +685,14 @@ export default function ArenaLanding() {
                 <div className="border-t border-[#f0ded0] p-6 text-center dk:border-[#443127]">
                   <Link to={cta} className={cx(BTN, "w-full sm:w-auto")}>{ctaLabel} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
                   <p className={cx("mt-3 text-xs", MUTED)}>Email verification required · {gw ? `payment via ${gw.name}` : "secure payment"}</p>
+                  <OfferBanner offer={info?.offer} className="mt-4" />
                 </div>
               </div>
             </div>
           </Reveal>
 
           <div className="space-y-6">
+            {(!info || refundsOn) && (
             <Reveal from="right">
               <div className={cx(CARD, LIFT, "group p-5 sm:p-6")}>
                 <h3 className={cx("flex items-center gap-2 font-semibold", H)}><Wallet className="h-5 w-5 text-orange-700 transition-transform group-hover:-rotate-12 dk:text-orange-300" aria-hidden /> Cancellation & refund</h3>
@@ -718,6 +723,7 @@ export default function ArenaLanding() {
                 ) : <p className={cx("mt-2 text-sm", MUTED)}>Loading…</p>}
               </div>
             </Reveal>
+            )}
 
             <Reveal from="right" delay={0.08}>
               <div className={cx(CARD, LIFT, "group p-5 sm:p-6")}>

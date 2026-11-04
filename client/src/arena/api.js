@@ -141,11 +141,26 @@ export const inr = (paise) => {
 };
 
 export const TOPICS = [
-  { value: "HLD", label: "System Design (HLD)" },
-  { value: "LLD", label: "Low-Level Design (LLD)" },
-  { value: "DSA", label: "DSA" },
-  { value: "GENAI", label: "GenAI / LLMs" },
-  { value: "JAVA", label: "Java & Spring" },
+  { value: "HLD", label: "System Design (HLD)", short: "HLD" },
+  { value: "LLD", label: "Low-Level Design (LLD)", short: "LLD" },
+  { value: "DSA", label: "DSA", short: "DSA" },
+  { value: "GENAI", label: "GenAI / LLMs", short: "GenAI" },
+  { value: "JAVA", label: "Java & Spring", short: "Java" },
+  { value: "FRONTEND", label: "Frontend (React, JS, CSS)", short: "Frontend" },
+  { value: "BACKEND", label: "Backend (APIs, services)", short: "Backend" },
+  { value: "FULLSTACK", label: "Full-stack", short: "Full-stack" },
+  { value: "NODEJS", label: "Node.js & JavaScript", short: "Node.js" },
+  { value: "PYTHON", label: "Python", short: "Python" },
+  { value: "SQL", label: "SQL & Databases", short: "SQL" },
+  { value: "DEVOPS", label: "DevOps & CI/CD", short: "DevOps" },
+  { value: "CLOUD", label: "Cloud (AWS, GCP, Azure)", short: "Cloud" },
+  { value: "SRE", label: "SRE & Observability", short: "SRE" },
+  { value: "SDET", label: "SDET / QA Automation", short: "SDET" },
+  { value: "MOBILE", label: "Mobile (Android, iOS, Flutter)", short: "Mobile" },
+  { value: "DATAENG", label: "Data Engineering", short: "Data Eng" },
+  { value: "DATASCI", label: "Data Science & ML", short: "Data Sci" },
+  { value: "CYBERSEC", label: "Cybersecurity", short: "Security" },
+  { value: "BEHAVIORAL", label: "HR & Behavioural rounds", short: "Behavioural" },
 ];
 export const LEVELS = [
   { value: "beginner", label: "Beginner" },
@@ -196,6 +211,21 @@ export const SKILL_SUGGESTIONS = {
   DSA: ["arrays", "graphs", "dp", "trees", "recursion", "heaps"],
   GENAI: ["llms", "rag", "prompting", "agents", "embeddings"],
   JAVA: ["spring boot", "jvm", "collections", "multithreading", "hibernate"],
+  FRONTEND: ["react", "javascript", "typescript", "css", "performance", "accessibility"],
+  BACKEND: ["rest apis", "microservices", "auth", "caching", "message queues", "databases"],
+  FULLSTACK: ["react", "node", "apis", "databases", "deployment"],
+  NODEJS: ["express", "event loop", "async", "typescript", "nestjs"],
+  PYTHON: ["django", "fastapi", "asyncio", "pandas", "testing"],
+  SQL: ["joins", "indexing", "query tuning", "transactions", "window functions"],
+  DEVOPS: ["docker", "kubernetes", "ci/cd", "terraform", "monitoring", "linux"],
+  CLOUD: ["aws", "gcp", "azure", "iam", "networking", "serverless"],
+  SRE: ["slos", "incident response", "observability", "capacity planning", "on-call"],
+  SDET: ["selenium", "playwright", "api testing", "test strategy", "ci pipelines", "cypress"],
+  MOBILE: ["android", "ios", "flutter", "react native", "kotlin", "swift"],
+  DATAENG: ["spark", "airflow", "etl", "data modelling", "kafka", "warehousing"],
+  DATASCI: ["machine learning", "statistics", "feature engineering", "model evaluation", "python"],
+  CYBERSEC: ["owasp", "threat modelling", "cryptography", "networking", "pentesting"],
+  BEHAVIORAL: ["star method", "leadership", "conflict", "salary negotiation", "introductions"],
 };
 
 export const labelOf = (list, value) => list.find((i) => i.value === value)?.label ?? value;

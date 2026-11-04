@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Download, Gift, RotateCcw, Trash2, Wallet } from "lucide-react";
 
@@ -33,6 +33,9 @@ export default function PaymentsTab() {
   const params = { ...f, q: dq, page, pageSize: 25 };
   const [{ loading, data, error }, reload] = useList("/payments", params);
   const { del, setDel, busy: deleting, run } = useDeleter(reload);
+
+  const [refundsOn, setRefundsOn] = useState(false);
+  useEffect(() => { api.get("/settings").then(({ data }) => setRefundsOn(data.data.cancelRefundEnabled !== false)).catch(() => setRefundsOn(false)); }, []);
 
   const [rf, setRf] = useState(null);       // payment being refunded
   const [amount, setAmount] = useState("");  // rupees, as typed
@@ -149,7 +152,7 @@ export default function PaymentsTab() {
                 <Td className="text-right">{p.status === "cancelled" ? <><Money paise={p.feePaise} /><p className={cx("text-[11px]", MUTED)}>{p.cancellationFeePercent}%</p></> : <span className={MUTED}>—</span>}</Td>
                 <Td className="text-right">{refundedOf(p) > 0 ? <Money paise={refundedOf(p)} negative /> : <span className={MUTED}>—</span>}</Td>
                 <Td className="whitespace-nowrap text-right">
-                  {refundableOf(p) > 0 && <Button size="sm" variant="ghost" className="text-amber-700 hover:bg-amber-50 dk:text-amber-300 dk:hover:bg-amber-500/10" aria-label={`Refund payment ${p.paymentId}`} onClick={() => openRefund(p)}><RotateCcw className="h-3.5 w-3.5" /> Refund</Button>}
+                  {refundsOn && refundableOf(p) > 0 && <Button size="sm" variant="ghost" className="text-amber-700 hover:bg-amber-50 dk:text-amber-300 dk:hover:bg-amber-500/10" aria-label={`Refund payment ${p.paymentId}`} onClick={() => openRefund(p)}><RotateCcw className="h-3.5 w-3.5" /> Refund</Button>}
                   <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10" aria-label={`Delete payment ${p.orderId || p.id} permanently`} onClick={() => setDel(p)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
                 </Td>
               </tr>

@@ -197,6 +197,12 @@ export const adminSettingsSchema = z.object({
   requestExpiryDays: z.coerce.number().int().min(1).max(90).optional(),
   minMatchDaysBeforeEnd: z.coerce.number().int().min(0).max(90).optional(),
   matchesPerEntry: z.coerce.number().int().min(1).max(5).optional(),
+  cancelRefundEnabled: z.boolean().optional(),
+  accountDeletionEnabled: z.boolean().optional(),
+  offerEnabled: z.boolean().optional(),
+  // ISO date-time, or null / "" for "no end date".
+  offerEndsAt: z.union([z.string().datetime({ offset: true }), z.literal(""), z.null()]).optional(),
+  offerText: z.string().trim().max(300).optional(),
 });
 
 export const bugReportSchema = z.object({
