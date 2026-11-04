@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
+import { commissionOf, NET_COMMISSION_EXPR } from "../../services/arena/affiliate.js";
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
 import ArenaRequest from "../../models/arena/ArenaRequest.js";
 import ArenaMatch from "../../models/arena/ArenaMatch.js";
@@ -274,6 +275,11 @@ export const listPayments = handle(async (req, res) => {
   if (req.query.complimentary === "true") filter.complimentary = true;
   if (req.query.complimentary === "false") filter.complimentary = false;
 
+  const aff = String(req.query.affiliate || "").trim().slice(0, 40);
+  if (aff === "any") filter["affiliate.user"] = { $exists: true };
+  else if (aff === "none") filter["affiliate.user"] = { $exists: false };
+  else if (aff) filter["affiliate.code"] = aff.toUpperCase();
+
   const from = req.query.from ? new Date(String(req.query.from)) : null;
   const to = req.query.to ? new Date(String(req.query.to)) : null;
   if ((from && !Number.isNaN(from)) || (to && !Number.isNaN(to))) {
@@ -303,16 +309,19 @@ export const listPayments = handle(async (req, res) => {
           entries: { $sum: 1 },
           gross: { $sum: "$paidPaise" },
           discounts: { $sum: "$discountPaise" },
-          refunds: { $sum: "$cancel.refundPaise" },
+          refunds: { $sum: { $add: [{ $ifNull: ["$cancel.refundPaise", 0] }, { $ifNull: ["$refundedPaise", 0] }] } },
           fees: { $sum: "$cancel.feePaise" },
           complimentary: { $sum: { $cond: ["$complimentary", 1, 0] } },
+          affiliateEntries: { $sum: { $cond: [{ $gt: ["$affiliate.commissionPaise", 0] }, 1, 0] } },
+          affiliateSales: { $sum: { $cond: [{ $gt: ["$affiliate.commissionPaise", 0] }, "$paidPaise", 0] } },
+          affiliateCommission: { $sum: NET_COMMISSION_EXPR },
         },
       },
     ]),
   ]);
 
   const people = await personMap([...new Set(rows.map((r) => String(r.profile)))]);
-  const sum = sums[0] ?? { entries: 0, gross: 0, discounts: 0, refunds: 0, fees: 0, complimentary: 0 };
+  const sum = sums[0] ?? { entries: 0, gross: 0, discounts: 0, refunds: 0, fees: 0, complimentary: 0, affiliateEntries: 0, affiliateSales: 0, affiliateCommission: 0 };
   const grantors = await User.find({ _id: { $in: rows.map((r) => r.grantedBy).filter(Boolean) } }).select("name").lean();
   const grantorName = new Map(grantors.map((u) => [String(u._id), u.name]));
 
@@ -339,19 +348,23 @@ export const listPayments = handle(async (req, res) => {
       feePaise: r.cancel?.feePaise ?? 0,
       refundPaise: r.cancel?.refundPaise ?? 0,
       refundId: r.cancel?.refundId ?? null,
+      refundedPaise: r.refundedPaise ?? 0,
+      refunds: (r.refunds ?? []).map((x) => ({ at: x.at, amountPaise: x.amountPaise, refundId: x.refundId })),
       cancelledAt: r.cancel?.at ?? null,
+      affiliate: commissionOf(r),
     };
   });
 
   if (csv) {
     await audit(req.user.id, "payments_exported", { targetType: "payments", summary: `Exported ${items.length} payment row(s) to CSV`, meta: { filter: req.query } });
-    const header = ["Date", "Member", "Email", "Phone", "Member ID", "Order ID", "Payment ID", "Gateway", "Status", "List price (INR)", "Discount (INR)", "Coupon", "Paid (INR)", "Matches used", "Matches allowed", "Cancellation fee %", "Fee kept (INR)", "Refund (INR)", "Refund ID", "Complimentary", "Granted by"];
+    const header = ["Date", "Member", "Email", "Phone", "Member ID", "Order ID", "Payment ID", "Gateway", "Status", "List price (INR)", "Discount (INR)", "Coupon", "Paid (INR)", "Matches used", "Matches allowed", "Cancellation fee %", "Fee kept (INR)", "Refund (INR)", "Refund ID", "Complimentary", "Granted by", "Affiliate code", "Commission type", "Commission rate", "Commission (INR)", "Commission status"];
     const lines = [header.map(csvCell).join(",")];
     for (const i of items) {
       lines.push([
         new Date(i.createdAt).toISOString(), i.member?.name, i.member?.email, i.member?.phone, i.member?.alias, i.orderId, i.paymentId, i.gateway, i.status,
         inr(i.listPricePaise), inr(i.discountPaise), i.coupon, inr(i.paidPaise), i.matchesUsed, i.matchesAllowed, i.cancellationFeePercent,
-        inr(i.feePaise), inr(i.refundPaise), i.refundId, i.complimentary ? "yes" : "no", i.grantedBy,
+        inr(i.feePaise), inr(i.refundPaise + i.refundedPaise), i.refundId, i.complimentary ? "yes" : "no", i.grantedBy,
+        i.affiliate?.code, i.affiliate?.type, i.affiliate ? (i.affiliate.type === "percentage" ? `${i.affiliate.value}%` : `INR ${i.affiliate.value}`) : "", i.affiliate ? inr(i.affiliate.netPaise) : "", i.affiliate?.status,
       ].map(csvCell).join(","));
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -373,6 +386,9 @@ export const listPayments = handle(async (req, res) => {
         cancellationFeesPaise: sum.fees,
         netPaise: sum.gross - sum.refunds,
         complimentaryEntries: sum.complimentary,
+        affiliateEntries: sum.affiliateEntries,
+        affiliateSalesPaise: sum.affiliateSales,
+        affiliateCommissionPaise: sum.affiliateCommission,
       },
       items,
     },

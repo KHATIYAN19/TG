@@ -95,28 +95,88 @@ export const issueAccessToken = (user, sessionId) =>
 
 export const getIp = req => req.ip;
 
-export const deviceInfo = req => {
-  const ua = String(req.get("user-agent") || "")
-    .slice(0, 500);
+/*
+  Turns a User-Agent into something a person recognises ("Chrome on Windows PC",
+  "Safari on iPhone"). Informational only; never use this to trust a device.
+*/
+export const describeDevice = (rawUa) => {
+  const ua = String(rawUa || "").slice(0, 500);
 
   let type = "desktop";
-  if (/tablet|ipad/i.test(ua)) type = "tablet";
-  else if (/mobile|android|iphone/i.test(ua)) type = "mobile";
+  if (/tablet|ipad/i.test(ua) || (/android/i.test(ua) && !/mobile/i.test(ua))) type = "tablet";
+  else if (/mobile|android|iphone|ipod/i.test(ua)) type = "mobile";
+  if (!ua) type = "unknown";
 
-  // Informational only; never use this to trust a device.
-  return {
-    userAgent: ua,
-    type,
-    browser: /Edg\//.test(ua) ? "Edge" :
-      /Chrome\//.test(ua) ? "Chrome" :
-      /Firefox\//.test(ua) ? "Firefox" :
-      /Safari\//.test(ua) ? "Safari" : "Other",
-    os: /Windows/i.test(ua) ? "Windows" :
-      /Mac OS/i.test(ua) ? "macOS" :
-      /Android/i.test(ua) ? "Android" :
-      /iPhone|iPad/i.test(ua) ? "iOS" :
-      /Linux/i.test(ua) ? "Linux" : "Other",
-  };
+  const browser =
+    /Edg(e|A|iOS)?\//.test(ua) ? "Edge" :
+    /OPR\/|Opera/.test(ua) ? "Opera" :
+    /SamsungBrowser\//.test(ua) ? "Samsung Internet" :
+    /Firefox\/|FxiOS\//.test(ua) ? "Firefox" :
+    /Chrome\/|CriOS\//.test(ua) ? "Chrome" :
+    /Safari\//.test(ua) ? "Safari" : "Browser";
+
+  const os =
+    /Windows/i.test(ua) ? "Windows" :
+    /iPhone|iPad|iPod/i.test(ua) ? "iOS" :
+    /Android/i.test(ua) ? "Android" :
+    /Mac OS|Macintosh/i.test(ua) ? "macOS" :
+    /CrOS/i.test(ua) ? "ChromeOS" :
+    /Linux/i.test(ua) ? "Linux" : "Unknown OS";
+
+  // Hardware label: phone/tablet model where the UA reveals it.
+  let model = "";
+  if (/iPhone/i.test(ua)) model = "iPhone";
+  else if (/iPad/i.test(ua)) model = "iPad";
+  else if (os === "Android") {
+    const m = ua.match(/Android[^;)]*;\s*([^;)]+?)\s*(?:Build\/[^;)]*)?[;)]/i);
+    const found = m?.[1]?.trim();
+    // Chrome's reduced UA reports a bare "K": not a real model.
+    model = found && found.length > 1 && !/^(k|mobile|wv)$/i.test(found) ? found : "Android device";
+  } else if (os === "macOS") model = "Mac";
+  else if (os === "Windows") model = "Windows PC";
+  else if (os === "Linux") model = "Linux PC";
+  else if (os === "ChromeOS") model = "Chromebook";
+
+  const name = ua ? `${browser} on ${model || os}` : "Unknown device";
+
+  return { userAgent: ua, type, browser, os, model, name };
+};
+
+/*
+  The browser cannot reveal an iPhone/Android model to the server, so the web app
+  sends what it can detect in a small cookie (tt_dhint = JSON {model}). It is
+  untrusted display text only: sanitised, length-capped, never used for security.
+*/
+const cleanHint = v =>
+  typeof v === "string"
+    ? v.replace(/[^\w .\-()/+]/g, "").trim().slice(0, 50)
+    : "";
+
+const readHint = req => {
+  try {
+    const raw = req.cookies?.tt_dhint;
+    if (typeof raw !== "string" || raw.length > 400) return {};
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    return { model: cleanHint(parsed?.model), label: cleanHint(parsed?.label) };
+  } catch {
+    return {};
+  }
+};
+
+export const deviceInfo = req => {
+  const info = describeDevice(req.get("user-agent"));
+  const { model, label } = readHint(req);
+
+  if (label) {
+    // The owner named this browser themselves (e.g. "MacBook Air M5").
+    info.model = label;
+    info.name = label;
+  } else if (model) {
+    info.model = model;
+    info.name = `${info.browser} on ${model}`;
+  }
+
+  return info;
 };
 
 export const logActivity = async ({

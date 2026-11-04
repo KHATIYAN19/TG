@@ -10,6 +10,8 @@ import {
 import {
   getMySessions,
   revokeMySession,
+  revokeMyOtherSessions,
+  renameMySession,
   forgetMyDevice,
 } from "../controllers/sessionController.js";
 
@@ -28,6 +30,11 @@ router.get("/me", me);
 /* SESSION CONTROL */
 
 router.get("/sessions", getMySessions);
+
+// Log out every device except the current one.
+router.delete("/sessions", revokeMyOtherSessions);
+
+router.patch("/sessions/:sessionId", renameMySession);
 
 router.delete(
   "/sessions/:sessionId",

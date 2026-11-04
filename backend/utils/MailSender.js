@@ -4,6 +4,7 @@ import { MailtrapTransport } from "mailtrap";
 
 import { getMailSettings } from "../services/mail/mailSettings.js";
 import { signRequest } from "./awsSigV4.js";
+import { canQueueMail, enqueueMail } from "../services/mail/mailQueue.js";
 
 dotenv.config();
 
@@ -662,17 +663,20 @@ export const sendMailWith = async (provider, ...args) => {
 };
 
 /* =====================================================
-   SEND MAIL (default export, unchanged signature)
+   DIRECT DELIVERY
 
-   sendMail(to, subject, text, html, options?)
+   deliverMail(to, subject, text, html, options?)
 
-   Uses the provider the admin selected. If it fails and
-   failover is on, every OTHER configured provider is tried
-   in turn (mailtrap → resend → ses), so one provider's
+   Sends RIGHT NOW through the provider the admin selected.
+   If it fails and failover is on, every OTHER configured provider
+   is tried in turn (mailtrap → resend → ses), so one provider's
    "daily limit reached" never stops emails.
+
+   This is what the queue worker calls. Application code should
+   normally call sendMail() below instead.
 ===================================================== */
 
-const sendMail = async (...args) => {
+const assertSendingEnabled = (args) => {
   // Safety switch for tests / dry runs: never contact a provider.
   if (process.env.MAIL_DISABLE_SEND === "true") {
     // Tests may collect what WOULD have been sent: set globalThis.__MAIL_OUTBOX = [].
@@ -682,6 +686,10 @@ const sendMail = async (...args) => {
     }
     throw new Error("Mail sending is disabled (MAIL_DISABLE_SEND=true)");
   }
+};
+
+export const deliverMail = async (...args) => {
+  assertSendingEnabled(args);
 
   const settings = await getMailSettings();
 
@@ -716,6 +724,41 @@ const sendMail = async (...args) => {
     // Surface the primary failure: that is the one the admin configured.
     throw primaryError;
   }
+};
+
+/* =====================================================
+   SEND MAIL (default export, unchanged signature)
+
+   sendMail(to, subject, text, html, options?)
+
+   BACKGROUND SENDING: when the Amazon SQS queue is configured
+   (SQS_EMAIL_QUEUE_NAME + AMAZON_* keys) the email is put on the
+   queue and the call returns immediately; the mail worker sends
+   it, retries transient failures and AWS moves messages that keep
+   failing to the dead-letter queue.
+
+   Delivered directly (the old behaviour) when:
+     - SQS is not configured, or MAIL_QUEUE_ENABLED=false
+     - the email has attachments or a calendar invite (binary data
+       does not belong on a queue)
+     - options.sync === true (the caller needs the real send result)
+     - the queue itself is unreachable (so mail is never lost)
+===================================================== */
+
+const sendMail = async (to, subject, text, html, options = {}) => {
+  if (canQueueMail(options)) {
+    assertSendingEnabled([to, subject, text, html, options]);
+
+    try {
+      return await enqueueMail(to, subject, text, html, options);
+    } catch (error) {
+      console.error(
+        `[MAIL QUEUE] could not queue (${error.code || error.message}); sending directly instead`
+      );
+    }
+  }
+
+  return deliverMail(to, subject, text, html, options);
 };
 
 export default sendMail;

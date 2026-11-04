@@ -2911,11 +2911,10 @@ import {
 } from "react-router-dom";
 
 import {
-  useDispatch,
   useSelector,
 } from "react-redux";
 
-import { logout } from "../Redux/authSlice";
+import { serverLogout } from "../lib/authSession";
 import logo from "../utils/target_Trek_logo_2.jpg";
 
 /* =====================================================
@@ -4598,7 +4597,6 @@ const MobileDrawer = memo(
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch();
 
   const auth = useSelector(
     (state) => state.auth
@@ -4650,14 +4648,15 @@ export default function Navbar() {
   );
 
   const handleLogout = useCallback(
-    () => {
-      dispatch(logout());
+    async () => {
+      // Ends the session on the server too, so the device leaves the active list.
+      await serverLogout();
 
       navigate(
         isLearn ? "/learn" : "/"
       );
     },
-    [dispatch, navigate, isLearn]
+    [navigate, isLearn]
   );
 
   const changeTheme = useCallback(

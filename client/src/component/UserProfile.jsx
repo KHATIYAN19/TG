@@ -8,9 +8,10 @@ import {
   IndianRupee, KeyRound, LayoutDashboard, Loader2, LockKeyhole, Mail,
   MonitorSmartphone, Percent, Phone, RefreshCw, Search, ShieldCheck,
   ShoppingBag, SlidersHorizontal, Sparkles, TrendingUp, UserRound, Wallet, X,
-  BarChart3, ReceiptText, Filter, CalendarRange, ExternalLink
+  BarChart3, ReceiptText, Filter, CalendarRange, ExternalLink, LogOut, Smartphone, Laptop, Tablet, MapPin, Pencil
 } from "lucide-react";
 import BASE_URL from "../utils/Url";
+import { setDeviceLabel } from "../lib/authSession";
 
 const ROOT = String(BASE_URL).replace(/\/$/, "");
 const API = {
@@ -19,6 +20,8 @@ const API = {
   activities: `${ROOT}/api/users/activities`, // Switch to /api/auth/activities if your self-activity route is mounted there.
   dashboard: `${ROOT}/api/affiliate/dashboard`,
   orders: `${ROOT}/api/affiliate/orders`,
+  sessions: `${ROOT}/api/users/sessions`,
+  logoutAll: `${ROOT}/api/auth/logout-all`,
 };
 const LOGIN_ROUTE = "/admin/login";
 const ORANGE = "#F97316";
@@ -27,7 +30,7 @@ const TABS = [
   { key: "password", label: "Passwords", desc: "Account security", icon: LockKeyhole },
   { key: "activity", label: "Activity", desc: "Account events", icon: Activity },
   { key: "sales", label: "Sales Dashboard", desc: "Partner performance", icon: LayoutDashboard, affiliateOnly: true },
-  { key: "devices", label: "Devices", desc: "Coming soon", icon: MonitorSmartphone, soon: true },
+  { key: "devices", label: "Devices", desc: "Where you are signed in", icon: MonitorSmartphone },
 ];
 const RULES = [
   { label: "8–128 characters", test: (v) => v.length >= 8 && v.length <= 128 },
@@ -182,6 +185,99 @@ function PasswordPage({ profile, token, dark }) {
       {same && <p className="text-[12px] text-red-500">Your new password must differ from the current password.</p>}{serverError && <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[12px] text-red-500">{serverError}</p>}<SmallButton primary type="submit" disabled={busy || !form.oldPassword || !valid || !matching || same} className="w-full sm:w-auto">{busy ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />} {busy ? "Updating..." : "Change password"}<ArrowRight size={15} /></SmallButton></div>
       <div className={`self-start rounded-xl border p-4 ${dark ? "border-[#454033] bg-[#24201B]" : "border-[#F3DED0] bg-[#FFF9F4]"}`}><div className="flex items-center gap-2 text-[12px] font-bold"><ShieldCheck className="text-[#F97316]" size={19} />Password checklist</div><div className="mt-4 grid grid-cols-5 gap-1">{rules.map(r => <span key={r.label} className={`h-1.5 rounded-full ${r.passed ? "bg-[#F97316]" : dark ? "bg-[#444]" : "bg-[#DDD]"}`} />)}</div><div className="mt-4 space-y-3">{rules.map(r => <div key={r.label} className={`flex items-center gap-2 text-[11px] ${r.passed ? "" : muted}`}><span className={`flex h-4 w-4 items-center justify-center rounded-full border ${r.passed ? "border-[#F97316] bg-[#F97316] text-white" : dark ? "border-[#666]" : "border-[#CCC]"}`}>{r.passed && <Check size={11} />}</span>{r.label}</div>)}</div><p className={`mt-5 border-t pt-4 text-[11px] leading-5 ${dark ? "border-[#504133] text-[#AAA]" : "border-[#F0D8C6] text-[#888]"}`}>On success, all browser-stored auth and session data are cleared and you'll be redirected to login. Other sessions must also be revoked server-side.</p></div></form></Panel></div>;
 }
+function DevicesPage({ token, dark }) {
+  const [devices, setDevices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(null); // { kind: "one" | "others" | "all", device? }
+  const [renaming, setRenaming] = useState(null); // { sessionId, name }
+  const [renameBusy, setRenameBusy] = useState(false);
+  const muted = dark ? "text-[#999]" : "text-[#777]";
+  const auth = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000 }), [token]);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true); setError("");
+    try {
+      const { data } = await axios.get(API.sessions, auth);
+      if (!data?.success || !Array.isArray(data.sessions)) throw new Error(data?.message || "Unexpected response.");
+      setDevices(data.sessions);
+    } catch (e) { setError(errorText(e, "Could not load your devices.")); } finally { setLoading(false); }
+  }, [token, auth]);
+  useEffect(() => { load(); }, [load]);
+
+  // The current device (or every device) is gone after this call: sign out locally too.
+  const leave = () => { localStorage.clear(); sessionStorage.clear(); window.location.replace(LOGIN_ROUTE); };
+
+  async function run() {
+    if (!confirm || busy) return;
+    setBusy(true);
+    try {
+      let r;
+      if (confirm.kind === "all") r = await axios.post(API.logoutAll, {}, auth);
+      else if (confirm.kind === "others") r = await axios.delete(API.sessions, auth);
+      else r = await axios.delete(`${API.sessions}/${encodeURIComponent(confirm.device.sessionId)}`, auth);
+      if (!r.data?.success) throw new Error(r.data?.message || "Request failed.");
+      toast.success(r.data.message || "Done");
+      setConfirm(null);
+      if (confirm.kind === "all" || (confirm.kind === "one" && confirm.device.isCurrent)) return leave();
+      await load();
+    } catch (e) { toast.error(errorText(e, "Could not log out.")); } finally { setBusy(false); }
+  }
+
+  async function saveName() {
+    const name = (renaming?.name || "").trim();
+    if (name.length < 2) return toast.error("Enter at least 2 characters");
+    setRenameBusy(true);
+    try {
+      const r = await axios.patch(`${API.sessions}/${encodeURIComponent(renaming.sessionId)}`, { name }, auth);
+      if (!r.data?.success) throw new Error(r.data?.message || "Request failed.");
+      setDevices(list => list.map(d => d.sessionId === renaming.sessionId ? { ...d, device: { ...d.device, name: r.data.name || name } } : d));
+      // Remember the name for this browser so future sign-ins use it too.
+      if (devices.find(d => d.sessionId === renaming.sessionId)?.isCurrent) setDeviceLabel(name);
+      setRenaming(null); toast.success("Device renamed");
+    } catch (e) { toast.error(errorText(e, "Could not rename the device.")); } finally { setRenameBusy(false); }
+  }
+
+  const others = devices.filter(d => !d.isCurrent).length;
+  const Icon = (d) => d.device?.type === "tablet" ? Tablet : d.device?.type === "mobile" ? Smartphone : Laptop;
+  const title = !confirm ? "" : confirm.kind === "all" ? "Log out of all devices?" : confirm.kind === "others" ? `Log out ${others} other device${others === 1 ? "" : "s"}?` : confirm.device.isCurrent ? "Log out of this device?" : `Log out ${confirm.device.device?.name || "this device"}?`;
+  const body = !confirm ? "" : confirm.kind === "all" ? "Every device, including this one, is signed out immediately and remembered devices are forgotten. You will need to sign in again." : confirm.kind === "others" ? "All devices except this one are signed out immediately." : confirm.device.isCurrent ? "You will be signed out here and taken to the login page." : "That device is signed out immediately. It will need your password (and an OTP) to get back in.";
+
+  return <div className="space-y-5">
+    <Panel dark={dark} title="Active devices" icon={MonitorSmartphone} caption="Only devices that are signed in right now are listed. Expired and logged-out devices disappear automatically."
+      action={<div className="flex flex-wrap gap-2">
+        <SmallButton dark={dark} disabled={loading || busy} onClick={load}><RefreshCw size={14} />Refresh</SmallButton>
+        <SmallButton dark={dark} disabled={busy || others === 0} onClick={() => setConfirm({ kind: "others" })}><LogOut size={14} />Log out other devices</SmallButton>
+        <SmallButton dark={dark} disabled={busy || devices.length === 0} onClick={() => setConfirm({ kind: "all" })}><LogOut size={14} />Log out all</SmallButton>
+      </div>}>
+      {confirm && <div role="alertdialog" className="mb-5 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+        <h4 className="text-[13px] font-semibold">{title}</h4>
+        <p className={`mt-2 text-[11px] ${muted}`}>{body}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <SmallButton dark={dark} disabled={busy} onClick={() => setConfirm(null)}>Cancel</SmallButton>
+          <SmallButton primary disabled={busy} onClick={run}>{busy ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}Yes, log out</SmallButton>
+        </div>
+      </div>}
+      {loading && devices.length === 0 ? <Loading label="Loading devices..." /> : error ? <div className="space-y-3"><p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[12px] text-red-500">{error}</p><SmallButton dark={dark} onClick={load}>Retry</SmallButton></div> : devices.length === 0 ? <Empty dark={dark} text="No active devices found." /> :
+        <div className="space-y-3">{devices.map(d => { const I = Icon(d); const name = d.device?.name || "Unknown device"; return <div key={d.sessionId} className={`flex flex-col justify-between gap-4 rounded-xl border p-4 sm:flex-row sm:items-center ${d.isCurrent ? "border-[#F97316]/50" : dark ? "border-[#343434] bg-[#1B1B1B]" : "border-[#E8E8E8] bg-[#FAFAFA]"}`}>
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F97316]/10"><I size={19} className="text-[#F97316]" /></span>
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2 break-words text-[13px] font-semibold">{name}{d.isCurrent && <span className="rounded-full bg-[#F97316] px-2 py-0.5 text-[10px] font-semibold text-white">This device</span>}{d.isTrusted && <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${dark ? "border-[#454545]" : "border-[#DDD]"}`}>Remembered</span>}<button type="button" aria-label="Rename device" title="Name this device, e.g. MacBook Air M5 or iPhone 15 Pro" onClick={() => setRenaming({ sessionId: d.sessionId, name })} className="rounded-md p-1 text-[#F97316] hover:bg-[#F97316]/10"><Pencil size={13} /></button></p>
+              {renaming?.sessionId === d.sessionId && <div className="mt-2 flex flex-wrap items-center gap-2"><input autoFocus maxLength={50} value={renaming.name} onChange={e => setRenaming({ ...renaming, name: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setRenaming(null); }} className={`h-9 min-w-0 flex-1 rounded-lg border px-3 text-[12px] outline-none focus:border-[#F97316] ${dark ? "border-[#424242] bg-[#242424]" : "border-[#DDD] bg-white"}`} /><SmallButton primary disabled={renameBusy} onClick={saveName}>{renameBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}Save</SmallButton><SmallButton dark={dark} disabled={renameBusy} onClick={() => setRenaming(null)}>Cancel</SmallButton></div>}
+              <p className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${muted}`}><MapPin size={12} className="text-[#F97316]" />{d.location?.text || "Location unavailable"}</p>
+              <p className={`mt-1 text-[11px] ${muted}`}>Last active: {dateText(d.lastActiveAt, true)}</p>
+              <p className={`mt-1 text-[11px] ${muted}`}>Signed in: {dateText(d.createdAt, true)} · IP {d.ipAddress || "Unknown"}</p>
+              <p className={`mt-1 text-[11px] ${muted}`}>Session expires: {dateText(d.expiresAt, true)}</p>
+            </div>
+          </div>
+          <SmallButton dark={dark} disabled={busy} onClick={() => setConfirm({ kind: "one", device: d })}><LogOut size={14} />{d.isCurrent ? "Log out" : "Log out device"}</SmallButton>
+        </div>; })}</div>}
+    </Panel>
+  </div>;
+}
 function UserProfile() {
   const token = useSelector(s => s.auth?.token);
   const theme = useTheme(); const dark = theme === "dark";
@@ -208,7 +304,7 @@ function UserProfile() {
         {chosen.key === "password" && <PasswordPage profile={profile} token={token} dark={dark} />}
         {chosen.key === "activity" && <Panel title="Account activity" caption="Recorded account and security events" icon={Activity} dark={dark} >{activityLoading ? <Loading label="Loading activity..." /> : activityError ? <Empty dark={dark} text={activityError} /> : activities.length === 0 ? <Empty dark={dark} text="No account activity found." /> : <div className="space-y-2">{activities.map((event, i) => <div key={event._id || i} className={`flex gap-3 rounded-lg border p-4 ${dark ? "border-[#333] bg-[#1E1E1E]" : "border-[#EEE] bg-[#FAFAFA]"}`}><Activity size={18} className="mt-0.5 shrink-0 text-[#F97316]" /><div><p className="text-[12px] font-semibold">{String(event.action || "Activity").replace(/_/g, " ")}</p><p className={`mt-1 text-[11px] ${muted}`}>{dateText(event.createdAt, true)} {event.result ? `· ${event.result}` : ""}</p></div></div>)}</div>}</Panel>}
         {chosen.key === "sales" && profile.role === "affiliate" && <SalesDashboard token={token} profile={profile} dark={dark} />}
-        {chosen.key === "devices" && <div className={`rounded-2xl border p-10 text-center sm:p-16 ${card}`}><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-[#F97316]/10"><MonitorSmartphone size={30} className="text-[#F97316]" /></div><p className="mt-5 text-[11px] font-bold uppercase tracking-widest text-[#F97316]">Coming soon</p><h3 className="mt-2 text-2xl font-semibold">Device management</h3><p className={`mx-auto mt-3 max-w-md text-[13px] leading-6 ${muted}`}>View trusted devices, identify sessions and manage login access from a dedicated security page.</p><SmallButton primary className="mt-6" onClick={() => setTab("profile")}><ArrowLeft size={15} />Back to profile</SmallButton></div>}
+        {chosen.key === "devices" && <DevicesPage token={token} dark={dark} />}
       </main></div>}</div></div>;
 }
 export default UserProfile;

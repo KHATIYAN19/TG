@@ -9,6 +9,7 @@ import { gateway } from "../../services/arena/gateway.js";
 import { computePricing, computeCancellation } from "../../services/arena/pricing.js";
 import { findValidCoupon, reserveCoupon } from "../../services/arena/coupons.js";
 import { markEntryPaid, expireEntry } from "../../services/arena/entryService.js";
+import { resolveAffiliate } from "../../services/arena/affiliate.js";
 import { healPaidMembers } from "../../services/arena/activation.js";
 import { emitToUser } from "../../services/arena/hub.js";
 import { couponCodeSchema, checkoutSchema, verifyPaymentSchema } from "./schemas.js";
@@ -62,7 +63,7 @@ const settleExistingPending = async (userId) => {
 
 /* POST /entry/checkout */
 export const checkout = handle(async (req, res) => {
-  const { couponCode } = checkoutSchema.parse(req.body);
+  const { couponCode, affiliateCode } = checkoutSchema.parse(req.body);
   const settings = await getArenaSettings();
 
   if (!settings.enabled) throw new ArenaError(503, "ARENA_PAUSED", "The arena is temporarily paused");
@@ -80,6 +81,7 @@ export const checkout = handle(async (req, res) => {
 
   const coupon = couponCode ? await findValidCoupon(couponCode, req.user.id) : null;
   const pricing = computePricing(settings.entryPricePaise, coupon);
+  const affiliate = await resolveAffiliate({ code: affiliateCode, paidPaise: pricing.finalPaise, buyerId: req.user.id });
 
   let entry;
   try {
@@ -92,6 +94,7 @@ export const checkout = handle(async (req, res) => {
       cancellationFeePercent: settings.cancellationFeePercent,
       matchesAllowed: settings.matchesPerEntry,
       coupon: coupon ? { id: coupon._id, code: coupon.code } : {},
+      ...(affiliate ? { affiliate } : {}),
     });
   } catch (error) {
     if (error?.code === 11000) {

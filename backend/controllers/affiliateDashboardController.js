@@ -1,3 +1,5 @@
+import ArenaEntry from "../models/arena/ArenaEntry.js";
+import { commissionOf, NET_COMMISSION_EXPR } from "../services/arena/affiliate.js";
 
 // import mongoose from "mongoose";
 // import Order from "../models/Order.js";
@@ -1725,6 +1727,119 @@ const metricFacet = (start, end) => [
 ];
 
 /* =====================================================
+   PREPBUDDY (ARENA) ENTRIES, MERGED INTO THE SAME REPORTS
+
+   Arena commissions live on ArenaEntry.affiliate. These
+   helpers shape them like book orders so the dashboard,
+   graph, recent list and transactions list can show both.
+   Only money, rate and an opaque reference are exposed.
+===================================================== */
+
+const ARENA_STATUSES = ["paid", "in_match", "consumed", "cancelling", "cancelled"];
+const ARENA_TITLE = "PrepBuddy Arena Entry";
+const paise = (v) => number(v) / 100;
+
+const arenaBase = (affiliateUserId, start, end) => ({
+  "affiliate.user": affiliateUserId,
+  status: { $in: ARENA_STATUSES },
+  paidAt: start && end ? { $gte: start, $lt: end } : { $ne: null },
+});
+
+const ARENA_REFUNDED = {
+  $add: [{ $ifNull: ["$cancel.refundPaise", 0] }, { $ifNull: ["$refundedPaise", 0] }],
+};
+const ARENA_FULLY_REFUNDED = { $gte: [ARENA_REFUNDED, "$paidPaise"] };
+
+const arenaGroup = {
+  $group: {
+    _id: null,
+    totalOrders: { $sum: 1 },
+    successfulOrders: { $sum: { $cond: [ARENA_FULLY_REFUNDED, 0, 1] } },
+    refundedOrders: { $sum: { $cond: [ARENA_FULLY_REFUNDED, 1, 0] } },
+    successfulAmount: { $sum: { $max: [0, { $subtract: ["$paidPaise", ARENA_REFUNDED] }] } },
+    earnedCommission: { $sum: NET_COMMISSION_EXPR },
+  },
+};
+
+const arenaStateMatch = (stateFilter) =>
+  stateFilter === "EARNED"
+    ? { $expr: { $not: [ARENA_FULLY_REFUNDED] } }
+    : stateFilter === "REFUNDED"
+      ? { $expr: ARENA_FULLY_REFUNDED }
+      : {};
+
+const arenaMetrics = async (affiliateUserId, start, end, stateFilter) => {
+  const [r] = await ArenaEntry.aggregate([
+    { $match: { ...arenaBase(affiliateUserId, start, end), ...arenaStateMatch(stateFilter) } },
+    arenaGroup,
+  ]);
+  const sales = paise(r?.successfulAmount);
+  const commission = paise(r?.earnedCommission);
+  return {
+    totalOrders: number(r?.totalOrders),
+    successfulOrders: number(r?.successfulOrders),
+    refundedOrders: number(r?.refundedOrders),
+    successfulAmount: sales,
+    earnedCommission: commission,
+    remainingAmount: Math.max(0, sales - commission),
+  };
+};
+
+const mergeMetrics = (book, arena) => {
+  const out = {
+    ...book,
+    totalOrders: book.totalOrders + arena.totalOrders,
+    successfulOrders: book.successfulOrders + arena.successfulOrders,
+    refundedOrders: book.refundedOrders + arena.refundedOrders,
+    successfulAmount: money(book.successfulAmount + arena.successfulAmount),
+    earnedCommission: money(book.earnedCommission + arena.earnedCommission),
+    remainingAmount: money(book.remainingAmount + arena.remainingAmount),
+  };
+  out.conversionRate = out.totalOrders > 0 ? money((out.successfulOrders / out.totalOrders) * 100) : 0;
+  return out;
+};
+
+const arenaAsOrder = (r) => {
+  const c = commissionOf(r);
+  const refunded = number(r.refundedPaise) + number(r.cancel?.refundPaise);
+  const fully = refunded >= number(r.paidPaise);
+  return {
+    orderId: `PB-${String(r._id).slice(-8).toUpperCase()}`,
+    source: "PREPBUDDY",
+    book: { title: ARENA_TITLE, price: money(paise(r.listPricePaise)) },
+    createdAt: r.paidAt,
+    eventAt: r.paidAt,
+    paidAt: r.paidAt,
+    currency: "INR",
+    paymentProvider: null,
+    paymentMethod: null,
+    paymentStatus: fully ? "REFUNDED" : "SUCCESS",
+    orderStatus: fully ? "REFUNDED" : "COMPLETED",
+    affiliateCode: c?.code || null,
+    commissionType: c ? c.type.toUpperCase() : null,
+    commissionValue: c ? c.value : null,
+    commissionAmount: c ? money(paise(c.netPaise)) : 0,
+    remainingAmount: money(paise(r.paidPaise) - (c ? paise(c.netPaise) : 0)),
+    amount: money(paise(r.paidPaise)),
+    discountAmount: money(paise(r.discountPaise)),
+    commissionEarned: !fully && Boolean(c),
+    state: fully ? "REFUNDED" : "EARNED",
+  };
+};
+
+const ARENA_SELECT = "status paidAt paidPaise listPricePaise discountPaise refundedPaise cancel.refundPaise affiliate";
+
+const arenaRecent = async (affiliateUserId, limit, start, end, stateFilter, dir = -1) => {
+  const match = arenaBase(affiliateUserId, start, end);
+  if (stateFilter === "EARNED") match.$expr = { $not: [ARENA_FULLY_REFUNDED] };
+  if (stateFilter === "REFUNDED") match.$expr = ARENA_FULLY_REFUNDED;
+  const rows = await ArenaEntry.find(match).sort({ paidAt: dir, _id: dir }).limit(limit).select(ARENA_SELECT).lean();
+  return rows.map(arenaAsOrder);
+};
+
+const byDateDesc = (a, b) => new Date(b.eventAt || b.createdAt) - new Date(a.eventAt || a.createdAt);
+
+/* =====================================================
    API 1: AFFILIATE DASHBOARD
 
    GET /api/affiliate/dashboard
@@ -1868,8 +1983,45 @@ export const getAffiliateDashboard = async (req, res) => {
 
     const aggregated = aggregateResult[0] || {};
 
+    const arenaPeriods = {
+      allTime: [null, null],
+      today: [periods.current.start, periods.current.end],
+      last7Days: [periods.last7Days.start, periods.last7Days.end],
+      last30Days: [periods.last30Days.start, periods.last30Days.end],
+      last365Days: [periods.last365Days.start, periods.last365Days.end],
+    };
+
+    const [arenaByPeriod, arenaGraph, arenaRecentOrders] = await Promise.all([
+      Promise.all(
+        Object.entries(arenaPeriods).map(async ([key, [a, b]]) => [
+          key,
+          await arenaMetrics(context.affiliateUserId, a, b),
+        ])
+      ).then(Object.fromEntries),
+
+      ArenaEntry.aggregate([
+        { $match: arenaBase(context.affiliateUserId, graphStart, graphEnd) },
+        {
+          $group: {
+            _id: { $dateToString: { date: "$paidAt", format: "%Y-%m-%d", timezone: TIMEZONE } },
+            orders: { $sum: 1 },
+            successfulOrders: { $sum: { $cond: [ARENA_FULLY_REFUNDED, 0, 1] } },
+            salesAmount: { $sum: { $max: [0, { $subtract: ["$paidPaise", ARENA_REFUNDED] }] } },
+            commission: { $sum: NET_COMMISSION_EXPR },
+          },
+        },
+      ]),
+
+      arenaRecent(context.affiliateUserId, 15),
+    ]);
+
+    const arenaGraphMap = new Map(arenaGraph.map((row) => [row._id, row]));
+
     const period = (key) =>
-      normalizeMetrics(aggregated[key]?.[0]);
+      mergeMetrics(
+        normalizeMetrics(aggregated[key]?.[0]),
+        arenaByPeriod[key]
+      );
 
     const graphMap = new Map(
       (aggregated.graph || []).map(
@@ -1883,12 +2035,15 @@ export const getAffiliateDashboard = async (req, res) => {
     ).map((date) => {
       const point = graphMap.get(date);
 
+      const arenaPoint = arenaGraphMap.get(date);
+
       return {
         date,
-        orders: number(point?.orders),
-        successfulOrders: number(point?.successfulOrders),
-        salesAmount: money(point?.salesAmount),
-        commission: money(point?.commission),
+        orders: number(point?.orders) + number(arenaPoint?.orders),
+        successfulOrders:
+          number(point?.successfulOrders) + number(arenaPoint?.successfulOrders),
+        salesAmount: money(number(point?.salesAmount) + paise(arenaPoint?.salesAmount)),
+        commission: money(number(point?.commission) + paise(arenaPoint?.commission)),
         failedOrders: number(point?.failedOrders),
       };
     });
@@ -1928,7 +2083,12 @@ export const getAffiliateDashboard = async (req, res) => {
           points: graph,
         },
 
-        recentOrders: recentOrders.map(cleanOrder),
+        recentOrders: [
+          ...recentOrders.map(cleanOrder),
+          ...arenaRecentOrders,
+        ]
+          .sort(byDateDesc)
+          .slice(0, 15),
 
         calculationPolicy: {
           commissionBasis:
@@ -2149,13 +2309,52 @@ export const getAffiliateOrders = async (req, res) => {
       },
     ]);
 
-    const total = number(
-      result?.count?.[0]?.value
-    );
+    // PrepBuddy entries are merged in (they are EARNED or REFUNDED only).
+    const includeArena = ["ALL", "EARNED", "REFUNDED"].includes(status);
+    const arenaStart = start && end ? start : null;
+    const arenaEnd = start && end ? end : null;
+
+    const arenaStateFilter = status === "ALL" ? null : status;
+
+    const [arenaCount, arenaTotals, arenaHead] = includeArena
+      ? await Promise.all([
+          ArenaEntry.countDocuments({
+            ...arenaBase(context.affiliateUserId, arenaStart, arenaEnd),
+            ...(arenaStateFilter === "EARNED" ? { $expr: { $not: [ARENA_FULLY_REFUNDED] } } : {}),
+            ...(arenaStateFilter === "REFUNDED" ? { $expr: ARENA_FULLY_REFUNDED } : {}),
+          }),
+          arenaMetrics(context.affiliateUserId, arenaStart, arenaEnd, arenaStateFilter),
+          // Enough from each source to fill this page after a date-ordered merge.
+          arenaRecent(context.affiliateUserId, skip + limit, arenaStart, arenaEnd, arenaStateFilter, sort),
+        ])
+      : [0, null, []];
+
+    const bookTotal = number(result?.count?.[0]?.value);
+    const total = bookTotal + arenaCount;
 
     const pages = Math.ceil(total / limit);
 
-    const rows = (result?.items || []).map(cleanOrder);
+    // Books were already paged by (skip, limit); to merge correctly, re-read
+    // the leading (skip + limit) book rows when arena rows exist.
+    let bookRows = result?.items || [];
+    if (arenaHead.length) {
+      const [head] = await Order.aggregate([
+        ...filterStages,
+        { $sort: { eventAt: sort, _id: sort } },
+        { $limit: skip + limit },
+        safeOrderProjection,
+        { $group: { _id: null, items: { $push: "$$ROOT" } } },
+      ]);
+      bookRows = head?.items || [];
+    }
+
+    const merged = [...bookRows.map(cleanOrder), ...arenaHead].sort((a, b) =>
+      sort === 1 ? -byDateDesc(a, b) : byDateDesc(a, b)
+    );
+
+    const rows = arenaHead.length
+      ? merged.slice(skip, skip + limit)
+      : merged;
 
     return res.status(200).json({
       success: true,
@@ -2171,9 +2370,9 @@ export const getAffiliateOrders = async (req, res) => {
           sort: sort === 1 ? "asc" : "desc",
         },
 
-        totals: normalizeMetrics(
-          result?.totals?.[0]
-        ),
+        totals: arenaTotals
+          ? mergeMetrics(normalizeMetrics(result?.totals?.[0]), arenaTotals)
+          : normalizeMetrics(result?.totals?.[0]),
 
         pagination: {
           page,
@@ -2194,5 +2393,127 @@ export const getAffiliateOrders = async (req, res) => {
       success: false,
       message: "Unable to retrieve affiliate orders.",
     });
+  }
+};
+
+
+/* =====================================================
+   PREPBUDDY (ARENA) AFFILIATE TRANSACTIONS
+
+   GET /api/affiliate/arena
+       ?userId=AFFILIATE_ID   (admin only)
+       &page=1&limit=15
+       &startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+
+   Privacy: only the amounts, commission and an opaque
+   reference are returned. No member name, email, phone,
+   alias, order id, payment id or gateway data.
+===================================================== */
+
+const ARENA_PAID_STATUSES = ["paid", "in_match", "consumed", "cancelling", "cancelled"];
+
+export const getAffiliateArenaTransactions = async (req, res) => {
+  try {
+    const context = await getAffiliateContext(req);
+
+    if (context.error) {
+      return res.status(context.status).json({ success: false, message: context.error });
+    }
+
+    const page = parsePositiveInt(req.query.page, 1, 100000);
+    const limit = parsePositiveInt(req.query.limit, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+
+    const { startDate, endDate } = req.query;
+
+    if (Boolean(startDate) !== Boolean(endDate)) {
+      return res.status(400).json({ success: false, message: "Provide both startDate and endDate." });
+    }
+
+    const match = {
+      "affiliate.user": context.affiliateUserId,
+      status: { $in: ARENA_PAID_STATUSES },
+      paidAt: { $ne: null },
+    };
+
+    if (startDate && endDate) {
+      if (!validDate(startDate) || !validDate(endDate) || startDate > endDate) {
+        return res.status(400).json({ success: false, message: "Invalid date range." });
+      }
+      if (daysBetween(startDate, endDate) > MAX_DATE_RANGE_DAYS) {
+        return res.status(400).json({ success: false, message: "Date range cannot exceed 3660 days." });
+      }
+      match.paidAt = { $gte: startIST(startDate), $lt: endExclusiveIST(endDate) };
+    }
+
+    const refundExpr = {
+      $add: [{ $ifNull: ["$cancel.refundPaise", 0] }, { $ifNull: ["$refundedPaise", 0] }],
+    };
+
+    const [rows, totalsAgg] = await Promise.all([
+      ArenaEntry.find(match)
+        .sort({ paidAt: -1, _id: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .select("status paidAt paidPaise listPricePaise discountPaise refundedPaise cancel.refundPaise affiliate")
+        .lean(),
+
+      ArenaEntry.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: null,
+            transactions: { $sum: 1 },
+            sales: { $sum: "$paidPaise" },
+            refunded: { $sum: refundExpr },
+            grossCommission: { $sum: { $ifNull: ["$affiliate.commissionPaise", 0] } },
+            netCommission: { $sum: NET_COMMISSION_EXPR },
+          },
+        },
+      ]),
+    ]);
+
+    const t = totalsAgg[0] || {};
+    const total = number(t.transactions);
+    const pages = Math.ceil(total / limit);
+    const rupees = (paise) => money(number(paise) / 100);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        currency: "INR",
+        source: "PREPBUDDY",
+
+        totals: {
+          transactions: total,
+          salesAmount: rupees(t.sales),
+          refundedAmount: rupees(t.refunded),
+          grossCommission: rupees(t.grossCommission),
+          earnedCommission: rupees(t.netCommission),
+        },
+
+        pagination: { page, limit, total, pages, hasNext: page < pages, hasPrevious: page > 1 },
+
+        transactions: rows.map((r) => {
+          const c = commissionOf(r);
+          return {
+            // Opaque short reference; not usable to look anything up.
+            reference: `PB-${String(r._id).slice(-8).toUpperCase()}`,
+            date: r.paidAt,
+            state: c ? c.status.toUpperCase() : "EARNED",
+            amount: rupees(r.paidPaise),
+            listAmount: rupees(r.listPricePaise),
+            discountAmount: rupees(r.discountPaise),
+            refundedAmount: rupees(number(r.refundedPaise) + number(r.cancel?.refundPaise)),
+            commissionType: c ? c.type : null,
+            commissionValue: c ? c.value : null,
+            commissionGross: c ? rupees(c.grossPaise) : 0,
+            commissionAmount: c ? rupees(c.netPaise) : 0,
+          };
+        }),
+      },
+    });
+  } catch (error) {
+    console.error("Affiliate arena transactions error:", error);
+    return res.status(500).json({ success: false, message: "Unable to retrieve PrepBuddy transactions." });
   }
 };

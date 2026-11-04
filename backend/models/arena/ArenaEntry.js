@@ -68,6 +68,18 @@ const entrySchema = new Schema(
       paymentId: { type: String, default: null },
     },
 
+    // Affiliate attribution, snapshotted at checkout so later rate changes never
+    // alter it. The commission is derived from paidPaise (see services/arena/affiliate.js);
+    // refunds reduce it proportionally at read time, so nothing here needs syncing.
+    affiliate: {
+      _id: false,
+      user: { type: Schema.Types.ObjectId, ref: "User", default: undefined },
+      code: { type: String, default: undefined },
+      type: { type: String, enum: ["percentage", "fixed"], default: undefined },
+      value: { type: Number, default: undefined },
+      commissionPaise: { type: Number, min: 0, default: undefined },
+    },
+
     paidAt: { type: Date, default: null },
     match: { type: Schema.Types.ObjectId, ref: "ArenaMatch", default: null },
 
@@ -78,6 +90,23 @@ const entrySchema = new Schema(
       refundPaise: { type: Number, default: 0 },
       refundId: { type: String, default: null },
     },
+
+    // Partial/full refunds started by an admin against the SAME gateway payment
+    // (money goes back to the original payer). Separate from the cancellation
+    // refund above; both together can never exceed paidPaise.
+    refundedPaise: { type: Number, default: 0, min: 0 },
+    refunds: [
+      {
+        _id: false,
+        at: { type: Date, default: Date.now },
+        by: { type: String },
+        amountPaise: { type: Number, required: true },
+        refundId: { type: String, default: null },
+        gateway: { type: String },
+        paymentId: { type: String },
+        note: { type: String, maxlength: 200, default: "" },
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -89,6 +118,7 @@ entrySchema.index(
 );
 // A user can only ever have one open (unmatched, un-cancelled) entry.
 entrySchema.index({ user: 1, createdAt: -1 });
+entrySchema.index({ "affiliate.user": 1, createdAt: -1 }, { partialFilterExpression: { "affiliate.user": { $exists: true } } });
 entrySchema.index(
   { user: 1 },
   {

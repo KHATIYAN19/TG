@@ -5,6 +5,7 @@
 // import "./index.css";
 
 // import ScrollTop from "./component/ScrollTop.jsx";
+import { initDeviceHint } from "./lib/authSession.js";
 // import MetaPageTracker from "./component/MetaPageTracker.jsx";
 
 // import { BrowserRouter } from "react-router-dom";
@@ -97,6 +98,8 @@ if (!rootElement) {
 // ============================================
 // INITIALIZE REACT
 // ============================================
+
+initDeviceHint();
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>

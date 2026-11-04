@@ -81,6 +81,9 @@ const userSessionSchema = new Schema(
     },
 
     device: {
+      // Human-readable label, e.g. "Chrome on Windows PC".
+      name: String,
+      model: String,
       browser: String,
       os: String,
       type: {
@@ -97,6 +100,14 @@ const userSessionSchema = new Schema(
     },
 
     ipAddress: String,
+
+    // Approximate sign-in location (from the IP), e.g. Agra, Uttar Pradesh, India.
+    location: {
+      city: String,
+      region: String,
+      country: String,
+      text: String,
+    },
 
     lastActiveAt: {
       type: Date,

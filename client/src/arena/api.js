@@ -26,6 +26,13 @@ export const mailHttp = axios.create({
   timeout: 30000,
 });
 
+// Admin-only: Campaign Studio (audiences, templates, queue-backed sending, DLQ).
+export const campaignHttp = axios.create({
+  baseURL: `${API_ROOT}/api/admin/campaigns`,
+  withCredentials: true,
+  timeout: 60000,
+});
+
 const getToken = () => store.getState().auth.token || localStorage.getItem("token") || "";
 
 /*
@@ -68,7 +75,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp]) {
+for (const instance of [http, adminHttp, mailHttp, campaignHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
@@ -88,7 +95,7 @@ for (const instance of [http, adminHttp, mailHttp]) {
       const code = error.response?.data?.code;
 
       // One silent refresh attempt for an expired access token.
-      if (status === 401 && code === "TOKEN_EXPIRED" && original && !original._retried) {
+      if (status === 401 && (code === "TOKEN_EXPIRED" || code === "SESSION_NOT_FOUND") && original && !original._retried) {
         original._retried = true;
         try {
           const token = await refreshAccessToken();

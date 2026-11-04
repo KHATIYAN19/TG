@@ -27,6 +27,8 @@ export const AUDIT_ACTIONS = [
   "chat_cleared",
   "message_deleted",
   "locks_cleared",
+  "payment_refunded",
+  "audit_cleared",
 ];
 
 const auditSchema = new Schema(

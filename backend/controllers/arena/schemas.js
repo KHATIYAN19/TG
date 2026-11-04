@@ -174,6 +174,8 @@ export const couponCodeSchema = z.object({
 
 export const checkoutSchema = z.object({
   couponCode: z.string().trim().max(30).optional().or(z.literal("")),
+  // Referral code remembered by the browser (localStorage "referralCode"). Unknown codes are ignored.
+  affiliateCode: z.string().trim().max(64).regex(/^[a-zA-Z0-9_-]*$/).optional(),
 });
 
 export const verifyPaymentSchema = z.object({

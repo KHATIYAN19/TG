@@ -4892,17 +4892,13 @@ function UserDevices({
     setBusy(true);
 
     try {
-      const endpoint = selected.all
-        ? `${base}/logout-all`
-        : `${base}/sessions/${encodeURIComponent(
-            selected.sessionId
-          )}/revoke`;
-
-      const { data } = await axios.post(
-        endpoint,
-        {},
-        apiConfig
-      );
+      // Backend routes: POST /:userId/logout-all, DELETE /:userId/sessions/:sessionId
+      const { data } = selected.all
+        ? await axios.post(`${base}/logout-all`, {}, apiConfig)
+        : await axios.delete(
+            `${base}/sessions/${encodeURIComponent(selected.sessionId)}`,
+            apiConfig
+          );
 
       if (!data?.success) {
         throw new Error(
@@ -4946,9 +4942,9 @@ function UserDevices({
     }
 
     return (
+      device.name ||
       device.deviceName ||
-      device.browser ||
-      device.userAgent ||
+      [device.browser, device.os].filter(Boolean).join(" on ") ||
       "Unknown device"
     );
   };
@@ -4987,8 +4983,10 @@ function UserDevices({
         }
       >
         <p className="mb-4 text-[11px] opacity-65">
-          Session revocation takes effect on the
-          user's next authenticated request.
+          Only devices with a live session are listed.
+          Logging a device out takes effect immediately;
+          expired and logged-out devices disappear
+          automatically.
         </p>
 
         {error && (
@@ -5009,7 +5007,8 @@ function UserDevices({
               const name = getDeviceName(session);
 
               const DeviceIcon =
-                /mobile|android|iphone/i.test(name)
+                session.device?.type === "mobile" ||
+                session.device?.type === "tablet"
                   ? Smartphone
                   : Laptop;
 
@@ -5035,6 +5034,17 @@ function UserDevices({
                         {name}
                       </p>
 
+                      {session.device?.model && (
+                        <p className="mt-1 text-[11px] opacity-65">
+                          Device: {session.device.model}
+                        </p>
+                      )}
+
+                      <p className="mt-1 text-[11px] opacity-65">
+                        Location:{" "}
+                        {session.location?.text || "Unknown"}
+                      </p>
+
                       <p className="mt-2 text-[11px] opacity-65">
                         Last active:{" "}
                         {dateText(
@@ -5046,6 +5056,11 @@ function UserDevices({
                       <p className="mt-1 text-[11px] opacity-65">
                         Login IP:{" "}
                         {session.ipAddress || "Unknown"}
+                      </p>
+
+                      <p className="mt-1 text-[11px] opacity-65">
+                        Signed in:{" "}
+                        {dateText(session.createdAt, true)}
                       </p>
 
                       <p className="mt-1 text-[11px] opacity-65">
@@ -5316,23 +5331,27 @@ function UserDetails({
 
       {tab === "sales" &&
         user.role === "affiliate" && (
-          <AffiliateSales
-            user={user}
-            apiConfig={apiConfig}
-            dark={dark}
-            onTransactions={() =>
-              setTab("transactions")
-            }
-          />
+          <div className="space-y-5">
+            <AffiliateSales
+              user={user}
+              apiConfig={apiConfig}
+              dark={dark}
+              onTransactions={() =>
+                setTab("transactions")
+              }
+            />
+          </div>
         )}
 
       {tab === "transactions" &&
         user.role === "affiliate" && (
-          <AffiliateTransactions
-            user={user}
-            apiConfig={apiConfig}
-            dark={dark}
-          />
+          <div className="space-y-5">
+            <AffiliateTransactions
+              user={user}
+              apiConfig={apiConfig}
+              dark={dark}
+            />
+          </div>
         )}
     </div>
   );

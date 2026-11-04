@@ -35,6 +35,10 @@ import cashfreeRoute from "./routes/cashfreeRoute.js";
 
 import paymentRoutes from "./routes/paymentRoute.js";
 import emailCampaignRoutes from "./routes/emailCampaignRoutes.js";
+import marketingCampaignRoutes from "./routes/marketingCampaignRoutes.js";
+import { unsubscribePage, unsubscribeSubmit } from "./controllers/unsubscribeController.js";
+import { publicFormLimiter } from "./Middleware/rateLimiter.js";
+import { startMailWorker } from "./services/mail/mailWorker.js";
 
 import InterviewExperience from "./routes/InterviewExperience.js";
 import BookReviewRoute from "./routes/bookReviewRoute.js";
@@ -70,6 +74,7 @@ import {
 } from "./services/analyticsJobs.js";
 
 import authRoutes from "./routes/authRoutes.js";
+import { sweepSessions } from "./services/sessionCleanup.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import mailSettingsRoutes from "./routes/mailSettingsRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -665,6 +670,16 @@ app.use(
   emailCampaignRoutes
 );
 
+// Campaign Studio: audiences, templates, queue-backed sending, DLQ.
+app.use(
+  "/api/admin/campaigns",
+  marketingCampaignRoutes
+);
+
+// Public unsubscribe (signed links in campaign emails).
+app.get("/api/mail/unsubscribe", publicFormLimiter, unsubscribePage);
+app.post("/api/mail/unsubscribe", publicFormLimiter, unsubscribeSubmit);
+
 /* =====================================================
    404 HANDLER
 ===================================================== */
@@ -765,6 +780,9 @@ const startServer = async () => {
     startAnalyticsJobs();
     startEbookEmailSweeper();
 
+    // Background email: consumes the Amazon SQS email queue (no-op if SQS is not configured).
+    startMailWorker();
+
     // Release abandoned arena checkouts (and their coupon reservations).
     const arenaMaintenance = () =>
       Promise.all([sweepAbandonedEntries(), healPaidMembers()]).catch((error) =>
@@ -773,6 +791,14 @@ const startServer = async () => {
     arenaMaintenance(); // also repairs anything stuck before this start-up
     const arenaSweeper = setInterval(arenaMaintenance, 10 * 60 * 1000);
     arenaSweeper.unref();
+
+    // Remove expired / revoked device sessions so only active devices remain.
+    const sessionSweep = () =>
+      sweepSessions().catch((error) =>
+        console.error("[sessions] cleanup failed:", error.message)
+      );
+    sessionSweep();
+    setInterval(sessionSweep, 10 * 60 * 1000).unref();
 
     const server = app.listen(PORT, () => {
       console.log(

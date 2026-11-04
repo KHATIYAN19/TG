@@ -42,6 +42,7 @@ import {
 import {
   getAffiliateDashboard,
   getAffiliateOrders,
+  getAffiliateArenaTransactions,
 } from "../controllers/affiliateDashboardController.js";
 
 const router = express.Router();
@@ -123,6 +124,12 @@ router.get(
 router.get(
   "/orders",
   getAffiliateOrders
+);
+
+/* PrepBuddy (arena) commissions: GET /api/affiliate/arena[?userId=...] */
+router.get(
+  "/arena",
+  getAffiliateArenaTransactions
 );
 
 export default router;

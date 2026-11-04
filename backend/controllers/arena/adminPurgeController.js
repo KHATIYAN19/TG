@@ -1,5 +1,5 @@
 import User from "../../models/User.js";
-import { audit } from "../../models/arena/ArenaAuditLog.js";
+import ArenaAuditLog, { audit } from "../../models/arena/ArenaAuditLog.js";
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { purgeChat, purgeMessage, purgeRequest, purgeMatch, purgeEntry, purgeUser } from "../../services/arena/purge.js";
 import { clearLocks } from "../../services/authLocks.js";
@@ -156,3 +156,20 @@ export const clearLocksFor = handle(async (req, res) => {
 
   res.json({ success: true, message: "Locks lifted. They can try again now.", data: { keys, accountUnlocked } });
 }, "Unable to lift the locks");
+
+/* ----- the admin activity log itself ----- */
+
+export const deleteAuditEntry = handle(async (req, res) => {
+  objectId.parse(req.params.id);
+  const row = await ArenaAuditLog.findByIdAndDelete(req.params.id).lean();
+  if (!row) throw new ArenaError(404, "NOT_FOUND", "Log entry not found");
+  console.log(`[arena:audit] entry ${row._id} (${row.action}) deleted by ${req.user.id}`);
+  res.json({ success: true, message: "Log entry permanently deleted" });
+}, "Unable to delete the log entry");
+
+/* Wipes the whole log. A single entry is written afterwards so the wipe itself is accountable. */
+export const clearAudit = handle(async (req, res) => {
+  const { deletedCount } = await ArenaAuditLog.deleteMany({});
+  await audit(req.user.id, "audit_cleared", { targetType: "audit", summary: `Cleared the activity log (${deletedCount} entr${deletedCount === 1 ? "y" : "ies"})`, meta: { deletedCount } });
+  res.json({ success: true, message: `Activity log cleared (${deletedCount} entr${deletedCount === 1 ? "y" : "ies"})`, data: { deletedCount } });
+}, "Unable to clear the activity log");

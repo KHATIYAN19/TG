@@ -4,6 +4,7 @@ import { auth, isAdmin } from "../../Middleware/auth.js";
 import * as admin from "../../controllers/arena/adminController.js";
 import * as ops from "../../controllers/arena/adminOpsController.js";
 import * as purge from "../../controllers/arena/adminPurgeController.js";
+import { refundPayment } from "../../controllers/arena/adminRefundController.js";
 import { listAccounts } from "../../controllers/arena/adminAccountsController.js";
 
 const router = express.Router();
@@ -41,11 +42,14 @@ router.put("/coupons/:id", admin.updateCoupon);
 router.delete("/coupons/:id", admin.deleteCoupon);
 
 router.get("/payments", ops.listPayments);
+router.post("/payments/:id/refund", refundPayment);
 router.delete("/payments/:id", purge.deletePayment);
 router.delete("/members/:userId", purge.deleteMember);
 
 router.post("/members/:id/matches", ops.adjustMatches);
 router.get("/audit", ops.listAudit);
+router.delete("/audit/:id", purge.deleteAuditEntry);
+router.delete("/audit", purge.clearAudit);
 router.post("/locks/clear", purge.clearLocksFor);
 
 router.get("/bugs", admin.listBugs);

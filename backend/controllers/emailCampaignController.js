@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import EmailCampaign from "../models/EmailCampaign.js";
-import sendMail from "../utils/MailSender.js";
+// Legacy synchronous campaigns need the real per-recipient send result,
+// so they bypass the queue. The new Campaign Studio uses the queue.
+import { deliverMail as sendMail } from "../utils/MailSender.js";
 
 const escapeRegexInput = (value) =>
   String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

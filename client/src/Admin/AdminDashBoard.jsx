@@ -36,6 +36,7 @@ import {
   PlusCircle,
   Search,
   Send,
+  Megaphone,
   Star,
   TicketPercent,
   UserCog,
@@ -94,6 +95,18 @@ const PRIORITY_ROUTES = [
       "daily payments orders transactions cashfree payu razorpay",
     featured: true,
     priority: 3,
+  },
+  {
+    path: "/admin/campaigns",
+    name: "Campaign Studio",
+    icon: Megaphone,
+    description:
+      "Targeted marketing: email buyers of specific books (or everyone except them) using templates and coupons. Sent in the background via the email queue, with progress, retries and unsubscribe.",
+    category: "Marketing",
+    keywords:
+      "campaign studio audience segment buyers hld lld coupon template queue sqs dlq unsubscribe",
+    featured: true,
+    priority: 4,
   },
   {
     path: "/admin/coupon/dashboard",
@@ -157,10 +170,10 @@ const PRIORITY_ROUTES = [
   },
   {
     path: "/campaign",
-    name: "Email Campaigns",
+    name: "Quick Email Send",
     icon: Send,
     description:
-      "Send book announcements, promotional emails, discount campaigns, customer notifications and product updates.",
+      "One-off sender: paste a list of addresses and send a single HTML email right now. No audience filters or queue. For marketing use Campaign Studio.",
     category: "Marketing",
     keywords:
       "email campaigns marketing newsletters bulk promotions",

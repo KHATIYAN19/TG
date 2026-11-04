@@ -158,6 +158,18 @@ const cashfree = {
     });
     return String(data.cf_refund_id ?? data.refund_id);
   },
+
+  // Admin-initiated (partial) refund. Cashfree refunds are made against the order,
+  // which has exactly one successful payment: the one we're refunding.
+  async adminRefund({ entry, amountPaise, attemptId, note }) {
+    const { data } = await cf("post", `/orders/${encodeURIComponent(entry.payment.orderId)}/refunds`, {
+      refund_amount: rupees(amountPaise),
+      refund_id: attemptId,
+      refund_note: note || "Admin refund",
+      refund_speed: "STANDARD",
+    });
+    return String(data.cf_refund_id ?? data.refund_id);
+  },
 };
 
 /* ------------------------------- RAZORPAY ------------------------------- */
@@ -222,6 +234,17 @@ const razorpay = {
     });
     return refund.id;
   },
+
+  // Refund exactly the captured payment we stored, so money returns to the original payer.
+  async adminRefund({ entry, amountPaise, attemptId, note }) {
+    const refund = await getRazorpayClient().payments.refund(entry.payment.paymentId, {
+      amount: amountPaise,
+      speed: "normal",
+      notes: { reason: "admin_refund", entryId: String(entry._id), note: note || "" },
+      receipt: attemptId,
+    });
+    return refund.id;
+  },
 };
 
 const IMPLEMENTATIONS = { cashfree, razorpay };
@@ -232,5 +255,19 @@ export const gateway = {
   createOrder: (args) => guard(gatewayName())(() => IMPLEMENTATIONS[gatewayName()].createOrder(args)),
   confirmPayment: (args) => guard(args.entry.payment?.gateway || gatewayName())(() => IMPLEMENTATIONS[args.entry.payment?.gateway || gatewayName()].confirmPayment(args)),
   findPaidPayment: (entry) => guard(entry.payment?.gateway || gatewayName())(() => IMPLEMENTATIONS[entry.payment?.gateway || gatewayName()].findPaidPayment(entry)),
+  /* Admin refunds show the gateway's own reason to the admin instead of a generic message. */
+  adminRefund: async (args) => {
+    const name = args.entry.payment?.gateway;
+    const impl = IMPLEMENTATIONS[name];
+    if (!impl) throw new ArenaError(400, "NOT_REFUNDABLE", "This payment has no gateway to refund through");
+    try {
+      return await impl.adminRefund(args);
+    } catch (error) {
+      if (error instanceof ArenaError) throw error;
+      const detail = error?.response?.data?.message || error?.error?.description || error?.message || "unknown error";
+      console.error(`[arena:refund] ${name} refund failed: ${detail}`);
+      throw new ArenaError(502, "REFUND_FAILED", `${name} could not process the refund: ${detail}`);
+    }
+  },
   refund: (args) => guard(args.entry.payment?.gateway || gatewayName())(() => IMPLEMENTATIONS[args.entry.payment?.gateway || gatewayName()].refund(args)),
 };

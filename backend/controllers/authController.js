@@ -3,6 +3,7 @@ import crypto, { randomUUID } from "crypto";
 
 import User from "../models/User.js";
 import UserSession from "../models/UserSession.js";
+import { locationFromRequest } from "../utils/geoLocation.js";
 
 import redis from "../utils/redis.js";
 import sendMail from "../utils/MailSender.js";
@@ -177,6 +178,7 @@ export const createPendingSession = async (
   state: "pending_otp",
   device: deviceInfo(req),
   ipAddress: getIp(req),
+  location: locationFromRequest(req),
   expiresAt: minutesFromNow(
     authConfig.otpMinutes
   ),
@@ -211,6 +213,70 @@ const unlockOtp = async lock => {
     [lock.key],
     [lock.value]
   );
+};
+
+/*
+  Logging in again on the same browser must not leave the old session behind as a
+  phantom "active device". The browser's previous session is identified by its
+  refresh cookie and, for remembered devices, by its device token. The one being
+  replaced is revoked straight away.
+*/
+const retireReplacedSessions = async ({ req, user, session, deviceToken }) => {
+  try {
+    const clauses = [];
+
+    const oldRefresh = req.cookies?.[cookieNames.refresh];
+    if (typeof oldRefresh === "string") {
+      clauses.push({ refreshTokenHash: hashToken(oldRefresh) });
+    }
+    if (deviceToken) {
+      clauses.push({ deviceTokenHash: hashToken(deviceToken) });
+    }
+
+    // Abandoned ghosts: same browser fingerprint and network that has been quiet for
+    // an hour is almost certainly this same device whose old login was never closed
+    // (cookies cleared, storage wiped). A different device that is in use is untouched.
+    if (session.device?.userAgent && session.ipAddress) {
+      clauses.push({
+        "device.userAgent": session.device.userAgent,
+        ipAddress: session.ipAddress,
+        lastActiveAt: { $lt: new Date(Date.now() - 3600000) },
+      });
+    }
+    if (!clauses.length) return;
+
+    const old = await UserSession.find({
+      user: user._id,
+      state: "active",
+      purpose: "login",
+      _id: { $ne: session._id },
+      $or: clauses,
+    }).select("sessionId").lean();
+
+    if (!old.length) return;
+
+    await Promise.all(old.map(o => revokeSessionAuth(o.sessionId)));
+
+    await UserSession.updateMany(
+      { _id: { $in: old.map(o => o._id) }, state: "active" },
+      {
+        $set: {
+          state: "revoked",
+          revokedAt: new Date(),
+          revokedBy: user._id,
+          revokeReason: "Replaced by a new login on the same device",
+          refreshTokenHash: null,
+          // The trust record moves to the new session.
+          deviceTokenHash: null,
+          isTrusted: false,
+          trustedUntil: null,
+        },
+      }
+    );
+  } catch (error) {
+    // Never block a login over housekeeping; the sweeper catches leftovers.
+    console.error("Retire replaced sessions:", error.message);
+  }
 };
 
 export const completeLogin = async ({
@@ -262,6 +328,8 @@ export const completeLogin = async ({
   );
 
   await session.save();
+
+  await retireReplacedSessions({ req, user, session, deviceToken: finalDeviceToken });
 
   try {
     await registerSessionAuth(user, session);

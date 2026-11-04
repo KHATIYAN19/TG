@@ -22,6 +22,16 @@ const loadScript = (id, src, ready) =>
   });
 
 const loadCashfree = () => loadScript("cashfree-sdk", "https://sdk.cashfree.com/js/v3/cashfree.js", () => Boolean(window.Cashfree));
+// Referral code captured globally by App.jsx (?ref= / ?referralCode=). The server validates it.
+const readReferralCode = () => {
+  try {
+    const code = (localStorage.getItem("referralCode") || "").trim();
+    return /^[a-zA-Z0-9_-]{1,64}$/.test(code) ? code : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const loadRazorpay = () => loadScript("razorpay-sdk", "https://checkout.razorpay.com/v1/checkout.js", () => Boolean(window.Razorpay));
 
 /* ------------------------------- step header ------------------------------- */
@@ -160,7 +170,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
   const pay = async () => {
     setPaying(true);
     try {
-      const { data } = await http.post("/entry/checkout", { couponCode: applied?.coupon?.code || "" });
+      const { data } = await http.post("/entry/checkout", { couponCode: applied?.coupon?.code || "", affiliateCode: readReferralCode() });
 
       if (data.data.free) {
         toast.success("You're in the arena!", { id: "arena-paid" });

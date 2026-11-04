@@ -4,6 +4,8 @@ import {
   Suspense,
   useEffect,
   useCallback,
+  useRef,
+  useState,
 } from "react";
 import {
   Routes,
@@ -28,6 +30,11 @@ import {
 } from "./Redux/authSlice.js";
 import Navbar from "./component/Navbar";
 import Footer from "./component/Footer.jsx";
+import {
+  refreshAccessToken,
+  tokenIsExpired,
+  tokenExpiresAt,
+} from "./lib/authSession";
 /* ============================================================
    LAZY IMPORTS — PUBLIC PAGES
 ============================================================ */
@@ -106,6 +113,10 @@ const ArenaApp = lazy(() =>
 const AdminArena = lazy(() =>
   import("./arena/AdminArena.jsx")
 );
+const CampaignStudio = lazy(() =>
+  import("./Admin/CampaignStudio.jsx")
+);
+
 const AdminMailSettings = lazy(() =>
   import("./Admin/AdminMailSettings.jsx")
 );
@@ -343,7 +354,7 @@ const AdminBookReviews = lazy(() =>
    LOADER
 ============================================================ */
 const RouteLoader = () => (
-  <div className="flex min-h-[55vh] w-full items-center justify-center px-4">
+  <div className="flex min-h-screen w-full items-center justify-center px-4">
     <div className="flex flex-col items-center gap-4">
       <div
         className="
@@ -589,7 +600,7 @@ function App() {
     const interceptorId =
       axios.interceptors.response.use(
         (response) => response,
-        (error) => {
+        async (error) => {
           const status =
             error.response?.status;
           const code = String(
@@ -609,6 +620,7 @@ function App() {
             "/api/auth/resend-otp",
             "/api/auth/password/setup",
             "/api/auth/refresh",
+            "/api/auth/logout",
           ].some((path) =>
             url.includes(path)
           );
@@ -629,6 +641,32 @@ function App() {
                 "SESSION_REVOKED",
               ].includes(code)
             );
+          // Expired access token (or the server lost its cached copy of the
+          // session): try ONE silent refresh with the refresh cookie and replay
+          // the request. Only sign out if the server says the session is gone.
+          const recoverable =
+            status === 401 &&
+            ["TOKEN_EXPIRED", "SESSION_NOT_FOUND"].includes(code) &&
+            authHeader &&
+            fromOurBackend &&
+            !publicAuth &&
+            error.config &&
+            !error.config._authRetried;
+          if (recoverable) {
+            error.config._authRetried = true;
+            try {
+              const fresh = await refreshAccessToken();
+              error.config.headers.Authorization = `Bearer ${fresh}`;
+              return axios.request(error.config);
+            } catch (refreshError) {
+              if (!refreshError.authRejected) {
+                // Network hiccup: keep the user signed in, fail this call only.
+                return Promise.reject(error);
+              }
+              forceSignOut("SESSION_EXPIRED");
+              return Promise.reject(error);
+            }
+          }
           if (
             authenticationFailure &&
             authHeader &&
@@ -651,19 +689,56 @@ function App() {
   /* ======================================================
      TOKEN EXPIRY
      Public routes remain accessible without login.
+     A signed-in user's access token is renewed quietly (shortly
+     before it expires, after the tab wakes up, and on first load).
+     They are only signed out if the server rejects the refresh.
   ====================================================== */
+  const [authReady, setAuthReady] = useState(
+    () => !token || !tokenIsExpired(token)
+  );
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+
+  const renewIfNeeded = useCallback(
+    async (skewMs = 0) => {
+      const current = tokenRef.current;
+      if (!current || !tokenIsExpired(current, skewMs)) return;
+      try {
+        await refreshAccessToken();
+      } catch (refreshError) {
+        if (refreshError.authRejected) {
+          forceSignOut("TOKEN_EXPIRED");
+        }
+      }
+    },
+    [forceSignOut]
+  );
+
+  // First load with a stale token: renew BEFORE the route guards run,
+  // otherwise they would bounce a still-valid session to the login page.
   useEffect(() => {
-    if (
-      token &&
-      accessTokenExpired(token)
-    ) {
-      forceSignOut("TOKEN_EXPIRED");
-    }
-  }, [
-    location.pathname,
-    token,
-    forceSignOut,
-  ]);
+    if (authReady) return;
+    renewIfNeeded().finally(() => setAuthReady(true));
+  }, [authReady, renewIfNeeded]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const msLeft = tokenExpiresAt(token) - Date.now();
+    const timer = setTimeout(
+      () => renewIfNeeded(60_000),
+      Math.max(5_000, msLeft - 60_000)
+    );
+    const onVisible = () => {
+      if (document.visibilityState === "visible") renewIfNeeded(30_000);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
+    };
+  }, [token, renewIfNeeded]);
   useEffect(() => {
     if (location.pathname !== LOGIN_URL) {
       return;
@@ -723,7 +798,7 @@ function App() {
         <SaleCampaign />
       </Suspense>
       <Suspense fallback={<RouteLoader />}>
-        <Routes>
+        {!authReady ? <RouteLoader /> : <Routes>
           {/* ========================================
               PUBLIC PAGES
           ======================================== */}
@@ -866,6 +941,12 @@ function App() {
             path="/admin/arena"
             element={requireAdmin(
               <AdminArena />
+            )}
+          />
+          <Route
+            path="/admin/campaigns"
+            element={requireAdmin(
+              <CampaignStudio />
             )}
           />
           <Route
@@ -1285,9 +1366,11 @@ function App() {
             path="*"
             element={<NotFoundPage />}
           />
-        </Routes>
+        </Routes>}
+        {/* Inside the boundary: while a lazy page loads, React hides the footer
+            too, so users never see (or get scrolled to) a footer-only screen. */}
+        {!hideFooter && <Footer />}
       </Suspense>
-      {!hideFooter && <Footer />}
     </div>
   );
 }

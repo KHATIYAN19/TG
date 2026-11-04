@@ -664,20 +664,20 @@ const EmailCampaignDashboard = () => {
               </div>
 
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Email Campaigns
+                Quick Email Send
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Create HTML
-                email campaigns,
-                send them to one
-                or multiple
-                recipients,
-                preview the
-                email before
-                sending, and
-                monitor delivery
-                results.
+                Paste a list of
+                addresses and send
+                one HTML email right
+                now, one by one. For
+                targeting buyers of
+                specific books,
+                templates, coupons
+                and background
+                sending, use
+                Campaign Studio.
               </p>
             </div>
 
@@ -696,6 +696,16 @@ const EmailCampaignDashboard = () => {
               New Campaign
             </button>
           </div>
+
+          <a
+            href="/admin/campaigns"
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-900 transition hover:bg-orange-100"
+          >
+            <span>
+              <b>Looking to email your customers?</b> Campaign Studio picks the audience (e.g. bought HLD but not LLD), adds templates and coupons, and sends in the background.
+            </span>
+            <span className="font-bold">Open Campaign Studio →</span>
+          </a>
 
           {/* STATS */}
 
