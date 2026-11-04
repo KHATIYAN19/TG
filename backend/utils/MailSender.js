@@ -17,11 +17,42 @@ const sender = {
   name: "Target Trek",
 };
 
-const transport = nodemailer.createTransport(
-  MailtrapTransport({
-    token: process.env.MAILTRAP_TOKEN,
-  })
-);
+/*
+  Mailtrap token, read at SEND time (never frozen at import) and cleaned up:
+  hosting dashboards often leave surrounding quotes / spaces / a "Bearer " prefix
+  on pasted values. Common alternative variable names are accepted too.
+*/
+const MAILTRAP_TOKEN_NAMES = [
+  "MAILTRAP_TOKEN",
+  "MAILTRAP_API_TOKEN",
+  "MAILTRAP_API_KEY",
+  "MAILTRAP_SENDING_TOKEN",
+];
+
+export const getMailtrapToken = () => {
+  for (const name of MAILTRAP_TOKEN_NAMES) {
+    const value = String(process.env[name] || "")
+      .trim()
+      .replace(/^["']|["']$/g, "")
+      .replace(/^Bearer\s+/i, "")
+      .trim();
+    if (value) return value;
+  }
+  return "";
+};
+
+// One transport per distinct token, created on first use.
+let mailtrapTransport = null;
+let mailtrapTransportToken = null;
+
+const getTransport = () => {
+  const token = getMailtrapToken();
+  if (!mailtrapTransport || mailtrapTransportToken !== token) {
+    mailtrapTransport = nodemailer.createTransport(MailtrapTransport({ token }));
+    mailtrapTransportToken = token;
+  }
+  return mailtrapTransport;
+};
 
 /* =====================================================
    ATTACHMENT NORMALIZATION
@@ -131,9 +162,10 @@ const sendViaMailtrap = async (
   htmlContent,
   options = {}
 ) => {
-  if (!process.env.MAILTRAP_TOKEN) {
+  if (!getMailtrapToken()) {
     throw new Error(
-      "MAILTRAP_TOKEN is missing"
+      "MAILTRAP_TOKEN is missing in this server process " +
+        "(set it in the environment of the service that runs the backend, then restart it)"
     );
   }
 
@@ -185,7 +217,7 @@ const sendViaMailtrap = async (
 
   try {
     const info =
-      await transport.sendMail(
+      await getTransport().sendMail(
         mailOptions
       );
 
@@ -595,7 +627,7 @@ const sendViaSes = async (
 const PROVIDERS = {
   mailtrap: {
     send: sendViaMailtrap,
-    configured: () => Boolean(process.env.MAILTRAP_TOKEN),
+    configured: () => Boolean(getMailtrapToken()),
   },
   resend: {
     send: sendViaResend,
@@ -632,9 +664,21 @@ const record = (name, ok, error) => {
   }
 };
 
+// Names only, never values: shown at start-up so production logs prove what the process can see.
+export const logMailConfiguration = () => {
+  console.log("[MAIL] providers configured in this process:", {
+    mailtrap: PROVIDERS.mailtrap.configured(),
+    resend: PROVIDERS.resend.configured(),
+    ses: PROVIDERS.ses.configured(),
+  });
+};
+
 export const getMailProviderStatus = () => ({
   providers: {
-    mailtrap: { configured: PROVIDERS.mailtrap.configured() },
+    mailtrap: {
+      configured: PROVIDERS.mailtrap.configured(),
+      missing: PROVIDERS.mailtrap.configured() ? [] : ["MAILTRAP_TOKEN"],
+    },
     resend: { configured: PROVIDERS.resend.configured(), from: resendFrom() },
     ses: {
       configured: PROVIDERS.ses.configured(),
@@ -693,9 +737,31 @@ export const deliverMail = async (...args) => {
 
   const settings = await getMailSettings();
 
-  const primary = PROVIDERS[settings.provider]
+  const chosen = PROVIDERS[settings.provider]
     ? settings.provider
     : "mailtrap";
+
+  /*
+    A provider whose keys are not set can never succeed, so do not try it
+    first (that only produced "MAILTRAP_TOKEN is missing" noise and extra
+    delay). Start with the chosen provider if it is configured, otherwise
+    with the first configured one; the rest are the failover backups.
+  */
+  const configured = ORDER.filter((name) => PROVIDERS[name].configured());
+
+  if (!configured.length) {
+    // Nothing configured: let the chosen provider produce its clear error.
+    return sendMailWith(chosen, ...args);
+  }
+
+  const primary = configured.includes(chosen) ? chosen : configured[0];
+
+  if (primary !== chosen) {
+    console.warn(
+      `[MAIL] "${chosen}" is selected but not configured; using "${primary}". ` +
+        `Add its keys or pick another provider at /admin/mail.`
+    );
+  }
 
   try {
     return await sendMailWith(primary, ...args);
@@ -704,9 +770,7 @@ export const deliverMail = async (...args) => {
       throw primaryError;
     }
 
-    const backups = ORDER.filter(
-      (name) => name !== primary && PROVIDERS[name].configured()
-    );
+    const backups = configured.filter((name) => name !== primary);
 
     for (const backup of backups) {
       stats.fallbacks += 1;

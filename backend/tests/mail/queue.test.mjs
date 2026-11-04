@@ -41,8 +41,9 @@ globalThis.fetch = async (url, init = {}) => {
 
 const { default: sendMail } = await import("../../utils/MailSender.js");
 const { processMessage, isPermanentError } = await import("../../services/mail/mailWorker.js");
-const { filterBuyers } = await import("../../services/campaign/audience.js");
-const { renderCampaignEmail, verifyUnsubscribeToken, unsubscribeToken } = await import("../../services/campaign/render.js");
+const { filterBuyers, dedupeRecipients, canonicalEmail } = await import("../../services/campaign/audience.js");
+const { renderCampaignEmail, verifyUnsubscribeToken, unsubscribeToken, joinTitles } = await import("../../services/campaign/render.js");
+const { BUILTIN_TEMPLATES } = await import("../../services/campaign/builtinTemplates.js");
 
 let passed = 0;
 const t = async (name, fn) => {
@@ -136,6 +137,32 @@ await t("template rendering: escaping, coupon, button, subject, unsubscribe toke
   assert.ok(!mail.html.includes("javascript:")); // unsafe CTA link replaced
   assert.ok(verifyUnsubscribeToken("a@b.com", unsubscribeToken("a@b.com")));
   assert.ok(!verifyUnsubscribeToken("a@b.com", unsubscribeToken("z@b.com")));
+});
+
+await t("one mail per person: two books / orders / gmail spellings merge into one", async () => {
+  const rows = [
+    { email: "ravi@gmail.com", name: "", books: ["HLD"], orders: 1, spent: 300 },
+    { email: "ravi@gmail.com", name: "Ravi", books: ["LLD"], orders: 1, spent: 300 },
+    { email: "r.a.vi+shop@googlemail.com", name: "", books: ["Java"], orders: 1, spent: 100 },
+    { email: "other@x.com", name: "O", books: [], orders: 0, spent: 0 },
+  ];
+  assert.equal(canonicalEmail("R.a.vi+x@GoogleMail.com"), "ravi@gmail.com");
+  const { recipients, duplicates } = dedupeRecipients(rows);
+  assert.equal(recipients.length, 2);
+  assert.equal(duplicates, 2);
+  assert.deepEqual(recipients[0].books.sort(), ["HLD", "Java", "LLD"]);
+  assert.equal(recipients[0].name, "Ravi");
+});
+
+await t("Prep Buddy template: price, coupon, book name, edge-to-edge, no raw placeholders", async () => {
+  const tpl = BUILTIN_TEMPLATES.find((x) => x.key === "prep-buddy-launch");
+  const campaign = { _id: "c1", subject: tpl.subject, preheader: tpl.defaults.preheader, html: tpl.html, content: { headline: tpl.defaults.headline, ctaText: tpl.defaults.ctaText, ctaUrl: tpl.defaults.ctaUrl, couponCode: "TTNEW29" } };
+  const mail = renderCampaignEmail(campaign, { email: "a@b.com", name: "Ravi Kumar", books: ["System Design HLD", "LLD Handbook"] }, {});
+  assert.equal(mail.subject, "Thanks for buying System Design HLD and LLD Handbook, Ravi: your Prep Buddy invite");
+  for (const needle of ["TTNEW29", "&#8377;199", "&#8377;29", "2 buddy matches", "System Design HLD and LLD Handbook", "/prep-buddy", "Unsubscribe"]) assert.ok(mail.html.includes(needle), needle);
+  assert.ok(!/\{\{/.test(mail.html), "unrendered placeholder left");
+  assert.ok(mail.html.includes("margin:0;padding:0;background:#ffffff"), "no outer margin");
+  assert.equal(joinTitles([]), "our Target Trek book");
 });
 
 console.log(`\n${passed} checks passed`);

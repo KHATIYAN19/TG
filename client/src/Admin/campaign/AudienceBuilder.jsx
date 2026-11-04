@@ -295,7 +295,7 @@ export default function AudienceBuilder({ value, onChange, meta, campaigns }) {
               {loading && <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-label="Updating" />}
             </div>
             <div className="mt-1 text-5xl font-extrabold tabular-nums">{loading && !preview ? "…" : (preview?.total ?? 0).toLocaleString("en-IN")}</div>
-            <p className="mt-1 text-xs text-orange-50">Updates as you change the filters</p>
+            <p className="mt-1 text-xs text-orange-50">One email per person, even if they bought several books</p>
           </div>
 
           <div className="p-5">
@@ -306,6 +306,7 @@ export default function AudienceBuilder({ value, onChange, meta, campaigns }) {
                   {preview.stats.buyers > 0 && <Badge tone="brand">{preview.stats.buyers} customers</Badge>}
                   {preview.stats.users > 0 && <Badge tone="slate">{preview.stats.users} registered</Badge>}
                   {preview.stats.manual > 0 && <Badge tone="slate">{preview.stats.manual} listed</Badge>}
+                  {preview.stats.duplicates > 0 && <Badge tone="emerald">{preview.stats.duplicates} duplicate{preview.stats.duplicates > 1 ? "s" : ""} merged</Badge>}
                   {preview.stats.suppressed > 0 && <Badge tone="amber">{preview.stats.suppressed} unsubscribed removed</Badge>}
                   {preview.stats.excluded > 0 && <Badge tone="amber">{preview.stats.excluded} excluded</Badge>}
                   {preview.stats.alreadyMailed > 0 && <Badge tone="amber">{preview.stats.alreadyMailed} already mailed</Badge>}

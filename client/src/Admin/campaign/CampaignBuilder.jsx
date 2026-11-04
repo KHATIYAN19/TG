@@ -99,7 +99,10 @@ export default function CampaignBuilder({ meta, campaigns, initial, onClose, onS
         headline: form.content.headline || t.defaults.headline || "",
         body: form.content.body || t.defaults.body || "",
         ctaText: form.content.ctaText || t.defaults.ctaText || "",
+        ctaUrl: form.content.ctaUrl || t.defaults.ctaUrl || "",
+        couponCode: form.content.couponCode || t.defaults.couponCode || "",
       });
+      if (!form.preheader && t.defaults.preheader) set({ preheader: t.defaults.preheader });
     }
   };
 

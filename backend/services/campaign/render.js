@@ -114,6 +114,14 @@ ${b.subtitle ? `<div style="font-size:13px;color:#78716c;margin-top:2px;">${esca
         .join("")}</table>`
     : "";
 
+/* "A", "A and B", "A, B and C" */
+export const joinTitles = (titles = [], fallback = "our Target Trek book") => {
+  const list = titles.filter(Boolean).slice(0, 3);
+  if (!list.length) return fallback;
+  if (list.length === 1) return list[0];
+  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+};
+
 /* ---------------- main renderer ---------------- */
 
 export const renderString = (template, vars = {}, blocks = {}) =>
@@ -156,7 +164,7 @@ export const renderCampaignEmail = (campaign, recipient, context = {}) => {
     couponExpiry,
     ctaText: content.ctaText || "",
     ctaUrl,
-    purchasedBooks: (recipient.books || []).slice(0, 3).join(", "),
+    purchasedBooks: joinTitles(recipient.books),
     unsubscribeUrl: unsubscribe,
     preheader: campaign.preheader || "",
   };

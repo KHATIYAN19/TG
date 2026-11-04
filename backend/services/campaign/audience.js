@@ -38,6 +38,46 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 export const isValidEmail = (value) => EMAIL_RE.test(value) && value.length <= 254;
 
+/*
+  The same mailbox can be written several ways (Gmail ignores dots and "+tags").
+  Used to make sure one person never gets the same campaign twice.
+*/
+export const canonicalEmail = (value) => {
+  const email = normalizeEmail(value);
+  const at = email.lastIndexOf("@");
+  if (at < 1) return email;
+  let local = email.slice(0, at);
+  let domain = email.slice(at + 1);
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (domain === "gmail.com") local = local.split("+")[0].replace(/\./g, "");
+  return `${local}@${domain}`;
+};
+
+/*
+  One row per person, however many books / orders / addresses they have.
+  Merges books, orders and spend into the first row seen.
+*/
+export const dedupeRecipients = (recipients) => {
+  const seen = new Map();
+  let duplicates = 0;
+
+  for (const r of recipients) {
+    const key = canonicalEmail(r.email);
+    const first = seen.get(key);
+    if (!first) {
+      seen.set(key, r);
+      continue;
+    }
+    duplicates += 1;
+    first.books = [...new Set([...first.books, ...r.books])];
+    first.orders += r.orders || 0;
+    first.spent += r.spent || 0;
+    if (!first.name && r.name) first.name = r.name;
+  }
+
+  return { recipients: [...seen.values()], duplicates };
+};
+
 export const parseEmailList = (value) => {
   const list = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
   return [...new Set(list.map(normalizeEmail).filter(Boolean))];
@@ -178,7 +218,7 @@ export const resolveAudience = async (filters = {}) => {
     (Array.isArray(filters.sources) && filters.sources.length ? filters.sources : ["buyers"]).map(String)
   );
 
-  const stats = { buyers: 0, users: 0, manual: 0, suppressed: 0, excluded: 0, invalid: 0, alreadyMailed: 0 };
+  const stats = { duplicates: 0, buyers: 0, users: 0, manual: 0, suppressed: 0, excluded: 0, invalid: 0, alreadyMailed: 0 };
   const byEmail = new Map();
 
   const bookDocs = await Book.find({}).select("_id title").lean();
@@ -237,6 +277,14 @@ export const resolveAudience = async (filters = {}) => {
       byEmail.set(email, { email, name: "", books: [], orders: 0, spent: 0, lastPurchaseAt: null, source: "manual" });
       stats.manual += 1;
     }
+  }
+
+  // ---- one email per person (two books, two orders or two spellings = one mail) ----
+  {
+    const merged = dedupeRecipients([...byEmail.values()]);
+    stats.duplicates = merged.duplicates;
+    byEmail.clear();
+    for (const r of merged.recipients) byEmail.set(r.email, r);
   }
 
   // ---- removals ----

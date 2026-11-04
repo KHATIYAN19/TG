@@ -39,6 +39,7 @@ import marketingCampaignRoutes from "./routes/marketingCampaignRoutes.js";
 import { unsubscribePage, unsubscribeSubmit } from "./controllers/unsubscribeController.js";
 import { publicFormLimiter } from "./Middleware/rateLimiter.js";
 import { startMailWorker } from "./services/mail/mailWorker.js";
+import { logMailConfiguration } from "./utils/MailSender.js";
 
 import InterviewExperience from "./routes/InterviewExperience.js";
 import BookReviewRoute from "./routes/bookReviewRoute.js";
@@ -253,6 +254,22 @@ const corsOptions = {
 
   optionsSuccessStatus: 204,
 };
+
+/*
+  Public unsubscribe (signed links in campaign emails).
+  Registered BEFORE the CORS / origin checks on purpose: it is a plain HTML page
+  served by this backend, and its form posts back to the same backend. The browser
+  sends that POST with the backend's own origin, which is (rightly) not in the
+  CORS allow-list for the site. The link is authenticated by its signed token and
+  rate-limited, and nothing here reads cookies, so skipping CORS is safe.
+*/
+app.get("/api/mail/unsubscribe", publicFormLimiter, unsubscribePage);
+app.post(
+  "/api/mail/unsubscribe",
+  express.urlencoded({ extended: false, limit: "4kb" }),
+  publicFormLimiter,
+  unsubscribeSubmit
+);
 
 app.use(cors(corsOptions));
 
@@ -676,9 +693,6 @@ app.use(
   marketingCampaignRoutes
 );
 
-// Public unsubscribe (signed links in campaign emails).
-app.get("/api/mail/unsubscribe", publicFormLimiter, unsubscribePage);
-app.post("/api/mail/unsubscribe", publicFormLimiter, unsubscribeSubmit);
 
 /* =====================================================
    404 HANDLER
@@ -781,6 +795,7 @@ const startServer = async () => {
     startEbookEmailSweeper();
 
     // Background email: consumes the Amazon SQS email queue (no-op if SQS is not configured).
+    logMailConfiguration();
     startMailWorker();
 
     // Release abandoned arena checkouts (and their coupon reservations).

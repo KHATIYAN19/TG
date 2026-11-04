@@ -152,12 +152,13 @@ export default function BrowsePage() {
             <ShieldCheck className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <h2 className="text-base font-extrabold text-stone-900 dk:text-[#fff7ed] sm:text-lg">We&apos;ve just opened the arena, and new members are joining every day.</h2>
+            <h2 className="text-base font-extrabold text-stone-900 dk:text-[#fff7ed] sm:text-lg">Thanks for purchasing! You&apos;re one of our first members. 🧡</h2>
             <p className="mt-1.5 text-sm leading-6 text-stone-600 dk:text-[#d9c7ba]">
-              We&apos;re a young community and still growing, so you may not see many members yet. If we can&apos;t onboard enough people, or you can&apos;t find a prep buddy,
-              {" "}<strong className="font-bold text-orange-700 dk:text-orange-300">we&apos;ll refund your full entry fee after 30 days.</strong> No questions asked, no hidden deductions.
+              We&apos;re new here and still onboarding members, so you may not see many profiles yet. New people join every day, and we&apos;re working on
+              {" "}<strong className="font-bold text-orange-700 dk:text-orange-300">bringing in more members, improving matching and adding more features.</strong>
+              {" "}Keep your profile complete and check back often, so you&apos;re ready when your buddy arrives.
             </p>
-            <p className="mt-2 text-xs font-semibold text-stone-500 dk:text-[#b9a79c]">Thanks for your support! Please keep supporting us. Thank you for being one of our first members, you&apos;re helping us build this. 🧡</p>
+            <p className="mt-2 text-xs font-semibold text-stone-500 dk:text-[#b9a79c]">Thank you for being one of the first to join and for helping us build this.</p>
           </div>
         </div>
       </div>
