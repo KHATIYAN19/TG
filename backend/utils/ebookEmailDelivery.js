@@ -439,6 +439,7 @@ export const deliverEbookEmail = async (
   );
 
   if (!order) {
+    console.log("[EBOOK EMAIL] not claimed (not paid, already sent/skipped, or busy):", String(orderDbId));
     return {
       status: "NOT_CLAIMED",
       message: "Order is not paid, already sent, or a send is in progress.",
@@ -456,6 +457,9 @@ export const deliverEbookEmail = async (
 
     // The setting is read at send time for automatic runs.
     if (!isAdmin && !product.sendEbookEmailOnPurchase) {
+      console.log(
+        `[EBOOK EMAIL] skipped order ${order.orderId}: "Send ebook email on purchase" is OFF for "${product.title}" in THIS database`
+      );
       await finish({ "ebookEmail.status": "SKIPPED" });
       return { status: "SKIPPED" };
     }
@@ -593,6 +597,8 @@ export const deliverEbookEmail = async (
       "ebookEmail.lastError": null,
     });
 
+    console.log(`[EBOOK EMAIL] sent order ${order.orderId} (${mailsSent} mail(s)) to ${recipient}`);
+
     return { status: "SENT", mailsSent };
   } catch (error) {
     console.error("[EBOOK EMAIL FAILED]", {
@@ -624,6 +630,21 @@ export const deliverEbookEmail = async (
 ----------------------------------------------------- */
 
 const MAX_CONCURRENT_JOBS = 2;
+
+// A job that never settles (stalled socket) would hold one of the slots
+// forever and eventually stop all ebook mail. Free the slot after this long;
+// the stale lock (LOCK_TIMEOUT_MS) lets the sweeper retry the order.
+const JOB_TIMEOUT_MS = 5 * 60 * 1000;
+
+const withTimeout = (promise, ms) => {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Ebook email job timed out after ${ms / 1000}s`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+};
 const queue = [];
 const queuedIds = new Set();
 let running = 0;
@@ -633,7 +654,7 @@ const pump = () => {
     const job = queue.shift();
     running += 1;
 
-    deliverEbookEmail(job.id, job.opts)
+    withTimeout(deliverEbookEmail(job.id, job.opts), JOB_TIMEOUT_MS)
       .catch((error) => {
         console.error("[EBOOK EMAIL QUEUE ERROR]", error);
       })
@@ -666,6 +687,7 @@ export const enqueueEbookEmail = (id, opts = {}) => {
 
 export const scheduleEbookEmail = (order) => {
   if (order?._id) {
+    console.log("[EBOOK EMAIL] queued order", order.orderId || String(order._id));
     enqueueEbookEmail(order._id, { trigger: "auto" });
     // Books with Prep Arena matches / packs: record the purchase, grant matches, send the thank-you mail (no-op for other books).
     scheduleMembershipActivation(order);

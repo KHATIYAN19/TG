@@ -986,68 +986,23 @@ export const payUSuccess = async (
      * Coupon usedCount +1 only once
      */
     if (updatedOrder) {
-      /*
-       * Increase coupon usage only after
-       * verified successful payment.
-       */
-      if (
-        updatedOrder
-          .coupon
-          ?.applied &&
-        updatedOrder
-          .coupon
-          ?.couponId
-      ) {
-        try {
-          await Coupon.updateOne(
-            {
-              _id:
-                updatedOrder
-                  .coupon
-                  .couponId,
-            },
-
-            {
-              $inc: {
-                usedCount:
-                  1,
-              },
-            }
-          );
-        } catch (error) {
-          console.error(
-            "Unable to increment coupon usage:",
-            error
-          );
-        }
-      }
-
-
-      /*
-       * Increase book purchase statistics.
-       */
-      try {
-        await Book.updateOne(
-          {
-            _id:
-              updatedOrder
-                .bookId,
-          },
-
-          {
-            $inc: {
-              "stats.purchases":
-                1,
-            },
-          }
-        );
-      } catch (error) {
-        console.error(
-          "Unable to increment book purchases:",
-          error
+      // Counters are bookkeeping: run them in parallel in the background
+      // so the buyer is redirected without waiting on them.
+      if (updatedOrder.coupon?.applied && updatedOrder.coupon?.couponId) {
+        Coupon.updateOne(
+          { _id: updatedOrder.coupon.couponId },
+          { $inc: { usedCount: 1 } }
+        ).catch((error) =>
+          console.error("Unable to increment coupon usage:", error)
         );
       }
 
+      Book.updateOne(
+        { _id: updatedOrder.bookId },
+        { $inc: { "stats.purchases": 1 } }
+      ).catch((error) =>
+        console.error("Unable to increment book purchases:", error)
+      );
 
       // Queue PDF email in the background (never awaited), so the
       // redirect below is not delayed by large attachments.
@@ -1168,6 +1123,11 @@ export const payUSuccess = async (
       );
     }
 
+
+    // A repeat callback (browser retry, PayU re-post) is also a second
+    // chance to deliver mail if the first attempt was lost. Both jobs are
+    // idempotent: already-sent mail is never repeated.
+    scheduleEbookEmail(paidOrder);
 
     return res.redirect(
       successRedirect(
@@ -1484,9 +1444,15 @@ export const getPurchasedBookAccess = async (req, res) => {
       ]
     };
 
-    const order = await Order.findOne(
-      orderQuery
-    ).lean();
+    // Only the fields this endpoint needs: orders also hold large
+    // PayU callback/verification blobs that would slow every read.
+    const order = await Order.findOne(orderQuery)
+      .select(
+        "orderId bookId book customer.email " +
+        "payment.amount purchasedBookIds " +
+        "metadata.attribution access.expiresAt"
+      )
+      .lean();
 
     if (!order) {
       return res.status(403).json({
@@ -1499,15 +1465,32 @@ export const getPurchasedBookAccess = async (req, res) => {
     // 2. GET PURCHASED PRODUCT
     // -----------------------------------------
 
-    const purchasedProduct = await Book.findById(
-      order.bookId
-    )
-      .select(
-        "_id title slug subtitle description " +
-        "resourceType coverPageUrl pdfUrl fileName " +
-        "includedBooks isActive sendEbookEmailOnPurchase"
-      )
+    const productSelect =
+      "_id title slug subtitle description " +
+      "resourceType coverPageUrl pdfUrl fileName " +
+      "includedBooks isActive sendEbookEmailOnPurchase";
+
+    const bookSelect =
+      "_id title slug subtitle description " +
+      "resourceType coverPageUrl pdfUrl fileName";
+
+    const orderSnapshotIds = Array.isArray(order.purchasedBookIds)
+      ? order.purchasedBookIds.map((id) => String(id))
+      : [];
+
+    // When the purchase-time snapshot exists, product and books are
+    // independent: load them together (one round trip instead of two).
+    const productPromise = Book.findById(order.bookId)
+      .select(productSelect)
       .lean();
+
+    const snapshotBooksPromise = orderSnapshotIds.length
+      ? Book.find({ _id: { $in: orderSnapshotIds } })
+          .select(bookSelect)
+          .lean()
+      : null;
+
+    const purchasedProduct = await productPromise;
 
     if (!purchasedProduct) {
       return res.status(404).json({
@@ -1566,16 +1549,11 @@ export const getPurchasedBookAccess = async (req, res) => {
     // 4. LOAD ALL INCLUDED BOOK DETAILS
     // -----------------------------------------
 
-    const foundBooks = await Book.find({
-      _id: {
-        $in: selectedIds
-      }
-    })
-      .select(
-        "_id title slug subtitle description " +
-        "resourceType coverPageUrl pdfUrl fileName"
-      )
-      .lean();
+    const foundBooks = snapshotBooksPromise
+      ? await snapshotBooksPromise
+      : await Book.find({ _id: { $in: selectedIds } })
+          .select(bookSelect)
+          .lean();
 
     const bookMap = new Map(
       foundBooks.map((book) => [
@@ -1614,24 +1592,14 @@ export const getPurchasedBookAccess = async (req, res) => {
     // 5. REVALIDATE ACCESS AND RECORD USAGE
     // -----------------------------------------
 
-    const accessUpdated = await Order.updateOne(
-      orderQuery,
-      {
-        $set: {
-          "access.lastAccessedAt": new Date()
-        },
-        $inc: {
-          "access.accessCount": 1
-        }
-      }
+    // The order was just validated by the same query above, so the
+    // usage counter does not need to hold up the response.
+    Order.updateOne(orderQuery, {
+      $set: { "access.lastAccessedAt": new Date() },
+      $inc: { "access.accessCount": 1 }
+    }).catch((error) =>
+      console.error("Unable to record access usage:", error.message)
     );
-
-    if (accessUpdated.matchedCount !== 1) {
-      return res.status(403).json({
-        success: false,
-        message: "Access link is invalid or expired."
-      });
-    }
 
     // -----------------------------------------
     // 6. FORMAT BOOK DATA

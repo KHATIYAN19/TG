@@ -39,6 +39,10 @@ import {
   Loader2,
   LockKeyhole,
   Mail,
+  Megaphone,
+  MousePointerClick,
+  Target,
+  BarChart3,
   MessageSquareText,
   MoreHorizontal,
   Receipt,
@@ -996,6 +1000,140 @@ function getRemainingTime(
 /* =========================================================
    STATUS BADGE
 ========================================================= */
+
+
+/* =========================================================
+   TRAFFIC SOURCE / UTM HELPERS
+
+   Orders store attribution in two places:
+   - metadata.utmSource / utmMedium / utmCampaign (legacy)
+   - metadata.attribution.* (platform, click ids, campaign ids)
+   Both are merged so every order shows whatever it has.
+========================================================= */
+
+const SOURCE_FILTERS = [
+  { key: "ALL", label: "All traffic", icon: Globe2 },
+  { key: "meta", label: "Meta Ads", icon: Megaphone },
+  { key: "google", label: "Google Ads", icon: Target },
+  { key: "other", label: "Other UTM", icon: Link2 },
+  { key: "organic", label: "Organic", icon: MousePointerClick },
+];
+
+const SOURCE_LABELS = {
+  meta: "Meta Ads",
+  google: "Google Ads",
+  other: "Tagged (UTM)",
+  organic: "Organic / Direct",
+};
+
+function clean(value) {
+  const text = String(value ?? "").trim();
+  return text && text !== "null" && text !== "undefined" ? text : "";
+}
+
+function getAttribution(order) {
+  const metadata = order?.metadata || {};
+  const a = metadata.attribution || {};
+
+  const result = {
+    platform: clean(a.platform).toLowerCase(),
+    utmSource: clean(a.utmSource) || clean(metadata.utmSource),
+    utmMedium: clean(a.utmMedium) || clean(metadata.utmMedium),
+    utmCampaign: clean(a.utmCampaign) || clean(metadata.utmCampaign),
+    utmContent: clean(a.utmContent),
+    utmTerm: clean(a.utmTerm),
+    campaignId: clean(a.campaignId),
+    adsetId: clean(a.adsetId),
+    adId: clean(a.adId),
+    fbclid: clean(a.fbclid),
+    fbc: clean(a.fbc),
+    fbp: clean(a.fbp),
+    gclid: clean(a.gclid),
+    gbraid: clean(a.gbraid),
+    wbraid: clean(a.wbraid),
+    landingPath: clean(a.landingPath),
+    touchedAt: clean(a.touchedAt),
+    referrer: clean(metadata.referrer),
+    ipAddress: clean(metadata.ipAddress),
+  };
+
+  const hasUtm = Boolean(
+    result.utmSource || result.utmMedium || result.utmCampaign
+  );
+
+  let key = "organic";
+
+  if (result.platform === "meta" || result.fbclid) key = "meta";
+  else if (result.platform === "google" || result.gclid || result.gbraid || result.wbraid) key = "google";
+  else if (hasUtm) key = "other";
+
+  result.key = key;
+  result.hasUtm = hasUtm;
+  result.sourceName =
+    result.utmSource || (key === "organic" ? "direct" : key);
+
+  return result;
+}
+
+function summarizeSources(orders) {
+  const sources = new Map();
+  const campaigns = new Map();
+
+  const bump = (map, id, label, order, paid, amount, extra = {}) => {
+    const row = map.get(id) || {
+      id,
+      label,
+      ...extra,
+      orders: 0,
+      paid: 0,
+      revenue: 0,
+    };
+    row.orders += 1;
+    if (paid) {
+      row.paid += 1;
+      row.revenue += amount;
+    }
+    map.set(id, row);
+  };
+
+  for (const order of orders) {
+    const a = getAttribution(order);
+    const paid = getOrderBucket(order) === "SUCCESS";
+    const amount = Number(order?.payment?.amount ?? 0) || 0;
+
+    bump(
+      sources,
+      `${a.key}|${a.sourceName}`,
+      a.sourceName,
+      order,
+      paid,
+      amount,
+      { key: a.key, medium: a.utmMedium }
+    );
+
+    if (a.utmCampaign) {
+      bump(
+        campaigns,
+        `${a.key}|${a.utmCampaign}`,
+        a.utmCampaign,
+        order,
+        paid,
+        amount,
+        { key: a.key, medium: a.utmMedium }
+      );
+    }
+  }
+
+  const sort = (rows) =>
+    [...rows.values()].sort(
+      (x, y) => y.revenue - x.revenue || y.orders - x.orders
+    );
+
+  return {
+    sources: sort(sources),
+    campaigns: sort(campaigns),
+  };
+}
 
 function StatusBadge({
   status,
@@ -2072,6 +2210,8 @@ function PaymentCard({
                   "No customer email"}
               </p>
 
+              <SourceChip order={order} />
+
 
               <div
                 className="tt-subtle mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold"
@@ -2840,72 +2980,7 @@ function PaymentCard({
               </section>
 
 
-              <section
-                className="tt-detail-section"
-              >
-                <div
-                  className="tt-section-title"
-                >
-                  <Globe2
-                    className="h-4 w-4"
-                  />
-
-                  Request Metadata
-                </div>
-
-
-                <div
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-                >
-                  <DataItem
-                    label="IP Address"
-
-                    value={
-                      metadata.ipAddress
-                    }
-
-                    copy
-
-                    mono
-                  />
-
-
-                  <DataItem
-                    label="Referrer"
-
-                    value={
-                      metadata.referrer
-                    }
-                  />
-
-
-                  <DataItem
-                    label="UTM Source"
-
-                    value={
-                      metadata.utmSource
-                    }
-                  />
-
-
-                  <DataItem
-                    label="UTM Medium"
-
-                    value={
-                      metadata.utmMedium
-                    }
-                  />
-
-
-                  <DataItem
-                    label="UTM Campaign"
-
-                    value={
-                      metadata.utmCampaign
-                    }
-                  />
-                </div>
-              </section>
+              <AttributionPanel order={order} />
             </div>
 
 
@@ -2936,6 +3011,213 @@ function PaymentCard({
   );
 }
 
+
+
+/* =========================================================
+   SOURCE CHIP + ATTRIBUTION PANEL
+========================================================= */
+
+function SourceChip({ order }) {
+  const a = getAttribution(order);
+
+  const parts = [a.utmSource, a.utmMedium, a.utmCampaign].filter(Boolean);
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className={`tt-source tt-source-${a.key}`}>
+        {a.key === "meta" ? (
+          <Megaphone className="h-3 w-3" />
+        ) : a.key === "google" ? (
+          <Target className="h-3 w-3" />
+        ) : a.key === "other" ? (
+          <Link2 className="h-3 w-3" />
+        ) : (
+          <MousePointerClick className="h-3 w-3" />
+        )}
+        {SOURCE_LABELS[a.key]}
+      </span>
+
+      {parts.map((part, i) => (
+        <span key={`${part}-${i}`} className="tt-utm-pill" title={part}>
+          {part}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function AttributionPanel({ order }) {
+  const a = getAttribution(order);
+
+  const utm = [
+    ["UTM Source", a.utmSource],
+    ["UTM Medium", a.utmMedium],
+    ["UTM Campaign", a.utmCampaign],
+    ["UTM Content", a.utmContent],
+    ["UTM Term", a.utmTerm],
+  ];
+
+  const ads = [
+    ["Campaign ID", a.campaignId],
+    ["Ad Set ID", a.adsetId],
+    ["Ad ID", a.adId],
+  ];
+
+  const clicks = [
+    ["fbclid", a.fbclid],
+    ["fbc", a.fbc],
+    ["fbp", a.fbp],
+    ["gclid", a.gclid],
+    ["gbraid", a.gbraid],
+    ["wbraid", a.wbraid],
+  ].filter(([, value]) => value);
+
+  return (
+    <section className="tt-detail-section tt-attribution">
+      <div className="tt-section-title">
+        <Megaphone className="h-4 w-4" />
+        Traffic Source &amp; Attribution
+        <span className={`tt-source tt-source-${a.key} ml-auto`}>
+          {SOURCE_LABELS[a.key]}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {utm.map(([label, value]) => (
+          <DataItem key={label} label={label} value={value} copy />
+        ))}
+
+        {ads.map(([label, value]) => (
+          <DataItem key={label} label={label} value={value} copy mono />
+        ))}
+
+        <DataItem label="Landing Page" value={a.landingPath} copy />
+        <DataItem label="Referrer" value={a.referrer} copy />
+        <DataItem label="First Touch" value={a.touchedAt} />
+        <DataItem label="IP Address" value={a.ipAddress} copy mono />
+      </div>
+
+      {clicks.length ? (
+        <div className="mt-3">
+          <p className="tt-label mb-2">Ad click identifiers</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {clicks.map(([label, value]) => (
+              <DataItem key={label} label={label} value={value} copy mono />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function TrafficSourcesPanel({ orders, currency, activeKey, onPick, scopeLabel }) {
+  const { sources, campaigns } = useMemo(
+    () => summarizeSources(orders),
+    [orders]
+  );
+
+  const maxRevenue = Math.max(1, ...sources.map((row) => row.revenue));
+
+  const Table = ({ title, icon: Icon, rows, empty }) => (
+    <div className="tt-soft-card p-4">
+      <div className="tt-section-title mb-3">
+        <Icon className="h-4 w-4" />
+        {title}
+      </div>
+
+      {rows.length ? (
+        <div className="space-y-2.5">
+          {rows.slice(0, 8).map((row) => (
+            <div key={row.id}>
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className={`tt-dot tt-dot-${row.key}`} />
+                  <span className="truncate font-black" title={row.label}>
+                    {row.label}
+                  </span>
+                  {row.medium ? (
+                    <span className="tt-subtle truncate font-semibold">
+                      {row.medium}
+                    </span>
+                  ) : null}
+                </span>
+
+                <span className="shrink-0 font-black">
+                  {money(row.revenue, currency)}
+                </span>
+              </div>
+
+              <div className="tt-bar mt-1">
+                <span
+                  className={`tt-bar-fill tt-dot-${row.key}`}
+                  style={{ width: `${Math.max(3, (row.revenue / maxRevenue) * 100)}%` }}
+                />
+              </div>
+
+              <p className="tt-subtle mt-0.5 text-[10px] font-semibold">
+                {row.orders} order{row.orders === 1 ? "" : "s"} · {row.paid} paid ·{" "}
+                {row.orders ? Math.round((row.paid / row.orders) * 100) : 0}% conversion
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="tt-muted text-sm font-semibold">{empty}</p>
+      )}
+    </div>
+  );
+
+  const totals = SOURCE_FILTERS.filter((f) => f.key !== "ALL").map((f) => ({
+    ...f,
+    count: orders.filter((order) => getAttribution(order).key === f.key).length,
+  }));
+
+  return (
+    <section className="tt-card mt-5 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="tt-label">Marketing attribution</p>
+          <h2 className="text-lg font-black">Where your buyers come from</h2>
+          <p className="tt-helper mt-0.5">{scopeLabel}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {totals.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onPick(activeKey === item.key ? "ALL" : item.key)}
+                className={`tt-filter-button ${activeKey === item.key ? "tt-filter-button-active" : ""}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {item.label}
+                <span className="tt-filter-count">{item.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Table
+          title="Revenue by source"
+          icon={BarChart3}
+          rows={sources}
+          empty="No orders loaded yet."
+        />
+        <Table
+          title="Top UTM campaigns"
+          icon={Target}
+          rows={campaigns}
+          empty="No UTM campaigns recorded on these orders."
+        />
+      </div>
+    </section>
+  );
+}
 
 /* =========================================================
    MODAL
@@ -3470,6 +3752,15 @@ export default function AdminBookPayments() {
   ] =
     useState(
       ""
+    );
+
+
+  const [
+    sourceFilter,
+    setSourceFilter,
+  ] =
+    useState(
+      "ALL"
     );
 
 
@@ -4339,6 +4630,9 @@ export default function AdminBookPayments() {
     statusFilter !==
       "ALL" ||
 
+    sourceFilter !==
+      "ALL" ||
+
     Boolean(
       searchQuery.trim()
     );
@@ -4408,6 +4702,7 @@ export default function AdminBookPayments() {
     },
     [
       statusFilter,
+      sourceFilter,
       searchQuery,
     ]
   );
@@ -4489,6 +4784,17 @@ export default function AdminBookPayments() {
 
 
             if (
+              sourceFilter !==
+                "ALL" &&
+              getAttribution(order)
+                .key !==
+                sourceFilter
+            ) {
+              return false;
+            }
+
+
+            if (
               !normalizedSearch
             ) {
               return true;
@@ -4535,6 +4841,19 @@ export default function AdminBookPayments() {
 
                 order?.coupon
                   ?.code,
+
+                ...Object.values(
+                  (({
+                    key,
+                    hasUtm,
+                    sourceName,
+                    ...rest
+                  }) => rest)(
+                    getAttribution(
+                      order
+                    )
+                  )
+                ),
               ]
                 .filter(
                   Boolean
@@ -4556,6 +4875,7 @@ export default function AdminBookPayments() {
         allPayments,
         isGlobalFilterMode,
         statusFilter,
+        sourceFilter,
         searchQuery,
       ]
     );
@@ -5843,23 +6163,23 @@ export default function AdminBookPayments() {
         .tt-payments {
           color-scheme: light;
 
-          --tt-bg: #f8fafc;
+          --tt-bg: #fff7ed;
           --tt-surface: #ffffff;
-          --tt-surface-soft: #f8fafc;
-          --tt-surface-muted: #f1f5f9;
+          --tt-surface-soft: #fffbf5;
+          --tt-surface-muted: #ffedd5;
 
-          --tt-text: #0f172a;
-          --tt-text-secondary: #334155;
+          --tt-text: #1c1917;
+          --tt-text-secondary: #44403c;
 
-          --tt-muted: #64748b;
-          --tt-subtle: #94a3b8;
+          --tt-muted: #78716c;
+          --tt-subtle: #a8a29e;
 
-          --tt-border: #e2e8f0;
-          --tt-border-soft: #f1f5f9;
+          --tt-border: #fed7aa;
+          --tt-border-soft: #ffedd5;
 
-          --tt-primary: #2563eb;
-          --tt-primary-hover: #1d4ed8;
-          --tt-primary-soft: #eff6ff;
+          --tt-primary: #ea580c;
+          --tt-primary-hover: #c2410c;
+          --tt-primary-soft: #fff1e0;
 
           --tt-success: #059669;
           --tt-success-soft: #ecfdf5;
@@ -5873,8 +6193,8 @@ export default function AdminBookPayments() {
           --tt-danger-soft: #fef2f2;
           --tt-danger-border: #fecaca;
 
-          --tt-violet: #7c3aed;
-          --tt-violet-soft: #f5f3ff;
+          --tt-violet: #f59e0b;
+          --tt-violet-soft: #fef3c7;
 
           --tt-overlay:
             rgba(2, 6, 23, 0.68);
@@ -5888,24 +6208,24 @@ export default function AdminBookPayments() {
         .tt-payments[data-theme="dark"] {
           color-scheme: dark;
 
-          --tt-bg: #020617;
-          --tt-surface: #0f172a;
-          --tt-surface-soft: #111827;
-          --tt-surface-muted: #1e293b;
+          --tt-bg: #120a05;
+          --tt-surface: #1c120b;
+          --tt-surface-soft: #231810;
+          --tt-surface-muted: #33200f;
 
-          --tt-text: #f8fafc;
-          --tt-text-secondary: #e2e8f0;
+          --tt-text: #fff7ed;
+          --tt-text-secondary: #fed7aa;
 
-          --tt-muted: #94a3b8;
-          --tt-subtle: #64748b;
+          --tt-muted: #c2a58a;
+          --tt-subtle: #8c735c;
 
-          --tt-border: #1e293b;
-          --tt-border-soft: #172033;
+          --tt-border: #3d2713;
+          --tt-border-soft: #2b1b0e;
 
-          --tt-primary: #60a5fa;
-          --tt-primary-hover: #93c5fd;
+          --tt-primary: #fb923c;
+          --tt-primary-hover: #fdba74;
           --tt-primary-soft:
-            rgba(37, 99, 235, 0.15);
+            rgba(234, 88, 12, 0.15);
 
           --tt-success: #34d399;
           --tt-success-soft:
@@ -5925,7 +6245,7 @@ export default function AdminBookPayments() {
           --tt-danger-border:
             rgba(248, 113, 113, 0.3);
 
-          --tt-violet: #a78bfa;
+          --tt-violet: #fbbf24;
           --tt-violet-soft:
             rgba(124, 58, 237, 0.15);
 
@@ -6135,9 +6455,13 @@ export default function AdminBookPayments() {
             linear-gradient(
               135deg,
               var(--tt-primary-soft),
-              var(--tt-surface) 50%,
+              var(--tt-surface) 55%,
               var(--tt-violet-soft)
             );
+
+          border-top:
+            4px solid
+            var(--tt-primary);
 
           box-shadow:
             var(--tt-shadow);
@@ -7345,6 +7669,149 @@ export default function AdminBookPayments() {
           }
         }
 
+
+        /* ---------- orange combo: primary button + card accent ---------- */
+
+        .tt-btn-primary {
+          background:
+            linear-gradient(135deg, #f97316, #ea580c) !important;
+          color: #ffffff !important;
+          border-color: transparent !important;
+          box-shadow: 0 6px 16px rgba(234, 88, 12, 0.28);
+        }
+
+        .tt-btn-primary:hover {
+          background:
+            linear-gradient(135deg, #ea580c, #c2410c) !important;
+        }
+
+        .tt-card {
+          border-radius: 1.1rem;
+        }
+
+        .tt-payment-header {
+          border-left: 4px solid var(--tt-primary);
+        }
+
+        .tt-filter-button-active {
+          background:
+            linear-gradient(135deg, #f97316, #ea580c) !important;
+          color: #ffffff !important;
+          border-color: transparent !important;
+        }
+
+        /* ---------- traffic source chips ---------- */
+
+        .tt-source {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 0.2rem 0.6rem;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          border: 1px solid transparent;
+        }
+
+        .tt-source-meta {
+          color: #1d4ed8;
+          background: #dbeafe;
+          border-color: #bfdbfe;
+        }
+
+        .tt-source-google {
+          color: #b45309;
+          background: #fef3c7;
+          border-color: #fde68a;
+        }
+
+        .tt-source-other {
+          color: #c2410c;
+          background: #ffedd5;
+          border-color: #fdba74;
+        }
+
+        .tt-source-organic {
+          color: #166534;
+          background: #dcfce7;
+          border-color: #bbf7d0;
+        }
+
+        .tt-payments[data-theme="dark"] .tt-source-meta {
+          color: #93c5fd;
+          background: rgba(59, 130, 246, 0.16);
+          border-color: rgba(59, 130, 246, 0.35);
+        }
+
+        .tt-payments[data-theme="dark"] .tt-source-google {
+          color: #fcd34d;
+          background: rgba(245, 158, 11, 0.16);
+          border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        .tt-payments[data-theme="dark"] .tt-source-other {
+          color: #fdba74;
+          background: rgba(249, 115, 22, 0.16);
+          border-color: rgba(249, 115, 22, 0.35);
+        }
+
+        .tt-payments[data-theme="dark"] .tt-source-organic {
+          color: #86efac;
+          background: rgba(34, 197, 94, 0.14);
+          border-color: rgba(34, 197, 94, 0.32);
+        }
+
+        .tt-utm-pill {
+          max-width: 12rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          padding: 0.2rem 0.55rem;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 800;
+          color: var(--tt-primary);
+          background: var(--tt-primary-soft);
+          border: 1px solid var(--tt-border);
+        }
+
+        .tt-attribution {
+          border-color: var(--tt-border);
+          background:
+            linear-gradient(
+              180deg,
+              var(--tt-primary-soft),
+              var(--tt-surface-soft)
+            );
+        }
+
+        .tt-dot {
+          width: 0.55rem;
+          height: 0.55rem;
+          border-radius: 999px;
+          flex-shrink: 0;
+        }
+
+        .tt-dot-meta { background: #3b82f6; }
+        .tt-dot-google { background: #f59e0b; }
+        .tt-dot-other { background: #ea580c; }
+        .tt-dot-organic { background: #22c55e; }
+
+        .tt-bar {
+          height: 6px;
+          border-radius: 999px;
+          background: var(--tt-surface-muted);
+          overflow: hidden;
+        }
+
+        .tt-bar-fill {
+          display: block;
+          height: 100%;
+          border-radius: 999px;
+        }
+
       `}</style>
 
 
@@ -7779,6 +8246,37 @@ export default function AdminBookPayments() {
 
 
           {/* =================================================
+              TRAFFIC SOURCES / UTM
+          ================================================= */}
+
+          <TrafficSourcesPanel
+            orders={
+              allPaymentsLoaded
+                ? allPayments
+                : payments
+            }
+
+            currency={
+              currency
+            }
+
+            activeKey={
+              sourceFilter
+            }
+
+            onPick={
+              setSourceFilter
+            }
+
+            scopeLabel={
+              allPaymentsLoaded
+                ? `Based on all ${allPayments.length} orders for this book`
+                : `Based on the ${payments.length} orders on this page. Pick a source or filter to analyse every order.`
+            }
+          />
+
+
+          {/* =================================================
               FILTERS / SEARCH
           ================================================= */}
 
@@ -7875,7 +8373,7 @@ export default function AdminBookPayments() {
 
                   className="tt-search-input"
 
-                  placeholder="Search customer, order, transaction, payment ID..."
+                  placeholder="Search customer, order, transaction, UTM, campaign, click ID..."
                 />
               </div>
             </div>

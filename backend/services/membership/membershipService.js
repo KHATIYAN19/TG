@@ -136,6 +136,7 @@ export const activateMembershipForOrder = async (orderOrId) => {
     } catch (error) {
       console.error("[membership] purchase mail failed:", error.message);
       await Membership.updateOne({ _id: membership._id }, { $set: { welcomeMailSentAt: null } });
+      throw error; // lets scheduleMembershipActivation retry the mail
     }
   }
 
@@ -145,9 +146,26 @@ export const activateMembershipForOrder = async (orderOrId) => {
 /** Fire-and-forget wrapper for payment callbacks. Never throws. */
 export const scheduleMembershipActivation = (order) => {
   if (!order?._id) return;
-  setImmediate(() => {
-    activateMembershipForOrder(order).catch((error) => console.error("[membership] activation failed:", error.message));
-  });
+
+  // Retried a few times: a brief database or mail-provider hiccup right after
+  // payment must not lose the credits / thank-you mail. Activation is idempotent
+  // (duplicate membership is detected, the mail is claimed once).
+  const delays = [0, 15_000, 60_000, 5 * 60_000];
+
+  const attempt = (n) => {
+    setTimeout(() => {
+      activateMembershipForOrder(order)
+        .then((membership) => {
+          if (membership) console.log(`[membership] activated for order ${order.orderId}`);
+        })
+        .catch((error) => {
+          console.error(`[membership] activation failed (try ${n + 1}/${delays.length}):`, error.message);
+          if (n + 1 < delays.length) attempt(n + 1);
+        });
+    }, delays[n]);
+  };
+
+  attempt(0);
 };
 
 /* ---------------- member lookup ---------------- */

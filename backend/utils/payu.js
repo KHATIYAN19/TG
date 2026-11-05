@@ -212,6 +212,12 @@ export const verifyTransactionWithPayU =
 
             body:
               body.toString(),
+
+            // Never let a slow PayU API hold the buyer on a blank page.
+            signal:
+              AbortSignal.timeout(
+                15 * 1000
+              ),
           }
         );
 
