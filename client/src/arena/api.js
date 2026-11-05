@@ -63,7 +63,7 @@ const sessionError = () => {
 };
 
 // Endpoints a signed-out visitor may call (landing page, signup).
-const isPublicCall = (config) => /^\/(public|signup|password)(\/|$|\?)/.test(String(config.url || ""));
+const isPublicCall = (config) => /^\/(public|signup|password|google)(\/|$|\?)/.test(String(config.url || ""));
 
 let refreshing = null;
 const refreshAccessToken = () => {

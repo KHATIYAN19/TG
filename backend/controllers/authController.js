@@ -124,6 +124,7 @@ const safeUser = user => {
   delete obj.tokenVersion;
   delete obj.failedLoginAttempts;
   delete obj.lockedUntil;
+  delete obj.googleId;
   return obj;
 };
 

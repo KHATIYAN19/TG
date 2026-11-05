@@ -13,6 +13,7 @@ import { login as loginAction } from "../Redux/authSlice";
 import { API_ROOT, http, errMsg, errCode, retryAfterOf } from "./api";
 import { Button, Field, inputClass, cx } from "./ui";
 import { useArenaChrome } from "./chrome";
+import GoogleButton, { googleEnabled } from "./GoogleButton";
 
 const LOCK_CODES = ["SIGNUP_LOCKED", "RESET_LOCKED", "LOGIN_IP_LOCKED"];
 
@@ -33,6 +34,10 @@ const signupSchema = z
     confirmPassword: z.string(),
   })
   .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
+
+const mobileSchema = z.object({
+  mobile: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+});
 
 const forgotSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
@@ -197,6 +202,45 @@ export default function ArenaAuth() {
     },
     [dispatch, navigate, redirectTo]
   );
+
+  /* ---- Google (same account as email + password) ---- */
+  const [googleSignup, setGoogleSignup] = useState(null); // { signupToken, email, name }
+  const mobileForm = useForm({ resolver: zodResolver(mobileSchema) });
+
+  const onGoogleCredential = async (credential) => {
+    setBusy(true);
+    setFormError("");
+    try {
+      const { data } = await http.post("/google", { credential });
+      if (data.needsMobile) {
+        setGoogleSignup({ signupToken: data.signupToken, email: data.email, name: data.name });
+        setStep("google-mobile");
+        return;
+      }
+      finish(data);
+    } catch (error) {
+      if (!applyLock(error)) setFormError(errMsg(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onGoogleMobile = mobileForm.handleSubmit(async (values) => {
+    setBusy(true);
+    setFormError("");
+    try {
+      const { data } = await http.post("/google/complete", { signupToken: googleSignup.signupToken, mobile: values.mobile });
+      finish(data);
+    } catch (error) {
+      if (["SIGNUP_EXPIRED", "ACCOUNT_EXISTS", "SIGNUP_ALREADY_USED"].includes(errCode(error))) {
+        setGoogleSignup(null);
+        setStep("login");
+      }
+      if (!applyLock(error)) setFormError(errMsg(error));
+    } finally {
+      setBusy(false);
+    }
+  });
 
   const signupForm = useForm({ resolver: zodResolver(signupSchema), mode: "onBlur" });
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
@@ -447,6 +491,14 @@ export default function ArenaAuth() {
             {/* SIGN UP */}
             {step === "signup" && (
               <form onSubmit={onSignup} className="space-y-4" noValidate>
+                {googleEnabled && (
+                  <>
+                    <GoogleButton text="signup_with" onCredential={onGoogleCredential} disabled={busy || authLocked} />
+                    <div className="flex items-center gap-3 text-xs text-stone-400" aria-hidden>
+                      <span className="h-px flex-1 bg-stone-200 dk:bg-white/10" /> or <span className="h-px flex-1 bg-stone-200 dk:bg-white/10" />
+                    </div>
+                  </>
+                )}
                 <Field label="Full name" htmlFor="name" error={signupForm.formState.errors.name?.message} hint="Kept private. Others see an anonymous ID.">
                   <input id="name" autoComplete="name" className={inputClass(signupForm.formState.errors.name)} {...signupForm.register("name")} />
                 </Field>
@@ -474,6 +526,14 @@ export default function ArenaAuth() {
             {/* LOG IN */}
             {step === "login" && (
               <form onSubmit={onLogin} className="space-y-4" noValidate>
+                {googleEnabled && (
+                  <>
+                    <GoogleButton text="signin_with" onCredential={onGoogleCredential} disabled={busy || authLocked} />
+                    <div className="flex items-center gap-3 text-xs text-stone-400" aria-hidden>
+                      <span className="h-px flex-1 bg-stone-200 dk:bg-white/10" /> or <span className="h-px flex-1 bg-stone-200 dk:bg-white/10" />
+                    </div>
+                  </>
+                )}
                 {isLocked && (
                   <div role="alert" className="rounded-xl bg-amber-50 dk:bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dk:text-amber-200 ring-1 ring-amber-200 dk:ring-amber-500/20">
                     <p className="flex items-center gap-2 font-semibold"><ShieldAlert className="h-4 w-4 shrink-0" aria-hidden /> Account locked for your safety</p>
@@ -506,6 +566,22 @@ export default function ArenaAuth() {
             )}
 
             {/* FORGOT PASSWORD: step 1, ask for the email */}
+            {/* GOOGLE: ONE MORE DETAIL */}
+            {step === "google-mobile" && googleSignup && (
+              <form onSubmit={onGoogleMobile} className="space-y-5" noValidate>
+                <p className="text-sm text-stone-600 dk:text-[#d6c6ba]">
+                  Signing up as <span className="font-semibold">{googleSignup.email}</span>. Add your mobile number to finish.
+                </p>
+                <Field label="Mobile number" htmlFor="g-mobile" error={mobileForm.formState.errors.mobile?.message}>
+                  <input id="g-mobile" inputMode="numeric" maxLength={10} autoComplete="tel-national" autoFocus className={inputClass(mobileForm.formState.errors.mobile)} {...mobileForm.register("mobile")} />
+                </Field>
+                <Button type="submit" size="lg" loading={busy} className="w-full">Create account</Button>
+                <button type="button" className="block w-full text-center text-sm text-stone-500 hover:text-stone-800" onClick={() => { setGoogleSignup(null); setFormError(""); setStep("signup"); }}>
+                  Cancel
+                </button>
+              </form>
+            )}
+
             {step === "forgot" && (
               <form onSubmit={onForgot} className="space-y-5" noValidate>
                 <div className="text-center">

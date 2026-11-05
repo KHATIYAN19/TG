@@ -444,6 +444,21 @@ const userSchema = new Schema(
       default: null,
     },
 
+    // Google account "sub" id. Set when the member signs up with, or
+    // links, Google. The same user can then log in with either
+    // email + password or Google.
+    googleId: {
+      type: String,
+      trim: true,
+      default: undefined,
+      select: false,
+    },
+
+    googleLinkedAt: {
+      type: Date,
+      default: null,
+    },
+
     /* =========================================
        LOGIN INFORMATION
     ========================================= */
@@ -530,6 +545,17 @@ userSchema.index(
       "affiliate.code": {
         $type: "string",
       },
+    },
+  }
+);
+
+// One Google account maps to at most one user.
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      googleId: { $type: "string" },
     },
   }
 );
@@ -725,6 +751,7 @@ userSchema.set("toJSON", {
     delete ret.tokenVersion;
     delete ret.failedLoginAttempts;
     delete ret.lockedUntil;
+    delete ret.googleId;
     delete ret.__v;
 
     return ret;

@@ -5,6 +5,7 @@ import { arenaSignupLimiter, arenaPasswordLimiter, arenaWriteLimiter } from "../
 import * as B from "../../Middleware/arenaBudgets.js";
 
 import { signup, verifySignup, resendSignupOtp, forgotPassword, resetPassword } from "../../controllers/arena/authController.js";
+import { googleAuth, googleComplete } from "../../controllers/arena/googleAuthController.js";
 import * as member from "../../controllers/arena/memberController.js";
 import * as pay from "../../controllers/arena/paymentController.js";
 import * as chat from "../../controllers/arena/chatController.js";
@@ -17,6 +18,8 @@ router.get("/public", member.publicInfo);
 router.post("/signup", arenaSignupLimiter, signup);
 router.post("/signup/verify", arenaSignupLimiter, verifySignup);
 router.post("/signup/resend", arenaSignupLimiter, resendSignupOtp);
+router.post("/google", arenaSignupLimiter, googleAuth);
+router.post("/google/complete", arenaSignupLimiter, googleComplete);
 router.post("/password/forgot", arenaPasswordLimiter, forgotPassword);
 router.post("/password/reset", arenaPasswordLimiter, resetPassword);
 
