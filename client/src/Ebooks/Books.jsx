@@ -38,11 +38,13 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
+  Swords,
   X,
   Zap,
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
+import PackShowcase from "./PackSections";
 
 // =======================================================
 // EXISTING WEBSITE CONFIGURATION
@@ -541,6 +543,13 @@ function BookPrice({ book, large = false }) {
 
       {discount > 0 && (
         <span className="tb-off">{discount}% OFF</span>
+      )}
+
+      {Number(book?.matches) > 0 && (
+        <span className="tb-matches" title="Prep Arena credits included. 1 credit = 1 match = 1 buddy partnership.">
+          <Swords size={12} />
+          {book.matches} Prep Arena {Number(book.matches) === 1 ? "credit" : "credits"}
+        </span>
       )}
     </div>
   );
@@ -1400,6 +1409,8 @@ export default function Books() {
         .tb-price strong { font-size: 21px; font-weight: 850; letter-spacing: -.03em; color: var(--tb-text); }
         .tb-price-lg strong { font-size: 34px; }
         .tb-price s { font-size: 13px; color: var(--tb-subtle); }
+        .tb-matches { display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 2px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; color: #C2410C; background: #FFEDD5; border: 1px solid #FDBA74; }
+        .tb-root[data-theme="dark"] .tb-matches { color: #FDBA74; background: rgba(249,115,22,.14); border-color: rgba(251,146,60,.4); }
         .tb-off {
           padding: 4px 8px; border-radius: 7px; background: var(--tb-soft); color: var(--tb-orange);
           font-size: 10px; font-weight: 900; animation: tb-pulse 2.4s ease-in-out infinite;
@@ -2059,6 +2070,12 @@ export default function Books() {
           {!loading && !error && featuredBook && (
             <FeaturedBook book={featuredBook} />
           )}
+
+          {/* ===================================== */}
+          {/* BOOK PACKS (both packs, live from DB) */}
+          {/* ===================================== */}
+
+          {!error && <PackShowcase theme={isDark ? "dark" : "light"} />}
 
           {/* ===================================== */}
           {/* FILTERABLE CATALOG                    */}

@@ -81,7 +81,7 @@ export const checkout = handle(async (req, res) => {
 
   const coupon = couponCode ? await findValidCoupon(couponCode, req.user.id) : null;
   const pricing = computePricing(settings.entryPricePaise, coupon);
-  const affiliate = await resolveAffiliate({ code: affiliateCode, paidPaise: pricing.finalPaise, buyerId: req.user.id });
+  const affiliate = settings.affiliateEnabled === false ? null : await resolveAffiliate({ code: affiliateCode, paidPaise: pricing.finalPaise, buyerId: req.user.id });
 
   let entry;
   try {

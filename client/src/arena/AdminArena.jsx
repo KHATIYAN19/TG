@@ -88,6 +88,7 @@ function Overview() {
         matchesPerEntry: Number(form.matchesPerEntry),
         cancelRefundEnabled: Boolean(form.cancelRefundEnabled),
         accountDeletionEnabled: Boolean(form.accountDeletionEnabled),
+        affiliateEnabled: form.affiliateEnabled !== false,
         offerEnabled: Boolean(form.offerEnabled),
         offerText: form.offerText || "",
         offerEndsAt: form.offerEndsAt ? new Date(form.offerEndsAt).toISOString() : null,
@@ -145,6 +146,7 @@ function Overview() {
           <Toggle label="Arena open" description="Turn off to pause new entries, requests and accepts. Existing chats keep working." checked={form.enabled} onChange={(v) => setForm((f) => ({ ...f, enabled: v }))} />
           <Toggle label="Allow cancel & refund" description="Off: members can't cancel their entry, the admin “Refund” button is hidden, and the refund/fee wording disappears from the site and API. When you turn it back on, each member is refunded using the cancellation fee % that applied when they paid." checked={form.cancelRefundEnabled !== false} onChange={(v) => setForm((f) => ({ ...f, cancelRefundEnabled: v }))} />
           <Toggle label="Allow members to delete their account" description="Off: the “Delete account” section is hidden in member settings and the server rejects the request." checked={form.accountDeletionEnabled !== false} onChange={(v) => setForm((f) => ({ ...f, accountDeletionEnabled: v }))} />
+          <Toggle label="Affiliate sales" description="Off: new purchases made through an affiliate link earn no commission and aren't counted as affiliate sales. Existing commissions are unchanged." checked={form.affiliateEnabled !== false} onChange={(v) => setForm((f) => ({ ...f, affiliateEnabled: v }))} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Entry price (₹)" htmlFor="price" hint="0 makes entry free."><input id="price" type="number" min="0" max="50000" step="1" className={inputClass(false)} {...bind("entryPriceRupees")} /></Field>
             <Field label="Cancellation fee (%)" htmlFor="fee" hint="Kept when a member cancels before their first match."><input id="fee" type="number" min="0" max="100" step="1" className={inputClass(false)} {...bind("cancellationFeePercent")} /></Field>

@@ -14,6 +14,9 @@ import { ArenaError, handle } from "../../services/arena/errors.js";
 import { publicCard, buddyView, ownerView, generateAlias, sharesTopic, FIELD_VISIBILITY } from "../../services/arena/privacy.js";
 import { gatewayName } from "../../services/arena/gateway.js";
 import { healPaidMembers } from "../../services/arena/activation.js";
+import { claimMatchesQuietly } from "../../services/membership/matches.js";
+import { syncArenaAccessForUser } from "../../services/membership/memberAdmin.js";
+import { getMemberSummary } from "../../services/membership/membershipService.js";
 import { acceptRequest, endMatch, expireStaleRequests } from "../../services/arena/matchService.js";
 import { emitToUser } from "../../services/arena/hub.js";
 import { messageView } from "../../services/arena/chat.js";
@@ -113,6 +116,10 @@ export const publicInfo = handle(async (_req, res) => {
 --------------------------------------------------------------- */
 export const me = handle(async (req, res) => {
   await healPaidMembers({ userId: req.user.id });
+  // A suspended book-pack membership suspends the arena profile (and unsuspending lifts it).
+  await syncArenaAccessForUser(req.user.id);
+  // Matches that came with a purchased book/pack land here the first time they have a profile.
+  await claimMatchesQuietly(req.user.id);
 
   const [settings, user, profile] = await Promise.all([
     getArenaSettings(),
@@ -121,6 +128,9 @@ export const me = handle(async (req, res) => {
   ]);
 
   await expireStaleRequests();
+
+  // Book-pack members get a "Books" tab (request new books, see every current book).
+  const pack = await getMemberSummary(user?.email).catch(() => null);
 
   let entry = null;
   let match = null;
@@ -147,6 +157,7 @@ export const me = handle(async (req, res) => {
     success: true,
     data: {
       user,
+      pack: pack ? { suspended: Boolean(pack.suspended), packMember: pack.packMember, lifetime: pack.lifetime, matches: pack.matches } : { suspended: false, packMember: false, lifetime: false, matches: { granted: 0, waiting: 0 } },
       profile: profile ? ownerView(profile) : null,
       entry,
       match,
@@ -220,6 +231,12 @@ export const upsertProfile = handle(async (req, res) => {
     }
     if (!profile) throw new ArenaError(500, "ALIAS_FAILED", "Please try again");
   }
+
+  // Signing up is the moment purchased matches arrive: the profile goes live straight away.
+  await syncArenaAccessForUser(req.user.id);
+  const { claimed } = await claimMatchesQuietly(req.user.id);
+  if (claimed > 0) profile = await ArenaProfile.findById(profile._id);
+  profile = await ArenaProfile.findById(profile._id);
 
   res.json({ success: true, data: ownerView(profile) });
 }, "Unable to save your profile");

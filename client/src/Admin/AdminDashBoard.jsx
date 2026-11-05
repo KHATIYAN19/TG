@@ -16,6 +16,7 @@ import {
   ArrowRight,
   BarChart3,
   BookOpen,
+  Crown,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
@@ -71,6 +72,18 @@ const PRIORITY_ROUTES = [
       "books products hld lld java ebook manage publishing",
     featured: true,
     priority: 1,
+  },
+  {
+    path: "/admin/membership",
+    name: "Book Packs & Matches",
+    icon: Crown,
+    description:
+      "Pack members, suspend or delete a membership, Prep Arena matches, book requests and new-book email announcements.",
+    category: "Books & Products",
+    keywords:
+      "membership pack pass lifetime all books matches credits suspend delete suggestions requests new book announcement",
+    featured: true,
+    priority: 2,
   },
   {
     path: "/admin/finance",

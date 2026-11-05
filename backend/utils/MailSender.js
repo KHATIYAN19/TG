@@ -213,6 +213,10 @@ const sendViaMailtrap = async (
             options.icalEvent,
         }
       : {}),
+
+    ...(options.headers
+      ? { headers: options.headers }
+      : {}),
   };
 
   try {
@@ -375,6 +379,7 @@ const sendViaResend = async (
     ...(text ? { text } : {}),
     ...(htmlContent ? { html: htmlContent } : {}),
     ...(options.replyTo ? { reply_to: options.replyTo } : {}),
+    ...(options.headers ? { headers: options.headers } : {}),
     ...(attachments.length ? { attachments } : {}),
   };
 
@@ -554,6 +559,9 @@ const sendViaSes = async (
           ...(htmlContent ? { Html: sesData(htmlContent) } : {}),
         },
         ...(attachments.length ? { Attachments: attachments } : {}),
+        ...(options.headers
+          ? { Headers: Object.entries(options.headers).map(([Name, Value]) => ({ Name, Value: String(Value) })) }
+          : {}),
       },
     },
     ...(config.configurationSet ? { ConfigurationSetName: config.configurationSet } : {}),

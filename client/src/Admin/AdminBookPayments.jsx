@@ -59,6 +59,7 @@ import {
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
+import PromoMailModal from "./PromoMailModal";
 
 
 /* =========================================================
@@ -1505,6 +1506,8 @@ function ActionMenu({
 
   onReviewMail,
 
+  onPromoMail,
+
   onDelete,
 
   sendingAccess,
@@ -1836,6 +1839,25 @@ function ActionMenu({
 
                 Send Review Email
               </button>
+
+
+              <button
+                type="button"
+
+                onClick={() =>
+                  onPromoMail(
+                    order
+                  )
+                }
+
+                className="tt-menu-item"
+              >
+                <Mail
+                  className="h-4 w-4"
+                />
+
+                Send Promotional Mail
+              </button>
             </>
           ) : null}
 
@@ -1897,6 +1919,8 @@ function PaymentCard({
   onReviewLink,
 
   onReviewMail,
+
+  onPromoMail,
 
   onDelete,
 
@@ -2162,6 +2186,10 @@ function PaymentCard({
 
               onReviewMail={
                 onReviewMail
+              }
+
+              onPromoMail={
+                onPromoMail
               }
 
               onDelete={
@@ -3586,6 +3614,16 @@ export default function AdminBookPayments() {
   const [
     sendingReviewMailOrderId,
     setSendingReviewMailOrderId,
+  ] =
+    useState(
+      null
+    );
+
+
+  /* The payment whose "Send Promotional Mail" window is open. */
+  const [
+    promoOrder,
+    setPromoOrder,
   ] =
     useState(
       null
@@ -5779,6 +5817,25 @@ export default function AdminBookPayments() {
           }
         />
       </Helmet>
+
+
+      {promoOrder ? (
+        <PromoMailModal
+          order={
+            promoOrder
+          }
+
+          token={
+            token
+          }
+
+          onClose={() =>
+            setPromoOrder(
+              null
+            )
+          }
+        />
+      ) : null}
 
 
       <style>{`
@@ -8086,6 +8143,20 @@ export default function AdminBookPayments() {
 
                     onReviewMail={
                       handleSendReviewMail
+                    }
+
+                    onPromoMail={
+                      (
+                        selectedOrder
+                      ) => {
+                        setMenuOrderId(
+                          null
+                        );
+
+                        setPromoOrder(
+                          selectedOrder
+                        );
+                      }
                     }
 
                     onDelete={

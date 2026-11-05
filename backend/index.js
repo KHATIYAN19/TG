@@ -28,6 +28,7 @@ import BookRoute from "./routes/bookRoute.js";
 import BookSalesRoute from "./routes/bookSales.js";
 import OrderMailRoute from "./routes/orderMailRoute.js";
 import CouponRoute from "./routes/couponRoute.js";
+import { memberRouter as membershipRoutes, adminRouter as membershipAdminRoutes } from "./routes/membershipRoute.js";
 
 import payuRoutes from "./routes/payuRoutes.js";
 import razorpayRoute from "./routes/razorpayRoute.js";
@@ -665,6 +666,10 @@ app.use(
   "/api/coupon",
   CouponRoute
 );
+
+/* All-Books pass: plans page, member status, book suggestions, admin */
+app.use("/api/membership", membershipRoutes);
+app.use("/api/admin/membership", membershipAdminRoutes);
 
 /* =====================================================
    INTERVIEW EXPERIENCE CONTENT API

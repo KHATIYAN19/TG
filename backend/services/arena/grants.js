@@ -23,11 +23,12 @@ import { emitToUser } from "./hub.js";
   them; the admin handles any goodwill refund outside the system.
 */
 
-export const MAX_MATCHES = 20;
+export const MAX_MATCHES = 100;
 
 const opts = (session) => (session ? { session } : {});
 
-export const adjustMemberMatches = async ({ profileId, adminId, action, amount, reason = "" }) => {
+// adminId is null and source is "pass" when matches come from a purchased book/pack (no admin involved).
+export const adjustMemberMatches = async ({ profileId, adminId = null, action, amount, reason = "", source = "admin" }) => {
   const result = await runInTransaction(async (session) => {
     const profile = await ArenaProfile.findById(profileId).session(session || null);
     if (!profile) throw new ArenaError(404, "NOT_FOUND", "Member not found");
@@ -71,7 +72,7 @@ export const adjustMemberMatches = async ({ profileId, adminId, action, amount, 
             matchesUsed: 0,
             complimentary: true,
             grantedBy: adminId,
-            payment: { gateway: "admin" },
+            payment: { gateway: source === "pass" ? "pass" : "admin" },
             adjustments: [{ at: new Date(), by: adminId, action: "grant", from: 0, to: target, reason }],
           },
         ],
@@ -118,7 +119,7 @@ export const adjustMemberMatches = async ({ profileId, adminId, action, amount, 
     return { entry: updated, action: adjustment.action, from: current, to: target };
   });
 
-  await audit(adminId, "matches_adjusted", {
+  if (adminId) await audit(adminId, "matches_adjusted", {
     targetType: "profile",
     targetId: profileId,
     summary: `${result.action}: ${result.from} → ${result.to} match(es)${reason ? ` (${reason})` : ""}`,

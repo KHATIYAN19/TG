@@ -2545,6 +2545,8 @@ const EMPTY_FORM = {
   isFeatured: false,
   showInMainBooks: false,
   sendEbookEmailOnPurchase: false,
+  matches: "0",
+  packPlan: "none",
 };
 
 const EMPTY_SUMMARY = {
@@ -2730,6 +2732,8 @@ const createFormFromBook = (book) => ({
   isFeatured: book?.isFeatured === true,
   showInMainBooks: book?.showInMainBooks === true,
   sendEbookEmailOnPurchase: book?.sendEbookEmailOnPurchase === true,
+  matches: String(book?.matches ?? 0),
+  packPlan: book?.membership?.plan || "none",
 });
 
 const getErrorMessage = (result, fallback) =>
@@ -3528,6 +3532,13 @@ export default function AdminBookDetails() {
       next.currency = "Invalid currency.";
     }
 
+    {
+      const m = Number(form.matches);
+      if (form.matches === "" || !Number.isInteger(m) || m < 0 || m > 100) {
+        next.matches = "Enter a whole number from 0 to 100.";
+      }
+    }
+
     if (!isValidHttpUrl(form.paymentUrl)) {
       next.paymentUrl = "Invalid payment URL.";
     }
@@ -3673,6 +3684,8 @@ export default function AdminBookDetails() {
 
       data.append("price", String(Number(form.price)));
       data.append("mrp", String(Number(form.mrp)));
+      data.append("matches", String(Number(form.matches) || 0));
+      data.append("packPlan", form.packPlan || "none");
 
       for (const field of ["tags", "topics", "highlights"]) {
         data.append(field, JSON.stringify(toArray(form[field])));
@@ -3903,6 +3916,18 @@ export default function AdminBookDetails() {
                   <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-500">
                     {book.resourceType?.toUpperCase()}
                   </span>
+
+                  {Number(book.matches) > 0 && (
+                    <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
+                      Prep Arena matches: {book.matches}
+                    </span>
+                  )}
+
+                  {book.membership?.plan && book.membership.plan !== "none" && (
+                    <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-500">
+                      {book.membership.plan === "lifetime" ? "Lifetime pack" : "All Books pack"}
+                    </span>
+                  )}
 
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -4601,6 +4626,34 @@ export default function AdminBookDetails() {
                     name="currency"
                     required
                   />
+                </div>
+              </Panel>
+
+              {/* PREP ARENA MATCHES + PACK */}
+
+              <Panel title="Prep Arena matches & pack">
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field
+                    label="Prep Arena matches"
+                    name="matches"
+                    type="number"
+                    help="1 match = 1 buddy partnership, added to the buyer's arena account when they sign up with the same email. 0 = none (hidden everywhere)."
+                  />
+                  <div className="min-w-0">
+                    <label htmlFor="book-field-packPlan" className={`mb-2 block text-xs font-bold ${ui.secondary}`}>Pack type</label>
+                    <select
+                      id="book-field-packPlan"
+                      name="packPlan"
+                      value={form.packPlan}
+                      onChange={handleChange}
+                      className={inputClass}
+                    >
+                      <option value="none">Not a pack (normal book / combo)</option>
+                      <option value="all_current">All Books pack (every book available today)</option>
+                      <option value="lifetime">Lifetime pack (all books + every future book)</option>
+                    </select>
+                    <p className={`mt-1.5 text-xs ${ui.secondary}`}>Packs are shown on the Books page; buyers get new-book emails and can suggest books from Prep Arena.</p>
+                  </div>
                 </div>
               </Panel>
 

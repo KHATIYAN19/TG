@@ -27,7 +27,7 @@ const getAdminName = (req) => {
  * Single source of truth for discount maths, used by both coupon
  * validation and the "available coupons" listing.
  */
-const computeDiscount = (coupon, originalAmount) => {
+export const computeDiscount = (coupon, originalAmount) => {
   let discountAmount = 0;
 
   if (coupon.discountType === "PERCENTAGE") {

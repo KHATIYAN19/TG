@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Swords,
   Tag,
   X,
   XCircle,
@@ -336,6 +337,19 @@ function AdminBookCard({
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
                 <Sparkles className="h-3 w-3" />
                 Featured
+              </span>
+            )}
+
+            {Number(book?.matches) > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-700">
+                <Swords className="h-3 w-3" />
+                {book.matches} {Number(book.matches) === 1 ? "match" : "matches"}
+              </span>
+            )}
+
+            {book?.membership?.plan && book.membership.plan !== "none" && (
+              <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                {book.membership.plan === "lifetime" ? "Lifetime pack" : "All Books pack"}
               </span>
             )}
           </div>

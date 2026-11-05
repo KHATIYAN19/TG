@@ -50,7 +50,11 @@ export const enqueueMail = async (to, subject, text, html, options = {}) => {
     subject,
     text: text || "",
     html: html || "",
-    options: options?.replyTo ? { replyTo: options.replyTo } : {},
+    options: {
+      ...(options?.replyTo ? { replyTo: options.replyTo } : {}),
+      // e.g. List-Unsubscribe, so mail apps can show their own "Unsubscribe" button
+      ...(options?.headers ? { headers: options.headers } : {}),
+    },
     enqueuedAt: new Date().toISOString(),
   });
 

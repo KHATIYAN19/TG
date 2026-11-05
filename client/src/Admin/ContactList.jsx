@@ -59,7 +59,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
 
 
 const ContactList = () => {
-  const [token, setToken] = useSelector((state) => state.auth.token);
+  const token = useSelector((state) => state.auth.token);
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);

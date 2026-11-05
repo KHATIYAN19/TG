@@ -46,6 +46,8 @@ const PUBLIC_PRODUCT_FIELDS = [
   "badge",
   "isFeatured",
   "includedBooks",
+  "matches",
+  "membership",
 ].join(" ");
 
 // =====================================================
@@ -294,6 +296,25 @@ const uploadProductFile = async (file) => {
 // NORMALIZE CREATE DATA
 // =====================================================
 
+const parseMatches = (value) => {
+  if (value === undefined || value === null || value === "") return 0;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > 100) {
+    throw new Error("Matches must be a whole number from 0 to 100.");
+  }
+  return n;
+};
+
+const PACK_PLANS = ["none", "all_current", "lifetime"];
+
+const parsePackPlan = (value) => {
+  const plan = String(value ?? "none").trim().toLowerCase();
+  if (!PACK_PLANS.includes(plan)) {
+    throw new Error("Pack type must be none, all_current or lifetime.");
+  }
+  return plan;
+};
+
 const normalizeCreateData = (body) => {
   return {
     title: String(body.title ?? "").trim(),
@@ -378,6 +399,13 @@ const normalizeCreateData = (body) => {
     includedBooks: parseArray(
       body.includedBooks
     ),
+
+    // Prep Arena matches the buyer gets (0 = none) and the pack marker.
+    matches: parseMatches(body.matches),
+
+    membership: {
+      plan: parsePackPlan(body.packPlan),
+    },
   };
 };
 
@@ -1000,6 +1028,8 @@ export const getAllBooks = asyncHandler(
               "isFeatured",
               "includedBooks",
               "showInMainBooks",
+              "matches",
+              "membership",
             ].join(" ")
           )
           .sort({
@@ -1687,6 +1717,21 @@ export const updateBookByBookId =
             ? NaN
             : Number(req.body[key]);
       }
+    }
+
+    // ---------------------------------------------
+    // PREP ARENA MATCHES + PACK TYPE
+    // ---------------------------------------------
+
+    try {
+      if (req.body.matches !== undefined) {
+        book.matches = parseMatches(req.body.matches);
+      }
+      if (req.body.packPlan !== undefined) {
+        book.membership = { plan: parsePackPlan(req.body.packPlan) };
+      }
+    } catch (error) {
+      return fail(res, 400, error.message);
     }
 
     // ---------------------------------------------

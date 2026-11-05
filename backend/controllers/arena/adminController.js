@@ -63,6 +63,7 @@ export const updateSettings = handle(async (req, res) => {
   if (input.matchesPerEntry !== undefined) set.matchesPerEntry = input.matchesPerEntry;
   if (input.cancelRefundEnabled !== undefined) set.cancelRefundEnabled = input.cancelRefundEnabled;
   if (input.accountDeletionEnabled !== undefined) set.accountDeletionEnabled = input.accountDeletionEnabled;
+  if (input.affiliateEnabled !== undefined) set.affiliateEnabled = input.affiliateEnabled;
   if (input.offerEnabled !== undefined) set.offerEnabled = input.offerEnabled;
   if (input.offerText !== undefined) set.offerText = input.offerText;
   if (input.offerEndsAt !== undefined) set.offerEndsAt = input.offerEndsAt ? new Date(input.offerEndsAt) : null;
@@ -217,7 +218,7 @@ export const listProfiles = handle(async (req, res) => {
   });
 }, "Unable to load profiles");
 
-const performSuspend = async ({ profileId, adminId, reason }) => {
+export const performSuspend = async ({ profileId, adminId, reason }) => {
   const profile = await ArenaProfile.findById(profileId);
   if (!profile) throw new ArenaError(404, "NOT_FOUND", "Profile not found");
   if (profile.status === "suspended") throw new ArenaError(409, "ALREADY_SUSPENDED", "Already suspended");
@@ -265,9 +266,13 @@ export const suspendProfile = handle(async (req, res) => {
   res.json({ success: true, message: "Profile suspended" });
 }, "Unable to suspend");
 
-export const unsuspendProfile = handle(async (req, res) => {
-  objectId.parse(req.params.id);
-  const profile = await ArenaProfile.findById(req.params.id);
+/*
+  Bring a suspended profile back: active again if it had a paid entry with matches left
+  (nothing about the entry changes, so every unused match is still there), otherwise draft.
+  Also used by the book-pack membership suspend / unsuspend.
+*/
+export const performUnsuspend = async ({ profileId, adminId }) => {
+  const profile = await ArenaProfile.findById(profileId);
   if (!profile || profile.status !== "suspended") throw new ArenaError(404, "NOT_FOUND", "Suspended profile not found");
 
   const entryStillPaid =
@@ -282,7 +287,13 @@ export const unsuspendProfile = handle(async (req, res) => {
     }
   );
 
-  await audit(req.user.id, "profile_unsuspended", { targetType: "profile", targetId: profile._id, summary: `Reinstated ${profile.alias} as ${restored}` });
+  await audit(adminId, "profile_unsuspended", { targetType: "profile", targetId: profile._id, summary: `Reinstated ${profile.alias} as ${restored}` });
+  return restored;
+};
+
+export const unsuspendProfile = handle(async (req, res) => {
+  objectId.parse(req.params.id);
+  const restored = await performUnsuspend({ profileId: req.params.id, adminId: req.user.id });
   res.json({ success: true, message: "Profile reinstated", data: { status: restored } });
 }, "Unable to reinstate");
 

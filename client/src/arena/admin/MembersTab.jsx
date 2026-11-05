@@ -5,7 +5,7 @@ import { Eye, EyeOff, Gift, History, Minus, Plus, Trash2, Unlock } from "lucide-
 import { Badge, Button, EmptyState, Field, Modal, Spinner, cx, inputClass } from "../ui";
 import { ConfirmModal, MUTED, Pager, SearchBox, StatusBadge, Table, Td, api, errMsg, rupees2, useDebounced, useDeleter, useList } from "./shared";
 
-const MAX = 20;
+const MAX = 100;
 
 /* ---------------------------- give / take matches ---------------------------- */
 function ManageMatches({ member, onClose, onDone }) {

@@ -8,7 +8,7 @@ import {
   IndianRupee, KeyRound, LayoutDashboard, Loader2, LockKeyhole, Mail,
   MonitorSmartphone, Percent, Phone, RefreshCw, Search, ShieldCheck,
   ShoppingBag, SlidersHorizontal, Sparkles, TrendingUp, UserRound, Wallet, X,
-  BarChart3, ReceiptText, Filter, CalendarRange, ExternalLink, LogOut, Smartphone, Laptop, Tablet, MapPin, Pencil
+  BarChart3, ReceiptText, Filter, CalendarRange, ExternalLink, LogOut, Smartphone, Laptop, Tablet, Pencil
 } from "lucide-react";
 import BASE_URL from "../utils/Url";
 import { setDeviceLabel } from "../lib/authSession";
@@ -267,10 +267,7 @@ function DevicesPage({ token, dark }) {
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 break-words text-[13px] font-semibold">{name}{d.isCurrent && <span className="rounded-full bg-[#F97316] px-2 py-0.5 text-[10px] font-semibold text-white">This device</span>}{d.isTrusted && <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${dark ? "border-[#454545]" : "border-[#DDD]"}`}>Remembered</span>}<button type="button" aria-label="Rename device" title="Name this device, e.g. MacBook Air M5 or iPhone 15 Pro" onClick={() => setRenaming({ sessionId: d.sessionId, name })} className="rounded-md p-1 text-[#F97316] hover:bg-[#F97316]/10"><Pencil size={13} /></button></p>
               {renaming?.sessionId === d.sessionId && <div className="mt-2 flex flex-wrap items-center gap-2"><input autoFocus maxLength={50} value={renaming.name} onChange={e => setRenaming({ ...renaming, name: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setRenaming(null); }} className={`h-9 min-w-0 flex-1 rounded-lg border px-3 text-[12px] outline-none focus:border-[#F97316] ${dark ? "border-[#424242] bg-[#242424]" : "border-[#DDD] bg-white"}`} /><SmallButton primary disabled={renameBusy} onClick={saveName}>{renameBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}Save</SmallButton><SmallButton dark={dark} disabled={renameBusy} onClick={() => setRenaming(null)}>Cancel</SmallButton></div>}
-              <p className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${muted}`}><MapPin size={12} className="text-[#F97316]" />{d.location?.text || "Location unavailable"}</p>
-              <p className={`mt-1 text-[11px] ${muted}`}>Last active: {dateText(d.lastActiveAt, true)}</p>
-              <p className={`mt-1 text-[11px] ${muted}`}>Signed in: {dateText(d.createdAt, true)} · IP {d.ipAddress || "Unknown"}</p>
-              <p className={`mt-1 text-[11px] ${muted}`}>Session expires: {dateText(d.expiresAt, true)}</p>
+              <p className={`mt-1 text-[11px] ${muted}`}>Signed in: {dateText(d.createdAt, true)}</p>
             </div>
           </div>
           <SmallButton dark={dark} disabled={busy} onClick={() => setConfirm({ kind: "one", device: d })}><LogOut size={14} />{d.isCurrent ? "Log out" : "Log out device"}</SmallButton>

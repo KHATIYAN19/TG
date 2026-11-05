@@ -1796,6 +1796,19 @@ const handlePayment = async (event) => {
                       </span>
                     )}
                   </div>
+
+                  {Number(product?.matches) > 0 && (
+                    <p
+                      className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                        isDark
+                          ? "bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-400/30"
+                          : "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200"
+                      }`}
+                    >
+                      Includes {product.matches} Prep Arena {Number(product.matches) === 1 ? "credit" : "credits"}
+                      <span className="font-medium opacity-80">(1 credit = 1 match = 1 buddy partnership; added when you sign up with this email)</span>
+                    </p>
+                  )}
                 </div>
               </div>
 

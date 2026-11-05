@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { Compass, CreditCard, Eye, EyeOff, Inbox, MessageCircle, Settings2, UserRound, Wifi, WifiOff } from "lucide-react";
+import { BookOpen, Compass, CreditCard, Eye, EyeOff, Inbox, MessageCircle, Settings2, UserRound, Wifi, WifiOff } from "lucide-react";
 
 import { ArenaProvider, useArena } from "./ArenaContext";
 import { http, errMsg } from "./api";
@@ -17,6 +17,7 @@ const BrowsePage = lazy(() => import("./pages/BrowsePage"));
 const RequestsPage = lazy(() => import("./pages/RequestsPage"));
 const BuddyPage = lazy(() => import("./pages/BuddyPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const BooksPage = lazy(() => import("./pages/BooksPage"));
 
 /*
   Temporarily hide / show my profile. Hidden = nobody can find or request me,
@@ -88,7 +89,9 @@ function Shell() {
 
   // Unpaid members only ever see the join flow (details → payment) and settings.
   // The API enforces this too; hiding tabs is just the friendly side of it.
-  const tabs = (
+  const packMember = Boolean(me?.pack?.packMember);
+
+  const baseTabs = (
     paid
       ? [
           { to: "arena", label: "Arena", icon: Compass, hidden: matched },
@@ -107,6 +110,9 @@ function Shell() {
             { to: "settings", label: "Settings", icon: Settings2 },
           ]
   ).filter((t) => !t.hidden);
+
+  // Book-pack members get a "Books" tab (all current books + request a new one), just before Settings.
+  const tabs = packMember ? [...baseTabs.slice(0, -1), { to: "books", label: "Books", icon: BookOpen }, ...baseTabs.slice(-1)] : baseTabs;
 
   const home = matched ? "buddy" : status === "active" ? "arena" : suspended ? "profile" : "join";
   const gate = (element) => (paid && !matched ? element : <Navigate to={`/prep-buddy/app/${home}`} replace />);
@@ -177,6 +183,7 @@ function Shell() {
             <Route path="requests" element={gate(<RequestsPage />)} />
             <Route path="buddy" element={matched ? <BuddyPage /> : <Navigate to={`/prep-buddy/app/${home}`} replace />} />
             <Route path="profile" element={me?.profile && (paid || suspended) ? <ProfilePage /> : <Navigate to={`/prep-buddy/app/${home}`} replace />} />
+            <Route path="books" element={packMember ? <BooksPage /> : <Navigate to={`/prep-buddy/app/${home}`} replace />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to={`/prep-buddy/app/${home}`} replace />} />
           </Routes>

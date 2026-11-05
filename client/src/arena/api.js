@@ -33,6 +33,13 @@ export const campaignHttp = axios.create({
   timeout: 60000,
 });
 
+// Book packs: membership status, the book library, book suggestions (signed-in members).
+export const membershipHttp = axios.create({
+  baseURL: `${API_ROOT}/api/membership`,
+  withCredentials: true,
+  timeout: 20000,
+});
+
 const getToken = () => store.getState().auth.token || localStorage.getItem("token") || "";
 
 /*
@@ -75,7 +82,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp, campaignHttp]) {
+for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {

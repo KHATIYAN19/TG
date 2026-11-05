@@ -34,7 +34,7 @@ const entrySchema = new Schema(
     cancellationFeePercent: { type: Number, required: true, min: 0, max: 100 },
 
     // Snapshot taken at checkout, so later admin changes never alter a paid entry.
-    matchesAllowed: { type: Number, default: 1, min: 0, max: 20 },
+    matchesAllowed: { type: Number, default: 1, min: 0, max: 100 },
     matchesUsed: { type: Number, default: 0, min: 0 },
 
     // Given by an admin, not bought. Nothing was paid, so there is nothing to refund.
@@ -62,8 +62,8 @@ const entrySchema = new Schema(
 
     payment: {
       _id: false,
-      // "admin" = a complimentary entry granted by the team (nothing was paid)
-      gateway: { type: String, enum: ["cashfree", "razorpay", "admin"] },
+      // "admin" = a complimentary entry granted by the team; "pass" = matches that came with a purchased book/pack (nothing paid in the arena)
+      gateway: { type: String, enum: ["cashfree", "razorpay", "admin", "pass"] },
       orderId: { type: String },
       paymentId: { type: String, default: null },
     },

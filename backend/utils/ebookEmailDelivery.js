@@ -1,6 +1,7 @@
 import Order from "../models/Order.js";
 import Book from "../models/Book.js";
 import sendMail from "./MailSender.js";
+import { scheduleMembershipActivation } from "../services/membership/membershipService.js";
 
 /* =====================================================
    EBOOK PDF EMAIL DELIVERY
@@ -666,6 +667,8 @@ export const enqueueEbookEmail = (id, opts = {}) => {
 export const scheduleEbookEmail = (order) => {
   if (order?._id) {
     enqueueEbookEmail(order._id, { trigger: "auto" });
+    // Books with Prep Arena matches / packs: record the purchase, grant matches, send the thank-you mail (no-op for other books).
+    scheduleMembershipActivation(order);
   }
 };
 

@@ -421,10 +421,25 @@ const verifyCashfree = async (order) => {
     Accept: "application/json",
   };
 
-  const gatewayOrder = await gatewayRequest(
-    `${base}/orders/${encodeURIComponent(gatewayOrderId)}`,
-    { headers }
-  );
+  let gatewayOrder;
+
+  try {
+    gatewayOrder = await gatewayRequest(
+      `${base}/orders/${encodeURIComponent(gatewayOrderId)}`,
+      { headers }
+    );
+  } catch (error) {
+    if (error.code === "GATEWAY_HTTP_ERROR" && /HTTP 404/.test(error.message)) {
+      throw appError(
+        "CASHFREE_ORDER_NOT_FOUND",
+        `Cashfree (${sandbox ? "sandbox" : "production"}) has no order ${gatewayOrderId}. ` +
+          "The order was probably created in the other environment: check CASHFREE_ENV and the Cashfree keys on this server.",
+        502
+      );
+    }
+
+    throw error;
+  }
 
   if (String(gatewayOrder.order_id) !== String(gatewayOrderId)) {
     throw appError(

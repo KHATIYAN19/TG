@@ -199,6 +199,7 @@ export const adminSettingsSchema = z.object({
   matchesPerEntry: z.coerce.number().int().min(1).max(5).optional(),
   cancelRefundEnabled: z.boolean().optional(),
   accountDeletionEnabled: z.boolean().optional(),
+  affiliateEnabled: z.boolean().optional(),
   offerEnabled: z.boolean().optional(),
   // ISO date-time, or null / "" for "no end date".
   offerEndsAt: z.union([z.string().datetime({ offset: true }), z.literal(""), z.null()]).optional(),
@@ -217,7 +218,7 @@ export const bugReportSchema = z.object({
 export const adminAdjustMatchesSchema = z
   .object({
     action: z.enum(["add", "remove", "set"]),
-    amount: z.coerce.number().int().min(0).max(20),
+    amount: z.coerce.number().int().min(0).max(100),
     reason: z.string().trim().max(300).optional().default(""),
   })
   .superRefine((v, ctx) => {

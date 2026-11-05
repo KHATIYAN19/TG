@@ -41,6 +41,31 @@ const bookSchema = new mongoose.Schema(
       default: []
     },
 
+    // Prep Arena matches the buyer receives (1 match = 1 buddy partnership).
+    // 0 = none, and the storefront hides the line. Edit any time: pages read it live,
+    // and each purchase keeps the number that was on the book when it was bought.
+    matches: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+      validate: { validator: Number.isInteger, message: "Matches must be a whole number." },
+    },
+
+    // Marks the two "all books" packs (buyers get new-book alerts, can suggest books, and
+    // see the pack in the Prep Arena). Prices, contents and matches are edited like any book.
+    //   none         normal book / combo
+    //   all_current  all books available today
+    //   lifetime     all books today + every book published later, emailed free
+    membership: {
+      plan: {
+        type: String,
+        enum: ["none", "all_current", "lifetime"],
+        default: "none",
+        index: true,
+      },
+    },
+
     price: {
       type: Number,
       required: true,

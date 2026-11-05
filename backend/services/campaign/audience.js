@@ -32,7 +32,7 @@ import User from "../../models/User.js";
   }
 */
 
-const PAID_STATUSES = ["SUCCESS", "PARTIALLY_REFUNDED"];
+export const PAID_STATUSES = ["SUCCESS", "PARTIALLY_REFUNDED"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
@@ -156,18 +156,30 @@ export const loadBuyers = async ({ from = null, to = null } = {}) => {
 };
 
 // bundleId -> [included book ids]. A bundle buyer owns the books inside it.
-const loadBundleMap = async () => {
+export const loadBundleMap = async () => {
   const bundles = await Book.find({ "includedBooks.0": { $exists: true } })
     .select("_id includedBooks")
     .lean();
   return new Map(bundles.map((b) => [String(b._id), b.includedBooks.map(String)]));
 };
 
-const expandBundles = (set, bundleMap) => {
+export const expandBundles = (set, bundleMap) => {
   for (const id of [...set]) {
     for (const inner of bundleMap.get(id) || []) set.add(inner);
   }
   return set;
+};
+
+/*
+  Does this person already have the book? `owned` is their book-id set with bundles
+  already expanded. A bundle counts as owned when they bought it OR already own every
+  book inside it (buying it again would give them nothing new).
+*/
+export const isBookOwned = (bookId, owned, bundleMap = new Map()) => {
+  const id = String(bookId);
+  if (owned.has(id)) return true;
+  const inner = bundleMap.get(id);
+  return Boolean(inner && inner.length && inner.every((b) => owned.has(b)));
 };
 
 /* ------------------------------------------------------------------ */

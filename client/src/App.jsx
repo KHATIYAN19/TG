@@ -135,6 +135,13 @@ const BookCallPage = lazy(() =>
 const Books = lazy(() =>
   import("./Ebooks/Books.jsx")
 );
+import BookMatchesNotice from "./Ebooks/BookMatchesNotice.jsx";
+const AllAccess = lazy(() =>
+  import("./Ebooks/AllAccess.jsx")
+);
+const AdminMembership = lazy(() =>
+  import("./Admin/AdminMembership.jsx")
+);
 const SystemDesignHLD = lazy(() =>
   import("./component/SystemDesignHLD.jsx")
 );
@@ -794,6 +801,7 @@ function App() {
       <Toaster />
       <Analytics />
       {!hideNavbar && <Navbar />}
+      <BookMatchesNotice />
       <Suspense fallback={null}>
         <SaleCampaign />
       </Suspense>
@@ -1018,6 +1026,14 @@ function App() {
             element={<Books />}
           />
           <Route
+            path="/book/all-books"
+            element={<AllAccess />}
+          />
+          <Route
+            path="/book/life-type-combo"
+            element={<AllAccess />}
+          />
+          <Route
             path="/book/system-design/hld"
             element={<SystemDesignHLD />}
           />
@@ -1164,6 +1180,12 @@ function App() {
             path="/admin/books"
             element={requireAdmin(
               <AdminBooks />
+            )}
+          />
+          <Route
+            path="/admin/membership"
+            element={requireAdmin(
+              <AdminMembership />
             )}
           />
           <Route

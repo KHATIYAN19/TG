@@ -37,6 +37,9 @@ const settingsSchema = new Schema(
     cancelRefundEnabled: { type: Boolean, default: true },
     accountDeletionEnabled: { type: Boolean, default: true },
 
+    // Affiliate sales switch. When false, new checkouts earn no affiliate commission.
+    affiliateEnabled: { type: Boolean, default: true },
+
     // Limited-time offer banner (text + optional countdown) shown under the pay button.
     offerEnabled: { type: Boolean, default: false },
     offerEndsAt: { type: Date, default: null },
@@ -72,6 +75,7 @@ export const ARENA_SETTING_DEFAULTS = {
   minMatchDaysBeforeEnd: 0,
   cancelRefundEnabled: true,
   accountDeletionEnabled: true,
+  affiliateEnabled: true,
   offerEnabled: false,
   offerEndsAt: null,
   offerText: "",

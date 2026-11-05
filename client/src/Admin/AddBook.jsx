@@ -155,6 +155,8 @@ const INITIAL_FORM = {
   isFeatured: false,
   showInMainBooks: false,
   sendEbookEmailOnPurchase: false,
+  matches: "0",
+  packPlan: "none",
 
 };
 
@@ -372,6 +374,8 @@ const normalizeBook = (record) => {
     isFeatured: record.isFeatured === true,
     showInMainBooks: record.showInMainBooks === true,
     sendEbookEmailOnPurchase: record.sendEbookEmailOnPurchase === true,
+    matches: String(record.matches ?? 0),
+    packPlan: record.membership?.plan || "none",
 
   };
 
@@ -2287,6 +2291,13 @@ export default function AddBook() {
 
     const next = {};
 
+    {
+      const m = Number(formData.matches);
+      if (formData.matches === "" || !Number.isInteger(m) || m < 0 || m > 100) {
+        next.matches = "Enter a whole number from 0 to 100.";
+      }
+    }
+
 
 
     if (
@@ -2714,6 +2725,12 @@ export default function AddBook() {
       )
 
     );
+
+
+
+    payload.append("matches", String(Number(formData.matches) || 0));
+
+    payload.append("packPlan", formData.packPlan || "none");
 
 
 
@@ -4345,6 +4362,76 @@ export default function AddBook() {
 
 
 
+            <Panel
+
+              title="Prep Arena matches & pack"
+
+              description="Matches are given to the buyer in Prep Arena. Leave 0 to hide them everywhere."
+
+            >
+
+              <div className="grid gap-5 md:grid-cols-2">
+
+                <InputField
+
+                  label="Prep Arena matches"
+
+                  name="matches"
+
+                  type="number"
+
+                  min="0"
+
+                  max="100"
+
+                  step="1"
+
+                  value={formData.matches}
+
+                  onChange={handleChange}
+
+                  error={errors.matches}
+
+                  helper="1 match = 1 buddy partnership. Added to the buyer's arena account when they sign up with the same email. 0 = none."
+
+                />
+
+                <div>
+
+                  <label htmlFor="packPlan" className={labelClass}>Pack type</label>
+
+                  <select
+
+                    id="packPlan"
+
+                    name="packPlan"
+
+                    value={formData.packPlan}
+
+                    onChange={handleChange}
+
+                    className={inputClass}
+
+                  >
+
+                    <option value="none">Not a pack (normal book / combo)</option>
+
+                    <option value="all_current">All Books pack (every book available today)</option>
+
+                    <option value="lifetime">Lifetime pack (all books + every future book)</option>
+
+                  </select>
+
+                  <p className="mt-1.5 text-xs text-slate-500">Packs are shown on the Books page. Buyers get new-book emails (Lifetime also gets the PDF) and can suggest books from Prep Arena. Pick the books it includes in the combo section above.</p>
+
+                </div>
+
+              </div>
+
+            </Panel>
+
+
+
             {/* ===================================
 
                 SECTION 6: DISCOVERY
@@ -4865,6 +4952,30 @@ export default function AddBook() {
             >
 
               <div className="rounded-xl border border-slate-200 p-4">
+
+                <div className="mb-3 flex flex-wrap gap-2">
+
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${Number(formData.matches) > 0 ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+
+                    {Number(formData.matches) > 0
+
+                      ? `Prep Arena matches: ${Number(formData.matches)}`
+
+                      : "No Prep Arena matches"}
+
+                  </span>
+
+                  {formData.packPlan && formData.packPlan !== "none" && (
+
+                    <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
+
+                      {formData.packPlan === "lifetime" ? "Lifetime pack" : "All Books pack"}
+
+                    </span>
+
+                  )}
+
+                </div>
 
                 {coverPreview ? (
 
