@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import UserSession from "../models/UserSession.js";
 
-import sendMail from "../utils/MailSender.js";
+import { deliverMail } from "../utils/MailSender.js";
 
 import {
   authConfig,
@@ -551,7 +551,9 @@ const sendPasswordSetupEmail = async (
     </div>
   `;
 
-  await sendMail(
+  // Sent directly (not via the SQS queue) so a delivery failure
+  // surfaces to the admin immediately.
+  await deliverMail(
     user.email,
     subject,
     text,
@@ -1593,8 +1595,18 @@ export const updateAffiliateStatus = async (
     const previousStatus =
       user.affiliate.status;
 
+    // Login requires User.status === "active", independent of
+    // affiliate.status. Activating an affiliate must also lift a
+    // plain "inactive" account state, otherwise the partner still
+    // gets "Account unavailable". Suspended/blocked accounts are
+    // deliberate admin actions and are left untouched.
+    const reactivateAccount =
+      status === "active" &&
+      user.status === "inactive";
+
     if (
-      previousStatus === status
+      previousStatus === status &&
+      !reactivateAccount
     ) {
       return res.json({
         success: true,
@@ -1604,13 +1616,38 @@ export const updateAffiliateStatus = async (
       });
     }
 
-    user.affiliate.status =
+    const previousAccountStatus =
+      user.status;
+
+    if (reactivateAccount) {
+      // Goes through the security service so cached auth state
+      // is refreshed, not just the Mongo document.
+      await changeAccountSecurityState({
+        userId,
+        actorId: actorId(req),
+        update: {
+          status: "active",
+          statusReason: null,
+          statusChangedAt: new Date(),
+          statusChangedBy: actorId(req),
+          updatedBy: actorId(req),
+        },
+        reason:
+          "Account activated with affiliate activation",
+      });
+    }
+
+    const fresh =
+      await User.findById(userId);
+
+    fresh.affiliate.status =
       status;
 
-    user.updatedBy =
+    fresh.updatedBy =
       actorId(req);
 
-    await user.save();
+    await fresh.save();
+
 
     await audit({
       req,
@@ -1623,6 +1660,12 @@ export const updateAffiliateStatus = async (
       metadata: {
         previousStatus,
         newStatus: status,
+        ...(reactivateAccount
+          ? {
+              previousAccountStatus,
+              newAccountStatus: "active",
+            }
+          : {}),
       },
     });
 
@@ -1630,9 +1673,12 @@ export const updateAffiliateStatus = async (
       success: true,
 
       message:
-        `Affiliate status changed to ${status}`,
+        `Affiliate status changed to ${status}` +
+        (reactivateAccount
+          ? " and account access activated"
+          : ""),
 
-      user: safe(user),
+      user: safe(fresh),
     });
   } catch (error) {
     return handleError(

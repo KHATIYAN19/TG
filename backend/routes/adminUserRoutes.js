@@ -12,6 +12,7 @@ import {
   getUserById,
   updateUser,
   updateUserStatus,
+  updateAffiliateStatus,
   deleteUser,
   sendPasswordLink,
   adminRevokeAll,
@@ -42,6 +43,11 @@ router.patch("/:userId", updateUser);
 router.patch(
   "/:userId/status",
   updateUserStatus
+);
+
+router.patch(
+  "/:userId/affiliate/status",
+  updateAffiliateStatus
 );
 
 router.delete("/:userId", deleteUser);

@@ -423,6 +423,36 @@ export const login = async (req, res) => {
     }
 
     if (!eligible(user)) {
+      // Invite never completed: the stored password is a random value
+      // nobody knows, so say what to do. Reveals only "pending setup".
+      if (
+        !user.isDeleted &&
+        user.status === "active" &&
+        user.mustChangePassword
+      ) {
+        return fail(
+          res,
+          403,
+          "Your account setup is not complete. Use the password setup link emailed to you, or ask your administrator to resend it.",
+          "PASSWORD_SETUP_PENDING"
+        );
+      }
+
+      // Disabled / deleted: only tell someone who proves they own it.
+      if (
+        user.password &&
+        (await verifyPassword(password, user.password))
+      ) {
+        return fail(
+          res,
+          403,
+          user.isDeleted
+            ? "This account has been removed. Please contact your administrator."
+            : `This account is ${user.status}. Please contact your administrator.`,
+          user.isDeleted ? "ACCOUNT_DELETED" : "ACCOUNT_DISABLED"
+        );
+      }
+
       return fail(res, 403, "Account unavailable");
     }
 
