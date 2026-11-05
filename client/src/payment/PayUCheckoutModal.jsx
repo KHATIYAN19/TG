@@ -20,6 +20,7 @@ import {
   Percent,
   Phone,
   ShieldCheck,
+  Swords,
   Tag,
   User,
   X,
@@ -1797,20 +1798,36 @@ const handlePayment = async (event) => {
                     )}
                   </div>
 
-                  {Number(product?.matches) > 0 && (
-                    <p
-                      className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                        isDark
-                          ? "bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-400/30"
-                          : "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200"
-                      }`}
-                    >
-                      Includes {product.matches} Prep Arena {Number(product.matches) === 1 ? "credit" : "credits"}
-                      <span className="font-medium opacity-80">(1 credit = 1 match = 1 buddy partnership; added when you sign up with this email)</span>
-                    </p>
-                  )}
                 </div>
               </div>
+
+              {/* Prep Arena credits that come with this book (hidden when 0) */}
+              {Number(product?.matches) > 0 && (
+                <div
+                  className={`mt-3 flex items-start gap-3 rounded-xl border p-3 ${
+                    isDark
+                      ? "border-orange-400/30 bg-orange-500/10"
+                      : "border-orange-200 bg-orange-50"
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+                      isDark ? "bg-orange-500/20 text-orange-300" : "bg-orange-100 text-orange-600"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <Swords size={16} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className={`text-[13px] font-extrabold leading-snug sm:text-sm ${isDark ? "text-orange-200" : "text-orange-800"}`}>
+                      Includes {product.matches} Prep Arena {Number(product.matches) === 1 ? "credit" : "credits"}
+                    </p>
+                    <p className={`mt-0.5 text-[11px] leading-snug sm:text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                      1 credit = 1 match = 1 buddy partnership. Added when you sign up on Prep Arena with this email.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* desktop-only: breakdown + reassurance */}
               <div className="mt-5 hidden space-y-4 lg:block">
