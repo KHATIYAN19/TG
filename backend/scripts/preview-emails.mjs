@@ -11,7 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { otpEmail, matchedEmail, unmatchedEmail, UNMATCH_VARIANTS } from "../services/mail/templates.js";
+import { otpEmail, matchedEmail, unmatchedEmail, reminderEmail, UNMATCH_VARIANTS } from "../services/mail/templates.js";
 
 const out = path.resolve(process.argv[2] || path.join(os.tmpdir(), "targettrek-email-previews"));
 fs.mkdirSync(out, { recursive: true });
@@ -22,6 +22,7 @@ const emails = [
   ["signup-otp", "Sign-up code", otpEmail({ purpose: "signup", name: sample.name, otp: "482915", minutes: 15 })],
   ["reset-otp", "Forgot-password code", otpEmail({ purpose: "reset", name: sample.name, otp: "730184", minutes: 10 })],
   ["login-otp", "Login code", otpEmail({ purpose: "login", name: sample.name, otp: "905512", minutes: 10 })],
+  ["reminder", "Payment reminder (sign-up, not paid)", reminderEmail({ name: sample.name, pricePaise: 1900, matches: 2 })],
   ["matched", "You're matched", matchedEmail({ ...sample, buddyTopics: ["HLD", "LLD"], buddyLevel: "intermediate", matchesLeft: 1 })],
   ...UNMATCH_VARIANTS.flatMap((variant) => [
     [`unmatched-${variant}`, `Unmatched: ${variant.replace(/_/g, " ")} (back in arena, 1 match left)`, unmatchedEmail({ ...sample, variant, matchesLeft: 1, backInArena: true })],

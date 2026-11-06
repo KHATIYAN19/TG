@@ -24,11 +24,15 @@ const BooksPage = lazy(() => import("./pages/BooksPage"));
   and I can't send requests either. Existing partnerships carry on.
   If the team hid the profile, only the team can bring it back.
 */
-function VisibilityButton({ profile }) {
+function VisibilityButton({ profile, toggleEnabled }) {
   const { refresh } = useArena();
   const [busy, setBusy] = useState(false);
   const hidden = profile.hidden === true;
   const byAdmin = hidden && profile.hiddenBy === "admin";
+
+  // The team can switch member hiding off. Members who are hidden can still make themselves visible;
+  // everyone else simply doesn't get the button.
+  if (!toggleEnabled && !hidden) return null;
 
   const toggle = async () => {
     if (byAdmin || busy) return;
@@ -90,6 +94,8 @@ function Shell() {
   // Unpaid members only ever see the join flow (details → payment) and settings.
   // The API enforces this too; hiding tabs is just the friendly side of it.
   const packMember = Boolean(me?.pack?.packMember);
+  // Pay-first: paid, but hasn't added details (so no profile yet).
+  const paidNoDetails = !me?.profile && ["paid", "in_match"].includes(me?.entry?.status);
 
   const baseTabs = (
     paid
@@ -106,7 +112,7 @@ function Shell() {
             { to: "settings", label: "Settings", icon: Settings2 },
           ]
         : [
-            { to: "join", label: me?.profile ? "Payment" : "Get started", icon: CreditCard },
+            { to: "join", label: me?.profile ? "Payment" : paidNoDetails ? "Your details" : "Get started", icon: CreditCard },
             { to: "settings", label: "Settings", icon: Settings2 },
           ]
   ).filter((t) => !t.hidden);
@@ -134,7 +140,7 @@ function Shell() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <BugReportButton className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] px-3 py-1 text-xs font-semibold text-stone-600 dk:text-[#d6c4b8] hover:border-orange-400 hover:text-orange-700 dk:hover:text-orange-300" />
-            {paid && me?.profile && <VisibilityButton profile={me.profile} />}
+            {paid && me?.profile && <VisibilityButton profile={me.profile} toggleEnabled={me.settings?.visibilityToggleEnabled !== false} />}
             {me?.profile && (
               <Badge tone={me.profile.status === "matched" ? "emerald" : me.profile.status === "active" ? "brand" : me.profile.status === "suspended" ? "rose" : "slate"}>
                 {me.profile.alias} · {me.profile.status === "draft" ? "payment pending" : me.profile.status}

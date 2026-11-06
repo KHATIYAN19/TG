@@ -44,7 +44,7 @@ export default function SettingsPage() {
   if (!profile) {
     return (
       <div className="space-y-6">
-        <EmptyState icon={UserRound} title="Create your profile first">Settings become available once you have a profile.</EmptyState>
+        <EmptyState icon={UserRound} title={["paid", "in_match"].includes(me.entry?.status) ? "Add your details first" : "Complete your entry first"}>Settings become available once you are in the arena.</EmptyState>
         {deletionOn && <DeleteAccount refundsOn={refundsOn} />}
       </div>
     );

@@ -36,7 +36,7 @@ const readReferralCode = () => {
 const loadRazorpay = () => loadScript("razorpay-sdk", "https://checkout.razorpay.com/v1/checkout.js", () => Boolean(window.Razorpay));
 
 /* ------------------------------- step header ------------------------------- */
-const STEPS = ["Account", "Your details", "Payment"];
+const STEPS = ["Account", "Payment", "Your details"];
 
 function Stepper({ current }) {
   return (
@@ -127,9 +127,10 @@ function PaymentStep({ me, refresh, onProcessing }) {
   };
 
   const finishPaid = async () => {
-    toast.success("Payment received. Welcome to the arena!", { id: "arena-paid" });
+    toast.success(me.profile ? "Payment received. Welcome to the arena!" : "Payment received. Now add your details to enter the arena.", { id: "arena-paid" });
     await refresh();
-    navigate("/prep-buddy/app/arena", { replace: true });
+    // No details yet: the app routes a paid member without a profile back to the details step.
+    navigate("/prep-buddy/app", { replace: true });
   };
 
   const startRazorpay = (checkout) =>
@@ -174,9 +175,9 @@ function PaymentStep({ me, refresh, onProcessing }) {
       const { data } = await http.post("/entry/checkout", { couponCode: applied?.coupon?.code || "", affiliateCode: readReferralCode() });
 
       if (data.data.free) {
-        toast.success("You're in the arena!", { id: "arena-paid" });
+        toast.success(me.profile ? "You're in the arena!" : "You're in! Now add your details to enter the arena.", { id: "arena-paid" });
         await refresh();
-        navigate("/prep-buddy/app/arena", { replace: true });
+        navigate("/prep-buddy/app", { replace: true });
         return;
       }
 
@@ -197,7 +198,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
       await startRazorpay(checkout);
     } catch (e) {
       toast.error(e.response ? errMsg(e) : e.message || "Payment failed. Please try again.", { id: "arena-pay-error" });
-      if (errCode(e) === "ALREADY_IN_ARENA") { await refresh(); navigate("/prep-buddy/app/arena", { replace: true }); }
+      if (["ALREADY_IN_ARENA", "ALREADY_PAID"].includes(errCode(e))) { await refresh(); navigate("/prep-buddy/app", { replace: true }); }
     } finally {
       setPaying(false);
     }
@@ -219,7 +220,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
 
       <div className="space-y-5 p-6">
         <ul className="space-y-2.5 text-sm text-stone-700 dk:text-[#ead9cc]">
-          {["Your profile goes live in the arena", "Browse members, send and accept buddy requests", `${settings.matchesPerEntry} ${settings.matchesPerEntry === 1 ? "partnership" : "partnerships"} with private chat${settings.matchesPerEntry > 1 ? " (one at a time)" : ""}`].map((t) => (
+          {["Add your details and your profile goes live in the arena", "Browse members, send and accept buddy requests", `${settings.matchesPerEntry} ${settings.matchesPerEntry === 1 ? "partnership" : "partnerships"} with private chat${settings.matchesPerEntry > 1 ? " (one at a time)" : ""}`].map((t) => (
             <li key={t} className="flex gap-2.5"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dk:text-emerald-400" aria-hidden />{t}</li>
           ))}
         </ul>
@@ -259,7 +260,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
         </Button>
         {!settings.enabled && <p className="text-center text-xs text-amber-700 dk:text-amber-300">New entries are paused for now. Please check back soon.</p>}
         <div className="flex justify-center"><OfferBanner offer={settings.offer} /></div>
-        <p className="flex items-center justify-center gap-1.5 text-xs text-stone-500 dk:text-[#b9a79c]"><Lock className="h-3.5 w-3.5" aria-hidden /> {gw ? `Secure payment via ${gw.name}` : "Secure payment"} · your details are saved</p>
+        <p className="flex items-center justify-center gap-1.5 text-xs text-stone-500 dk:text-[#b9a79c]"><Lock className="h-3.5 w-3.5" aria-hidden /> {gw ? `Secure payment via ${gw.name}` : "Secure payment"}{me.profile ? " · your details are saved" : ""}</p>
         {gw && final > 0 && <p className="text-center text-xs text-stone-500 dk:text-[#b9a79c]">Pay with {gw.methods.join(", ")}.</p>}
       </div>
     </Card>
@@ -286,9 +287,10 @@ function PaymentReturn({ orderId, refresh }) {
         return setState("processing");
       }
       sessionStorage.setItem(`arena:verify:${orderId}`, "done");
-      toast.success("Payment received. Welcome to the arena!", { id: "arena-paid" });
+      toast.success("Payment received.", { id: "arena-paid" });
       await refresh();
-      navigate("/prep-buddy/app/arena", { replace: true });
+      // The app sends a member with details to the arena, and one without to the details step.
+      navigate("/prep-buddy/app", { replace: true });
     } catch (e) {
       setMessage(errMsg(e));
       setState("failed");
@@ -300,7 +302,7 @@ function PaymentReturn({ orderId, refresh }) {
   useEffect(() => {
     const key = `arena:verify:${orderId}`;
     if (sessionStorage.getItem(key) === "done") {
-      navigate("/prep-buddy/app/arena", { replace: true }); // already confirmed (page reload)
+      navigate("/prep-buddy/app", { replace: true }); // already confirmed (page reload)
       return;
     }
     if (started.current) return;
@@ -331,8 +333,12 @@ function PaymentReturn({ orderId, refresh }) {
 }
 
 /* ----------------------------------- page ----------------------------------- */
+// Matches that came with a book pack: those members don't pay in the arena, they just add details.
+const hasPackAccess = (pack) => Boolean(pack?.packMember || pack?.matches?.waiting > 0 || pack?.matches?.granted > 0);
+
 export default function JoinPage() {
   const { me, refresh } = useArena();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const orderId = params.get("order_id");
 
@@ -343,31 +349,62 @@ export default function JoinPage() {
   // Returning from the payment gateway.
   if (orderId) return <PaymentReturn orderId={orderId} refresh={async () => { await refresh(); setParams({}, { replace: true }); }} />;
 
-  // No details yet, or editing them → step 2. Otherwise straight to payment (step 3).
-  const showForm = !profile || editing;
-  const step = showForm ? 1 : 2;
+  /*
+    PAY FIRST, THEN DETAILS:
+      1. no details yet and nothing paid  → payment (step 2)
+      2. paid (or a book pack) but no details → details form (step 3), then straight into the arena
+      3. older accounts that saved details before paying → recap + payment, as before
+  */
+  const paidWithoutDetails = !profile && ["paid", "in_match"].includes(me.entry?.status);
+  const unlocked = paidWithoutDetails || (!profile && hasPackAccess(me.pack));
+  const showForm = unlocked || (profile && editing);
+  const step = unlocked ? 2 : 1;
 
-  return (
-    <div className="mx-auto max-w-5xl">
-      <Stepper current={step} />
-
-      {showForm ? (
+  if (showForm) {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <Stepper current={step} />
         <div className="mx-auto max-w-3xl">
           <div className="mb-5">
-            <h2 className="text-xl font-bold text-[#29201b] dk:text-[#fff7ed]">{profile ? "Edit your details" : "Tell us about you"}</h2>
-            <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">We save these to your account, then take you to payment. Other members only ever see the anonymous parts.</p>
+            <h2 className="text-xl font-bold text-[#29201b] dk:text-[#fff7ed]">{profile ? "Edit your details" : paidWithoutDetails ? "Payment received. Now tell us about you" : "Tell us about you"}</h2>
+            <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">
+              {profile
+                ? "Update your details. Other members only ever see the anonymous parts."
+                : "Save your details and your profile appears in the arena straight away. Other members only ever see the anonymous parts."}
+            </p>
           </div>
           {profile && (
             <button onClick={() => setEditing(false)} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 dk:text-orange-300 hover:text-orange-600 dk:hover:text-orange-400">
               <ArrowLeft className="h-4 w-4" aria-hidden /> Back to payment
             </button>
           )}
-          <ProfileForm me={me} refresh={refresh} onSaved={() => setEditing(false)} saveLabel="Save & continue to payment" />
+          <ProfileForm
+            me={me}
+            refresh={refresh}
+            onSaved={() => { setEditing(false); if (!profile) navigate("/prep-buddy/app", { replace: true }); }}
+            saveLabel={profile ? "Save & continue to payment" : "Save & enter the arena"}
+          />
         </div>
-      ) : (
+      </div>
+    );
+  }
+
+  // Nothing paid yet.
+  return (
+    <div className="mx-auto max-w-5xl">
+      <Stepper current={1} />
+      {profile ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="order-2 lg:order-1"><DetailsRecap profile={profile} onEdit={() => setEditing(true)} /></div>
           <div className="order-1 lg:order-2 lg:sticky lg:top-[calc(var(--arena-nav-h,5rem)+4rem)] lg:self-start"><PaymentStep me={me} refresh={refresh} onProcessing={() => setProcessing(true)} /></div>
+        </div>
+      ) : (
+        <div className="mx-auto max-w-lg">
+          <div className="mb-5 text-center">
+            <h2 className="text-xl font-bold text-[#29201b] dk:text-[#fff7ed]">Pay the entry fee to join</h2>
+            <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">Pay once, then add your details and your profile appears in the arena.</p>
+          </div>
+          <PaymentStep me={me} refresh={refresh} onProcessing={() => setProcessing(true)} />
         </div>
       )}
     </div>

@@ -37,6 +37,11 @@ const settingsSchema = new Schema(
     cancelRefundEnabled: { type: Boolean, default: true },
     accountDeletionEnabled: { type: Boolean, default: true },
 
+    // Member "Visible / Hidden" switch. When false members can no longer HIDE their own
+    // profile (they can still make themselves visible again). Admins can hide / unhide
+    // any profile from the Members tab whatever this is set to.
+    memberVisibilityToggleEnabled: { type: Boolean, default: true },
+
     // Affiliate sales switch. When false, new checkouts earn no affiliate commission.
     affiliateEnabled: { type: Boolean, default: true },
 
@@ -75,6 +80,7 @@ export const ARENA_SETTING_DEFAULTS = {
   minMatchDaysBeforeEnd: 0,
   cancelRefundEnabled: true,
   accountDeletionEnabled: true,
+  memberVisibilityToggleEnabled: true,
   affiliateEnabled: true,
   offerEnabled: false,
   offerEndsAt: null,
@@ -131,6 +137,7 @@ export const publicOffer = (s) => {
 /* Server-side guards: throw the same shape the controllers use. */
 export const isCancelRefundEnabled = (s) => s.cancelRefundEnabled !== false;
 export const isAccountDeletionEnabled = (s) => s.accountDeletionEnabled !== false;
+export const isVisibilityToggleEnabled = (s) => s.memberVisibilityToggleEnabled !== false;
 
 export const invalidateArenaSettingsCache = () => {
   cache = { value: null, at: 0 };

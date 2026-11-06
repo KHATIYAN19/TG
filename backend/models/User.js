@@ -468,6 +468,17 @@ const userSchema = new Schema(
       default: null,
     },
 
+    // Prep Buddy Arena: "complete your entry" reminders sent by an admin.
+    arenaReminderSentAt: {
+      type: Date,
+      default: null,
+    },
+
+    arenaReminderCount: {
+      type: Number,
+      default: 0,
+    },
+
     /* =========================================
        ADMIN MANAGEMENT
     ========================================= */

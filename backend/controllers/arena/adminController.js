@@ -63,6 +63,7 @@ export const updateSettings = handle(async (req, res) => {
   if (input.matchesPerEntry !== undefined) set.matchesPerEntry = input.matchesPerEntry;
   if (input.cancelRefundEnabled !== undefined) set.cancelRefundEnabled = input.cancelRefundEnabled;
   if (input.accountDeletionEnabled !== undefined) set.accountDeletionEnabled = input.accountDeletionEnabled;
+  if (input.memberVisibilityToggleEnabled !== undefined) set.memberVisibilityToggleEnabled = input.memberVisibilityToggleEnabled;
   if (input.affiliateEnabled !== undefined) set.affiliateEnabled = input.affiliateEnabled;
   if (input.offerEnabled !== undefined) set.offerEnabled = input.offerEnabled;
   if (input.offerText !== undefined) set.offerText = input.offerText;

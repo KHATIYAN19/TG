@@ -8,12 +8,12 @@ import ArenaReport from "../../models/arena/ArenaReport.js";
 import ArenaBugReport from "../../models/arena/ArenaBugReport.js";
 import User from "../../models/User.js";
 import ArenaCoupon from "../../models/arena/ArenaCoupon.js";
-import { getArenaSettings, publicOffer, isCancelRefundEnabled, isAccountDeletionEnabled } from "../../models/arena/ArenaSettings.js";
+import { getArenaSettings, publicOffer, isCancelRefundEnabled, isAccountDeletionEnabled, isVisibilityToggleEnabled } from "../../models/arena/ArenaSettings.js";
 
 import { ArenaError, handle } from "../../services/arena/errors.js";
 import { publicCard, buddyView, ownerView, generateAlias, sharesTopic, FIELD_VISIBILITY } from "../../services/arena/privacy.js";
 import { gatewayName } from "../../services/arena/gateway.js";
-import { healPaidMembers } from "../../services/arena/activation.js";
+import { healPaidMembers, attachPaidEntry, hasPaidEntry } from "../../services/arena/activation.js";
 import { claimMatchesQuietly } from "../../services/membership/matches.js";
 import { syncArenaAccessForUser } from "../../services/membership/memberAdmin.js";
 import { getMemberSummary } from "../../services/membership/membershipService.js";
@@ -136,19 +136,20 @@ export const me = handle(async (req, res) => {
   let match = null;
   let counts = { incoming: 0, outgoing: 0 };
 
+  // Pay-first: a member can hold a paid entry before they have a profile, so always look it up.
+  entry = await ArenaEntry.findOne({ user: req.user.id, status: { $in: ["pending_payment", "paid", "in_match", "cancelling"] } })
+    .select("status paidPaise listPricePaise discountPaise cancellationFeePercent matchesAllowed matchesUsed complimentary coupon paidAt")
+    .lean();
+  // Never expose the stored fee % while cancel/refund is off.
+  if (entry && !isCancelRefundEnabled(settings)) delete entry.cancellationFeePercent;
+
   if (profile) {
-    const [openEntry, activeMatch, incoming, outgoing] = await Promise.all([
-      ArenaEntry.findOne({ user: req.user.id, status: { $in: ["pending_payment", "paid", "in_match", "cancelling"] } })
-        .select("status paidPaise listPricePaise discountPaise cancellationFeePercent matchesAllowed matchesUsed complimentary coupon paidAt")
-        .lean(),
+    const [activeMatch, incoming, outgoing] = await Promise.all([
       ArenaMatch.findOne({ users: req.user.id, status: "active" }).select("matchedAt").lean(),
       ArenaRequest.countDocuments({ toUser: req.user.id, status: "pending" }),
       ArenaRequest.countDocuments({ fromUser: req.user.id, status: "pending" }),
     ]);
 
-    entry = openEntry;
-    // Never expose the stored fee % while cancel/refund is off.
-    if (entry && !isCancelRefundEnabled(settings)) delete entry.cancellationFeePercent;
     match = activeMatch ? { id: String(activeMatch._id), matchedAt: activeMatch.matchedAt } : null;
     counts = { incoming, outgoing };
   }
@@ -167,6 +168,7 @@ export const me = handle(async (req, res) => {
         entryPricePaise: settings.entryPricePaise,
         cancelRefundEnabled: isCancelRefundEnabled(settings),
         accountDeletionEnabled: isAccountDeletionEnabled(settings),
+        visibilityToggleEnabled: isVisibilityToggleEnabled(settings),
         ...(isCancelRefundEnabled(settings) ? { cancellationFeePercent: settings.cancellationFeePercent } : {}),
         matchesPerEntry: settings.matchesPerEntry,
         paymentGateway: gatewayName(),
@@ -189,6 +191,19 @@ export const upsertProfile = handle(async (req, res) => {
 
   if (profile?.status === "suspended") {
     throw new ArenaError(403, "SUSPENDED", "Your arena access has been suspended");
+  }
+
+  /*
+    PAY FIRST: a NEW profile (details) can only be created after the entry fee is paid.
+    Book-pack members are the exception: their matches came with the pack, nothing to pay here.
+    Existing profiles (e.g. saved before this rule) can always be edited.
+  */
+  if (!profile && !(await hasPaidEntry(req.user.id))) {
+    const pack = await getMemberSummary(user?.email).catch(() => null);
+    const hasPackMatches = Boolean(pack?.packMember || pack?.matches?.waiting > 0 || pack?.matches?.granted > 0);
+    if (!hasPackMatches) {
+      throw new ArenaError(402, "ENTRY_REQUIRED", "Pay the entry fee first, then add your details to enter the arena");
+    }
   }
 
   const fields = {
@@ -232,6 +247,9 @@ export const upsertProfile = handle(async (req, res) => {
     if (!profile) throw new ArenaError(500, "ALIAS_FAILED", "Please try again");
   }
 
+  // Pay-first: a paid entry that was waiting for these details is linked now and the profile goes live.
+  await attachPaidEntry({ userId: req.user.id, profile });
+
   // Signing up is the moment purchased matches arrive: the profile goes live straight away.
   await syncArenaAccessForUser(req.user.id);
   const { claimed } = await claimMatchesQuietly(req.user.id);
@@ -266,6 +284,11 @@ export const setVisibility = handle(async (req, res) => {
 
   if (!["active", "matched"].includes(profile.status)) {
     throw new ArenaError(409, "NOT_IN_ARENA", "You can hide your profile once you've joined the arena");
+  }
+
+  // Admin switch: members may not HIDE themselves while it is off (showing again is always allowed).
+  if (hidden && !isVisibilityToggleEnabled(await getArenaSettings({ fresh: true }))) {
+    throw new ArenaError(403, "FEATURE_DISABLED", "Hiding your profile is not available right now.");
   }
 
   if (!hidden && profile.hidden && profile.hiddenBy === "admin") {

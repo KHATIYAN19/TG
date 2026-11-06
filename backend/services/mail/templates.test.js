@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { otpEmail, matchedEmail, unmatchedEmail, UNMATCH_VARIANTS, esc } from "./templates.js";
+import { otpEmail, matchedEmail, unmatchedEmail, reminderEmail, UNMATCH_VARIANTS, esc } from "./templates.js";
 
 const SUPPORT = "supporttargettrek@gmail.com";
 const ALL = () => [
@@ -122,6 +122,7 @@ test("user-supplied text is HTML-escaped everywhere (name, alias, topics, level)
     otpEmail({ purpose: "signup", name: evil, otp: "123456", minutes: 5 }),
     matchedEmail({ name: evil, buddyAlias: evil, buddyTopics: [evil], buddyLevel: evil, matchesLeft: 1 }),
     unmatchedEmail({ name: evil, buddyAlias: evil, variant: "ended_by_buddy", matchesLeft: 1, backInArena: true }),
+    reminderEmail({ name: evil, pricePaise: 1900, matches: 2, offerText: evil }),
   ];
   for (const m of mails) { assert.ok(!m.html.includes("<script>alert"), m.subject); assert.ok(m.html.includes("&lt;script&gt;")); }
   assert.equal(esc(`<b>"x"&'</b>`), "&lt;b&gt;&quot;x&quot;&amp;&#39;&lt;/b&gt;");
@@ -134,4 +135,34 @@ test("site links follow FRONTEND_URL", () => {
     assert.ok(m.html.includes("https://staging.example.com/prep-buddy/app/buddy") && !m.html.includes("staging.example.com//"));
     assert.ok(m.text.includes("https://staging.example.com/privacy-policy"));
   } finally { delete process.env.FRONTEND_URL; }
+});
+
+test("reminder email: greets by first name and shows the live price and match count", () => {
+  const m = reminderEmail({ name: "Asha Rao", pricePaise: 1900, matches: 2 });
+  assert.equal(m.subject, "Hi Asha, get Prep Buddy Arena at ₹19 for 2 matches");
+  for (const body of [m.html, m.text]) {
+    assert.ok(body.includes("₹19") && body.includes("2 matches"));
+    assert.ok(body.includes("/prep-buddy/app/join"));
+    assert.ok(body.includes(SUPPORT));
+  }
+  assert.ok(m.html.includes("#ea580c") || m.html.includes("#c2410c"), "orange palette");
+  assert.ok(!m.text.includes("\n\n\n"), "no empty gaps in the text version");
+});
+
+test("reminder email: follows the settings (price, singular match, offer)", () => {
+  const m = reminderEmail({ name: "", pricePaise: 29900, matches: 1, offerText: "Diwali sale" });
+  assert.ok(m.subject.startsWith("Hi there,") && m.subject.includes("₹299") && m.subject.includes("1 match") && !m.subject.includes("1 matches"));
+  assert.ok(m.html.includes("Diwali sale") && m.text.includes("Diwali sale"));
+});
+
+test("reminder email: each attempt has its own subject (no stacking into one thread)", () => {
+  const subjects = [1, 2, 3, 4].map((attempt) => reminderEmail({ name: "Asha", pricePaise: 1900, matches: 2, attempt }).subject);
+  assert.equal(new Set(subjects.slice(0, 3)).size, 3);
+  assert.equal(subjects[3], subjects[2], "attempts beyond the last variant reuse it");
+});
+
+test("reminder email: compact layout uses padding only, no margins", () => {
+  const m = reminderEmail({ name: "Asha", pricePaise: 1900, matches: 2, attempt: 2, offerText: "Sale", unsubscribeUrl: "https://example.com/u?e=a" });
+  assert.ok(!/margin:(?!0;)/.test(m.html), "no non-zero margins");
+  assert.ok(m.html.includes("https://example.com/u?e=a") && m.text.includes("Unsubscribe: https://example.com/u?e=a"));
 });

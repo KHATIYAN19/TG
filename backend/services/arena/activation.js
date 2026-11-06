@@ -57,3 +57,29 @@ export const countNeedingAttention = async () => {
   ]);
   return rows[0]?.n ?? 0;
 };
+
+/**
+ * Pay-first flow. Called after a member saves their details: if they already hold a
+ * paid entry that is not linked to a profile yet, link it and put the profile in the arena.
+ * Idempotent. Returns true when an entry was attached.
+ */
+export const attachPaidEntry = async ({ userId, profile }) => {
+  if (!profile || profile.status === "suspended") return false;
+
+  const entry = await ArenaEntry.findOneAndUpdate(
+    { user: userId, status: "paid", profile: null },
+    { $set: { profile: profile._id } },
+    { new: true }
+  );
+  if (!entry) return false;
+
+  await ArenaProfile.updateOne(
+    { _id: profile._id, status: "draft" },
+    { $set: { status: "active", entry: entry._id, activatedAt: new Date() } }
+  );
+  return true;
+};
+
+/** Does this member hold a paid entry (any state that grants arena access)? */
+export const hasPaidEntry = (userId) =>
+  ArenaEntry.exists({ user: userId, status: { $in: ["paid", "in_match", "consumed"] } }).then(Boolean);

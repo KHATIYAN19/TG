@@ -14,10 +14,10 @@ import { healPaidMembers } from "../../services/arena/activation.js";
 import { emitToUser } from "../../services/arena/hub.js";
 import { couponCodeSchema, checkoutSchema, verifyPaymentSchema } from "./schemas.js";
 
-const requireProfile = async (userId) => {
+/* Pay-first: the profile is optional at checkout (details come after payment). */
+const findProfile = async (userId) => {
   const profile = await ArenaProfile.findOne({ user: userId });
-  if (!profile) throw new ArenaError(404, "PROFILE_REQUIRED", "Save your details first");
-  if (profile.status === "suspended") throw new ArenaError(403, "SUSPENDED", "Your arena access has been suspended");
+  if (profile?.status === "suspended") throw new ArenaError(403, "SUSPENDED", "Your arena access has been suspended");
   return profile;
 };
 
@@ -68,9 +68,14 @@ export const checkout = handle(async (req, res) => {
 
   if (!settings.enabled) throw new ArenaError(503, "ARENA_PAUSED", "The arena is temporarily paused");
 
-  const profile = await requireProfile(req.user.id);
-  if (profile.status === "active") throw new ArenaError(409, "ALREADY_IN_ARENA", "You're already in the arena");
-  if (profile.status === "matched") throw new ArenaError(409, "ALREADY_MATCHED", "You already have a buddy");
+  const profile = await findProfile(req.user.id);
+  if (profile?.status === "active") throw new ArenaError(409, "ALREADY_IN_ARENA", "You're already in the arena");
+  if (profile?.status === "matched") throw new ArenaError(409, "ALREADY_MATCHED", "You already have a buddy");
+
+  // Paid already, details still to fill in: never charge twice.
+  if (!profile && (await ArenaEntry.exists({ user: req.user.id, status: { $in: ["paid", "in_match"] } }))) {
+    throw new ArenaError(409, "ALREADY_PAID", "Your payment was already received. Add your details to enter the arena.");
+  }
 
   // Already paid but somehow not active? Fix it instead of charging again.
   if (await healPaidMembers({ userId: req.user.id })) {
@@ -87,7 +92,7 @@ export const checkout = handle(async (req, res) => {
   try {
     entry = await ArenaEntry.create({
       user: req.user.id,
-      profile: profile._id,
+      profile: profile?._id ?? null,
       listPricePaise: pricing.listPricePaise,
       discountPaise: pricing.discountPaise,
       paidPaise: pricing.finalPaise,
@@ -196,10 +201,11 @@ const assertCancelRefundEnabled = async () => {
 /* POST /entry/cancel – only before a match; keeps the configured fee */
 export const cancelEntry = handle(async (req, res) => {
   await assertCancelRefundEnabled();
-  const profile = await requireProfile(req.user.id);
+  // Pay-first: a paid member who has not added their details yet has no profile, and may cancel too.
+  const profile = await findProfile(req.user.id);
 
-  if (profile.status === "matched") throw new ArenaError(409, "ALREADY_MATCHED", "You can't cancel after you're matched");
-  if (profile.status !== "active") throw new ArenaError(409, "NOTHING_TO_CANCEL", "You don't have an active entry");
+  if (profile?.status === "matched") throw new ArenaError(409, "ALREADY_MATCHED", "You can't cancel after you're matched");
+  if (profile && profile.status !== "active") throw new ArenaError(409, "NOTHING_TO_CANCEL", "You don't have an active entry");
 
   // Claim the cancellation atomically so a double-click can't refund twice.
   // Only an entry that hasn't spent any match can be cancelled.
@@ -236,15 +242,19 @@ export const cancelEntry = handle(async (req, res) => {
     { $set: { status: "cancelled", cancel: { at: new Date(), feePaise, refundPaise, refundId } } }
   );
 
-  await ArenaProfile.updateOne(
-    { _id: profile._id, status: "active" },
-    { $set: { status: "draft", entry: null, activatedAt: null } }
-  );
+  if (profile) {
+    await ArenaProfile.updateOne(
+      { _id: profile._id, status: "active" },
+      { $set: { status: "draft", entry: null, activatedAt: null } }
+    );
+  }
 
-  const affected = await ArenaRequest.find({
-    status: "pending",
-    $or: [{ from: profile._id }, { to: profile._id }],
-  }).select("fromUser toUser");
+  const affected = profile
+    ? await ArenaRequest.find({
+        status: "pending",
+        $or: [{ from: profile._id }, { to: profile._id }],
+      }).select("fromUser toUser")
+    : [];
 
   await ArenaRequest.updateMany(
     { _id: { $in: affected.map((r) => r._id) } },

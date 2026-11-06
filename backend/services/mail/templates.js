@@ -9,6 +9,7 @@
     otpEmail        sign-up code, forgot-password code, login code
     matchedEmail    "You're matched with <buddy>"
     unmatchedEmail  "Your partnership has ended" (5 variants, see below)
+    reminderEmail   "Get Prep Buddy Arena at ₹X" – sent by an admin to sign-ups who haven't paid
 
   Design rules (all email clients, including Gmail, Outlook and Apple Mail)
     - one 600px column of nested <table>s with inline styles only
@@ -27,6 +28,8 @@
 /* ----------------------------------------------------------------------- */
 /*  Brand + settings                                                        */
 /* ----------------------------------------------------------------------- */
+
+import { rupees } from "../arena/pricing.js";
 
 export const BRAND = "Target Trek";
 export const PRODUCT = "Prep Buddy Arena";
@@ -180,11 +183,28 @@ const helpBlock = (tips = []) => `
 </table>`;
 
 /* Page shell shared by every email. */
-const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason }) => {
+const SERVICE_NOTE = "This is a service email about your account, so it can't be unsubscribed from.";
+
+/*
+  Compact layout: padding only, no margins anywhere (margins are the first thing Outlook
+  and some Gmail views collapse or double). Every margin becomes a small padding.
+*/
+const tight = (html) =>
+  html
+    .replace(/margin:0 0 16px;/g, "margin:0;padding:0 0 8px;")
+    .replace(/margin:0 0 14px;/g, "margin:0;padding:0 0 6px;")
+    .replace(/margin:0 0 12px;/g, "margin:0;padding:0 0 6px;")
+    .replace(/margin:28px 0 10px;/g, "margin:0;padding:10px 0 4px;")
+    .replace(/margin:(?!0;)[^;"]*;/g, "");
+
+const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason, note = SERVICE_NOTE, extraFooter = "", compact = false }) => {
   const site = siteUrl();
   const year = new Date().getFullYear();
+  const pad = compact
+    ? { outer: "8px 6px 12px", head: "16px 20px 14px", card: "18px 20px 2px", foot: "2px 20px 16px", h1: "24px", h1lh: "30px" }
+    : { outer: "28px 12px 36px", head: "30px 32px 28px", card: "34px 32px 8px", foot: "8px 32px 30px", h1: "28px", h1lh: "34px" };
 
-  return `<!DOCTYPE html>
+  const out = `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta charset="utf-8">
@@ -199,12 +219,12 @@ const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason }) =
 <div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${C.page};">${esc(preheader)}${"&nbsp;&zwnj;".repeat(40)}</div>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${C.page}" style="background-color:${C.page};">
   <tr>
-    <td align="center" style="padding:28px 12px 36px;">
+    <td align="center" style="padding:${pad.outer};">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;">
 
         <!-- header -->
         <tr>
-          <td bgcolor="${C.head2}" style="background-color:${C.head2};background-image:linear-gradient(135deg,${C.head1},${C.head2});border-radius:18px 18px 0 0;padding:30px 32px 28px;">
+          <td bgcolor="${C.head2}" style="background-color:${C.head2};background-image:linear-gradient(135deg,${C.head1},${C.head2});border-radius:18px 18px 0 0;padding:${pad.head};">
             <div style="font-family:${FONT};font-size:22px;line-height:26px;font-weight:700;color:#ffffff;letter-spacing:.3px;">${BRAND}</div>
             <div style="padding-top:4px;font-family:${FONT};font-size:12px;line-height:16px;font-weight:700;color:#ffedd5;letter-spacing:2.5px;text-transform:uppercase;">${esc(eyebrow || PRODUCT)}</div>
           </td>
@@ -212,8 +232,8 @@ const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason }) =
 
         <!-- card -->
         <tr>
-          <td bgcolor="${C.card}" style="background-color:${C.card};border-left:1px solid ${C.border};border-right:1px solid ${C.border};padding:34px 32px 8px;">
-            <h1 style="margin:0 0 14px;font-family:${FONT};font-size:28px;line-height:34px;font-weight:700;color:${C.ink};">${esc(heading)}</h1>
+          <td bgcolor="${C.card}" style="background-color:${C.card};border-left:1px solid ${C.border};border-right:1px solid ${C.border};padding:${pad.card};">
+            <h1 style="margin:0 0 14px;font-family:${FONT};font-size:${pad.h1};line-height:${pad.h1lh};font-weight:700;color:${C.ink};">${esc(heading)}</h1>
             ${lead ? p(lead, "font-size:17px;line-height:27px;") : ""}
             ${bodyHtml}
           </td>
@@ -221,10 +241,10 @@ const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason }) =
 
         <!-- footer -->
         <tr>
-          <td bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.border};border-top:0;border-radius:0 0 18px 18px;padding:8px 32px 30px;">
+          <td bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.border};border-top:0;border-radius:0 0 18px 18px;padding:${pad.foot};">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="border-top:1px solid ${C.border};padding-top:18px;font-family:${FONT};font-size:12px;line-height:19px;color:${C.muted};">
               <div style="padding-bottom:8px;">${esc(reason)}</div>
-              <div style="padding-bottom:8px;">This is a service email about your account, so it can't be unsubscribed from.</div>
+              <div style="padding-bottom:8px;">${esc(note)}</div>${extraFooter}
               <div>
                 <a href="${esc(site)}" style="color:${C.linkText};text-decoration:underline;">${BRAND}</a> &nbsp;|&nbsp;
                 <a href="${esc(site)}/privacy-policy" style="color:${C.linkText};text-decoration:underline;">Privacy Policy</a> &nbsp;|&nbsp;
@@ -242,6 +262,7 @@ const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason }) =
 </table>
 </body>
 </html>`;
+  return compact ? tight(out) : out;
 };
 
 /* ----------------------------------------------------------------------- */
@@ -256,11 +277,11 @@ const textHelp = (tips = []) =>
     `Tip: add ${supportEmail()} to your contacts so our emails never land in spam.`,
   ].join("\n");
 
-const textFooter = (reason) =>
+const textFooter = (reason, note = SERVICE_NOTE) =>
   [
     "--",
     reason,
-    "This is a service email about your account, so it can't be unsubscribed from.",
+    note,
     `${BRAND} | ${siteUrl()} | Privacy: ${siteUrl()}/privacy-policy | Terms: ${siteUrl()}/terms-of-service`,
   ].join("\n");
 
@@ -580,6 +601,117 @@ export const unmatchedEmail = ({ name, buddyAlias, variant = "ended", matchesLef
       : `WHAT'S NEXT\nYou've used all the matches included in your entry. To match with someone new, join the arena again with a new entry. Your profile details are saved, so it only takes a minute.\nJoin the arena again: ${site}/prep-buddy/app`,
     textHelp(textTips),
     textFooter("You received this because a partnership you were in on Prep Buddy Arena ended."),
+  ]);
+
+  return { subject, text, html };
+};
+
+/* ======================================================================= */
+/*  4. PAYMENT REMINDER (sent by an admin to sign-ups who haven't paid)      */
+/* ======================================================================= */
+
+/*
+  data: { name, pricePaise, matches, offerText, attempt, unsubscribeUrl }
+  pricePaise / matches are the LIVE arena settings, never hard-coded.
+  attempt = which reminder this is for the person (1, 2, 3…). Each attempt has its own
+  subject and opening line: repeating the exact same subject makes mail apps stack the
+  messages into one conversation and treat the repeat as bulk mail.
+  The layout is compact: small padding, no margins.
+*/
+const REMINDER_COPY = [
+  {
+    subject: (n, price, m) => `Hi ${n}, get ${PRODUCT} at ${price} for ${m}`,
+    lead: (n, price, m) => `You signed up for ${PRODUCT} but haven't joined yet. You can get in for just <strong>${price}</strong> and be matched for <strong>${m}</strong>.`,
+    textLead: (price, m) => `You signed up for ${PRODUCT} but haven't joined yet. You can get in for just ${price} and be matched for ${m}.`,
+  },
+  {
+    subject: (n, price, m) => `${n}, your prep buddy seat is still open (${price}, ${m})`,
+    lead: (n, price, m) => `A quick follow-up: your ${PRODUCT} seat is still open. Entry is <strong>${price}</strong> and includes <strong>${m}</strong>.`,
+    textLead: (price, m) => `A quick follow-up: your ${PRODUCT} seat is still open. Entry is ${price} and includes ${m}.`,
+  },
+  {
+    subject: (n, price, m) => `Still thinking it over, ${n}? ${price} for ${m}`,
+    lead: (n, price, m) => `If you're still thinking about ${PRODUCT}, here is the price again: <strong>${price}</strong> for <strong>${m}</strong>. If it isn't for you, no problem.`,
+    textLead: (price, m) => `If you're still thinking about ${PRODUCT}, here is the price again: ${price} for ${m}. If it isn't for you, no problem.`,
+  },
+];
+
+export const reminderEmail = ({ name, pricePaise, matches = 1, offerText = "", attempt = 1, unsubscribeUrl = "" }) => {
+  const site = siteUrl();
+  const price = rupees(Math.max(0, Number(pricePaise) || 0));
+  const count = Math.max(1, Number(matches) || 1);
+  const matchWord = plural(count, "match", "matches");
+  const joinUrl = `${site}/prep-buddy/app/join`;
+  const offer = String(offerText || "").trim();
+  const who = firstName(name);
+  const copy = REMINDER_COPY[Math.min(Math.max(1, Number(attempt) || 1), REMINDER_COPY.length) - 1];
+  const unsub = /^https?:\/\//i.test(unsubscribeUrl) ? unsubscribeUrl : "";
+
+  const subject = copy.subject(who, price, matchWord);
+  const cta = `Get Prep Buddy Arena at ${price}`;
+
+  // Each block sits in a small padded wrapper (padding only, no margins).
+  const block = (html, pad = "0 0 8px") => `<div style="padding:${pad};">${html}</div>`;
+
+  const bodyHtml = [
+    block(
+      panel(
+        `<div style="font-family:${FONT};font-size:12px;line-height:16px;letter-spacing:2px;font-weight:700;color:${C.warnInk};text-transform:uppercase;padding-bottom:4px;">One-time entry</div>
+         <div style="font-family:${FONT};font-size:34px;line-height:40px;font-weight:700;color:${C.codeInk};">${esc(price)}</div>
+         <div style="font-family:${FONT};font-size:15px;line-height:22px;color:${C.body};padding-top:2px;">Includes <strong>${esc(matchWord)}</strong>${count > 1 ? ", one after another" : ""}. No subscription.</div>`,
+        { bg: C.codeBg, border: C.codeBorder }
+      )
+    ),
+    offer ? block(panel(`<strong>Current offer:</strong> ${esc(offer)}`, { bg: C.warnBg, border: C.warnBorder })) : "",
+    block(button(joinUrl, cta), "2px 0 6px"),
+    block(h2("How it works"), "0"),
+    block(
+      ol([
+        `<strong>Pay ${esc(price)}</strong> once. It takes under a minute.`,
+        "<strong>Add your details</strong>: what you are preparing for, your level and when you are free.",
+        "<strong>Appear in the arena</strong> and start practising with a buddy.",
+      ]),
+      "0 0 4px"
+    ),
+    block(helpBlock(), "10px 0 0"),
+  ].join("");
+
+  const unsubHtml = unsub
+    ? `<div style="padding-bottom:6px;">Don't want these? ${link(unsub, "Unsubscribe")} and we won't email you about this again.</div>`
+    : "";
+
+  const html = shell({
+    compact: true,
+    title: subject,
+    preheader: `${price} for ${matchWord}. Pay, add your details and meet your prep buddy.`,
+    eyebrow: "Your seat is waiting",
+    heading: `Hi ${who}, your prep buddy is waiting`,
+    lead: copy.lead(who, esc(price), esc(matchWord)),
+    bodyHtml,
+    reason: "You received this because you signed up for Prep Buddy Arena but haven't completed your entry yet.",
+    note: "This is a reminder from the Target Trek team. Just reply if you have any questions.",
+    extraFooter: unsubHtml,
+  });
+
+  const text = joinText([
+    `${BRAND.toUpperCase()} | YOUR SEAT IS WAITING`,
+    `Hi ${who},`,
+    copy.textLead(price, matchWord),
+    `ONE-TIME ENTRY: ${price} (includes ${matchWord}${count > 1 ? ", one after another" : ""}. No subscription.)`,
+    offer ? `CURRENT OFFER: ${offer}` : null,
+    `${cta.toUpperCase()}: ${joinUrl}`,
+    [
+      "HOW IT WORKS",
+      `1. Pay ${price} once. It takes under a minute.`,
+      "2. Add your details: what you are preparing for, your level and when you are free.",
+      "3. Appear in the arena and start practising with a buddy.",
+    ].join("\n"),
+    textHelp(),
+    textFooter(
+      "You received this because you signed up for Prep Buddy Arena but haven't completed your entry yet.",
+      "This is a reminder from the Target Trek team. Just reply if you have any questions."
+    ),
+    unsub ? `Unsubscribe: ${unsub}` : null,
   ]);
 
   return { subject, text, html };

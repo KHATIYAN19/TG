@@ -101,11 +101,9 @@ export const deleteMember = handle(async (req, res) => {
     throw new ArenaError(400, "SELF_DELETE", "You can't delete your own account here");
   }
 
-  const target = await User.findById(req.params.userId).select("role").lean();
+  // Any role (member, employee, affiliate or admin) can be deleted from the arena portal.
+  const target = await User.findById(req.params.userId).select("_id").lean();
   if (!target) throw new ArenaError(404, "NOT_FOUND", "User not found");
-  if (target.role !== "normal") {
-    throw new ArenaError(403, "PROTECTED_ACCOUNT", "Admin, employee and affiliate accounts can't be deleted from the arena portal.");
-  }
 
   const { user, profiles, counts } = await purgeUser(req.params.userId);
 

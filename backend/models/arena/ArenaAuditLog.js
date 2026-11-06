@@ -29,6 +29,7 @@ export const AUDIT_ACTIONS = [
   "locks_cleared",
   "payment_refunded",
   "audit_cleared",
+  "reminder_sent",
 ];
 
 const auditSchema = new Schema(

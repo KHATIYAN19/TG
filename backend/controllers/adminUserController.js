@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 
 import User from "../models/User.js";
 import UserSession from "../models/UserSession.js";
+import UserActivity from "../models/UserActivity.js";
+import { purgeUser } from "../services/arena/purge.js";
 
 import { deliverMail } from "../utils/MailSender.js";
 
@@ -25,6 +27,8 @@ import {
 import {
   provisionUserAuth,
   changeAccountSecurityState,
+  invalidateUserAuth,
+  revokeAllRedisSessions,
 } from "../services/authStateService.js";
 
 /* =====================================================
@@ -1689,7 +1693,7 @@ export const updateAffiliateStatus = async (
 };
 
 /* =====================================================
-   SOFT DELETE USER
+   HARD DELETE USER (permanent)
 
    DELETE /api/admin/users/:userId
 ===================================================== */
@@ -1735,46 +1739,46 @@ export const deleteUser = async (
       );
     }
 
-    await changeAccountSecurityState({
-      userId,
+    // Admin accounts are protected: no admin can delete another admin.
+    if (current.role === "admin") {
+      return fail(
+        res,
+        403,
+        "Admin accounts cannot be deleted"
+      );
+    }
 
-      actorId:
-        actorId(req),
+    // Cut off every live login first, then erase the account for good.
+    await invalidateUserAuth(userId);
+    await revokeAllRedisSessions(userId);
 
-      update: {
-        isDeleted: true,
+    // HARD DELETE: the user, their sessions and all their arena data are removed from the database.
+    await purgeUser(userId, { mode: "hard" });
+    await UserActivity.deleteMany({ user: userId });
 
-        deletedAt:
-          new Date(),
-
-        deletedBy:
-          actorId(req),
-
-        status:
-          "inactive",
-
-        updatedBy:
-          actorId(req),
-      },
-
-      reason:
-        "Account deleted by administrator",
-    });
-
+    // The account is gone, so the record is kept on the acting admin's activity log.
     await audit({
       req,
-      user: userId,
+      user: actorId(req),
       actor: actorId(req),
 
       action:
         "ACCOUNT_DELETED",
+
+      metadata: {
+        deletedUserId: String(userId),
+        deletedEmail: current.email,
+        deletedName: current.name,
+        deletedRole: current.role,
+        permanent: true,
+      },
     });
 
     return res.json({
       success: true,
 
       message:
-        "User deleted and all sessions revoked",
+        "User permanently deleted",
     });
   } catch (error) {
     return handleError(

@@ -4,7 +4,7 @@ import { ScrollText, Trash2 } from "lucide-react";
 import { Badge, Button, EmptyState, Spinner, cx, inputClass } from "../ui";
 import { ConfirmModal, MUTED, Pager, Table, Td, fmtDateTime, humanize, useDeleter, useList } from "./shared";
 
-const ACTIONS = ["chat_viewed", "matches_adjusted", "report_deleted", "bug_deleted", "payments_exported", "profile_suspended", "profile_unsuspended", "match_dissolved", "repair_run", "settings_updated", "payment_refunded", "payment_deleted", "member_deleted", "audit_cleared"];
+const ACTIONS = ["chat_viewed", "matches_adjusted", "report_deleted", "bug_deleted", "payments_exported", "profile_suspended", "profile_unsuspended", "match_dissolved", "repair_run", "settings_updated", "payment_refunded", "payment_deleted", "member_deleted", "reminder_sent", "audit_cleared"];
 const TONE = { chat_viewed: "amber", report_deleted: "rose", bug_deleted: "rose", matches_adjusted: "brand", payments_exported: "slate", payment_refunded: "amber", payment_deleted: "rose", member_deleted: "rose", audit_cleared: "rose", profile_suspended: "rose", match_dissolved: "rose" };
 
 export default function AuditTab() {

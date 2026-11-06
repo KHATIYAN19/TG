@@ -23,7 +23,10 @@ export const ENTRY_STATUSES = [
 const entrySchema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    profile: { type: Schema.Types.ObjectId, ref: "ArenaProfile", required: true },
+    // Pay-first flow: a member pays BEFORE filling in their details, so a paid entry can
+    // exist without a profile. It is linked (and the profile activated) when they save
+    // their details. See attachPaidEntry() in services/arena/activation.js.
+    profile: { type: Schema.Types.ObjectId, ref: "ArenaProfile", default: null },
 
     status: { type: String, enum: ENTRY_STATUSES, default: "pending_payment", index: true },
 

@@ -5,7 +5,7 @@ import * as admin from "../../controllers/arena/adminController.js";
 import * as ops from "../../controllers/arena/adminOpsController.js";
 import * as purge from "../../controllers/arena/adminPurgeController.js";
 import { refundPayment } from "../../controllers/arena/adminRefundController.js";
-import { listAccounts } from "../../controllers/arena/adminAccountsController.js";
+import { listAccounts, remindAccount } from "../../controllers/arena/adminAccountsController.js";
 
 const router = express.Router();
 
@@ -18,6 +18,7 @@ router.post("/repair", admin.repair);
 
 router.get("/profiles", admin.listProfiles);
 router.get("/accounts", listAccounts);
+router.post("/accounts/:id/remind", remindAccount);
 router.post("/profiles/:id/suspend", admin.suspendProfile);
 router.post("/profiles/:id/unsuspend", admin.unsuspendProfile);
 router.post("/profiles/:id/hide", admin.hideProfile);

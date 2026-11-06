@@ -6123,6 +6123,12 @@ export default function UserManagement() {
       );
     }
 
+    if (modal.user.role === "admin") {
+      return toast.error(
+        "Admin accounts cannot be deleted."
+      );
+    }
+
     setBusy(true);
 
     try {
@@ -6139,7 +6145,7 @@ export default function UserManagement() {
       }
 
       toast.success(
-        data.message || "User deleted."
+        data.message || "User permanently deleted."
       );
 
       setModal(null);
@@ -6770,10 +6776,13 @@ export default function UserManagement() {
             >
               <Button
                 danger
-                disabled={isSelf(
-                  modal.user,
-                  currentUserId
-                )}
+                disabled={
+                  isSelf(
+                    modal.user,
+                    currentUserId
+                  ) ||
+                  modal.user.role === "admin"
+                }
                 onClick={() =>
                   setModal({
                     type: "delete",
@@ -6782,7 +6791,9 @@ export default function UserManagement() {
                 }
               >
                 <Trash2 size={14} />
-                Delete user
+                {modal.user.role === "admin"
+                  ? "Admins can't be deleted"
+                  : "Delete user"}
               </Button>
             </Panel>
           </div>
@@ -6995,9 +7006,11 @@ export default function UserManagement() {
           busy={busy}
         >
           <p className="mb-5 text-[12px]">
-            Are you sure you want to delete this
-            user? This action invokes your existing
-            admin soft-delete endpoint.
+            Permanently delete{" "}
+            <strong>{modal.user.email}</strong>? The
+            account, its sessions and all its Prep
+            Buddy Arena data are erased from the
+            database. This cannot be undone.
           </p>
 
           <div className="flex gap-2">
@@ -7015,7 +7028,7 @@ export default function UserManagement() {
               onClick={deleteUser}
             >
               <Trash2 size={14} />
-              Delete user
+              Delete permanently
             </Button>
           </div>
         </Modal>

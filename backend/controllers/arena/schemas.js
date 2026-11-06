@@ -199,6 +199,7 @@ export const adminSettingsSchema = z.object({
   matchesPerEntry: z.coerce.number().int().min(1).max(5).optional(),
   cancelRefundEnabled: z.boolean().optional(),
   accountDeletionEnabled: z.boolean().optional(),
+  memberVisibilityToggleEnabled: z.boolean().optional(),
   affiliateEnabled: z.boolean().optional(),
   offerEnabled: z.boolean().optional(),
   // ISO date-time, or null / "" for "no end date".

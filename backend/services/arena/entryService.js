@@ -27,6 +27,10 @@ export const markEntryPaid = async ({ entryId, paymentId = null }) => {
       return { entry: await ArenaEntry.findById(entryId).session(session || null), transitioned: false };
     }
 
+    // Pay-first: the member has not filled in their details yet. The entry stays paid and is
+    // linked to the profile (which then goes live) the moment they save their details.
+    if (!entry.profile) return { entry, transitioned: true };
+
     const activated = await ArenaProfile.updateOne(
       { _id: entry.profile, status: "draft" },
       { $set: { status: "active", entry: entry._id, activatedAt: new Date() } },

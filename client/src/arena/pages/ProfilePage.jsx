@@ -210,7 +210,7 @@ export function ProfileForm({ me, refresh, onSaved, saveLabel }) {
         availability: v.availability, bio: v.bio, goal: v.goal,
         contact: { email: v.contactEmail, phone: v.contactPhone, linkedin: v.linkedin },
       });
-      toast.success(profile ? "Details saved" : "Details saved. Now complete your payment.", { id: "arena-profile-saved" });
+      toast.success(profile ? "Details saved" : "Details saved. Welcome to the arena!", { id: "arena-profile-saved" });
       await refresh();
       onSaved?.();
     } catch (e) {

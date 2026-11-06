@@ -320,13 +320,21 @@ export const listPayments = handle(async (req, res) => {
     ]),
   ]);
 
-  const people = await personMap([...new Set(rows.map((r) => String(r.profile)))]);
+  const people = await personMap([...new Set(rows.filter((r) => r.profile).map((r) => String(r.profile)))]);
+  // Pay-first entries have no profile until the member adds their details: show the account instead.
+  const noProfileUsers = await User.find({ _id: { $in: rows.filter((r) => !r.profile).map((r) => r.user) } }).select("name email mobile").lean();
+  const userById = new Map(noProfileUsers.map((u) => [String(u._id), u]));
   const sum = sums[0] ?? { entries: 0, gross: 0, discounts: 0, refunds: 0, fees: 0, complimentary: 0, affiliateEntries: 0, affiliateSales: 0, affiliateCommission: 0 };
   const grantors = await User.find({ _id: { $in: rows.map((r) => r.grantedBy).filter(Boolean) } }).select("name").lean();
   const grantorName = new Map(grantors.map((u) => [String(u._id), u.name]));
 
   const items = rows.map((r) => {
-    const who = people.get(String(r.profile));
+    const acct = !r.profile ? userById.get(String(r.user)) : null;
+    const who = r.profile
+      ? people.get(String(r.profile))
+      : acct
+        ? { profileId: null, userId: String(acct._id), alias: "No details yet", name: acct.name || "—", email: acct.email || "", phone: acct.mobile || "" }
+        : undefined;
     return {
       id: String(r._id),
       createdAt: r.createdAt,
