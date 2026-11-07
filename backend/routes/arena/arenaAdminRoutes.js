@@ -19,6 +19,7 @@ router.post("/repair", admin.repair);
 router.get("/profiles", admin.listProfiles);
 router.get("/accounts", listAccounts);
 router.post("/accounts/:id/remind", remindAccount);
+router.post("/accounts/:id/matches", ops.grantToAccount);
 router.post("/profiles/:id/suspend", admin.suspendProfile);
 router.post("/profiles/:id/unsuspend", admin.unsuspendProfile);
 router.post("/profiles/:id/hide", admin.hideProfile);

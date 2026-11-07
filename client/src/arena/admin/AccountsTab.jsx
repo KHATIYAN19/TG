@@ -1,8 +1,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { BellRing, Copy, Trash2, UserX, UserRoundPlus } from "lucide-react";
+import { BellRing, Copy, Gift, Trash2, UserX, UserRoundPlus } from "lucide-react";
 
-import { Badge, Button, EmptyState, Spinner, cx } from "../ui";
+import { Badge, Button, EmptyState, Field, Modal, Spinner, cx, inputClass } from "../ui";
 import { adminHttp as api, errMsg } from "../api";
 import { ConfirmModal, MUTED, Pager, SearchBox, Table, Td, fmtDateTime, useDebounced, useDeleter, useList } from "./shared";
 
@@ -58,6 +58,49 @@ function RemindButton({ a, onSent }) {
   );
 }
 
+/* Give a sign-up free matches so they skip payment: creates a free entry, then they add their details and enter. */
+function GiveModal({ account, onClose, onDone }) {
+  const [amount, setAmount] = useState(1);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const n = Math.floor(Number(amount) || 0);
+  const problem = n < 1 ? "Enter at least 1" : n > 100 ? "At most 100 matches" : "";
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/accounts/${account.id}/matches`, { action: "add", amount: n, reason: reason.trim() || "Free credits from admin" });
+      toast.success(data.message, { duration: 6000 });
+      onDone();
+    } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  return (
+    <Modal
+      open={Boolean(account)}
+      onClose={onClose}
+      title={`Give free matches to ${account?.name ?? ""}`}
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={submit} loading={busy} disabled={Boolean(problem)}>Give {n > 0 ? n : ""} free {n === 1 ? "match" : "matches"}</Button></>}
+    >
+      {account && (
+        <div className="space-y-5">
+          <p className="rounded-xl bg-orange-50/70 p-4 text-xs text-stone-600 ring-1 ring-orange-100 dk:bg-orange-500/10 dk:text-[#d6c4b8] dk:ring-orange-500/20">
+            <strong className="text-sm text-[#29201b] dk:text-[#fff7ed]">{account.email}</strong><br />
+            This creates a <strong>free entry (₹0)</strong>. They skip payment, add their details, and go straight into the arena. Nothing was paid, so it can never be refunded.
+          </p>
+          <Field label="How many free matches?" htmlFor="gm-n" error={problem}>
+            <input id="gm-n" type="number" min={1} max={100} value={amount} onChange={(ev) => setAmount(ev.target.value)} className={cx(inputClass(Boolean(problem)), "w-28 text-center text-lg font-semibold")} />
+          </Field>
+          <Field label="Reason (kept in the activity log)" htmlFor="gm-r">
+            <input id="gm-r" maxLength={300} value={reason} onChange={(ev) => setReason(ev.target.value)} className={inputClass(false)} placeholder="e.g. free trial credits" />
+          </Field>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export default function AccountsTab() {
   const [kind, setKind] = useState("deleted");
   const [scope, setScope] = useState("arena");
@@ -67,6 +110,7 @@ export default function AccountsTab() {
 
   const [{ loading, data, error }, reload] = useList("/accounts", { kind, scope, q: dq, page, pageSize: 20 });
   const { del, setDel, busy, run } = useDeleter(reload);
+  const [give, setGive] = useState(null);
   const counts = data?.counts;
 
   const copy = async (text) => {
@@ -153,6 +197,7 @@ export default function AccountsTab() {
                 <Td className="whitespace-nowrap text-right">
                   <div className="flex flex-col items-end gap-1.5">
                     <RemindButton a={a} onSent={reload} />
+                    <Button size="sm" variant="outline" onClick={() => setGive(a)}><Gift className="h-3.5 w-3.5" /> Give free matches</Button>
                     <Button size="sm" variant="outline" onClick={() => copy(a.email)}><Copy className="h-3.5 w-3.5" /> Copy email</Button>
                     <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 dk:text-rose-300 dk:hover:bg-rose-500/10" onClick={() => setDel(a)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
                   </div>
@@ -163,6 +208,8 @@ export default function AccountsTab() {
           <Pager page={page} setPage={setPage} total={data.total} pageSize={data.pageSize} />
         </>
       )}
+
+      <GiveModal account={give} onClose={() => setGive(null)} onDone={() => { setGive(null); reload(); }} />
 
       <ConfirmModal
         open={Boolean(del)}

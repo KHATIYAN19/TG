@@ -417,6 +417,15 @@ export const adjustMatches = handle(async (req, res) => {
   });
 }, "Unable to change matches");
 
+/* Give free matches to a sign-up who has no profile yet (they never paid). Their details step then unlocks. */
+export const grantToAccount = handle(async (req, res) => {
+  objectId.parse(req.params.id);
+  const input = adminAdjustMatchesSchema.parse(req.body);
+  if (input.action === "remove") throw new ArenaError(400, "NOTHING_TO_REMOVE", "This account has no matches to remove.");
+  const out = await adjustMemberMatches({ userId: req.params.id, adminId: req.user.id, ...input });
+  res.json({ success: true, message: `Gave ${out.matchesAllowed} free match${out.matchesAllowed === 1 ? "" : "es"}. They can add their details and enter the arena now.`, data: out });
+}, "Unable to give matches");
+
 /* ================================================================== AUDIT TRAIL */
 export const listAudit = handle(async (req, res) => {
   const size = pageSizeOf(req, 25, 100);

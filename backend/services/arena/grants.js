@@ -1,3 +1,4 @@
+import User from "../../models/User.js";
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
 import { audit } from "../../models/arena/ArenaAuditLog.js";
@@ -28,17 +29,26 @@ export const MAX_MATCHES = 100;
 const opts = (session) => (session ? { session } : {});
 
 // adminId is null and source is "pass" when matches come from a purchased book/pack (no admin involved).
-export const adjustMemberMatches = async ({ profileId, adminId = null, action, amount, reason = "", source = "admin" }) => {
+// Pass userId (no profileId) to grant to a sign-up who has no profile yet: they get a free entry that is linked
+// to their profile, and activates it, as soon as they save their details (see attachPaidEntry).
+export const adjustMemberMatches = async ({ profileId = null, userId = null, adminId = null, action, amount, reason = "", source = "admin" }) => {
   const result = await runInTransaction(async (session) => {
-    const profile = await ArenaProfile.findById(profileId).session(session || null);
-    if (!profile) throw new ArenaError(404, "NOT_FOUND", "Member not found");
+    const profile = profileId
+      ? await ArenaProfile.findById(profileId).session(session || null)
+      : await ArenaProfile.findOne({ user: userId }).session(session || null);
+    if (profileId && !profile) throw new ArenaError(404, "NOT_FOUND", "Member not found");
+    if (!profile) {
+      const account = await User.findOne({ _id: userId, role: "normal", isDeleted: { $ne: true } }).select("_id").session(session || null);
+      if (!account) throw new ArenaError(404, "NOT_FOUND", "Account not found");
+    }
+    const memberId = profile?.user ?? userId;
 
-    let entry = await ArenaEntry.findOne({ user: profile.user, status: { $in: ["paid", "in_match"] } }).session(session || null);
+    let entry = await ArenaEntry.findOne({ user: memberId, status: { $in: ["paid", "in_match"] } }).session(session || null);
     let reopened = false;
 
     // A fully-used entry can be re-opened by raising its number.
     if (!entry) {
-      entry = await ArenaEntry.findOne({ user: profile.user, status: "consumed" }).sort({ createdAt: -1 }).session(session || null);
+      entry = await ArenaEntry.findOne({ user: memberId, status: "consumed" }).sort({ createdAt: -1 }).session(session || null);
       reopened = Boolean(entry);
     }
 
@@ -60,8 +70,8 @@ export const adjustMemberMatches = async ({ profileId, adminId = null, action, a
       const [created] = await ArenaEntry.create(
         [
           {
-            user: profile.user,
-            profile: profile._id,
+            user: memberId,
+            profile: profile?._id ?? null,
             status: "paid",
             paidAt: new Date(),
             listPricePaise: 0,
@@ -79,7 +89,7 @@ export const adjustMemberMatches = async ({ profileId, adminId = null, action, a
         opts(session)
       );
 
-      await activate(profile, created, session);
+      if (profile) await activate(profile, created, session);
       return { entry: created, action: "grant", from: 0, to: target };
     }
 
@@ -110,8 +120,8 @@ export const adjustMemberMatches = async ({ profileId, adminId = null, action, a
 
     const updated = await ArenaEntry.findById(entry._id).session(session || null);
 
-    if (status === "paid") await activate(profile, updated, session);
-    else if (status === "consumed" && profile.status === "active") {
+    if (status === "paid") { if (profile) await activate(profile, updated, session); }
+    else if (status === "consumed" && profile?.status === "active") {
       // Nothing left and not in a match: they'd need a new entry (or another grant).
       await ArenaProfile.updateOne({ _id: profile._id, status: "active" }, { $set: { status: "draft", entry: null, activatedAt: null } }, opts(session));
     }
@@ -120,14 +130,14 @@ export const adjustMemberMatches = async ({ profileId, adminId = null, action, a
   });
 
   if (adminId) await audit(adminId, "matches_adjusted", {
-    targetType: "profile",
-    targetId: profileId,
+    targetType: profileId ? "profile" : "user",
+    targetId: profileId ?? userId,
     summary: `${result.action}: ${result.from} → ${result.to} match(es)${reason ? ` (${reason})` : ""}`,
     meta: { entryId: String(result.entry._id), complimentary: result.entry.complimentary, ...result },
   });
 
-  const profile = await ArenaProfile.findById(profileId).select("user status").lean();
-  if (profile) emitToUser(profile.user, { type: "request_updated" }); // nudge their UI to refresh
+  const profile = await ArenaProfile.findOne(profileId ? { _id: profileId } : { user: userId }).select("user status").lean();
+  emitToUser(profile?.user ?? userId, { type: "request_updated" }); // nudge their UI to refresh
 
   return {
     entryId: String(result.entry._id),
