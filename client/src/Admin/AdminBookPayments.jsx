@@ -1636,6 +1636,8 @@ function ActionMenu({
 
   onEbookPdfs,
 
+  onArenaMail,
+
   onExtend,
 
   onRevoke,
@@ -1851,6 +1853,27 @@ function ActionMenu({
               <button
                 type="button"
 
+                onClick={() =>
+                  onArenaMail(
+                    order
+                  )
+                }
+
+                title="Re-send the order confirmation with Prep Arena match credits"
+
+                className="tt-menu-item"
+              >
+                <Mail
+                  className="h-4 w-4"
+                />
+
+                Resend Arena Credit Mail
+              </button>
+
+
+              <button
+                type="button"
+
                 disabled={
                   extending ||
 
@@ -2049,6 +2072,8 @@ function PaymentCard({
   onAccess,
 
   onEbookPdfs,
+
+  onArenaMail,
 
   onExtend,
 
@@ -2310,6 +2335,10 @@ function PaymentCard({
 
               onEbookPdfs={
                 onEbookPdfs
+              }
+
+              onArenaMail={
+                onArenaMail
               }
 
               onExtend={
@@ -5230,6 +5259,95 @@ export default function AdminBookPayments() {
   /* =======================================================
      EMAIL EBOOK PDFs (sent in the background by the server)
   ======================================================= */
+
+  const handleResendArenaMail =
+    async (
+      order
+    ) => {
+      if (
+        !order?._id
+      ) {
+        toast.error(
+          "Order ID is missing."
+        );
+
+        return;
+      }
+
+      setMenuOrderId(
+        null
+      );
+
+      const toastId =
+        toast.loading(
+          `Sending Arena credit mail to ${
+            order.customer?.email ||
+            "customer"
+          }...`
+        );
+
+      try {
+        const response =
+          await fetch(
+            `${BASE_URL}/api/admin/membership/orders/${encodeURIComponent(
+              order._id
+            )}/resend-purchase-mail`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Accept:
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
+
+        const result =
+          await readResponse(
+            response
+          );
+
+        if (
+          !response.ok ||
+
+          result?.success ===
+            false
+        ) {
+          throw new Error(
+            result?.message ||
+
+            "Unable to send the Arena credit mail."
+          );
+        }
+
+        toast.success(
+          result?.message ||
+
+          "Arena credit mail sent.",
+          {
+            id:
+              toastId,
+          }
+        );
+      } catch (
+        error
+      ) {
+        toast.error(
+          error?.message ||
+
+          "Unable to send the Arena credit mail.",
+          {
+            id:
+              toastId,
+          }
+        );
+      }
+    };
+
 
   const handleSendEbookPdfs =
     async (
@@ -8614,6 +8732,10 @@ export default function AdminBookPayments() {
 
                     onEbookPdfs={
                       handleSendEbookPdfs
+                    }
+
+                    onArenaMail={
+                      handleResendArenaMail
                     }
 
                     onExtend={

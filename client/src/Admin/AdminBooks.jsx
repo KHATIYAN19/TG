@@ -981,6 +981,47 @@ export default function AdminBooks() {
     !publishStatus &&
     !activeStatus;
 
+  // Auto-scroll the page while a card is being dragged near the top/bottom edge.
+  useEffect(() => {
+    if (!dragId) return undefined;
+
+    const EDGE = 120; // px from the viewport edge where scrolling starts
+    const MAX_SPEED = 28; // px per frame
+    let pointerY = null;
+    let frame = null;
+
+    const onDragOver = (event) => {
+      pointerY = event.clientY;
+    };
+
+    const tick = () => {
+      if (pointerY !== null) {
+        const height = window.innerHeight;
+        let delta = 0;
+
+        if (pointerY < EDGE) {
+          delta = -MAX_SPEED * ((EDGE - pointerY) / EDGE);
+        } else if (pointerY > height - EDGE) {
+          delta = MAX_SPEED * ((pointerY - (height - EDGE)) / EDGE);
+        }
+
+        if (delta !== 0) {
+          window.scrollBy(0, Math.round(delta));
+        }
+      }
+
+      frame = requestAnimationFrame(tick);
+    };
+
+    document.addEventListener("dragover", onDragOver);
+    frame = requestAnimationFrame(tick);
+
+    return () => {
+      document.removeEventListener("dragover", onDragOver);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [dragId]);
+
   const endDrag = () => {
     setDragId(null);
     setOverId(null);

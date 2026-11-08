@@ -74,7 +74,7 @@ export const activateMembershipForOrder = async (orderOrId) => {
   const order = await Order.findById(orderOrId?._id || orderOrId).lean();
   if (!order || order.orderStatus !== "PAID") return null;
 
-  const product = await Book.findById(order.bookId).select("title matches membership").lean();
+  const product = await Book.findById(order.bookId).select("title matches membership coverPageUrl").lean();
   if (!product) return null;
 
   const plan = PLANS.includes(product.membership?.plan) ? product.membership.plan : "none";
@@ -128,6 +128,8 @@ export const activateMembershipForOrder = async (orderOrId) => {
         email,
         name: membership.name,
         bookTitle: product.title,
+        orderId: order.orderId,
+        coverUrl: product.coverPageUrl,
         matches,
         matchesAdded: Boolean(fresh?.matches?.claimedAt),
         packPlan: plan,
@@ -141,6 +143,38 @@ export const activateMembershipForOrder = async (orderOrId) => {
   }
 
   return membership;
+};
+
+/* Admin: re-send the purchase / Prep Arena credit mail for one paid order (ignores the sent-once claim). */
+export const resendPurchaseMailForOrder = async (orderId) => {
+  const order = await Order.findById(orderId).lean();
+  if (!order) throw Object.assign(new Error("Order not found."), { status: 404 });
+  if (order.orderStatus !== "PAID") throw Object.assign(new Error("Only paid orders can be emailed."), { status: 400 });
+
+  const product = await Book.findById(order.bookId).select("title matches membership coverPageUrl").lean();
+  const matches = Math.max(0, Math.floor(Number(product?.matches) || 0));
+  if (!product || matches <= 0) throw Object.assign(new Error("This book gives no Prep Arena matches, so there is no credit mail to send."), { status: 400 });
+
+  // Make sure the membership row exists (idempotent) and the matches are on the account.
+  const membership = (await Membership.findOne({ orderId: order.orderId }).lean()) || (await activateMembershipForOrder(order));
+  const email = String(order.customer?.email || "").toLowerCase().trim();
+  if (!email) throw Object.assign(new Error("Order has no customer e-mail."), { status: 400 });
+
+  const fresh = membership ? await Membership.findById(membership._id).select("matches").lean() : null;
+  const plan = PLANS.includes(product.membership?.plan) ? product.membership.plan : "none";
+  const mail = buildPurchaseMail({
+    email,
+    name: order.customer?.name || membership?.name || "",
+    bookTitle: product.title,
+    orderId: order.orderId,
+    coverUrl: product.coverPageUrl,
+    matches,
+    matchesAdded: Boolean(fresh?.matches?.claimedAt),
+    packPlan: plan,
+  });
+  await sendMail(email, mail.subject, mail.text, mail.html, { replyTo: SUPPORT_EMAIL, headers: mail.headers });
+  if (membership) await Membership.updateOne({ _id: membership._id }, { $set: { welcomeMailSentAt: new Date() } });
+  return { email, subject: mail.subject };
 };
 
 /** Fire-and-forget wrapper for payment callbacks. Never throws. */

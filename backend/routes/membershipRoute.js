@@ -1,5 +1,6 @@
 import express from "express";
 
+import { resendPurchaseMailForOrder } from "../services/membership/membershipService.js";
 import { auth, isAdmin } from "../Middleware/auth.js";
 import { budget, byIp, byUser } from "../Middleware/budget.js";
 import {
@@ -37,6 +38,14 @@ memberRouter.post("/suggestions", auth, suggestDaily, createSuggestion);
 /* Admin: mounted at /api/admin/membership */
 export const adminRouter = express.Router();
 adminRouter.use(auth, isAdmin);
+adminRouter.post("/orders/:orderId/resend-purchase-mail", async (req, res) => {
+  try {
+    const { email } = await resendPurchaseMailForOrder(req.params.orderId);
+    res.json({ success: true, message: `Prep Arena credit mail sent to ${email}.` });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message || "Unable to send the mail." });
+  }
+});
 adminRouter.get("/overview", adminOverview);
 adminRouter.get("/members", adminListMembers);
 adminRouter.patch("/members/:id/suspend", adminSuspendMember);
