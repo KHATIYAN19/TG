@@ -21,6 +21,8 @@ import {
   updateSlot,
   blockSlot,
   unblockSlot,
+  markSlotBooked,
+  markSlotAvailable,
   deleteSlot,
   getAdminBookings,
   getAdminBooking,
@@ -115,6 +117,16 @@ router.patch(
 router.patch(
   "/admin/slots/:id/unblock",
   unblockSlot
+);
+
+router.patch(
+  "/admin/slots/:id/book",
+  markSlotBooked
+);
+
+router.patch(
+  "/admin/slots/:id/unbook",
+  markSlotAvailable
 );
 
 router.delete(

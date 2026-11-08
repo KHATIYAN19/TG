@@ -9,6 +9,7 @@ import {
   getAllBooksForAdmin,
   updateBookByBookId,
   deleteBookById,
+  updateBookPosition,
 } from "../controllers/bookController.js";
 
 import {
@@ -83,6 +84,14 @@ router.get(
   auth,
   isAdmin,
   getAllBooksForAdmin
+);
+
+router.patch(
+  "/admin/:bookId/position",
+  auth,
+  isAdmin,
+  express.json(),
+  updateBookPosition
 );
 
 router.get(

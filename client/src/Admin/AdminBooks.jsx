@@ -12,6 +12,8 @@ import { useSelector } from "react-redux";
 import {
   AlertCircle,
   ArrowRight,
+  GripVertical,
+  ListOrdered,
   BookOpen,
   CheckCircle2,
   ChevronDown,
@@ -263,12 +265,97 @@ function AdminBookCover({ book }) {
 }
 
 /* =========================================================
+   POSITION EDITOR
+========================================================= */
+
+const UNSET_POSITION = 999999;
+
+function PositionEditor({ book, total, onMove }) {
+  const current =
+    Number(book?.position) > 0 &&
+    Number(book?.position) < UNSET_POSITION
+      ? Number(book.position)
+      : "";
+
+  const [value, setValue] = useState(String(current));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setValue(String(current));
+  }, [current]);
+
+  const dirty =
+    value !== "" && Number(value) !== current;
+
+  const save = async () => {
+    const next = Number(value);
+
+    if (!Number.isInteger(next) || next < 1) {
+      setValue(String(current));
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await onMove(book, Math.min(next, total || next));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="mt-3 flex items-center gap-2"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <ListOrdered className="h-4 w-4 text-slate-400" />
+
+      <label className="text-xs font-bold text-slate-500">
+        Position
+      </label>
+
+      <input
+        type="number"
+        min={1}
+        max={total || undefined}
+        value={value}
+        placeholder="—"
+        disabled={saving}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (dirty) save();
+          }
+        }}
+        className="h-8 w-20 rounded-lg border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
+      />
+
+      {dirty && (
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="h-8 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
    ADMIN BOOK CARD
 ========================================================= */
 
 function AdminBookCard({
   book,
   onOpen,
+  total,
+  onMove,
 }) {
   const discount = getDiscount(book);
 
@@ -353,6 +440,9 @@ function AdminBookCard({
               </span>
             )}
           </div>
+
+          <PositionEditor book={book} total={total} onMove={onMove} />
+
 
           {/* Title */}
 
@@ -525,16 +615,16 @@ export default function AdminBooks() {
   const [resourceType, setResourceType] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
   const [activeStatus, setActiveStatus] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [sort, setSort] = useState("position");
 
   /* =======================================================
      API
   ======================================================= */
 
   const fetchBooks = useCallback(
-    async (signal) => {
+    async (signal, silent = false) => {
       try {
-        setLoading(true);
+        if (!silent) setLoading(true);
         setError("");
 
         if (!token) {
@@ -544,7 +634,7 @@ export default function AdminBooks() {
         }
 
         const response = await fetch(
-          `${BASE_URL}/book/admin/all`,
+          `${BASE_URL}/book/admin/all?limit=100`,
           {
             method: "GET",
 
@@ -761,6 +851,18 @@ export default function AdminBooks() {
     });
 
     return [...result].sort((a, b) => {
+      if (sort === "position") {
+        const pa = Number(a?.position) || UNSET_POSITION;
+        const pb = Number(b?.position) || UNSET_POSITION;
+
+        if (pa !== pb) return pa - pb;
+
+        return (
+          new Date(b?.createdAt || 0) -
+          new Date(a?.createdAt || 0)
+        );
+      }
+
       if (sort === "newest") {
         return (
           new Date(b?.createdAt || 0) -
@@ -815,6 +917,108 @@ export default function AdminBooks() {
   ]);
 
   /* =======================================================
+     MOVE POSITION
+  ======================================================= */
+
+  const moveBook = useCallback(
+    async (book, position) => {
+      try {
+        setError("");
+
+        const response = await fetch(
+          `${BASE_URL}/book/admin/${encodeURIComponent(
+            book._id
+          )}/position`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ position }),
+          }
+        );
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || result?.success !== true) {
+          throw new Error(
+            result?.error?.message ||
+              result?.message ||
+              "Unable to update book position."
+          );
+        }
+
+        // Reload so every card shows its renumbered position.
+        await fetchBooks(undefined, true);
+      } catch (err) {
+        window.alert(
+          err?.message ||
+            "Unable to update book position."
+        );
+
+        // Roll back the optimistic order.
+        await fetchBooks(undefined, true);
+      }
+    },
+    [token, fetchBooks]
+  );
+
+  /* =======================================================
+     DRAG & DROP REORDER
+  ======================================================= */
+
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
+
+  // Dragging only makes sense on the full list in position order.
+  const canReorder =
+    sort === "position" &&
+    !search.trim() &&
+    !category &&
+    !resourceType &&
+    !publishStatus &&
+    !activeStatus;
+
+  const endDrag = () => {
+    setDragId(null);
+    setOverId(null);
+  };
+
+  const handleDrop = async (targetId) => {
+    const sourceId = dragId;
+    endDrag();
+
+    if (!canReorder || !sourceId || sourceId === targetId) {
+      return;
+    }
+
+    const ordered = [...filteredBooks];
+    const from = ordered.findIndex((b) => b._id === sourceId);
+    const to = ordered.findIndex((b) => b._id === targetId);
+
+    if (from === -1 || to === -1) return;
+
+    const [moved] = ordered.splice(from, 1);
+    ordered.splice(to, 0, moved);
+
+    // Optimistic update so the card lands instantly.
+    setBooks(
+      ordered.map((b, index) => ({
+        ...b,
+        position: index + 1,
+      }))
+    );
+
+    try {
+      await moveBook(moved, to + 1);
+    } catch {
+      fetchBooks(undefined, true);
+    }
+  };
+
+  /* =======================================================
      NAVIGATION
   ======================================================= */
 
@@ -843,7 +1047,7 @@ export default function AdminBooks() {
     setResourceType("");
     setPublishStatus("");
     setActiveStatus("");
-    setSort("newest");
+    setSort("position");
   };
 
   const hasFilters =
@@ -852,7 +1056,7 @@ export default function AdminBooks() {
     Boolean(resourceType) ||
     Boolean(publishStatus) ||
     Boolean(activeStatus) ||
-    sort !== "newest";
+    sort !== "position";
 
   /* =======================================================
      UI
@@ -1049,6 +1253,10 @@ export default function AdminBooks() {
                       onChange={setSort}
                       options={[
                         {
+                          value: "position",
+                          label: "Admin Position",
+                        },
+                        {
                           value: "newest",
                           label: "Newest",
                         },
@@ -1098,6 +1306,16 @@ export default function AdminBooks() {
 
                     {" "}books
                   </div>
+
+                  {canReorder ? (
+                    <span className="text-xs font-semibold text-blue-600">
+                      Drag a card onto another to reorder
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">
+                      Clear filters and sort by Admin Position to drag-reorder
+                    </span>
+                  )}
 
                   {hasFilters && (
                     <button
@@ -1167,15 +1385,50 @@ export default function AdminBooks() {
             filteredBooks.length > 0 && (
               <div className="mt-7 grid grid-cols-1 gap-4 xl:grid-cols-2">
                 {filteredBooks.map((book) => (
-                  <AdminBookCard
+                  <div
                     key={
                       book?._id ||
                       book?.pageKey ||
                       book?.slug
                     }
-                    book={book}
-                    onOpen={openBook}
-                  />
+                    draggable={canReorder}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", book._id);
+                      setDragId(book._id);
+                    }}
+                    onDragOver={(event) => {
+                      if (!canReorder || !dragId) return;
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      if (overId !== book._id) setOverId(book._id);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      handleDrop(book._id);
+                    }}
+                    onDragEnd={endDrag}
+                    className={`relative rounded-2xl transition ${
+                      dragId === book._id ? "opacity-40" : ""
+                    } ${
+                      overId === book._id && dragId !== book._id
+                        ? "ring-4 ring-blue-300"
+                        : ""
+                    } ${canReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  >
+                    {canReorder && (
+                      <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-lg bg-slate-100 p-1.5 text-slate-500">
+                        <GripVertical className="h-4 w-4" />
+                      </div>
+                    )}
+
+                    <AdminBookCard
+                      book={book}
+                      onOpen={openBook}
+                      total={books.length}
+                      onMove={moveBook}
+                    />
+                  </div>
                 ))}
               </div>
             )}

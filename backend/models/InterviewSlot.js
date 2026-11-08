@@ -196,6 +196,39 @@ const interviewSlotSchema = new Schema(
     },
 
     /*
+      Manual booking
+
+      Set when an admin marks the slot as BOOKED directly
+      (e.g. booked offline / outside the website) without
+      an InterviewBooking record.
+    */
+
+    manualBooking: {
+      isManual: {
+        type: Boolean,
+        default: false,
+      },
+
+      note: {
+        type: String,
+        trim: true,
+        default: null,
+        maxlength: 500,
+      },
+
+      bookedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+
+      bookedAt: {
+        type: Date,
+        default: null,
+      },
+    },
+
+    /*
       Soft deletion
 
       Never physically delete a slot
@@ -360,9 +393,14 @@ interviewSlotSchema.pre("validate", function () {
 
   const owner = this.reservation?.bookingId;
 
+  const isManualBooked =
+    this.status === "BOOKED" &&
+    this.manualBooking?.isManual === true;
+
   if (
     ["HELD", "BOOKED"].includes(this.status) &&
-    !owner
+    !owner &&
+    !isManualBooked
   ) {
     throw new Error(
       "Held or booked slots require a booking ID."

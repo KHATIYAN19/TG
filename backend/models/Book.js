@@ -170,6 +170,15 @@ const bookSchema = new mongoose.Schema(
       default: false,
     },
 
+    // Admin-controlled display order. 1 = first. Lower comes first in every list API.
+    // Books that were never positioned keep the default and sort last.
+    position: {
+      type: Number,
+      default: 999999,
+      min: 1,
+      index: true,
+    },
+
     // When true, the PDF(s) are emailed to the buyer automatically
     // after a verified successful payment. For bundles this setting
     // lives on the bundle itself and attaches every included book.

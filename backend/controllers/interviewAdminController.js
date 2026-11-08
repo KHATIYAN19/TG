@@ -877,6 +877,144 @@ export const unblockSlot = wrap(
 );
 
 /* =========================================================
+   6a. MARK SLOT AS BOOKED (MANUAL)
+
+   PATCH /api/interviews/admin/slots/:id/book
+
+   Body (optional): { "note": "Booked offline via WhatsApp" }
+
+   Only AVAILABLE, unreserved, future slots.
+========================================================= */
+
+export const markSlotBooked = wrap(
+  async (req, res) => {
+    const adminId = requireAdmin(req);
+
+    const note = cleanString(
+      req.body?.note || "",
+      500
+    );
+
+    const now = new Date();
+
+    const slot =
+      await InterviewSlot.findOneAndUpdate(
+        {
+          _id: requireId(
+            req.params.id,
+            "slot ID"
+          ),
+
+          status: "AVAILABLE",
+          active: true,
+          isDeleted: false,
+
+          startTime: { $gt: now },
+
+          "reservation.bookingId": null,
+        },
+        {
+          $set: {
+            status: "BOOKED",
+
+            "reservation.bookedAt": now,
+
+            manualBooking: {
+              isManual: true,
+              note: note || null,
+              bookedBy: adminId,
+              bookedAt: now,
+            },
+
+            updatedBy: adminId,
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+    if (!slot) {
+      fail(
+        409,
+        "Only available, upcoming and unreserved slots can be marked as booked"
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: "Interview slot marked as booked",
+      data: slot,
+    });
+  }
+);
+
+/* =========================================================
+   6b. REVERT MANUAL BOOKING
+
+   PATCH /api/interviews/admin/slots/:id/unbook
+
+   Only slots that were manually marked BOOKED
+   (no real booking attached) can be reopened.
+========================================================= */
+
+export const markSlotAvailable = wrap(
+  async (req, res) => {
+    const adminId = requireAdmin(req);
+
+    const slot =
+      await InterviewSlot.findOneAndUpdate(
+        {
+          _id: requireId(
+            req.params.id,
+            "slot ID"
+          ),
+
+          status: "BOOKED",
+          isDeleted: false,
+
+          "manualBooking.isManual": true,
+          "reservation.bookingId": null,
+        },
+        {
+          $set: {
+            status: "AVAILABLE",
+
+            "reservation.bookedAt": null,
+
+            manualBooking: {
+              isManual: false,
+              note: null,
+              bookedBy: null,
+              bookedAt: null,
+            },
+
+            updatedBy: adminId,
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+    if (!slot) {
+      fail(
+        409,
+        "Only manually booked slots can be reopened. Cancel real bookings from the Bookings tab."
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: "Interview slot is now available",
+      data: slot,
+    });
+  }
+);
+
+/* =========================================================
    7. SOFT DELETE SLOT
 
    DELETE /api/interviews/admin/slots/:id

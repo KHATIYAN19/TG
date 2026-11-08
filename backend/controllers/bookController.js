@@ -990,6 +990,92 @@ export const createBook = asyncHandler(
   }
 );
 
+// =====================================================
+// POSITION HELPERS
+// =====================================================
+
+const DEFAULT_POSITION = 999999;
+
+// Books created before `position` existed have no value, and Mongo sorts
+// missing fields first. Give them the default so they sort last.
+const backfillPositions = async () => {
+  await Book.updateMany(
+    { position: { $exists: false } },
+    { $set: { position: DEFAULT_POSITION } }
+  );
+};
+
+// Moves one book to `position` (1-based) and renumbers every book 1..n,
+// so positions stay unique and gap-free.
+export const updateBookPosition = asyncHandler(
+  async (req, res) => {
+    const { bookId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      return fail(res, 400, "Invalid product ID.");
+    }
+
+    const requested = Number(req.body?.position);
+
+    if (
+      !Number.isInteger(requested) ||
+      requested < 1
+    ) {
+      return fail(
+        res,
+        400,
+        "Position must be a whole number of 1 or more."
+      );
+    }
+
+    await backfillPositions();
+
+    const books = await Book.find({})
+      .select("_id redirectUrl")
+      .sort({ position: 1, createdAt: -1 })
+      .lean();
+
+    const currentIndex = books.findIndex(
+      (book) => String(book._id) === bookId
+    );
+
+    if (currentIndex === -1) {
+      return fail(res, 404, "Product not found.");
+    }
+
+    const [moved] = books.splice(currentIndex, 1);
+    const targetIndex = Math.min(
+      requested - 1,
+      books.length
+    );
+    books.splice(targetIndex, 0, moved);
+
+    await Book.bulkWrite(
+      books.map((book, index) => ({
+        updateOne: {
+          filter: { _id: book._id },
+          update: { $set: { position: index + 1 } },
+        },
+      }))
+    );
+
+    await clearBookCaches(
+      ...books.map((book) => book.redirectUrl)
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Book position updated.",
+      data: {
+        bookId,
+        position: targetIndex + 1,
+        total: books.length,
+      },
+    });
+  }
+);
+
+
 export const getAllBooks = asyncHandler(
   async (req, res) => {
     const cachedBooks =
@@ -1002,6 +1088,8 @@ export const getAllBooks = asyncHandler(
         data: cachedBooks,
       });
     }
+
+    await backfillPositions();
 
     const books =
       await populateIncludedBooks(
@@ -1026,6 +1114,7 @@ export const getAllBooks = asyncHandler(
               "category",
               "badge",
               "isFeatured",
+              "position",
               "includedBooks",
               "showInMainBooks",
               "matches",
@@ -1033,6 +1122,7 @@ export const getAllBooks = asyncHandler(
             ].join(" ")
           )
           .sort({
+            position: 1,
             isFeatured: -1,
             createdAt: -1,
           })
@@ -1176,6 +1266,8 @@ export const getBookByIdForAdmin =
 
 export const getAllBooksForAdmin =
   asyncHandler(async (req, res) => {
+    await backfillPositions();
+
     const {
       page = 1,
       limit = 20,
@@ -1272,6 +1364,7 @@ export const getAllBooksForAdmin =
         populateIncludedBooks(
           Book.find(query)
             .sort({
+              position: 1,
               createdAt: -1,
             })
             .skip(
