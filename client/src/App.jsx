@@ -203,6 +203,9 @@ const GenaiMCP = lazy(() =>
 const GenaiRAG = lazy(() =>
   import("./component/GenaiRAG.jsx")
 );
+const OperatingSystemBook = lazy(() =>
+  import("./component/OperatingSystemBook.jsx")
+);
 const JavaInterviewHandbook = lazy(() =>
   import("./component/JavaInterviewHandbook.jsx")
 );
@@ -1185,6 +1188,10 @@ function App() {
           <Route
             path="/book/genai/rag"
             element={<GenaiRAG />}
+          />
+          <Route
+            path="/books/operating-systems"
+            element={<OperatingSystemBook />}
           />
           {/* <Route
             path="/book/language/java"
