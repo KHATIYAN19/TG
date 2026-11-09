@@ -12,6 +12,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useParams,
 } from "react-router-dom";
 import {
   useDispatch,
@@ -142,6 +143,48 @@ const AllAccess = lazy(() =>
 const AdminMembership = lazy(() =>
   import("./Admin/AdminMembership.jsx")
 );
+const AdminMemoryPages = lazy(() =>
+  import("./Admin/AdminMemoryPages.jsx")
+);
+const MemoriesLanding = lazy(() =>
+  import("./memories/MemoriesLanding.jsx")
+);
+const MemoriesAuth = lazy(() =>
+  import("./memories/MemoriesAuth.jsx")
+);
+const MemoriesApp = lazy(() =>
+  import("./memories/MemoriesApp.jsx")
+);
+const BirthdayPreview = lazy(() =>
+  import("./memories/templates/birthday/BirthdayPreview.jsx")
+);
+const SorryPreview = lazy(() =>
+  import("./memories/templates/sorry/SorryPreview.jsx")
+);
+const AnniversaryPreview = lazy(() =>
+  import("./memories/templates/anniversary/AnniversaryPreview.jsx")
+);
+const ProposalPreview = lazy(() =>
+  import("./memories/templates/proposal/ProposalPreview.jsx")
+);
+const ThanksPreview = lazy(() =>
+  import("./memories/templates/thanks/ThanksPreview.jsx")
+);
+const MemoriesPaymentResult = lazy(() =>
+  import("./memories/MemoriesPaymentResult.jsx")
+);
+/* Links made before the address changed (/m/<code>) keep working: they forward to /memories/<code>. */
+function LegacyMemoryLink() {
+  const { code } = useParams();
+  return <Navigate to={`/memories/${code}`} replace />;
+}
+const MemoriesViewer = lazy(() =>
+  import("./memories/MemoriesViewer.jsx")
+);
+const MemoriesTerms = lazy(() => import("./memories/legal/MemoriesTerms.jsx"));
+const MemoriesPrivacy = lazy(() => import("./memories/legal/MemoriesPrivacy.jsx"));
+const MemoriesRefund = lazy(() => import("./memories/legal/MemoriesRefund.jsx"));
+const MemoriesContact = lazy(() => import("./memories/legal/MemoriesContact.jsx"));
 const SystemDesignHLD = lazy(() =>
   import("./component/SystemDesignHLD.jsx")
 );
@@ -520,11 +563,14 @@ function PublicLoginRoute({
    Add routes here when they should hide the navbar and/or footer.
    Supports exact paths and wildcard prefixes ending in /*.
 ============================================================ */
+// Memories has its own header and footer (and is light-only), so the site chrome is hidden there.
 const NO_NAVBAR_ROUTES = [
   "/others/book/how-to-sell-ebook",
+  "/memories/*",
 ];
 const NO_FOOTER_ROUTES = [
   "/others/book/how-to-sell-ebook",
+  "/memories/*",
 ];
 function matchesLayoutRoute(pathname, routes) {
   return routes.some((route) => {
@@ -543,6 +589,7 @@ function App() {
   const location = useLocation();
   const hideNavbar = matchesLayoutRoute(location.pathname, NO_NAVBAR_ROUTES);
   const hideFooter = matchesLayoutRoute(location.pathname, NO_FOOTER_ROUTES);
+  const onMemories = location.pathname === "/memories" || location.pathname.startsWith("/memories/");
   // Capture referral codes globally for every frontend route.
   // Existing checkout continues reading localStorage.getItem("referralCode").
   useEffect(() => {
@@ -576,6 +623,8 @@ function App() {
       );
       // Prep Buddy Arena members sign back in on the arena's own login
       // (and return to the page they were on), not the admin login.
+      const onMemories =
+        window.location.pathname.startsWith("/memories");
       const onArena =
         window.location.pathname.startsWith("/prep-buddy");
       if (
@@ -589,6 +638,18 @@ function App() {
           window.location.pathname +
             window.location.search
         );
+      }
+      if (onMemories) {
+        // Memories visitors sign back in on the Memories login, and return to where they were.
+        if (window.location.pathname.startsWith("/memories/app")) {
+          sessionStorage.setItem(
+            "memories:returnTo",
+            window.location.pathname +
+              window.location.search
+          );
+        }
+        window.location.replace("/memories/login");
+        return;
       }
       window.location.replace(
         onArena
@@ -801,10 +862,13 @@ function App() {
       <Toaster />
       <Analytics />
       {!hideNavbar && <Navbar />}
-      <BookMatchesNotice />
-      <Suspense fallback={null}>
-        <SaleCampaign />
-      </Suspense>
+      {/* Book promos and sale popups are for the Target Trek store, not for Memories. */}
+      {!onMemories && <BookMatchesNotice />}
+      {!onMemories && (
+        <Suspense fallback={null}>
+          <SaleCampaign />
+        </Suspense>
+      )}
       <Suspense fallback={<RouteLoader />}>
         {!authReady ? <RouteLoader /> : <Routes>
           {/* ========================================
@@ -933,6 +997,63 @@ function App() {
               redirects to signup/login when signed out, and
               every API call is authorised server-side.
           ======================================== */}
+          {/* ========================================
+              MEMORIES — public landing, login/signup,
+              and the signed-in area. Light theme only,
+              own header/footer (see NO_NAVBAR_ROUTES).
+          ======================================== */}
+          <Route
+            path="/memories"
+            element={<MemoriesLanding />}
+          />
+          <Route
+            path="/memories/login"
+            element={<MemoriesAuth />}
+          />
+          <Route
+            path="/memories/signup"
+            element={<MemoriesAuth />}
+          />
+          <Route path="/memories/terms" element={<MemoriesTerms />} />
+          <Route path="/memories/privacy" element={<MemoriesPrivacy />} />
+          <Route path="/memories/refund" element={<MemoriesRefund />} />
+          <Route path="/memories/contact" element={<MemoriesContact />} />
+          <Route
+            path="/memories/:code"
+            element={<MemoriesViewer />}
+          />
+          <Route
+            path="/m/:code"
+            element={<LegacyMemoryLink />}
+          />
+          <Route
+            path="/memories/payment-result"
+            element={<MemoriesPaymentResult />}
+          />
+          <Route
+            path="/memories/app/*"
+            element={<MemoriesApp />}
+          />
+          <Route
+            path="/memories/preview/birthday"
+            element={<BirthdayPreview />}
+          />
+          <Route
+            path="/memories/preview/sorry"
+            element={<SorryPreview />}
+          />
+          <Route
+            path="/memories/preview/anniversary"
+            element={<AnniversaryPreview />}
+          />
+          <Route
+            path="/memories/preview/proposal"
+            element={<ProposalPreview />}
+          />
+          <Route
+            path="/memories/preview/thanks"
+            element={<ThanksPreview />}
+          />
           <Route
             path="/prep-buddy"
             element={<ArenaLanding />}
@@ -1186,6 +1307,12 @@ function App() {
             path="/admin/membership"
             element={requireAdmin(
               <AdminMembership />
+            )}
+          />
+          <Route
+            path="/admin/memories"
+            element={requireAdmin(
+              <AdminMemoryPages />
             )}
           />
           <Route

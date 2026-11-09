@@ -17,6 +17,7 @@ import {
   BarChart3,
   BookOpen,
   Crown,
+  Heart,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
@@ -289,6 +290,16 @@ const OTHER_ADMIN_ROUTES = [
       "Manage registered users, employees, roles, permissions and account access.",
     category: "Users & Access",
     keywords: "users employee admin roles",
+  },
+  {
+    path: "/admin/memories",
+    name: "Memory Pages",
+    icon: Heart,
+    description:
+      "Birthday, proposal and sorry pages: users and logins, live links with PIN, deactivate and delete controls, payments, access codes, price and upload limits.",
+    category: "Users & Access",
+    keywords:
+      "memory memories birthday proposal sorry love page pin link private public codes price limits photos videos",
   },
   {
     path: "/admin/signup",

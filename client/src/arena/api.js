@@ -40,6 +40,13 @@ export const membershipHttp = axios.create({
   timeout: 20000,
 });
 
+// Memories: credits, payments and the signed-in owner's pages.
+export const memoriesHttp = axios.create({
+  baseURL: `${API_ROOT}/api/memories`,
+  withCredentials: true,
+  timeout: 25000,
+});
+
 const getToken = () => store.getState().auth.token || localStorage.getItem("token") || "";
 
 /*
@@ -82,7 +89,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp]) {
+for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp, memoriesHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
@@ -111,7 +118,8 @@ for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp]
         } catch {
           store.dispatch(logout());
         }
-      } else if (status === 401 && getToken()) {
+      } else if (status === 401 && getToken() && (instance !== memoriesHttp || SESSION_CODES.has(code))) {
+        // Memories: only a real "your session ended" answer signs the visitor out. A 401 relayed from a payment gateway must not.
         store.dispatch(logout());
       }
 

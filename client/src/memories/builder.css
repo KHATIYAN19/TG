@@ -1,0 +1,5 @@
+/* The builder's form: every section of the editor becomes its own soft card (the editor itself stays plain so it also works in a drawer). */
+.pb-cards > section { border-radius: 24px; border: 1px solid #ffe3e9; background: #fff; padding: 1rem; box-shadow: 0 1px 2px rgba(190,24,93,.04), 0 10px 24px -18px rgba(190,24,93,.25); }
+.pb-cards > section > h3, .pb-cards > section > div:first-child > h3 { font-size: 1rem; letter-spacing: -.005em; }
+@media (min-width: 640px) { .pb-cards > section { padding: 1.4rem 1.5rem; } }
+@media (min-width: 1024px) { .pb-cards > section { border-radius: 28px; padding: 1.75rem 2rem; } .pb-cards { gap: 1.25rem; } }

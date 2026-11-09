@@ -54,6 +54,9 @@ import { attachArenaSocket } from "./services/arena/socket.js";
 import { sweepAbandonedEntries } from "./services/arena/entryService.js";
 import { healPaidMembers } from "./services/arena/activation.js";
 import { migrateLegacyArenaData } from "./services/arena/migrate.js";
+import { dropLegacyMemoryIndexes } from "./services/memory/migrate.js";
+import { startStorageSweeper } from "./services/memory/storageCleanup.js";
+import { backfillExpiry, startExpirySweeper } from "./services/memory/expiry.js";
 
 
 import { auth, isAdmin } from "./Middleware/auth.js";
@@ -79,6 +82,15 @@ import authRoutes from "./routes/authRoutes.js";
 import { sweepSessions } from "./services/sessionCleanup.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import mailSettingsRoutes from "./routes/mailSettingsRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import {
+  publicRouter as memoryPublicRoutes,
+  userRouter as memoryUserRoutes,
+  adminRouter as memoryAdminRoutes,
+  paymentCallbackRouter as memoryPaymentCallbackRoutes,
+  infoRouter as memoryInfoRoutes,
+} from "./routes/memory/memoryRoutes.js";
+import { gatewayWebhook as memoryGatewayWebhook } from "./controllers/memory/memoryPaymentController.js";
 import userRoutes from "./routes/userRoutes.js";
 
 /* =====================================================
@@ -241,6 +253,9 @@ const corsOptions = {
 
     // Blog view counter (dedupes one view per visitor per 24h).
     "x-blog-visitor-id",
+
+    // Memory pages: unlock token for private pages.
+    "x-memory-token",
   ],
 
   exposedHeaders: [
@@ -340,6 +355,14 @@ app.post(
   },
 
   interviewCashfreeWebhook
+);
+
+/* Memory-page payment webhooks (any gateway). Needs the raw body for signature checks, so it
+   must stay above express.json(). Each gateway adapter verifies its own signature. */
+app.post(
+  "/api/memories/payments/webhook/:gateway",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  memoryGatewayWebhook
 );
 
 /* =====================================================
@@ -513,6 +536,15 @@ app.use(
 app.use("/api/arena", arenaRoutes);
 app.use("/api/admin/arena", arenaAdminRoutes);
 app.use("/api/admin/mail", mailSettingsRoutes);
+app.use("/api/uploads", uploadRoutes);
+
+/* MEMORY PAGES (birthday / proposal / sorry pages with photos + videos)
+   public viewer is mounted first: it must not sit behind the login middleware. */
+app.use("/api/memories/public", memoryInfoRoutes);
+app.use("/api/memories/view", memoryPublicRoutes);
+app.use("/api/memories/payments/callback", memoryPaymentCallbackRoutes);
+app.use("/api/memories", memoryUserRoutes);
+app.use("/api/admin/memories", memoryAdminRoutes);
 
 /* =====================================================
    EXISTING PAYMENT ROUTES
@@ -795,9 +827,15 @@ const startServer = async () => {
     await migrateLegacyArenaData().catch((error) =>
       console.error("[arena] legacy data migration failed:", error.message)
     );
+    await dropLegacyMemoryIndexes().catch((error) =>
+      console.error("[memory] leftover index cleanup failed:", error.message)
+    );
 
     startAnalyticsJobs();
     startEbookEmailSweeper();
+    await backfillExpiry().catch((error) => console.error("[memory] expiry backfill failed:", error.message));
+    startStorageSweeper();
+    startExpirySweeper();
 
     // Background email: consumes the Amazon SQS email queue (no-op if SQS is not configured).
     logMailConfiguration();

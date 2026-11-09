@@ -1,0 +1,16 @@
+/* the reply box, themed by the page it sits in (it only uses the shared --bd-* colours) */
+.rb { width: min(560px, 100%); margin: 1.1rem auto 0; display: grid; gap: .6rem; padding: 14px; border-radius: 24px; background: var(--bd-card); border: 1px solid var(--bd-line); text-align: left; color: var(--bd-ink); }
+.rb-title { margin: 0; font-family: var(--f-head); font-weight: 700; font-size: 1.05rem; text-align: center; }
+.rb-sent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rb-sent li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: 14px; background: color-mix(in srgb, var(--bd-accent) 12%, transparent); font-size: .9rem; line-height: 1.4; }
+.rb-sent svg { margin-top: 3px; flex: none; color: var(--bd-accent); }
+.rb-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.rb-chip { min-height: 2.3rem; padding: .35rem .9rem; border-radius: 999px; border: 1px solid var(--bd-line); background: var(--bd-card-solid); color: var(--bd-ink); font-size: .85rem; font-weight: 600; cursor: pointer; transition: transform .15s, border-color .2s; }
+.rb-chip:active { transform: scale(.95); }
+.rb-chip.on { border-color: var(--bd-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bd-accent) 22%, transparent); }
+.rb-label { font-size: .78rem; font-weight: 600; color: var(--bd-muted); }
+.rb-box { width: 100%; resize: vertical; padding: .7rem .85rem; border-radius: 16px; border: 1px solid var(--bd-line); background: var(--bd-card-solid); color: var(--bd-ink); font: inherit; font-size: .95rem; }
+.rb-box:focus { outline: 2px solid var(--bd-accent); outline-offset: 1px; }
+.rb-err { margin: 0; color: #dc2626; font-size: .85rem; }
+.rb-send { justify-self: center; }
+.rb-send:disabled { opacity: .5; pointer-events: none; }
