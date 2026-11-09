@@ -1,4 +1,6 @@
 import { PAYU_KEY, PAYU_SALT, PAYU_PAYMENT_URL } from "../../../config/payu.js";
+import { gatewayPhone } from "../../../utils/phone.js";
+import { PaymentError } from "./errors.js";
 import { generatePaymentHash, generateTransactionId, verifyTransactionWithPayU } from "../../../utils/payu.js";
 
 /* PayU: client auto-submits a form to PayU; PayU redirects the browser back to our callback URL. */
@@ -11,6 +13,7 @@ export default {
   async createCheckout({ order, user, amountPaise, urls }) {
     const gatewayOrderId = generateTransactionId();
     const amount = (amountPaise / 100).toFixed(2);
+    if (!gatewayPhone(user)) throw new PaymentError(400, "There is no mobile number on your account. Please contact support.", "PHONE_UNAVAILABLE");
     const fields = {
       key: PAYU_KEY,
       txnid: gatewayOrderId,
@@ -18,7 +21,7 @@ export default {
       productinfo: "Memory page",
       firstname: String(user.name || "Customer").slice(0, 60),
       email: user.email,
-      phone: String(user.mobile || "").replace(/\D/g, "").slice(-10),
+      phone: gatewayPhone(user),
       surl: urls.callback("payu"),
       furl: urls.callback("payu"),
       udf1: "", udf2: "", udf3: "", udf4: "", udf5: "",

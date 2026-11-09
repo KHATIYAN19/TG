@@ -174,7 +174,7 @@ export default function MembersTab({ openHistory }) {
               return (
                 <tr key={m.id}>
                   <Td><p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{m.realName}</p><p className={cx("text-xs", MUTED)}>{m.alias}</p></Td>
-                  <Td><p className="break-all">{m.account?.email ?? m.contact?.email}</p><p className={cx("text-xs", MUTED)}>{m.account?.mobile ?? m.contact?.phone}</p></Td>
+                  <Td><p className="break-all">{m.account?.email ?? m.contact?.email}</p><p className={cx("text-xs", MUTED)}>{m.account?.phone ?? m.account?.mobile ?? m.contact?.phone}</p></Td>
                   <Td>{m.topics?.join(", ")} · {m.level}<p className={cx("text-xs", MUTED)}>{[m.designation, m.companyName].filter(Boolean).join(" @ ") || m.skills.slice(0, 4).join(", ")}</p></Td>
                   <Td><StatusBadge status={m.status} />{m.hidden && <Badge tone="amber" className="ml-1.5"><EyeOff className="h-3 w-3" /> hidden{m.hiddenBy === "admin" ? " by admin" : " by member"}</Badge>}{m.suspendedReason && <p className="mt-1 max-w-[14rem] text-xs text-rose-600">{m.suspendedReason}</p>}</Td>
                   <Td className="min-w-[10rem]">

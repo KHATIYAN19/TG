@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { ArrowRight, Check, Gift, KeyRound, Lock, Phone, ShieldCheck, Ticket, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Gift, KeyRound, Lock, ShieldCheck, Ticket, Sparkles } from "lucide-react";
 
 import { errMsg } from "../arena/api";
 import { claimFreeCredit, createPayment, getPaymentStatus, redeemCode } from "./memApi";
@@ -10,7 +10,7 @@ import { runCheckout } from "./checkout";
 import { formatPrice } from "./api";
 import { Loading } from "./AppShell";
 import { SUPPORT_EMAIL } from "./legal/constants";
-import { chooseGateway, gatewayLabel, needsPhone } from "./paymentGateway";
+import { chooseGateway, gatewayLabel } from "./paymentGateway";
 import { Button, cx } from "./ui";
 
 const STEPS = ["Account", "Unlock a page", "Choose a template"];
@@ -48,7 +48,6 @@ const INCLUDED = [
 export default function MemoriesPay({ cfg, reload, firstTime = false }) {
   const navigate = useNavigate();
   const user = useSelector((s) => s.auth?.user);
-  const [phone, setPhone] = useState(String(user?.mobile || user?.phone || "").replace(/\D/g, "").slice(-10));
   const [paying, setPaying] = useState(false);
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -62,7 +61,6 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
   const included = [INCLUDED[0], `Each page stays online for ${cfg.pageLifetimeDays || 30} days`, ...INCLUDED.slice(1)];
   const chosen = chooseGateway(cfg); // VITE_MEMORIES_PAYMENT_GATEWAY (default cashfree), or the server's default if that one is switched off
   const noGateway = !isFree && !chosen;
-  const phoneWanted = !isFree && needsPhone(chosen);
 
   const done = async (how, credits) => {
     await reload();
@@ -71,10 +69,9 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
   };
 
   const pay = async () => {
-    if (phoneWanted && phone.length !== 10) return setError("Enter your 10-digit mobile number. The payment page needs it.");
     setPaying(true); setError("");
     try {
-      const order = await createPayment(chosen, phone);
+      const order = await createPayment(chosen);
       const r = await runCheckout({ checkout: order.checkout, orderId: order.orderId, user });
       if (r.status === "redirect") return; // the gateway page takes over, and brings us back to /memories/payment-result
       let status = r.status;
@@ -132,17 +129,6 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
             <ul className="space-y-2.5">
               {included.map((x) => <li key={x} className="flex gap-2.5 text-sm text-[#4a2340]"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={3} aria-hidden /> {x}</li>)}
             </ul>
-
-            {phoneWanted && (
-              <div className="mt-5">
-                <label htmlFor="mem-phone" className="text-xs font-bold uppercase tracking-wider text-[#a07890]">Mobile number <span className="font-medium normal-case tracking-normal text-[#c4a8b8]">(needed for the payment page)</span></label>
-                <div className="relative mt-1.5">
-                  <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-rose-300" aria-hidden />
-                  <input id="mem-phone" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }} placeholder="10-digit number"
-                    className="w-full rounded-xl border border-rose-100 bg-white py-3 pl-10 pr-3 text-sm text-[#3a1530] outline-none transition placeholder:text-[#c4a8b8] focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
-                </div>
-              </div>
-            )}
 
             {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>}
             {noGateway && <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">Online payment isn&apos;t available right now. If you have a unique code, use it on the right.</p>}

@@ -96,6 +96,7 @@ adminRouter.get("/stats", A.stats);
 
 adminRouter.get("/pages", A.listPages);
 adminRouter.get("/pages/:id", A.getPage);
+adminRouter.get("/pages/:id/activity", A.getPageActivity);
 adminRouter.post("/pages/:id/pin", A.setPin);
 adminRouter.post("/pages/:id/expiry", A.setExpiry);
 adminRouter.post("/pages/:id/visibility", A.setVisibility);

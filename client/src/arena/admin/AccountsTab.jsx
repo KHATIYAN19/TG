@@ -25,7 +25,7 @@ function Who({ a }) {
     <div className="min-w-0">
       <p className="truncate font-semibold text-[#29201b] dk:text-[#fff7ed]">{a.name}</p>
       <p className={cx("break-all text-xs", MUTED)}>{a.anonymized ? "Details erased at deletion" : a.email}</p>
-      {a.mobile && <p className={cx("text-xs", MUTED)}>{a.mobile}</p>}
+      {(a.phone || a.mobile) && <p className={cx("text-xs", MUTED)}>{a.phone || a.mobile}</p>}
       <p className={cx("mt-0.5 font-mono text-[10px]", MUTED)} title="Account id">{a.id}</p>
     </div>
   );

@@ -238,6 +238,7 @@
 //   mongoose.model("User", userSchema);
 
 
+import { DEFAULT_DIAL, isKnownDial, mobileProblem } from "../utils/phone.js";
 import mongoose from "mongoose";
 
 const { Schema } = mongoose;
@@ -324,14 +325,30 @@ const userSchema = new Schema(
       ],
     },
 
+    // Dial code of the mobile number, e.g. "+91". Accounts created before country codes existed have none and count as +91.
+    countryCode: {
+      type: String,
+      trim: true,
+      default: undefined,
+      validate: {
+        validator: (v) => v === undefined || v === null || isKnownDial(v),
+        message: "Please choose a valid country code",
+      },
+    },
+
+    // National number, digits only, no country code (see utils/phone.js).
     mobile: {
       type: String,
       trim: true,
       default: undefined,
-      match: [
-        /^[6-9]\d{9}$/,
-        "Please enter a valid 10-digit mobile number",
-      ],
+      validate: {
+        validator(v) {
+          // `this` is the document on create/save. In query-update validators it is the query, which has no country code: +91 rules, as before.
+          const dial = (this && typeof this.get === "function" ? this.get("countryCode") : undefined) || DEFAULT_DIAL;
+          return !mobileProblem(dial, v);
+        },
+        message: "Please enter a valid mobile number for the chosen country",
+      },
     },
 
     /* =========================================

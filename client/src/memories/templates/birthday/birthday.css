@@ -197,6 +197,9 @@
 .bd-pol.main { column-span: all; max-width: min(100%, 340px); margin-inline: auto; margin-bottom: 16px; padding: 8px 8px 12px; }
 .bd-pol.main::before { content: ""; position: absolute; top: -10px; left: 50%; width: 84px; height: 22px; margin-left: -42px; background: rgba(255,255,255,.55); box-shadow: 0 2px 6px rgba(0,0,0,.15); transform: rotate(-3deg); backdrop-filter: blur(2px); }
 .bd-play { position: absolute; inset: 0; display: grid; place-items: center; }
+.bd-play-btn { background: transparent; border: 0; cursor: pointer; }
+.bd-pol-vid .bd-pol-img video { object-fit: contain; background: #111; }
+@media (hover: hover) { .bd-pol-vid:hover { transform: rotate(var(--r, 0deg)); box-shadow: 0 12px 24px -14px rgba(0,0,0,.5); } }
 .bd-play i { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.9); color: var(--bd-accent); box-shadow: 0 8px 20px rgba(0,0,0,.3); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
 @media (hover: hover) { .bd-pol:hover .bd-play i { transform: scale(1.14); } }
 .bd-lb { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; padding: 10px; background: rgba(20,8,30,.86); backdrop-filter: blur(8px); animation: bd-fade .25s ease both; touch-action: pan-y; }

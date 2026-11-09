@@ -58,7 +58,7 @@ const sections = [
     body: (
       <UL items={[
         <><b>Anyone with your link</b> (and the PIN, if the page is private) can see the page: its text, photos and videos.</>,
-        <><b>Only you</b> see your Activity screen, the answers, replies and PIN for your pages.</>,
+        <><b>Only you</b> (and our support team, when needed to help you or keep the service safe) can see your Activity screen, the answers, replies and PIN for your pages.</>,
         <>The person who opens a page knows what they type is delivered to the sender. A &ldquo;yes&rdquo; or &ldquo;no&rdquo; they give is stored and can&apos;t be changed.</>,
         "Our team can access data when needed to give support, run the service, keep it safe or follow the law.",
       ]} />

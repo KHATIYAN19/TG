@@ -9,6 +9,7 @@ import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryEvent from "../../models/memory/MemoryEvent.js";
 import { StorageError, createDownloadUrl } from "../storage/s3.js";
 import { removeFiles } from "./storageCleanup.js";
+import { formatPhone } from "../../utils/phone.js";
 
 /* =====================================================
    ERRORS + VALIDATION
@@ -324,7 +325,7 @@ export const pageView = async (page, { withMedia = false, withPin = false } = {}
     viewCount: page.viewCount || 0,
     photoCount: (page.media || []).filter((m) => m.kind === "photo").length,
     videoCount: (page.media || []).filter((m) => m.kind === "video").length,
-    owner: user ? { id: String(user._id), name: user.name, email: user.email } : { id: String(page.user) },
+    owner: user ? { id: String(user._id), name: user.name, email: user.email, ...(user.mobile ? { phone: formatPhone(user.countryCode, user.mobile) } : {}) } : { id: String(page.user) },
     createdAt: page.createdAt,
     updatedAt: page.updatedAt,
     ...(withMedia ? { media: await signMedia(page) } : {}),

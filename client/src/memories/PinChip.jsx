@@ -17,12 +17,12 @@ export default function PinChip({ pin, onNew, className = "" }) {
     );
   }
   return (
-    <div className={`flex items-center gap-2 rounded-2xl bg-[#fff7f3] p-2 pl-3 ${className}`}>
+    <div className={`flex min-w-0 items-center gap-1.5 rounded-2xl bg-[#fff7f3] p-2 pl-3 sm:gap-2 ${className}`}>
       <KeyRound className="h-4 w-4 shrink-0 text-rose-400" aria-hidden />
-      <span className="text-xs font-semibold text-[#8a6a80]">PIN</span>
-      <span className="flex-1 font-mono text-base font-bold tracking-[0.25em] text-[#3a1530]" aria-label={show ? `PIN ${pin.split("").join(" ")}` : "PIN hidden"}>{show ? pin : "••••••"}</span>
-      <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? "Hide PIN" : "Show PIN"} aria-pressed={show} className="grid h-8 w-8 place-items-center rounded-xl text-[#6b3a5a] hover:bg-white">{show ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}</button>
-      <button type="button" onClick={copy} className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-rose-600 ring-1 ring-rose-100 hover:bg-rose-50">{copied ? <><Check className="h-3.5 w-3.5" aria-hidden /> Copied</> : <><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</>}</button>
+      <span className="shrink-0 text-xs font-semibold text-[#8a6a80]">PIN</span>
+      <span className="min-w-0 flex-1 truncate font-mono text-sm font-bold tracking-[0.15em] sm:text-base sm:tracking-[0.25em] text-[#3a1530]" aria-label={show ? `PIN ${pin.split("").join(" ")}` : "PIN hidden"}>{show ? pin : "••••••"}</span>
+      <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? "Hide PIN" : "Show PIN"} aria-pressed={show} className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-[#6b3a5a] hover:bg-white">{show ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}</button>
+      <button type="button" onClick={copy} className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold sm:px-3 text-rose-600 ring-1 ring-rose-100 hover:bg-rose-50">{copied ? <><Check className="h-3.5 w-3.5" aria-hidden /> Copied</> : <><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</>}</button>
     </div>
   );
 }

@@ -5,10 +5,10 @@
   To support a NEW gateway: add it to GATEWAYS below and add a runner for its `checkout.type` in checkout.js.
 */
 export const GATEWAYS = {
-  cashfree: { label: "Cashfree", needsPhone: true },
-  razorpay: { label: "Razorpay", needsPhone: false },
-  payu: { label: "PayU", needsPhone: true },
-  mock: { label: "Test payment", needsPhone: false },
+  cashfree: { label: "Cashfree" },
+  razorpay: { label: "Razorpay" },
+  payu: { label: "PayU" },
+  mock: { label: "Test payment" },
 };
 
 const asked = String(import.meta.env.VITE_MEMORIES_PAYMENT_GATEWAY || "cashfree").trim().toLowerCase();
@@ -22,4 +22,3 @@ export const chooseGateway = (cfg) => {
 };
 
 export const gatewayLabel = (id) => GATEWAYS[id]?.label || id || "";
-export const needsPhone = (id) => Boolean(GATEWAYS[id]?.needsPhone);

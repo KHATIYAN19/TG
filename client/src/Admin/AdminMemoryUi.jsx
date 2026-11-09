@@ -67,11 +67,11 @@ export function Avatar({ name, email }) {
   return <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-pink-100 to-indigo-100 text-[11px] font-bold text-slate-700">{t}</span>;
 }
 
-export function Person({ name, email }) {
+export function Person({ name, email, phone }) {
   return (
     <div className="flex items-center gap-2.5">
       <Avatar name={name} email={email} />
-      <div className="min-w-0"><div className="truncate font-semibold text-slate-900">{name || "-"}</div><div className="truncate text-xs text-slate-500">{email}</div></div>
+      <div className="min-w-0"><div className="truncate font-semibold text-slate-900">{name || "-"}</div><div className="truncate text-xs text-slate-500">{email}</div>{phone && <div className="truncate text-xs text-slate-500">📞 {phone}</div>}</div>
     </div>
   );
 }

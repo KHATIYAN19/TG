@@ -88,7 +88,7 @@ export default function UsersTab({ http, run, setDialog }) {
         <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16 text-slate-400"><Loader2 className="animate-spin" /></div>
       ) : (
         <Table rows={rows} empty="No users match" cols={[
-          { h: "User", v: (u) => <Person name={u.name} email={u.email} /> },
+          { h: "User", v: (u) => <Person name={u.name} email={u.email} phone={u.phone} /> },
           { h: "Role", v: (u) => <Chip>{u.role}</Chip> },
           { h: "Status", v: (u) => (
             <span title={u.statusReason || ""}><Chip className={u.status === "active" ? STATUS.active : u.status === "suspended" ? STATUS.closed : STATUS.blocked}>{u.status || "active"}</Chip></span>

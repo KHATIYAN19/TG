@@ -7,6 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
 import toast from "react-hot-toast";
+import PhoneInput from "../utils/PhoneInput";
+import { DEFAULT_DIAL, digitsOf, mobileProblem } from "../utils/countries";
 import { ArrowLeft, Eye, EyeOff, Gift, ImageIcon, KeyRound, Lock, MailCheck, ShieldAlert } from "lucide-react";
 
 import { login as loginAction } from "../Redux/authSlice";
@@ -33,18 +35,25 @@ const passwordRule = z
   .regex(/\d/, "Add a number")
   .regex(/[^A-Za-z0-9]/, "Add a special character");
 
-const mobileRule = z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number");
+const mobileFields = (v, ctx) => {
+  const problem = mobileProblem(v.countryCode, v.mobile);
+  if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mobile"], message: problem });
+};
+const countryRule = z.string().default(DEFAULT_DIAL);
+const mobileRule = z.string().trim().transform(digitsOf);
 
 const signupSchema = z
   .object({
     name: z.string().trim().min(2, "Enter your name"),
     email: z.string().trim().email("Enter a valid email"),
+    countryCode: countryRule,
     mobile: mobileRule,
     password: passwordRule,
     confirmPassword: z.string(),
   })
+  .superRefine(mobileFields)
   .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
-const mobileSchema = z.object({ mobile: mobileRule });
+const mobileSchema = z.object({ countryCode: countryRule, mobile: mobileRule }).superRefine(mobileFields);
 const forgotSchema = z.object({ email: z.string().trim().email("Enter a valid email") });
 const resetSchema = z
   .object({ password: passwordRule, confirmPassword: z.string() })
@@ -202,11 +211,11 @@ export default function MemoriesAuth() {
     [dispatch, navigate, redirectTo]
   );
 
-  const signupForm = useForm({ resolver: zodResolver(signupSchema), mode: "onBlur" });
+  const signupForm = useForm({ resolver: zodResolver(signupSchema), mode: "onBlur", defaultValues: { countryCode: DEFAULT_DIAL } });
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
   const forgotForm = useForm({ resolver: zodResolver(forgotSchema) });
   const resetForm = useForm({ resolver: zodResolver(resetSchema) });
-  const mobileForm = useForm({ resolver: zodResolver(mobileSchema) });
+  const mobileForm = useForm({ resolver: zodResolver(mobileSchema), defaultValues: { countryCode: DEFAULT_DIAL } });
 
   /* ---- Google (same account as email + password) ---- */
   const [googleSignup, setGoogleSignup] = useState(null); // { signupToken, email, name }
@@ -233,7 +242,7 @@ export default function MemoriesAuth() {
     setBusy(true);
     setFormError("");
     try {
-      const { data } = await http.post("/google/complete", { signupToken: googleSignup.signupToken, mobile: values.mobile });
+      const { data } = await http.post("/google/complete", { signupToken: googleSignup.signupToken, countryCode: values.countryCode, mobile: values.mobile });
       finish(data);
     } catch (error) {
       if (["SIGNUP_EXPIRED", "ACCOUNT_EXISTS", "SIGNUP_ALREADY_USED"].includes(errCode(error))) {
@@ -490,7 +499,7 @@ export default function MemoriesAuth() {
                   <input id="email" type="email" autoComplete="email" className={inputClass(signupForm.formState.errors.email)} {...signupForm.register("email")} />
                 </Field>
                 <Field label="Mobile number" htmlFor="mobile" error={signupForm.formState.errors.mobile?.message}>
-                  <input id="mobile" inputMode="numeric" maxLength={10} autoComplete="tel-national" className={inputClass(signupForm.formState.errors.mobile)} {...signupForm.register("mobile")} />
+                  <PhoneInput id="mobile" countryProps={signupForm.register("countryCode")} mobileProps={signupForm.register("mobile")} dial={signupForm.watch("countryCode")} invalid={signupForm.formState.errors.mobile} inputClass={inputClass} />
                 </Field>
                 <Field label="Password" htmlFor="password" error={signupForm.formState.errors.password?.message} hint="8+ characters with upper, lower, number and symbol.">
                   <PasswordInput id="password" autoComplete="new-password" invalid={signupForm.formState.errors.password} {...signupForm.register("password")} />
@@ -534,7 +543,7 @@ export default function MemoriesAuth() {
               <form onSubmit={onGoogleMobile} className="space-y-5" noValidate>
                 <p className="text-sm text-[#6b3a5a]">Signing up as <span className="font-semibold">{googleSignup.email}</span>. Add your mobile number to finish.</p>
                 <Field label="Mobile number" htmlFor="g-mobile" error={mobileForm.formState.errors.mobile?.message}>
-                  <input id="g-mobile" inputMode="numeric" maxLength={10} autoComplete="tel-national" autoFocus className={inputClass(mobileForm.formState.errors.mobile)} {...mobileForm.register("mobile")} />
+                  <PhoneInput id="g-mobile" autoFocus countryProps={mobileForm.register("countryCode")} mobileProps={mobileForm.register("mobile")} dial={mobileForm.watch("countryCode")} invalid={mobileForm.formState.errors.mobile} inputClass={inputClass} />
                 </Field>
                 <Button type="submit" size="lg" loading={busy} className="w-full">Create account</Button>
                 <button type="button" className={cx(backBtn, "block w-full text-center")} onClick={() => { setGoogleSignup(null); setFormError(""); setStep("signup"); }}>Cancel</button>

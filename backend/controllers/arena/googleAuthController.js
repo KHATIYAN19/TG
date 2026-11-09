@@ -10,6 +10,7 @@ import { provisionUserAuth } from "../../services/authStateService.js";
 import { createPendingSession, completeLogin } from "../authController.js";
 
 import { ArenaError, handle } from "../../services/arena/errors.js";
+import { countryCodeField, mobileField, checkMobile } from "./schemas.js";
 
 /*
   GOOGLE SIGN-IN / SIGN-UP
@@ -48,11 +49,14 @@ const credentialSchema = z.object({
   credential: z.string().min(20).max(4096),
 });
 
-const completeSchema = z.object({
-  signupToken: z.string().regex(/^[a-f0-9]{48}$/, "Invalid signup session"),
-  mobile: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
-  name: z.string().trim().min(2, "Enter your name").max(80).optional(),
-});
+const completeSchema = z
+  .object({
+    signupToken: z.string().regex(/^[a-f0-9]{48}$/, "Invalid signup session"),
+    countryCode: countryCodeField,
+    mobile: mobileField,
+    name: z.string().trim().min(2, "Enter your name").max(80).optional(),
+  })
+  .superRefine(checkMobile);
 
 const verifyGoogleToken = async (credential) => {
   let payload;
@@ -163,7 +167,7 @@ export const googleAuth = handle(async (req, res) => {
 
 /* POST /google/complete  { signupToken, mobile, name? } */
 export const googleComplete = handle(async (req, res) => {
-  const { signupToken, mobile, name } = completeSchema.parse(req.body);
+  const { signupToken, countryCode, mobile, name } = completeSchema.parse(req.body);
 
   const pending = await redis.get(pendingKey(signupToken));
   if (!pending) {
@@ -193,6 +197,7 @@ export const googleComplete = handle(async (req, res) => {
     created = await User.create({
       name: name || pending.name,
       email: pending.email,
+      countryCode,
       mobile,
       // Random, unguessable. The member can set a real one via "Forgot password".
       password: await hashPassword(crypto.randomBytes(32).toString("hex")),

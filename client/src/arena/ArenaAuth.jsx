@@ -7,6 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
 import toast from "react-hot-toast";
+import PhoneInput from "../utils/PhoneInput";
+import { DEFAULT_DIAL, digitsOf, mobileProblem } from "../utils/countries";
 import { ArrowLeft, Eye, EyeOff, MailCheck, ShieldCheck, Users, Lock, KeyRound, ShieldAlert } from "lucide-react";
 
 import { login as loginAction } from "../Redux/authSlice";
@@ -25,19 +27,26 @@ const passwordRule = z
   .regex(/\d/, "Add a number")
   .regex(/[^A-Za-z0-9]/, "Add a special character");
 
+const mobileFields = (v, ctx) => {
+  const problem = mobileProblem(v.countryCode, v.mobile);
+  if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mobile"], message: problem });
+};
+const countryRule = z.string().default(DEFAULT_DIAL);
+const mobileRule = z.string().trim().transform(digitsOf);
+
 const signupSchema = z
   .object({
     name: z.string().trim().min(2, "Enter your name"),
     email: z.string().trim().email("Enter a valid email"),
-    mobile: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+    countryCode: countryRule,
+    mobile: mobileRule,
     password: passwordRule,
     confirmPassword: z.string(),
   })
+  .superRefine(mobileFields)
   .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
 
-const mobileSchema = z.object({
-  mobile: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
-});
+const mobileSchema = z.object({ countryCode: countryRule, mobile: mobileRule }).superRefine(mobileFields);
 
 const forgotSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
@@ -205,7 +214,7 @@ export default function ArenaAuth() {
 
   /* ---- Google (same account as email + password) ---- */
   const [googleSignup, setGoogleSignup] = useState(null); // { signupToken, email, name }
-  const mobileForm = useForm({ resolver: zodResolver(mobileSchema) });
+  const mobileForm = useForm({ resolver: zodResolver(mobileSchema), defaultValues: { countryCode: DEFAULT_DIAL } });
 
   const onGoogleCredential = async (credential) => {
     setBusy(true);
@@ -229,7 +238,7 @@ export default function ArenaAuth() {
     setBusy(true);
     setFormError("");
     try {
-      const { data } = await http.post("/google/complete", { signupToken: googleSignup.signupToken, mobile: values.mobile });
+      const { data } = await http.post("/google/complete", { signupToken: googleSignup.signupToken, countryCode: values.countryCode, mobile: values.mobile });
       finish(data);
     } catch (error) {
       if (["SIGNUP_EXPIRED", "ACCOUNT_EXISTS", "SIGNUP_ALREADY_USED"].includes(errCode(error))) {
@@ -242,7 +251,7 @@ export default function ArenaAuth() {
     }
   });
 
-  const signupForm = useForm({ resolver: zodResolver(signupSchema), mode: "onBlur" });
+  const signupForm = useForm({ resolver: zodResolver(signupSchema), mode: "onBlur", defaultValues: { countryCode: DEFAULT_DIAL } });
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
   const forgotForm = useForm({ resolver: zodResolver(forgotSchema) });
   const resetForm = useForm({ resolver: zodResolver(resetSchema) });
@@ -506,7 +515,7 @@ export default function ArenaAuth() {
                   <input id="email" type="email" autoComplete="email" className={inputClass(signupForm.formState.errors.email)} {...signupForm.register("email")} />
                 </Field>
                 <Field label="Mobile number" htmlFor="mobile" error={signupForm.formState.errors.mobile?.message}>
-                  <input id="mobile" inputMode="numeric" maxLength={10} autoComplete="tel-national" className={inputClass(signupForm.formState.errors.mobile)} {...signupForm.register("mobile")} />
+                  <PhoneInput id="mobile" countryProps={signupForm.register("countryCode")} mobileProps={signupForm.register("mobile")} dial={signupForm.watch("countryCode")} invalid={signupForm.formState.errors.mobile} inputClass={inputClass} />
                 </Field>
                 <Field label="Password" htmlFor="password" error={signupForm.formState.errors.password?.message} hint="8+ characters with upper, lower, number and symbol.">
                   <PasswordInput id="password" autoComplete="new-password" invalid={signupForm.formState.errors.password} {...signupForm.register("password")} />
@@ -573,7 +582,7 @@ export default function ArenaAuth() {
                   Signing up as <span className="font-semibold">{googleSignup.email}</span>. Add your mobile number to finish.
                 </p>
                 <Field label="Mobile number" htmlFor="g-mobile" error={mobileForm.formState.errors.mobile?.message}>
-                  <input id="g-mobile" inputMode="numeric" maxLength={10} autoComplete="tel-national" autoFocus className={inputClass(mobileForm.formState.errors.mobile)} {...mobileForm.register("mobile")} />
+                  <PhoneInput id="g-mobile" autoFocus countryProps={mobileForm.register("countryCode")} mobileProps={mobileForm.register("mobile")} dial={mobileForm.watch("countryCode")} invalid={mobileForm.formState.errors.mobile} inputClass={inputClass} />
                 </Field>
                 <Button type="submit" size="lg" loading={busy} className="w-full">Create account</Button>
                 <button type="button" className="block w-full text-center text-sm text-stone-500 hover:text-stone-800" onClick={() => { setGoogleSignup(null); setFormError(""); setStep("signup"); }}>

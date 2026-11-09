@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { formatPhone } from "../../utils/phone.js";
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
 import { commissionOf, NET_COMMISSION_EXPR } from "../../services/arena/affiliate.js";
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
@@ -37,7 +38,7 @@ const profileIdsMatching = async (q) => {
 /** { profileId → {profileId, alias, name, email, phone} } */
 const personMap = async (profileIds) => {
   const profiles = await ArenaProfile.find({ _id: { $in: profileIds } }).select("alias realName user contact").lean();
-  const users = await User.find({ _id: { $in: profiles.map((p) => p.user) } }).select("name email mobile").lean();
+  const users = await User.find({ _id: { $in: profiles.map((p) => p.user) } }).select("name email mobile countryCode").lean();
   const byUser = new Map(users.map((u) => [String(u._id), u]));
   return new Map(
     profiles.map((p) => {
@@ -50,7 +51,7 @@ const personMap = async (profileIds) => {
           alias: p.alias,
           name: p.realName || u?.name || "—",
           email: u?.email || p.contact?.email || "",
-          phone: u?.mobile || p.contact?.phone || "",
+          phone: formatPhone(u?.countryCode, u?.mobile) || p.contact?.phone || "",
         },
       ];
     })
@@ -322,7 +323,7 @@ export const listPayments = handle(async (req, res) => {
 
   const people = await personMap([...new Set(rows.filter((r) => r.profile).map((r) => String(r.profile)))]);
   // Pay-first entries have no profile until the member adds their details: show the account instead.
-  const noProfileUsers = await User.find({ _id: { $in: rows.filter((r) => !r.profile).map((r) => r.user) } }).select("name email mobile").lean();
+  const noProfileUsers = await User.find({ _id: { $in: rows.filter((r) => !r.profile).map((r) => r.user) } }).select("name email mobile countryCode").lean();
   const userById = new Map(noProfileUsers.map((u) => [String(u._id), u]));
   const sum = sums[0] ?? { entries: 0, gross: 0, discounts: 0, refunds: 0, fees: 0, complimentary: 0, affiliateEntries: 0, affiliateSales: 0, affiliateCommission: 0 };
   const grantors = await User.find({ _id: { $in: rows.map((r) => r.grantedBy).filter(Boolean) } }).select("name").lean();
@@ -333,7 +334,7 @@ export const listPayments = handle(async (req, res) => {
     const who = r.profile
       ? people.get(String(r.profile))
       : acct
-        ? { profileId: null, userId: String(acct._id), alias: "No details yet", name: acct.name || "—", email: acct.email || "", phone: acct.mobile || "" }
+        ? { profileId: null, userId: String(acct._id), alias: "No details yet", name: acct.name || "—", email: acct.email || "", phone: formatPhone(acct.countryCode, acct.mobile) }
         : undefined;
     return {
       id: String(r._id),

@@ -11,6 +11,7 @@ import {
   CircleDollarSign,
   CreditCard,
   Eye,
+  EyeOff,
   HardDrive,
   Radio,
   ShoppingBag,
@@ -202,7 +203,67 @@ function Dialogs({ dialog, close }) {
     );
   }
   if (dialog.kind === "media") return <MediaDialog dialog={dialog} close={close} />;
+  if (dialog.kind === "activity") return <ActivityDialog dialog={dialog} close={close} />;
   return null;
+}
+
+const TYPE_LABEL = {
+  open: "Opened the page", gate_open: "Opened the surprise", letter_open: "Opened the letter", media_view: "Looked at photos/videos", balloon_pop: "Popped balloons",
+  candles_blown: "Blew out the candles", cake_cut: "Cut the cake", gift_open: "Opened a gift", chocolate_bite: "Ate chocolate", comfort: "Comforted the mascot",
+  heart_mended: "Mended the heart", promise_flip: "Opened a promise", gesture: "Sent a gesture", box_open: "Opened the ring box", time_spent: "Time on page",
+};
+const label = (t) => TYPE_LABEL[t] || t.replace(/_/g, " ");
+const ANSWER = { yes: "Said YES", no: "Said no", later: "Needs more time" };
+
+function ActivityDialog({ dialog, close }) {
+  const { http, run, pageId } = dialog;
+  const [d, setD] = useState(null);
+  useEffect(() => { run(() => http.get(`/pages/${pageId}/activity`)).then((x) => x && setD(x)); }, [http, run, pageId]);
+  const sm = d?.summary;
+  const dur = (n) => (n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`);
+  return (
+    <Modal title={`Activity: ${d?.page?.title || ""}`} onClose={close} wide footer={<Btn tone="primary" onClick={close}>Close</Btn>}>
+      {!d ? <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto animate-spin" /></div> : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[["Opens", sm.opens], ["Visitors", sm.uniqueVisitors], ["Time on page", sm.totalSeconds ? dur(sm.totalSeconds) : "–"], ["Messages", d.replies.length]].map(([l, v]) => (
+              <div key={l} className="rounded-xl bg-slate-50 py-2 text-center"><div className="text-lg font-extrabold text-slate-800">{v}</div><div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{l}</div></div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">
+            {sm.firstOpenedAt ? `First opened ${when(sm.firstOpenedAt)} · last opened ${when(sm.lastOpenedAt)}` : "Not opened yet."}
+            {Object.keys(sm.devices || {}).length > 0 && ` · ${Object.entries(sm.devices).map(([k, v]) => `${k} ${v}`).join(", ")}`}
+          </p>
+          {d.answer?.value && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">Answer: {ANSWER[d.answer.value] || d.answer.value}{d.answer.final ? " (final)" : ""}</p>}
+          {d.replies.length > 0 && (
+            <div><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Replies</h4>
+              <ul className="space-y-1.5">{d.replies.map((r, i) => <li key={r.id || i} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">{r.text || r.message}<span className="ml-2 text-[11px] text-slate-400">{when(r.at || r.createdAt)}</span></li>)}</ul></div>
+          )}
+          <div><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">What they did</h4>
+            {Object.keys(d.byType).length === 0 ? <p className="text-sm text-slate-400">Nothing yet.</p> : (
+              <ul className="grid gap-1.5 sm:grid-cols-2">{Object.entries(d.byType).map(([t, v]) => <li key={t} className="flex justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm"><span className="text-slate-700">{label(t)}</span><b className="text-slate-900">{v.total || v.count}×</b></li>)}</ul>
+            )}</div>
+          <div><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Latest events</h4>
+            <ul className="max-h-48 divide-y divide-slate-100 overflow-auto rounded-xl border border-slate-100">{d.timeline.slice(0, 40).map((e, i) => <li key={i} className="flex justify-between gap-2 px-3 py-1.5 text-xs"><span className="text-slate-700">{label(e.type)}</span><span className="shrink-0 text-slate-400">{when(e.at)}</span></li>)}</ul></div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function PinRow({ pin }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="mt-2 flex min-w-0 items-center gap-1.5 rounded-xl bg-amber-50/70 px-2.5 py-1.5">
+      <KeyRound size={13} className="shrink-0 text-amber-500" />
+      <span className="text-xs font-semibold text-amber-800">PIN</span>
+      <span className="min-w-0 flex-1 truncate font-mono text-sm font-bold tracking-[0.2em] text-slate-800">{pin ? (show ? pin : "••••••") : "not viewable"}</span>
+      {pin && <>
+        <button type="button" aria-label={show ? "Hide PIN" : "Show PIN"} onClick={() => setShow((v) => !v)} className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-amber-600 hover:bg-white">{show ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+        <button type="button" aria-label="Copy PIN" onClick={() => { navigator.clipboard?.writeText(pin); toast.success("PIN copied"); }} className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-amber-600 hover:bg-white"><Copy size={12} /></button>
+      </>}
+    </div>
+  );
 }
 
 function MediaDialog({ dialog, close }) {
@@ -311,7 +372,8 @@ function Pages({ http, run, setDialog }) {
   const menuFor = (p) => [
     { label: "Open the page", icon: <ExternalLink size={14} />, onClick: () => window.open(p.url, "_blank", "noopener,noreferrer") },
     { label: "Copy link", icon: <Copy size={14} />, onClick: () => { navigator.clipboard?.writeText(p.url); toast.success("Link copied"); } },
-    { label: "Photos and videos", icon: <ImageIcon size={14} />, divider: true, onClick: () => setDialog({ kind: "media", http, run, pageId: p.id, confirm, onChange: load }) },
+    { label: "Activity", icon: <Activity size={14} />, divider: true, onClick: () => setDialog({ kind: "activity", http, run, pageId: p.id }) },
+    { label: "Photos and videos", icon: <ImageIcon size={14} />, onClick: () => setDialog({ kind: "media", http, run, pageId: p.id, confirm, onChange: load }) },
     { label: "Give more time", icon: <CalendarClock size={14} />, onClick: () => extend(p) },
     { label: "Set a PIN", icon: <KeyRound size={14} />, onClick: () => setPin(p) },
     { label: "Make public", icon: <Unlock size={14} />, hidden: p.visibility !== "private", onClick: () => post(p, "visibility", { visibility: "public" }, "Page is now public") },
@@ -348,7 +410,8 @@ function Pages({ http, run, setDialog }) {
           ))}
         </div>
 
-        <div className="mt-3"><Person name={p.owner?.name} email={p.owner?.email} /></div>
+        <div className="mt-3"><Person name={p.owner?.name} email={p.owner?.email} phone={p.owner?.phone} /></div>
+        {p.visibility === "private" && <PinRow pin={p.pin} />}
 
         <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-indigo-50/60 px-2.5 py-1.5">
           <Link2 size={13} className="shrink-0 text-indigo-400" />
@@ -467,7 +530,7 @@ function Orders({ http, run, setDialog }) {
     <div>
       <Table rows={data?.items || []} cols={[
         { h: "When", v: (o) => <span className="whitespace-nowrap text-xs">{when(o.createdAt)}</span> },
-        { h: "User", v: (o) => (o.user ? <Person name={o.user.name} email={o.user.email} /> : "-") },
+        { h: "User", v: (o) => (o.user ? <Person name={o.user.name} email={o.user.email} phone={o.user.phone} /> : "-") },
         { h: "Amount", v: (o) => inr(o.amount) },
         { h: "Status", v: (o) => <Chip className={STATUS[o.status]}>{o.status}</Chip> },
         { h: "Gateway", v: (o) => <Chip>{o.gateway}</Chip> },

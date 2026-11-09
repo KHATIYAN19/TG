@@ -1,4 +1,5 @@
 import { CASHFREE_ENV } from "../../../config/cashfree.js";
+import { gatewayPhone } from "../../../utils/phone.js";
 import { createCashfreeOrderRequest, fetchCashfreePayments, getCashfreeError, verifyCashfreeWebhookSignature } from "../../../utils/cashfree.js";
 import { PaymentError } from "./errors.js";
 
@@ -10,8 +11,9 @@ export default {
   isConfigured: () => Boolean(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY && ["production", "sandbox"].includes(CASHFREE_ENV)),
 
   async createCheckout({ order, user, amountPaise, urls }) {
-    const phone = String(user.mobile || user.phone || "").replace(/\D/g, "").slice(-10);
-    if (phone.length !== 10) throw new PaymentError(400, "A 10-digit mobile number is needed to pay with this gateway.", "PHONE_REQUIRED");
+    // The number comes from the account (saved at sign-up), never from the payment form.
+    const phone = gatewayPhone(user);
+    if (!phone) throw new PaymentError(400, "There is no mobile number on your account. Please contact support.", "PHONE_UNAVAILABLE");
     const gatewayOrderId = `MEM_${order._id}`;
     let cf;
     try {

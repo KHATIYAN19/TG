@@ -7,17 +7,19 @@ import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
 import MemoryCode from "../../models/memory/MemoryCode.js";
 import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryOrder from "../../models/memory/MemoryOrder.js";
+import MemoryEvent from "../../models/memory/MemoryEvent.js";
 import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
 import User from "../../models/User.js";
 import UserActivity from "../../models/UserActivity.js";
 
+import { digitsOf, formatPhone } from "../../utils/phone.js";
 import { removeFiles } from "../../services/memory/storageCleanup.js";
 import { changeAccountSecurityState, invalidateUserAuth, revokeAllRedisSessions } from "../../services/authStateService.js";
 import { purgeUser } from "../../services/arena/purge.js";
 import { activeGateways, knownGateways } from "../../services/memory/payments/index.js";
 import {
   MemoryError, assertId, deleteMediaObjects, purgePageEvents, ensureOccasions, escapeRegex, getSettings, grantCredits,
-  hashPin, encryptPin, newCode, newPin, newSlug, pageView, parse, sendError, updateSettings,
+  hashPin, encryptPin, buildActivity, MAX_EVENTS_PER_PAGE, newCode, newPin, newSlug, pageView, parse, sendError, updateSettings,
 } from "../../services/memory/memoryService.js";
 
 const handler = (fn) =>
@@ -141,7 +143,7 @@ export const stats = handler(async (req, res) => {
 
 const loadPage = async (id) => {
   assertId(id, "page id");
-  const page = await MemoryPage.findById(id).populate("occasion", "name theme").populate("user", "name email");
+  const page = await MemoryPage.findById(id).select("+pinEnc").populate("occasion", "name theme").populate("user", "name email mobile countryCode");
   if (!page) throw new MemoryError(404, "Page not found.", "PAGE_NOT_FOUND");
   return page;
 };
@@ -164,17 +166,24 @@ export const listPages = handler(async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
   if (q) {
     const rx = new RegExp(escapeRegex(q), "i");
-    const owners = await User.find({ $or: [{ email: rx }, { name: rx }] }).select("_id").limit(200).lean();
+    const owners = await User.find({ $or: [{ email: rx }, { name: rx }, ...(digitsOf(q).length >= 3 ? [{ mobile: new RegExp(escapeRegex(digitsOf(q))) }] : [])] }).select("_id").limit(200).lean();
     filter.$or = [{ title: rx }, { recipientName: rx }, { slug: q }, { user: { $in: owners.map((u) => u._id) } }];
   }
   const [rows, total] = await Promise.all([
-    MemoryPage.find(filter).sort(sort).skip(skip).limit(limit).populate("occasion", "name theme").populate("user", "name email"),
+    MemoryPage.find(filter).select("+pinEnc").sort(sort).skip(skip).limit(limit).populate("occasion", "name theme").populate("user", "name email mobile countryCode"),
     MemoryPage.countDocuments(filter),
   ]);
-  ok(res, { items: await Promise.all(rows.map((p) => pageView(p))), total, page, pages: Math.ceil(total / limit) });
+  ok(res, { items: await Promise.all(rows.map((p) => pageView(p, { withPin: true }))), total, page, pages: Math.ceil(total / limit) });
 });
 
-export const getPage = handler(async (req, res) => ok(res, await out(req.params.id, { withMedia: true })));
+export const getPage = handler(async (req, res) => ok(res, await out(req.params.id, { withMedia: true, withPin: true })));
+
+/** What the receiver did on a page (same report the owner sees). */
+export const getPageActivity = handler(async (req, res) => {
+  const page = await loadPage(req.params.id);
+  const events = await MemoryEvent.find({ page: page._id }).sort({ at: 1 }).limit(MAX_EVENTS_PER_PAGE).select("type data visitor at").lean();
+  ok(res, buildActivity(page, events));
+});
 
 /** Give a page more time (or set its last day). Works on a page that has run out but hasn't been cleaned up yet. */
 export const setExpiry = handler(async (req, res) => {
@@ -298,11 +307,11 @@ export const listUsers = handler(async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
   if (q) {
     const rx = new RegExp(escapeRegex(q), "i");
-    filter.$or = [{ name: rx }, { email: rx }];
+    filter.$or = [{ name: rx }, { email: rx }, ...(digitsOf(q).length >= 3 ? [{ mobile: new RegExp(escapeRegex(digitsOf(q))) }] : [])];
   }
   if (["active", "inactive", "suspended", "blocked"].includes(req.query.status)) filter.status = req.query.status;
 
-  const { items: users, hasMore, nextCursor } = await keysetPage(User, filter, req, { select: "name email role status statusReason lastLoginAt createdAt" });
+  const { items: users, hasMore, nextCursor } = await keysetPage(User, filter, req, { select: "name email mobile countryCode role status statusReason lastLoginAt createdAt" });
   const ids = users.map((u) => u._id);
   const [pageCounts, creditCounts, total] = await Promise.all([
     MemoryPage.aggregate([{ $match: { user: { $in: ids } } }, { $group: { _id: "$user", n: { $sum: 1 } } }]),
@@ -312,7 +321,7 @@ export const listUsers = handler(async (req, res) => {
   const pc = new Map(pageCounts.map((r) => [String(r._id), r.n]));
   const cc = new Map(creditCounts.map((r) => [String(r._id), r.n]));
   ok(res, {
-    items: users.map((u) => ({ id: String(u._id), name: u.name, email: u.email, role: u.role, status: u.status, statusReason: u.statusReason || "", lastLoginAt: u.lastLoginAt || null, createdAt: u.createdAt, pages: pc.get(String(u._id)) || 0, credits: cc.get(String(u._id)) || 0 })),
+    items: users.map((u) => ({ id: String(u._id), name: u.name, email: u.email, mobile: u.mobile || null, countryCode: u.mobile ? u.countryCode || "+91" : null, phone: formatPhone(u.countryCode, u.mobile) || null, role: u.role, status: u.status, statusReason: u.statusReason || "", lastLoginAt: u.lastLoginAt || null, createdAt: u.createdAt, pages: pc.get(String(u._id)) || 0, credits: cc.get(String(u._id)) || 0 })),
     hasMore, nextCursor, ...(total !== undefined ? { total } : {}),
   });
 });
@@ -502,11 +511,11 @@ export const removeMailBlock = handler(async (req, res) => {
 export const listOrders = handler(async (req, res) => {
   const { limit, page, skip } = paginate(req);
   const [rows, total] = await Promise.all([
-    MemoryOrder.find().sort({ createdAt: -1 }).skip(skip).limit(limit).populate("user", "name email").lean(),
+    MemoryOrder.find().sort({ createdAt: -1 }).skip(skip).limit(limit).populate("user", "name email mobile countryCode").lean(),
     MemoryOrder.countDocuments(),
   ]);
   ok(res, {
-    items: rows.map((o) => ({ id: String(o._id), user: o.user ? { name: o.user.name, email: o.user.email } : null, amount: rupees(o.amount), status: o.status, gateway: o.gateway, gatewayOrderId: o.gatewayOrderId, gatewayPaymentId: o.gatewayPaymentId, failureReason: o.failureReason, createdAt: o.createdAt, paidAt: o.paidAt })),
+    items: rows.map((o) => ({ id: String(o._id), user: o.user ? { name: o.user.name, email: o.user.email, phone: formatPhone(o.user.countryCode, o.user.mobile) || null } : null, amount: rupees(o.amount), status: o.status, gateway: o.gateway, gatewayOrderId: o.gatewayOrderId, gatewayPaymentId: o.gatewayPaymentId, failureReason: o.failureReason, createdAt: o.createdAt, paidAt: o.paidAt })),
     total, page, pages: Math.ceil(total / limit),
   });
 });

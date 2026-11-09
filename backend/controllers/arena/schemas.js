@@ -5,6 +5,7 @@ import {
 } from "../../models/arena/ArenaProfile.js";
 import { BUG_CATEGORIES, BUG_SEVERITIES, BUG_STATUSES } from "../../models/arena/ArenaBugReport.js";
 import { REPORT_REASONS } from "../../models/arena/ArenaReport.js";
+import { DEFAULT_DIAL, digitsOf, isKnownDial, mobileProblem } from "../../utils/phone.js";
 import { detectContactInfo, CONTACT_INFO_MESSAGE } from "../../services/arena/privacy.js";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid id");
@@ -16,6 +17,20 @@ const anonymousText = (max) =>
     .trim()
     .max(max)
     .refine((v) => detectContactInfo(v) === null, { message: CONTACT_INFO_MESSAGE });
+
+/* Phone: a country code ("+91") and the national number. Clients that send only `mobile` get +91. */
+export const countryCodeField = z
+  .string()
+  .trim()
+  .default(DEFAULT_DIAL)
+  .transform((v) => (v.startsWith("+") ? v : `+${v}`))
+  .refine(isKnownDial, { message: "Choose a valid country code" });
+export const mobileField = z.string().trim().min(1, "Enter your mobile number").max(20).transform(digitsOf);
+/** Use after the object: z.object({ countryCode, mobile }).superRefine(checkMobile) */
+export const checkMobile = (v, ctx) => {
+  const problem = mobileProblem(v.countryCode, v.mobile);
+  if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mobile"], message: problem });
+};
 
 export const passwordRule = z
   .string()
@@ -30,10 +45,12 @@ export const signupSchema = z
   .object({
     name: z.string().trim().min(2, "Enter your name").max(80),
     email: z.string().trim().toLowerCase().email("Enter a valid email").max(120),
-    mobile: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+    countryCode: countryCodeField,
+    mobile: mobileField,
     password: passwordRule,
     confirmPassword: z.string(),
   })
+  .superRefine(checkMobile)
   .refine((v) => v.password === v.confirmPassword, {
     path: ["confirmPassword"],
     message: "Passwords do not match",

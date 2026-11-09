@@ -1,4 +1,5 @@
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
+import { formatPhone } from "../../utils/phone.js";
 import User from "../../models/User.js";
 import ArenaEntry from "../../models/arena/ArenaEntry.js";
 import ArenaRequest from "../../models/arena/ArenaRequest.js";
@@ -177,7 +178,7 @@ export const listProfiles = handle(async (req, res) => {
   // Account email + each member's current/latest entry (so admins see matches at a glance).
   const userIds = rows.map((p) => p.user);
   const [users, entries] = await Promise.all([
-    User.find({ _id: { $in: userIds } }).select("name email mobile").lean(),
+    User.find({ _id: { $in: userIds } }).select("name email mobile countryCode").lean(),
     ArenaEntry.find({ user: { $in: userIds } }).sort({ createdAt: -1 }).lean(),
   ]);
   const userBy = new Map(users.map((u) => [String(u._id), u]));
@@ -198,7 +199,7 @@ export const listProfiles = handle(async (req, res) => {
         const u = userBy.get(String(p.user));
         return {
           ...adminView(p),
-          account: u ? { name: u.name, email: u.email, mobile: u.mobile } : null,
+          account: u ? { name: u.name, email: u.email, mobile: u.mobile, countryCode: u.mobile ? u.countryCode || "+91" : null, phone: formatPhone(u.countryCode, u.mobile) || null } : null,
           entry: e
             ? {
                 id: String(e._id),

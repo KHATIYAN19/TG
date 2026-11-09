@@ -74,6 +74,7 @@ export const signup = handle(async (req, res) => {
     {
       name: data.name,
       email: data.email,
+      countryCode: data.countryCode,
       mobile: data.mobile,
       passwordHash: await hashPassword(data.password),
       otpHash: otpHash(data.email, otp),
@@ -167,6 +168,7 @@ export const verifySignup = handle(async (req, res) => {
     created = await User.create({
       name: pending.name,
       email: pending.email,
+      countryCode: pending.countryCode || "+91", // codes sent before this change had no country code
       mobile: pending.mobile,
       password: pending.passwordHash, // already bcrypt-hashed
       role: "normal",

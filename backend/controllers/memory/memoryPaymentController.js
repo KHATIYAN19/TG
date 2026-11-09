@@ -51,7 +51,7 @@ export const createPayment = handler(async (req, res) => {
   const urls = publicUrls(orderId);
   if (adapter.needsPublicUrl && !urls.base) throw new MemoryError(500, "BACKEND_URL is not configured on the server.", "BACKEND_URL_MISSING");
 
-  const user = await User.findById(uid(req)).select("name email mobile").lean();
+  const user = await User.findById(uid(req)).select("name email mobile countryCode").lean();
   if (!user) throw new MemoryError(404, "User not found.", "USER_NOT_FOUND");
 
   const amountPaise = amountToPaise(s.price);
@@ -60,7 +60,7 @@ export const createPayment = handler(async (req, res) => {
   try {
     ({ gatewayOrderId, checkout } = await adapter.createCheckout({
       order: { _id: orderId, user: uid(req), amount: amountPaise },
-      user: { ...user, mobile: user.mobile || req.body?.phone },
+      user, // name, email and mobile all come from the saved account
       amountPaise,
       urls,
     }));

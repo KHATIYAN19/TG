@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { formatPhone } from "../../utils/phone.js";
 import User from "../../models/User.js";
 import MailSuppression from "../../models/MailSuppression.js";
 import ArenaProfile from "../../models/arena/ArenaProfile.js";
@@ -56,6 +57,8 @@ const baseView = (u) => ({
   name: u.name,
   email: u.email,
   mobile: u.mobile ?? null,
+  countryCode: u.mobile ? u.countryCode || "+91" : null,
+  phone: formatPhone(u.countryCode, u.mobile) || null,
   role: u.role,
   signedUpAt: u.createdAt,
   verified: Boolean(u.emailVerifiedAt),
@@ -131,7 +134,7 @@ export const listAccounts = handle(async (req, res) => {
 
     const [rows, total] = await Promise.all([
       User.find(filter)
-        .select("name email mobile role createdAt emailVerifiedAt lastLoginAt deletedAt deletedBy status")
+        .select("name email mobile countryCode role createdAt emailVerifiedAt lastLoginAt deletedAt deletedBy status")
         .sort({ deletedAt: -1, _id: -1 })
         .skip((page - 1) * pageSize)
         .limit(pageSize)
@@ -176,7 +179,7 @@ export const listAccounts = handle(async (req, res) => {
           { $sort: { createdAt: -1, _id: -1 } },
           { $skip: (page - 1) * pageSize },
           { $limit: pageSize },
-          { $project: { name: 1, email: 1, mobile: 1, role: 1, createdAt: 1, emailVerifiedAt: 1, lastLoginAt: 1, arenaReminderSentAt: 1, arenaReminderCount: 1 } },
+          { $project: { name: 1, email: 1, mobile: 1, countryCode: 1, role: 1, createdAt: 1, emailVerifiedAt: 1, lastLoginAt: 1, arenaReminderSentAt: 1, arenaReminderCount: 1 } },
         ],
         total: [{ $count: "n" }],
       },

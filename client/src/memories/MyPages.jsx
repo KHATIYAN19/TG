@@ -194,10 +194,10 @@ export default function MyPages({ credits }) {
                   <span className="ml-auto text-[#a07890]">{when(p.createdAt)}</span>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 rounded-2xl bg-[#fff7f3] p-2 pl-3">
+                <div className="mt-3 flex min-w-0 items-center gap-1.5 rounded-2xl bg-[#fff7f3] p-2 pl-3 sm:gap-2">
                   <Link2 className="h-4 w-4 shrink-0 text-rose-400" aria-hidden />
                   <input readOnly value={p.url} aria-label="Page link" onFocus={(e) => e.target.select()} className="min-w-0 flex-1 truncate bg-transparent text-xs text-[#6b3a5a] outline-none" />
-                  <button type="button" onClick={() => copy(p)} className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-rose-600 ring-1 ring-rose-100 hover:bg-rose-50">{copied === p.id ? <><Check className="h-3.5 w-3.5" aria-hidden /> Copied</> : <><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</>}</button>
+                  <button type="button" onClick={() => copy(p)} className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 ring-1 ring-rose-100 hover:bg-rose-50 sm:px-3">{copied === p.id ? <><Check className="h-3.5 w-3.5" aria-hidden /> Copied</> : <><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</>}</button>
                 </div>
 
                 {p.visibility === "private" && <PinChip pin={p.pin} onNew={() => { setSheet(null); setDialog({ kind: "pin", page: p }); }} className="mt-2" />}
