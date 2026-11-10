@@ -15,6 +15,7 @@ import { createFx, prefersReducedMotion } from "../birthday/fx";
 import { createSound } from "../birthday/audio";
 import Gifts from "../birthday/Gifts";
 import Gallery from "../birthday/Gallery";
+import PhotoCamera from "../common/PhotoCamera";
 import Letter from "../birthday/Letter";
 import VolumeControl from "../birthday/VolumeControl";
 import { BgFloat } from "../birthday/decor";
@@ -214,8 +215,15 @@ export default function ThanksPage({ data = DUMMY_THANKS, theme: themeId = DEFAU
           </section>
         )}
 
+        {/* ---- camera: clicks and prints the main photo ---- */}
+        {data.photos?.length > 0 && (
+          <section id="camera" className="bd-sec" aria-label="A photo for you">
+            <div className="bd-wrap"><PhotoCamera photo={data.photos?.find((x) => x.id === data.mainPhotoId) || data.photos?.[0]} name={name} sound={sound} fx={fx} nextId="moments" /></div>
+          </section>
+        )}
+
         {hasGallery && (
-        <section className="bd-sec">
+        <section id="moments" className="bd-sec">
           <div className="bd-wrap">
             <Head kicker="Memories" title="Moments to remember" sub="Tap any picture to see it bigger." />
             <Gallery photos={data.photos} video={data.video} mainPhotoId={data.mainPhotoId} sound={sound} />

@@ -84,6 +84,9 @@ const NotFoundPage = lazy(() =>
 const LearnHome = lazy(() =>
   import("./component/LearnHome.jsx")
 );
+// const MentorshipPage = lazy(() =>
+//   import("./component/MentorshipPage.jsx")
+// );
 const BlogPage = lazy(() =>
   import("./component/BlogPage")
 );
@@ -965,6 +968,10 @@ function App() {
             path="/learn"
             element={<LearnHome />}
           />
+          {/* <Route
+            path="/mentorship"
+            element={<MentorshipPage />}
+          /> */}
           <Route
             path="/blogs"
             element={<BlogPage />}

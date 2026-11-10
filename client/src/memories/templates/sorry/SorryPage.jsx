@@ -14,6 +14,7 @@ import { createSound } from "../birthday/audio";
 import Gifts from "../birthday/Gifts";
 import Chocolate from "../birthday/Chocolate";
 import Gallery from "../birthday/Gallery";
+import PhotoCamera from "../common/PhotoCamera";
 import Letter from "../birthday/Letter";
 import VolumeControl from "../birthday/VolumeControl";
 import { BgFloat } from "../birthday/decor";
@@ -339,8 +340,15 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
         </section>
 
         {/* ---- gallery ---- */}
+        {/* ---- camera: clicks and prints the main photo ---- */}
+        {data.photos?.length > 0 && (
+          <section id="camera" className="bd-sec" aria-label="A photo for you">
+            <div className="bd-wrap"><PhotoCamera photo={data.photos?.find((x) => x.id === data.mainPhotoId) || data.photos?.[0]} name={name} sound={sound} fx={fx} nextId="moments" /></div>
+          </section>
+        )}
+
         {hasGallery && (
-        <section className="bd-sec">
+        <section id="moments" className="bd-sec">
           <div className="bd-wrap">
             <p className="bd-kicker mem-reveal">Memories</p>
             <h2 className="bd-h2 mem-reveal">Moments I treasure</h2>

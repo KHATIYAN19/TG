@@ -22,6 +22,9 @@ import VolumeControl from "./VolumeControl";
 import { BgFloat, HeroDecor } from "./decor";
 import { track } from "../../track";
 import ReplyBox from "../common/ReplyBox";
+import PhotoCamera from "../common/PhotoCamera";
+import ScratchCard from "../common/ScratchCard";
+import StoryReel from "../common/StoryReel";
 
 const FREDOKA = { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" };
 
@@ -66,7 +69,7 @@ function GateGift() {
 export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = DEFAULT_THEME, response, onReply }) {
   useMemoriesChrome();
   useReveal([]);
-  const hasGallery = Boolean(data.photos?.length || data.video); // no photos or videos yet: no gallery section
+  const hasGallery = Boolean(data.photos?.length); // the video has its own story reel // no photos or videos yet: no gallery section
 
   const theme = resolveTheme(themeId);
   const themeRef = useRef(theme);
@@ -139,6 +142,8 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
   const wishes = data.wishes?.length ? data.wishes : DEFAULT_WISHES;
   const gifts = data.gifts || [];
   const { recipientName: name, senderName: sender } = data;
+  const mainPhoto = (data.photos || []).find((p) => p.id === data.mainPhotoId) || data.photos?.[0];
+  const scratchPhoto = (data.photos || []).find((p) => p !== mainPhoto) || mainPhoto;
 
   return (
     <div className={`bd-root ${opened ? "open" : ""}`} data-theme={theme.id} style={theme.vars}>
@@ -221,20 +226,41 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
           </div>
         </section>
 
+        {/* ---- camera: prints the main photo ---- */}
+        {mainPhoto && (
+          <section id="camera" className="bd-sec" aria-label="A photo for you">
+            <div className="bd-wrap"><PhotoCamera photo={mainPhoto} name={name} sound={sound} fx={fx} nextId="scratch" /></div>
+          </section>
+        )}
+
+        {/* ---- scratch card: hides another photo ---- */}
+        {mainPhoto && (
+          <section id="scratch" className="bd-sec" aria-label="Scratch card">
+            <div className="bd-wrap"><ScratchCard photo={scratchPhoto} name={name} sound={sound} fx={fx} nextId={data.video ? "reel" : hasGallery ? "moments" : "note"} /></div>
+          </section>
+        )}
+
+        {/* ---- the film: the video plays as a little movie ---- */}
+        {data.video && (
+          <section id="reel" className="bd-sec" aria-label="Your story">
+            <div className="bd-wrap"><StoryReel video={data.video} photos={data.photos || []} name={name} sender={sender} sound={sound} /></div>
+          </section>
+        )}
+
         {/* ---- gallery ---- */}
         {hasGallery && (
-        <section className="bd-sec">
+        <section id="moments" className="bd-sec">
           <div className="bd-wrap">
             <p className="bd-kicker mem-reveal">Memories</p>
             <h2 className="bd-h2 mem-reveal">Moments we love</h2>
             <p className="bd-sub mem-reveal">Tap any picture to see it bigger.</p>
-            <Gallery photos={data.photos} video={data.video} mainPhotoId={data.mainPhotoId} sound={sound} />
+            <Gallery photos={data.photos} video={null} mainPhotoId={data.mainPhotoId} sound={sound} />
           </div>
         </section>
         )}
 
         {/* ---- letter ---- */}
-        <section className="bd-sec">
+        <section id="note" className="bd-sec">
           <div className="bd-wrap">
             <p className="bd-kicker mem-reveal">From {sender}</p>
             <h2 className="bd-h2 mem-reveal">A note just for you</h2>

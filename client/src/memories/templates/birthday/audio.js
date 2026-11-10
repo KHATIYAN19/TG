@@ -119,6 +119,13 @@ export function createSound() {
       const t = now();
       noise(t, 0.8, { type: "lowpass", freq: 350, sweepTo: 1300, q: 0.7, gain: 0.5, attack: 0.18 });
     }),
+    shutter: run(() => { // camera click: two quick snaps
+      const t = now();
+      noise(t, 0.04, { type: "highpass", freq: 2500, gain: 0.5 });
+      tone(900, t, 0.03, { type: "square", gain: 0.12, glideTo: 300, attack: 0.001, release: 0.02 });
+      noise(t + 0.09, 0.05, { type: "highpass", freq: 1800, gain: 0.4 });
+      tone(600, t + 0.09, 0.04, { type: "square", gain: 0.1, glideTo: 200, attack: 0.001, release: 0.03 });
+    }),
     chime: run(() => {
       const t = now();
       ["C6", "E6", "G6", "C7"].forEach((n, i) => tone(NOTE[n], t + i * 0.075, 0.5, { gain: 0.14, release: 0.5 }));
