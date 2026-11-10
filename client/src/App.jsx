@@ -197,6 +197,15 @@ const SystemDesignCombo = lazy(() =>
 const SystemDesignLLD = lazy(() =>
   import("./component/SystemDesignLLD.jsx")
 );
+const SqlInterviewHandbook = lazy(() =>
+  import("./component/SqlInterviewHandbook.jsx")
+);
+const GcpHandbook = lazy(() =>
+  import("./component/GcpHandbook.jsx")
+);
+const AwsHandbook = lazy(() =>
+  import("./component/AwsHandbook.jsx")
+);
 const GenAiGoogleAdk = lazy(() =>
   import("./component/GenAiGoogleAdk.jsx")
 );
@@ -1183,6 +1192,18 @@ function App() {
           <Route
             path="/book/system-design/lld"
             element={<SystemDesignLLD />}
+          />
+          <Route
+            path="/book/cloud/aws"
+            element={<AwsHandbook />}
+          />
+          <Route
+            path="/book/cloud/gcp"
+            element={<GcpHandbook />}
+          />
+          <Route
+            path="/book/database/sql"
+            element={<SqlInterviewHandbook />}
           />
           <Route
             path="/book/genai/google-adk"

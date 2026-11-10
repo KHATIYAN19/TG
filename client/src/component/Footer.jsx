@@ -84,6 +84,18 @@ const BOOK_LINKS = [
     name: "Mastering System Design — LLD (Java)",
     href: "/book/system-design/lld",
   },
+  {
+    name: "SQL & Database Interview Handbook",
+    href: "/book/database/sql",
+  },
+  {
+    name: "Google Cloud (GCP) Engineer's Handbook",
+    href: "/book/cloud/gcp",
+  },
+  {
+    name: "AWS: The Complete Cloud Engineer's Handbook",
+    href: "/book/cloud/aws",
+  },
 ];
 
 const LEGAL_LINKS = [

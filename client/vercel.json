@@ -42,6 +42,18 @@
       "destination": "/api/page?p=/book/system-design/lld"
     },
     {
+      "source": "/book/cloud/aws",
+      "destination": "/api/page?p=/book/cloud/aws"
+    },
+    {
+      "source": "/book/cloud/gcp",
+      "destination": "/api/page?p=/book/cloud/gcp"
+    },
+    {
+      "source": "/book/database/sql",
+      "destination": "/api/page?p=/book/database/sql"
+    },
+    {
       "source": "/book/system-design/hld-lld/combo",
       "destination": "/api/page?p=/book/system-design/hld-lld/combo"
     },

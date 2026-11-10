@@ -26,6 +26,18 @@ const PAGES = {
     file: "src/component/SystemDesignLLD.jsx",
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "faqItems"],
   },
+  "/book/cloud/aws": {
+    file: "src/component/AwsHandbook.jsx",
+    pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
+  },
+  "/book/cloud/gcp": {
+    file: "src/component/GcpHandbook.jsx",
+    pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
+  },
+  "/book/database/sql": {
+    file: "src/component/SqlInterviewHandbook.jsx",
+    pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
+  },
   "/book/system-design/hld-lld/combo": {
     file: "src/component/SystemDesignCombo.jsx",
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],

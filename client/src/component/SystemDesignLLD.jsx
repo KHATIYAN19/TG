@@ -55,7 +55,7 @@ const THEME_EVENT = "targettrek-theme-change";
 const HLD_REDIRECT_URL = "/book/system-design/hld";
 const COMBO_REDIRECT_URL = "/book/system-design/hld-lld/combo";
 
-const readTheme = () => {
+export const readTheme = () => {
   if (typeof window === "undefined") return "light";
   return window.localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 };
@@ -95,7 +95,7 @@ const flowSteps = [
   { n: "06", title: "Validate", text: "Concurrency, edge cases and trade-offs" },
 ];
 
-const styles = `
+export const styles = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
 html,
 body,
@@ -3125,13 +3125,13 @@ function CompanionCard({
   );
 }
 
-function ScrollProgress() {
+export function ScrollProgress() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.3 });
   return <motion.div aria-hidden="true" className="lld-progress" style={{ scaleX }} />;
 }
 
-function CountUp({ to, suffix = "", duration = 1.4 }) {
+export function CountUp({ to, suffix = "", duration = 1.4 }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduce = useReducedMotion();
@@ -3161,7 +3161,7 @@ function CountUp({ to, suffix = "", duration = 1.4 }) {
 
 // Scroll-linked scale in / scale out: grows to full size entering the viewport
 // and eases back slightly as it leaves.
-function ScrollScale({ children, className, from = 0.93 }) {
+export function ScrollScale({ children, className, from = 0.93 }) {
   const ref = useRef(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
