@@ -60,6 +60,7 @@ userRouter.use(auth);
 
 userRouter.get("/config", U.getConfig);
 userRouter.post("/codes/redeem", codeLimit, U.redeemCode);
+userRouter.post("/gumroad/redeem-order", codeLimit, U.redeemGumroadOrder);
 userRouter.post("/credits/free", codeLimit, U.claimFreeCredit);
 userRouter.post("/payments/create", PB.payCreateHourly, PB.payCreateDaily, P.createPayment);
 userRouter.post("/payments/verify", PB.payVerifyHourly, P.verifyPayment);
@@ -118,6 +119,13 @@ adminRouter.delete("/logins", A.clearLoginEvents);
 adminRouter.delete("/logins/:id", A.deleteLoginEvent);
 adminRouter.delete("/users/:userId/pages", A.deleteUserPages);
 
+adminRouter.get("/gumroad/status", A.gumroadStatus);
+adminRouter.get("/gumroad/products", A.listGumroadProducts);
+adminRouter.post("/gumroad/products", A.createGumroadProduct);
+adminRouter.patch("/gumroad/products/:id", A.updateGumroadProduct);
+adminRouter.post("/gumroad/products/:id/primary", A.makeGumroadPrimary);
+adminRouter.delete("/gumroad/products/:id", A.deleteGumroadProduct);
+adminRouter.get("/gumroad/sales", A.listGumroadSales);
 adminRouter.get("/codes", A.listCodes);
 adminRouter.post("/codes", A.createCodes);
 adminRouter.patch("/codes/:id", A.updateCode);

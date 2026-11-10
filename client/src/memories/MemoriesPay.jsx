@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { ArrowRight, Check, Gift, KeyRound, Lock, ShieldCheck, Ticket, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, Gift, Globe, KeyRound, Lock, ShieldCheck, Ticket, Sparkles } from "lucide-react";
 
 import { errMsg } from "../arena/api";
-import { claimFreeCredit, createPayment, getPaymentStatus, redeemCode } from "./memApi";
+import { claimFreeCredit, createPayment, getPaymentStatus, redeemCode, redeemGumroadOrder } from "./memApi";
 import { runCheckout } from "./checkout";
 import { formatPrice } from "./api";
 import { Loading } from "./AppShell";
@@ -53,6 +53,20 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
   const [redeeming, setRedeeming] = useState(false);
   const [error, setError] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [params] = useSearchParams();
+  const gumRef = useRef(null);
+
+  const [gOrder, setGOrder] = useState("");
+  const [gEmail, setGEmail] = useState(user?.email || "");
+  const [gBusy, setGBusy] = useState(false);
+  const [gError, setGError] = useState("");
+
+  // /memories/app/pay?gumroad=1 jumps to the Gumroad section
+  const wantsGumroad = params.get("gumroad") === "1";
+  useEffect(() => { if (cfg?.gumroad?.enabled && wantsGumroad) gumRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [cfg?.gumroad?.enabled, wantsGumroad]);
+
+
+  const gum = cfg?.gumroad;
 
   if (!cfg) return <Loading label="Getting things ready…" />;
 
@@ -91,6 +105,18 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
     if (code.trim().length < 3) return setCodeError("Enter your unique code.");
     setRedeeming(true); setCodeError("");
     try { await redeemCode(code.trim()); await done("code"); } catch (err) { setCodeError(errMsg(err)); } finally { setRedeeming(false); }
+  };
+
+  const redeemGumroad = async (e) => {
+    e.preventDefault();
+    if (gOrder.trim().length < 4 || !/^\S+@\S+\.\S+$/.test(gEmail.trim())) return setGError("Enter your order number and the email you used on Gumroad.");
+    setGBusy(true); setGError("");
+    try {
+      const r = await redeemGumroadOrder(gOrder.trim(), gEmail.trim());
+      await reload();
+      toast.success(`${r.added} page credit${r.added === 1 ? "" : "s"} added.`, { id: "memories-credit" });
+      navigate("/memories/app", { replace: true, state: { welcome: "code", credits: r.credits, added: r.added } });
+    } catch (err) { setGError(errMsg(err)); } finally { setGBusy(false); }
   };
 
   const claimFree = async () => {
@@ -139,6 +165,46 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
               <Button size="lg" className="mt-6 w-full" onClick={pay} loading={paying} disabled={noGateway}><Lock className="h-4 w-4" aria-hidden /> Pay {formatPrice(price)} with {gatewayLabel(chosen)}</Button>
             )}
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[#8a6a80]"><ShieldCheck className="h-4 w-4 text-emerald-500" aria-hidden /> UPI, cards and netbanking on a secure page. You&apos;re charged only when you confirm. All sales are final; only an accidental double payment is refunded.</p>
+
+            {gum?.enabled && (
+              <div ref={gumRef} id="gumroad" className="mt-6 scroll-mt-24 border-t border-dashed border-rose-200 pt-6" aria-labelledby="gum-h">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sky-50 text-sky-600"><Globe className="h-5 w-5" aria-hidden /></span>
+                  <div>
+                    <h2 id="gum-h" className="text-base font-bold text-[#3a1530]">Pay in any currency</h2>
+                    <p className="mt-0.5 text-sm leading-relaxed text-[#7a5370]">Pay on Gumroad with a card or PayPal, in the currency you prefer. Gumroad emails you a receipt with an <b>Order ID</b>. Enter it here with the email you paid with and your page credits are added.</p>
+                  </div>
+                </div>
+
+                {gum.primary && (
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-rose-50/60 px-4 py-3 ring-1 ring-rose-100">
+                    <span className="text-sm font-semibold text-[#3a1530]">1. {gum.primary.name} <span className="font-normal text-[#8a6a80]">· {gum.primary.credits} page credit{gum.primary.credits === 1 ? "" : "s"}</span></span>
+                    {gum.primary.url
+                      ? <a href={gum.primary.url} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-500 to-orange-400 px-4 py-2 text-sm font-bold text-white shadow hover:brightness-105">{gum.primary.price ? `Buy ${gum.primary.price}` : "Buy"} <ExternalLink className="h-3.5 w-3.5" aria-hidden /></a>
+                      : <span className="text-sm font-bold text-[#3a1530]">{gum.primary.price}</span>}
+                  </div>
+                )}
+
+                <form onSubmit={redeemGumroad} noValidate className="mt-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#a07890]">2. Add your credits</p>
+                  <div className="mt-2 grid gap-3">
+                    <div>
+                      <label htmlFor="mem-gorder" className="text-sm font-semibold text-[#3a1530]">Order ID</label>
+                      <input id="mem-gorder" value={gOrder} onChange={(e) => { setGOrder(e.target.value); setGError(""); }} maxLength={60} autoComplete="off" spellCheck={false} placeholder="From your receipt, e.g. zLEugBsv…iQ=="
+                        className="mt-1 w-full rounded-xl border border-rose-100 bg-white px-3 py-3 font-mono text-sm text-[#3a1530] outline-none transition placeholder:font-sans placeholder:text-[#c4a8b8] focus:border-rose-400 focus:ring-4 focus:ring-rose-100" aria-invalid={Boolean(gError)} />
+                    </div>
+                    <div>
+                      <label htmlFor="mem-gemail" className="text-sm font-semibold text-[#3a1530]">Email you paid with</label>
+                      <input id="mem-gemail" type="email" value={gEmail} onChange={(e) => { setGEmail(e.target.value); setGError(""); }} maxLength={254} autoComplete="email" placeholder="you@example.com"
+                        className="mt-1 w-full rounded-xl border border-rose-100 bg-white px-3 py-3 text-sm text-[#3a1530] outline-none transition placeholder:text-[#c4a8b8] focus:border-rose-400 focus:ring-4 focus:ring-rose-100" aria-invalid={Boolean(gError)} aria-describedby={gError ? "gkey-err" : undefined} />
+                    </div>
+                  </div>
+                  {gError && <p id="gkey-err" role="alert" className="mt-2 text-sm text-rose-600">{gError}</p>}
+                  <Button type="submit" variant="soft" size="lg" className="mt-4 w-full" loading={gBusy}><Sparkles className="h-4 w-4" aria-hidden /> Add my credits</Button>
+                  <p className="mt-3 text-xs leading-relaxed text-[#8a6a80]">Both must match your Gumroad receipt. Each purchase can be used one time, for one account. Only the Memories purchase works here, not other Gumroad products.</p>
+                </form>
+              </div>
+            )}
           </div>
         </section>
 
@@ -161,6 +227,7 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
           <p className="mt-auto pt-6 text-xs leading-relaxed text-[#8a6a80]">Codes are single-use per person and can expire. Wrong tries are limited to keep codes safe.</p>
         </section>
       </div>
+
 
       <p className="mx-auto mt-6 max-w-4xl text-center text-sm text-[#8a6a80]">Payment problem or a question? <a className="font-semibold text-rose-600 hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. <Link to="/memories/refund" className="font-semibold text-rose-600 hover:underline">Refund policy</Link></p>
       <p className="mt-3 text-center text-sm text-[#8a6a80]">Just looking? <Link to="/memories" className="font-semibold text-rose-600 hover:underline">Back to the home page</Link></p>

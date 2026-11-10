@@ -7,6 +7,9 @@ import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
 import MemoryCode from "../../models/memory/MemoryCode.js";
 import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryOrder from "../../models/memory/MemoryOrder.js";
+import MemoryGumroadProduct from "../../models/memory/MemoryGumroadProduct.js";
+import MemoryGumroadSale from "../../models/memory/MemoryGumroadSale.js";
+import { checkConnection } from "../../services/memory/gumroad.js";
 import MemoryEvent from "../../models/memory/MemoryEvent.js";
 import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
 import User from "../../models/User.js";
@@ -484,6 +487,69 @@ export const deleteCode = handler(async (req, res) => {
   assertId(req.params.id, "code id");
   await MemoryCode.findByIdAndDelete(req.params.id);
   ok(res, { deleted: true });
+});
+
+/* =====================================================
+   GUMROAD: the products on sale and the keys that have been redeemed
+===================================================== */
+const gumroadProductBody = z.object({
+  name: z.string().trim().min(1).max(80),
+  productId: z.string().trim().min(3).max(80),
+  credits: z.number().int().min(1).max(1000),
+  priceLabel: z.string().trim().max(30).optional(),
+  url: z.string().trim().max(300).refine((v) => !v || /^https:\/\//i.test(v), "The link must start with https://").optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(1000).optional(),
+});
+const gumroadRow = (p) => ({ id: String(p._id), name: p.name, productId: p.productId, credits: p.credits, priceLabel: p.priceLabel || "", url: p.url || "", isActive: p.isActive, sortOrder: p.sortOrder || 0 });
+
+export const gumroadStatus = handler(async (req, res) => ok(res, await checkConnection()));
+export const listGumroadProducts = handler(async (req, res) => {
+  const rows = await MemoryGumroadProduct.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
+  ok(res, rows.map(gumroadRow));
+});
+export const createGumroadProduct = handler(async (req, res) => {
+  const b = parse(gumroadProductBody, req.body);
+  try {
+    const p = await MemoryGumroadProduct.create(b);
+    ok(res, gumroadRow(p), 201);
+  } catch (e) {
+    if (e?.code === 11000) throw new MemoryError(409, "That Gumroad product id is already added.", "PRODUCT_EXISTS");
+    throw e;
+  }
+});
+export const updateGumroadProduct = handler(async (req, res) => {
+  assertId(req.params.id, "product id");
+  const b = parse(gumroadProductBody.partial(), req.body);
+  try {
+    const p = await MemoryGumroadProduct.findByIdAndUpdate(req.params.id, { $set: b }, { new: true });
+    if (!p) throw new MemoryError(404, "Product not found.", "PRODUCT_NOT_FOUND");
+    ok(res, gumroadRow(p));
+  } catch (e) {
+    if (e?.code === 11000) throw new MemoryError(409, "That Gumroad product id is already added.", "PRODUCT_EXISTS");
+    throw e;
+  }
+});
+/* "Show on payment page": this product goes first; the others keep their order behind it. */
+export const makeGumroadPrimary = handler(async (req, res) => {
+  assertId(req.params.id, "product id");
+  const rows = await MemoryGumroadProduct.find().sort({ sortOrder: 1, createdAt: 1 }).select("_id").lean();
+  if (!rows.some((r) => String(r._id) === req.params.id)) throw new MemoryError(404, "Product not found.", "PRODUCT_NOT_FOUND");
+  const order = [req.params.id, ...rows.map((r) => String(r._id)).filter((id) => id !== req.params.id)];
+  await MemoryGumroadProduct.bulkWrite(order.map((id, i) => ({ updateOne: { filter: { _id: id }, update: { $set: { sortOrder: i } } } })));
+  ok(res, { primary: req.params.id });
+});
+export const deleteGumroadProduct = handler(async (req, res) => {
+  assertId(req.params.id, "product id");
+  await MemoryGumroadProduct.findByIdAndDelete(req.params.id); // keys already redeemed stay on record and stay used
+  ok(res, { deleted: true });
+});
+export const listGumroadSales = handler(async (req, res) => {
+  const rows = await MemoryGumroadSale.find().sort({ createdAt: -1 }).limit(300).populate("user", "name email").lean();
+  ok(res, rows.map((r) => ({
+    id: String(r._id), when: r.createdAt, product: r.productName, credits: r.credits, saleId: r.saleId, buyerEmail: r.buyerEmail,
+    user: r.user ? { id: String(r.user._id), name: r.user.name, email: r.user.email } : null,
+  })));
 });
 
 /* =====================================================

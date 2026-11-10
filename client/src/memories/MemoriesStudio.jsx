@@ -53,7 +53,8 @@ export default function MemoriesStudio({ cfg }) {
   useReveal([]);
   const location = useLocation();
   const navigate = useNavigate();
-  const welcome = WELCOME[location.state?.welcome];
+  const added = Number(location.state?.added) || 0;
+  const welcome = added > 1 ? `Code accepted. ${added} page credits added.` : WELCOME[location.state?.welcome];
   const wanted = (() => { try { return sessionStorage.getItem("memories:template"); } catch { return null; } })();
 
   const create = ({ t, theme, audience }) => {
@@ -74,6 +75,7 @@ export default function MemoriesStudio({ cfg }) {
           </div>
         </div>
         <Button as={Link} to="/memories/app/pay" variant="outline" className="w-full !text-rose-600 lg:ml-auto lg:w-auto lg:shrink-0"><Plus className="h-4 w-4" aria-hidden /> Add credits</Button>
+        <Link to="/memories/app/pay?gumroad=1" className="text-center text-xs font-semibold text-white underline underline-offset-2 lg:basis-full lg:text-right">Paid on Gumroad? Redeem your code</Link>
       </section>
 
       {welcome && (

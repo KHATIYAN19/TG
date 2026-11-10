@@ -10,7 +10,7 @@ const { Schema } = mongoose;
 const memoryCreditSchema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    source: { type: String, enum: ["code", "payment", "admin", "free"], required: true },
+    source: { type: String, enum: ["code", "payment", "admin", "free", "gumroad"], required: true },
     ref: { type: String, default: null }, // code string, order id, or admin user id
     page: { type: Schema.Types.ObjectId, ref: "MemoryPage", default: null },
   },

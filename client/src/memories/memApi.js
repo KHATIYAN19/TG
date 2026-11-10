@@ -9,6 +9,7 @@ const data = (r) => r.data?.data;
 
 export const getConfig = () => memoriesHttp.get("/config").then(data);
 export const redeemCode = (code) => memoriesHttp.post("/codes/redeem", { code }).then(data);
+export const redeemGumroadOrder = (orderId, email) => memoriesHttp.post("/gumroad/redeem-order", { orderId, email }).then(data);
 export const claimFreeCredit = () => memoriesHttp.post("/credits/free").then(data);
 /* the buyer's mobile number is read from their account on the server, so nothing about it is sent; `returnOrigin` brings the buyer back to this same site (and login) after paying */
 export const createPayment = (gateway) =>

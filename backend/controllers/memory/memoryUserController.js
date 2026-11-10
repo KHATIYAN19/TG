@@ -7,6 +7,9 @@ import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
 import MemoryCode from "../../models/memory/MemoryCode.js";
 import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryEvent from "../../models/memory/MemoryEvent.js";
+import MemoryGumroadProduct from "../../models/memory/MemoryGumroadProduct.js";
+import MemoryGumroadSale from "../../models/memory/MemoryGumroadSale.js";
+import { findSale, orderLookupEnabled } from "../../services/memory/gumroad.js";
 
 import { createUploadTarget, headObject, keyBelongsTo, userPrefix } from "../../services/storage/s3.js";
 import { removeFiles, trackUpload, uploadAttached } from "../../services/memory/storageCleanup.js";
@@ -69,10 +72,64 @@ export const getConfig = handler(async (req, res) => {
     limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, messageChars: s.maxMessageChars },
     occasions: occasions.map((o) => ({ id: String(o._id), name: o.name, theme: o.theme })),
     credits,
+    gumroad: await gumroadOffer(),
     gateways: gatewaysForUsers(s),
     defaultGateway: pickGateway(s)?.id || null,
   });
 });
+
+/* Gumroad on the pay page (any currency). No active product, or no GUMROAD_ACCESS_TOKEN = hidden. */
+const gumroadOffer = async () => {
+  // buyers see ONE product on the pay page: the first active one (the admin chooses which is first). Any active product can be redeemed.
+  const first = await MemoryGumroadProduct.findOne({ isActive: true }).sort({ sortOrder: 1, createdAt: 1 }).lean();
+  return { enabled: Boolean(first) && orderLookupEnabled(), primary: first ? { name: first.name, credits: first.credits, price: first.priceLabel, url: first.url } : null };
+};
+
+/* =====================================================
+   GUMROAD: an order paid on Gumroad is worth the credits of its product, once.
+===================================================== */
+
+/* The one-and-only claim of a Gumroad sale. The unique indexes on licenseKey (holds ORDER-<sale id>) and saleId mean a sale pays out once, even if two people try at the same moment. */
+async function claimSale(userId, { licenseKey, saleId, product, email }) {
+  let sale;
+  try {
+    sale = await MemoryGumroadSale.create({ licenseKey, saleId, productId: product.productId, productName: product.name, credits: product.credits, user: userId, buyerEmail: email });
+  } catch (e) {
+    if (e?.code === 11000) throw new MemoryError(400, "This purchase has already been used.", "KEY_USED");
+    throw e;
+  }
+  try {
+    await grantCredits(userId, { source: "gumroad", ref: saleId, count: product.credits });
+  } catch (e) {
+    await MemoryGumroadSale.deleteOne({ _id: sale._id }); // nothing was credited: let them try again
+    throw e;
+  }
+  return product.credits;
+}
+
+/* Redeem by the order number from the Gumroad receipt + the email used to pay. */
+export const redeemGumroadOrder = handler(async (req, res) => {
+  const { orderId, email } = parse(z.object({ orderId: z.string().trim().min(4).max(60), email: z.string().trim().toLowerCase().email().max(254) }), req.body);
+  const userId = uid(req);
+  if (!orderLookupEnabled()) throw new MemoryError(503, "Redeeming by order number isn't available right now. Use your license key, or contact support.", "ORDER_LOOKUP_OFF");
+  const products = await MemoryGumroadProduct.find({ isActive: true }).limit(12).lean();
+  if (!products.length) throw new MemoryError(503, "Gumroad codes are not available right now.", "GUMROAD_OFF");
+  let r;
+  try {
+    r = await findSale({ email, orderRef: orderId, productIds: products.map((p) => p.productId) });
+  } catch (e) {
+    if (e.message === "GUMROAD_NOT_CONFIGURED") throw new MemoryError(503, "Redeeming by order number isn't available right now. Please contact support.", "ORDER_LOOKUP_OFF");
+    throw new MemoryError(502, "We couldn't reach Gumroad to check your order. Please try again in a minute.", "GUMROAD_UNREACHABLE");
+  }
+  // one message for "no such order" and "wrong email", so this can't be used to probe other people's orders
+  if (!r.found && r.otherProduct) throw new MemoryError(400, "This order is for a different Gumroad product, so it can't be used for Memories page credits.", "ORDER_OTHER_PRODUCT");
+  if (!r.found) throw new MemoryError(400, "We couldn't find that order. Use the Order ID and the email from your Gumroad receipt.", "ORDER_NOT_FOUND");
+  if (r.refunded) throw new MemoryError(400, "That purchase was refunded, so it can't be used.", "KEY_REFUNDED");
+  const product = products.find((p) => p.productId === r.productId);
+  const added = await claimSale(userId, { licenseKey: `ORDER-${r.saleId}`, saleId: r.saleId, product, email: r.email });
+  ok(res, { added, credits: await availableCredits(userId) });
+});
+
 
 /* =====================================================
    UNIQUE CODE

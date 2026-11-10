@@ -18,6 +18,7 @@ import {
   Copy,
   ExternalLink,
   Gift,
+  Globe,
   Heart,
   Image as ImageIcon,
   KeyRound,
@@ -64,6 +65,7 @@ const TABS = [
   ["users", "Users", Users],
   ["logins", "Logins", Activity],
   ["codes", "Codes", Ticket],
+  ["gumroad", "Gumroad", Globe],
   ["orders", "Orders", Receipt],
   ["occasions", "Occasions", Gift],
   ["settings", "Settings", SettingsIcon],
@@ -130,6 +132,7 @@ export default function AdminMemoryPages() {
           {tab === "logins" && <Logins {...ctx} />}
         </Suspense>
         {tab === "codes" && <Codes {...ctx} />}
+        {tab === "gumroad" && <Gumroad {...ctx} />}
         {tab === "orders" && <Orders {...ctx} />}
         {tab === "occasions" && <Occasions {...ctx} />}
         {tab === "settings" && <><Settings {...ctx} /><MailBlocks {...ctx} /></>}
@@ -515,6 +518,90 @@ function Codes({ http, run, setDialog }) {
             <Btn tone="danger" onClick={() => setDialog({ kind: "confirm", title: "Delete code?", text: c.code, label: "Delete", onSubmit: async () => { if (await run(() => http.delete(`/codes/${c.id}`))) load(); } })}><Trash2 size={12} /></Btn>
           </div>) },
       ]} />
+    </div>
+  );
+}
+
+/* ---------------------------------------------------- gumroad (payments from outside India) */
+
+function Gumroad({ http, run, setDialog }) {
+  const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [conn, setConn] = useState(null); // { ok, reason, account }
+  const load = useCallback(async () => {
+    const [p, l, c] = await Promise.all([run(() => http.get("/gumroad/products")), run(() => http.get("/gumroad/sales")), run(() => http.get("/gumroad/status"))]);
+    if (c) setConn(c);
+    if (p) setProducts(p);
+    if (l) setSales(l);
+  }, [http, run]);
+  useEffect(() => { load(); }, [load]);
+
+  const shownId = products.find((p) => p.isActive)?.id; // the payment page shows the first active product
+  const fields = (p = {}) => [
+    { name: "name", label: "Name buyers see", value: p.name || "", placeholder: "e.g. 1 page" },
+    { name: "productId", label: "Gumroad product id", value: p.productId || "", placeholder: "the product's id from Gumroad" },
+    { name: "credits", label: "Page credits one order gives", type: "number", value: p.credits ?? 1, min: 1, max: 1000 },
+    { name: "priceLabel", label: "Price shown (display only)", value: p.priceLabel || "", placeholder: "e.g. $3" },
+    { name: "url", label: "Gumroad product link (https://…)", value: p.url || "", placeholder: "https://yourname.gumroad.com/l/memories" },
+  ];
+  const body = (v) => ({ name: v.name.trim(), productId: v.productId.trim(), credits: Number(v.credits), priceLabel: (v.priceLabel || "").trim(), url: (v.url || "").trim() });
+  const add = () => setDialog({ kind: "form", title: "Add a Gumroad product", label: "Add", intro: "An order paid for this product is worth the credits below, once.", fields: fields(),
+    onSubmit: async (v) => { if (await run(() => http.post("/gumroad/products", body(v)), "Product added")) { load(); return true; } return false; } });
+  const edit = (p) => setDialog({ kind: "form", title: "Edit product", label: "Save", fields: fields(p),
+    onSubmit: async (v) => { if (await run(() => http.patch(`/gumroad/products/${p.id}`, body(v)), "Saved")) { load(); return true; } return false; } });
+
+  return (
+    <div className="space-y-6">
+      {conn && (
+        <div role="status" className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border p-3 text-sm ${conn.ok ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-900"}`}>
+          <span>
+            {conn.ok && <>Connected to Gumroad{conn.account ? <> as <b>{conn.account}</b></> : null}. Buyers can redeem.</>}
+            {!conn.ok && conn.reason === "missing" && <>No <b>GUMROAD_ACCESS_TOKEN</b> in the server .env. Buyers can&apos;t redeem until you add it and restart the backend.</>}
+            {!conn.ok && conn.reason === "rejected" && <>Gumroad <b>rejected the access token</b>. Generate a new one (Gumroad Settings, Advanced, Applications), put it in the server .env as GUMROAD_ACCESS_TOKEN and restart the backend.</>}
+            {!conn.ok && conn.reason === "unreachable" && <>Couldn&apos;t reach Gumroad just now. Try again in a minute.</>}
+          </span>
+          <Btn onClick={load}><RefreshCw size={12} /> Check again</Btn>
+        </div>
+      )}
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+        <b>International payments use Gumroad.</b> Buyers outside India pay on Gumroad in any currency, then redeem the Order ID on the payment page. The payment page shows only the product marked <b>Shown on payment page</b>. Use <b>Show on payment page</b> to change which one it is. Every product you add and keep on can be redeemed. Orders for any other product in your Gumroad account are refused.
+      </div>
+      <div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-slate-600">Products you sell on Gumroad. Buyers pay there, then enter the Order ID from their receipt and the email they paid with on the pay page (needs GUMROAD_ACCESS_TOKEN in the server .env). Each purchase works once. With no active product the option is hidden.</p>
+          <Btn tone="primary" onClick={add}><Plus size={12} /> Add product</Btn>
+        </div>
+        <Table rows={products} cols={[
+          { h: "Name", v: (p) => <b>{p.name}</b> },
+          { h: "Gumroad product id", v: (p) => <span className="font-mono text-xs">{p.productId}</span> },
+          { h: "Credits per order", v: (p) => p.credits },
+          { h: "Price shown", v: (p) => p.priceLabel || "-" },
+          { h: "Link", v: (p) => (p.url ? <a className="text-rose-600 hover:underline" href={p.url} target="_blank" rel="noreferrer">open <ExternalLink size={11} className="inline" /></a> : <span className="text-amber-600">none</span>) },
+          { h: "Status", v: (p) => (
+            <span className="flex flex-wrap gap-1">
+              <Chip className={p.isActive ? STATUS.active : STATUS.closed}>{p.isActive ? "on" : "off"}</Chip>
+              {p.id === shownId && <Chip className="bg-sky-100 text-sky-700">shown on payment page</Chip>}
+            </span>) },
+          { h: "", v: (p) => (
+            <div className="flex flex-wrap gap-1.5">
+              <Btn onClick={() => edit(p)}>Edit</Btn>
+              {p.isActive && p.id !== shownId && <Btn onClick={async () => { if (await run(() => http.post(`/gumroad/products/${p.id}/primary`), "Now shown on the payment page")) load(); }}>Show on payment page</Btn>}
+              <Btn onClick={async () => { if (await run(() => http.patch(`/gumroad/products/${p.id}`, { isActive: !p.isActive }))) load(); }}>{p.isActive ? "Turn off" : "Turn on"}</Btn>
+              <Btn tone="danger" onClick={() => setDialog({ kind: "confirm", title: "Delete product?", text: `${p.name}. Orders already redeemed stay used. Orders not yet redeemed can't be redeemed any more.`, label: "Delete", onSubmit: async () => { if (await run(() => http.delete(`/gumroad/products/${p.id}`))) load(); } })}><Trash2 size={12} /></Btn>
+            </div>) },
+        ]} />
+      </div>
+      <div>
+        <h3 className="mb-2 text-sm font-bold text-slate-700">Redeemed orders</h3>
+        <Table rows={sales} cols={[
+          { h: "When", v: (r) => <span className="whitespace-nowrap text-xs">{when(r.when)}</span> },
+          { h: "Account", v: (r) => (r.user ? <Person name={r.user.name} email={r.user.email} /> : <span className="text-slate-400">deleted user</span>) },
+          { h: "Product", v: (r) => r.product },
+          { h: "Credits", v: (r) => r.credits },
+          { h: "Gumroad buyer email", v: (r) => <span className="text-xs">{r.buyerEmail || "-"}</span> },
+          { h: "Sale id", v: (r) => <span className="font-mono text-xs">{r.saleId}</span> },
+        ]} />
+      </div>
     </div>
   );
 }
