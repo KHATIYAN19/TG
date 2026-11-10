@@ -38,7 +38,7 @@ export default function MemoriesApp() {
       <Routes>
         <Route index element={needsPayment ? <Navigate to="/memories/app/pay" replace /> : <MemoriesStudio cfg={cfg} />} />
         <Route path="pay" element={<MemoriesPay cfg={cfg} reload={reload} firstTime={needsPayment} />} />
-        <Route path="pages" element={<MyPages credits={cfg.credits} />} />
+        <Route path="pages" element={<MyPages credits={cfg.credits} emailEnabled={cfg.emailEnabled !== false} />} />
         <Route path="pages/:id/preview" element={<OwnerPreview />} />
         <Route path="pages/:id/activity" element={<PageActivity />} />
         <Route path="pages/:id/edit" element={<PageBuilder mode="edit" cfg={cfg} setCredits={setCredits} reload={reload} />} />

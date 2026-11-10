@@ -185,9 +185,18 @@ const checkMessage = (s, message) => {
   if (message && message.length > s.maxMessageChars) throw new MemoryError(400, `Message is too long (max ${s.maxMessageChars} characters).`, "MESSAGE_TOO_LONG");
 };
 
+/** Every rule for emailing a page to an address. Throws a clear message when it can't be done. */
+const assertCanEmail = async (req, s, shareEmail) => {
+  if (s.emailEnabled === false) throw new MemoryError(400, "Emailing pages is switched off right now. You can still share the link yourself.", "EMAIL_DISABLED");
+  if (await MemoryMailBlock.exists({ email: shareEmail })) throw new MemoryError(400, "That address has asked not to receive emails from Memories. Please share the link another way.", "EMAIL_BLOCKED");
+  const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
+  if ((await MemoryPage.countDocuments({ user: uid(req), shareEmail: { $ne: "" }, createdAt: { $gte: dayAgo } })) >= (s.maxEmailsPerUserPerDay || 10)) throw new MemoryError(429, "You've reached today's limit for emailing pages. Try again tomorrow.", "EMAIL_DAILY_LIMIT");
+  if ((await MemoryPage.countDocuments({ shareEmail, createdAt: { $gte: dayAgo } })) >= 3) throw new MemoryError(429, "That address has already received several pages today. Please try again tomorrow.", "EMAIL_RECIPIENT_LIMIT");
+};
+
 export const createPage = handler(async (req, res) => {
   const b = parse(
-    z.object({ occasionId: z.string(), ...pageFields, ...extras, visibility: z.enum(["public", "private"]).default("public"), pin: pinField.optional(), shareEmail: z.union([z.literal(""), z.string().trim().toLowerCase().email("Enter a valid email address.").max(254)]).optional() }),
+    z.object({ occasionId: z.string(), ...pageFields, ...extras, visibility: z.enum(["public", "private"]).default("public"), pin: pinField.optional(), shareEmail: z.union([z.literal(""), z.string().trim().toLowerCase().email("Enter a valid email address.").max(254)]).optional(), includePin: z.boolean().optional() }),
     req.body
   );
   assertId(b.occasionId, "occasion");
@@ -201,13 +210,7 @@ export const createPage = handler(async (req, res) => {
 
   // "Email this page": checked BEFORE a credit is spent, so a refusal never costs anything
   const shareEmail = b.shareEmail || "";
-  if (shareEmail) {
-    if (s.emailEnabled === false) throw new MemoryError(400, "Emailing pages is switched off right now. You can still share the link yourself.", "EMAIL_DISABLED");
-    if (await MemoryMailBlock.exists({ email: shareEmail })) throw new MemoryError(400, "That address has asked not to receive emails from Memories. Please share the link another way.", "EMAIL_BLOCKED");
-    const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
-    if ((await MemoryPage.countDocuments({ user: uid(req), shareEmail: { $ne: "" }, createdAt: { $gte: dayAgo } })) >= (s.maxEmailsPerUserPerDay || 10)) throw new MemoryError(429, "You've reached today's limit for emailing pages. Create it without the email, or try again tomorrow.", "EMAIL_DAILY_LIMIT");
-    if ((await MemoryPage.countDocuments({ shareEmail, createdAt: { $gte: dayAgo } })) >= 3) throw new MemoryError(429, "That address has already received several pages today. Please try again tomorrow.", "EMAIL_RECIPIENT_LIMIT");
-  }
+  if (shareEmail) await assertCanEmail(req, s, shareEmail);
 
   const pin = b.visibility === "private" ? b.pin || newPin() : null;
   const pinHash = pin ? await hashPin(pin) : null;
@@ -221,7 +224,7 @@ export const createPage = handler(async (req, res) => {
   try {
     await MemoryPage.create({
       _id: pageId, user: uid(req), occasion: b.occasionId, title: b.title, recipientName: b.recipientName,
-      senderName: b.senderName, message: b.message, visibility: b.visibility, pinHash, pinEnc, shareEmail, slug: newSlug(), expiresAt: expiryFrom(Date.now(), lifetimeDays(s)),
+      senderName: b.senderName, message: b.message, visibility: b.visibility, pinHash, pinEnc, shareEmail, emailIncludesPin: b.includePin !== false, slug: newSlug(), expiresAt: expiryFrom(Date.now(), lifetimeDays(s)),
       style: b.style || "", age: b.age ?? null, gifts: b.gifts || [], wishes: b.wishes || [], promises: b.promises || [],
       since: b.since || "", question: b.question || "", audience: b.audience || "", people: b.people || [], timeline: b.timeline || [], reasons: b.reasons || [], stats: b.stats || [],
     });
@@ -233,8 +236,8 @@ export const createPage = handler(async (req, res) => {
   let email = null;
   if (shareEmail) {
     const fresh = await MemoryPage.findById(pageId).populate("occasion", "theme");
-    const sent = await sendPageMail({ page: fresh, senderName: b.senderName || req.user?.name || "", theme: fresh.occasion?.theme, pin, to: shareEmail });
-    email = { status: sent.status, to: shareEmail };
+    const sent = await sendPageMail({ page: fresh, senderName: b.senderName || req.user?.name || "", theme: fresh.occasion?.theme, pin: b.includePin === false ? null : pin, pinHidden: Boolean(pin) && b.includePin === false, to: shareEmail });
+    email = { status: sent.status, to: shareEmail, includesPin: Boolean(pin) && b.includePin !== false };
   }
   // The PIN is returned only now; it is stored hashed.
   ok(res, { page: await reload(pageId, { withMedia: true }), pin, email }, 201);
@@ -265,8 +268,11 @@ export const updatePage = handler(async (req, res) => {
   const page = await ownPage(req);
   editable(page);
   // The address the page was emailed to is fixed once the page exists, like the names.
-  if (req.body?.shareEmail !== undefined && String(req.body.shareEmail).trim().toLowerCase() !== (page.shareEmail || "")) throw new MemoryError(400, "The email address can't be changed after the page is created.", "EMAIL_LOCKED");
-  const b = parse(z.object({ occasionId: z.string(), ...pageFields, ...extras }).partial(), req.body);
+  // It can be ADDED once, if the page was made without one; after that it is fixed.
+  const wantedEmail = req.body?.shareEmail === undefined ? undefined : String(req.body.shareEmail).trim().toLowerCase();
+  if (wantedEmail !== undefined && wantedEmail !== (page.shareEmail || "") && page.shareEmail) throw new MemoryError(400, "The email address can't be changed after it has been set.", "EMAIL_LOCKED");
+  const addEmail = wantedEmail && !page.shareEmail ? parse(z.string().email("Enter a valid email address.").max(254), wantedEmail) : "";
+  const b = parse(z.object({ occasionId: z.string(), ...pageFields, ...extras, includePin: z.boolean().optional() }).partial(), req.body);
   checkMessage(await getSettings(), b.message);
   // The names on a page are fixed once it exists (the page, its link and its PIN are shared with them). Everything else can be edited.
   if (b.recipientName !== undefined && b.recipientName !== page.recipientName) throw new MemoryError(400, "The name of the person it's for can't be changed after the page is created.", "NAME_LOCKED");
@@ -292,8 +298,24 @@ export const updatePage = handler(async (req, res) => {
   if (b.reasons !== undefined) page.reasons = b.reasons;
   if (b.stats !== undefined) page.stats = b.stats;
   for (const k of ["title", "recipientName", "senderName", "message"]) if (b[k] !== undefined) page[k] = b[k];
+  let email = null;
+  if (addEmail) {
+    await assertCanEmail(req, await getSettings(), addEmail); // before anything is saved
+    page.shareEmail = addEmail;
+    page.emailIncludesPin = b.includePin !== false;
+  }
   await page.save();
-  ok(res, await reload(page._id, { withMedia: true }));
+  if (addEmail) {
+    const pin = page.visibility === "private" ? decryptPin(page.pinEnc) : null;
+    const withPin = page.emailIncludesPin && Boolean(pin);
+    if (page.visibility === "private" && !pin) email = { status: "failed", to: addEmail, reason: "PIN_UNKNOWN" }; // an old page whose PIN was never kept: make a new PIN, then resend
+    else {
+      const sent = await sendPageMail({ page, senderName: page.senderName || req.user?.name || "", theme: page.occasion?.theme, pin: withPin ? pin : null, pinHidden: Boolean(pin) && !withPin, to: addEmail });
+      email = { status: sent.status, to: addEmail, includesPin: withPin };
+    }
+  }
+  const out = await reload(page._id, { withMedia: true });
+  ok(res, email ? { ...out, email } : out);
 });
 
 export const setVisibility = handler(async (req, res) => {
@@ -336,8 +358,9 @@ export const resendEmail = handler(async (req, res) => {
   canResend(page);
   if (await MemoryMailBlock.exists({ email: page.shareEmail })) throw new MemoryError(400, "That address has asked not to receive emails from Memories.", "EMAIL_BLOCKED");
   const pin = page.visibility === "private" ? decryptPin(page.pinEnc) : null;
-  if (page.visibility === "private" && !pin) throw new MemoryError(400, "This page's PIN was set before it could be emailed. Make a new PIN in My pages, then resend.", "PIN_UNKNOWN");
-  const sent = await sendPageMail({ page, senderName: page.senderName, theme: page.occasion?.theme, pin });
+  if (page.visibility === "private" && page.emailIncludesPin !== false && !pin) throw new MemoryError(400, "This page's PIN was set before it could be emailed. Make a new PIN in My pages, then resend.", "PIN_UNKNOWN");
+  const withPin = page.emailIncludesPin !== false;
+  const sent = await sendPageMail({ page, senderName: page.senderName, theme: page.occasion?.theme, pin: withPin ? pin : null, pinHidden: Boolean(pin) && !withPin });
   const fresh = await MemoryPage.findById(page._id);
   ok(res, { status: sent.status, sendsLeft: Math.max(0, MAX_EMAIL_SENDS - (fresh.emailSends || 0)) });
 });

@@ -1,5 +1,6 @@
 import sendMail, { deliverMail } from "../../utils/MailSender.js";
 import { unsubscribeUrl } from "../campaign/render.js";
+import { memoriesOtpEmail } from "../memory/otpMail.js";
 import { otpEmail, matchedEmail, unmatchedEmail, reminderEmail, supportEmail } from "../mail/templates.js";
 
 /*
@@ -26,11 +27,14 @@ const safeSend = async (to, mail, { direct = false } = {}) => {
   }
 };
 
-export const sendSignupOtp = (to, name, otp, minutes) =>
-  safeSend(to, otpEmail({ purpose: "signup", name, otp, minutes }), { direct: true });
+/* `source` is where the person is signing in: "memories" gets the Memories email, anything else the Prep Buddy Arena one. */
+const otpFor = (source, purpose, args) => (source === "memories" ? memoriesOtpEmail({ purpose, ...args }) : otpEmail({ purpose, ...args }));
 
-export const sendPasswordResetOtp = (to, name, otp, minutes) =>
-  safeSend(to, otpEmail({ purpose: "reset", name, otp, minutes }), { direct: true });
+export const sendSignupOtp = (to, name, otp, minutes, source = "arena") =>
+  safeSend(to, otpFor(source, "signup", { name, otp, minutes }), { direct: true });
+
+export const sendPasswordResetOtp = (to, name, otp, minutes, source = "arena") =>
+  safeSend(to, otpFor(source, "reset", { name, otp, minutes }), { direct: true });
 
 /* data: { name, buddyAlias, buddyTopics, buddyLevel, matchesLeft } */
 export const sendMatchedMail = (to, data = {}) => safeSend(to, matchedEmail(data));

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   ArrowRight, Camera, Check, ChevronDown, Gift, Heart, KeyRound, Link2, Lock, Menu, Music2, Plus,
-  Palette, PenLine, ShieldCheck, Smartphone, Sparkles, Ticket, Timer, Video, X,
+  Eye, MessageCircleHeart, Palette, PenLine, ShieldCheck, Smartphone, Sparkles, Ticket, Timer, Video, X,
 } from "lucide-react";
 
 import { logout } from "../Redux/authSlice";
@@ -17,7 +17,7 @@ import Showcase, { LivePhone, META, THEME_TOTAL, useScale } from "./Showcase";
 import { Button, FONT_LINKS, Logo, cx } from "./ui";
 import "./memories.css";
 
-const NAV = [["templates", "Templates"], ["how", "How it works"], ["features", "Features"], ["pricing", "Pricing"], ["faq", "FAQ"]];
+const NAV = [["templates", "Templates"], ["how", "How it works"], ["features", "Features"], ["activity", "Activity"], ["pricing", "Pricing"], ["faq", "FAQ"]];
 
 /* ---------------------------------------------------- header */
 function Header() {
@@ -261,6 +261,7 @@ function Features({ info }) {
     [Timer, "Your story, counted", "A live counter of years, days and seconds together, a timeline that draws itself and numbers that count up."],
     [Camera, "Photos and videos", l ? `Add up to ${l.photos} photos and ${l.videos} videos, up to ${l.photoMb} MB and ${l.videoMb} MB each. Pick a main photo and video to set the mood.` : "Add your best photos and videos. Pick a main photo and video to set the mood."],
     [Heart, "Kind to every answer", "A proposal has a celebration for yes and gentle, respectful screens for \"I need time\" and no. Thank-you pages let them reply on WhatsApp."],
+    [Eye, "See what they did", "An activity screen shows when they opened it, how long they stayed, every balloon, gift and answer, and any message they send back."],
     [Music2, "Music they control", "Play a song with one tap, with a volume slider so it is never too loud."],
     [ShieldCheck, "Your files stay protected", "Photos and videos are stored privately and only reachable through your page."],
     [Smartphone, "Perfect on every phone", "Designed phone-first, lovely on tablets and desktops. They open the link and it just works, nothing to install."],
@@ -276,6 +277,70 @@ function Features({ info }) {
             <p className="mt-1.5 text-sm leading-relaxed text-[#7a5370]">{text}</p>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/*
+  ACTIVITY TRACKER: what the sender sees after they share the link. The screen below is a sample drawn with made-up data
+  (Ravi and Anu), laid out like the real Activity screen in the app.
+*/
+const ACT_TILES = [["👀", "5", "times opened", "bg-sky-50 text-sky-800"], ["🧑", "2", "visitors", "bg-violet-50 text-violet-800"], ["⏱️", "4m 12s", "on the page", "bg-amber-50 text-amber-800"], ["💌", "1", "message", "bg-rose-50 text-rose-800"]];
+const ACT_ROWS = [["🎁", "Opened the surprise", "Done"], ["🎈", "Balloons popped", "12"], ["🕯️", "Blew out the candles", "Done"], ["🍰", "Cut the cake", "Done"], ["🎀", "Gifts opened", "2 of 3"], ["🖼️", "Looked at your photos and videos", "5 of 6"]];
+const ACT_LINE = [["Today, 8:41 pm", "Opened your page on a phone"], ["Today, 8:42 pm", "Popped 12 balloons"], ["Today, 8:44 pm", "Cut the cake"], ["Today, 8:49 pm", "Replied: “Best surprise ever, thank you!”"]];
+
+function Activity() {
+  const points = [
+    ["When they opened it", "The first and latest time, how many times, and on what kind of device."],
+    ["What they tried", "Balloons, candles, gifts, the ring box, the gratitude tree: each template reports its own moments."],
+    ["How long they stayed", "Total time on your page, so you know they really took it in."],
+    ["Their answer and replies", "A yes, a gentle \"I need time\", or the message they send back. It all lands here."],
+  ];
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-b from-white via-sky-50/40 to-white py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <SectionHead id="activity" kicker="Activity tracker" title="Know the moment they open it" text="After you share the link, your Activity screen fills in by itself. See what they did, step by step." />
+        <div className="mt-12 grid items-center gap-10 lg:grid-cols-[1fr_1.05fr]">
+          <div>
+            <ul className="space-y-4">
+              {points.map(([t, x]) => (
+                <li key={t} className="mem-reveal flex gap-3">
+                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-700"><Check className="h-4 w-4" strokeWidth={3} aria-hidden /></span>
+                  <div><p className="text-sm font-bold text-[#3a1530]">{t}</p><p className="mt-0.5 text-sm leading-relaxed text-[#7a5370]">{x}</p></div>
+                </li>
+              ))}
+            </ul>
+            <p className="mem-reveal mt-6 flex items-start gap-2 rounded-2xl bg-white p-4 text-xs leading-relaxed text-[#7a5370] ring-1 ring-rose-100"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden /> Only you can see it. Visitors are never asked for a name or contact details, and we don&apos;t store their IP address on your page.</p>
+          </div>
+
+          <div className="mem-reveal rounded-[28px] border border-rose-100 bg-white p-4 shadow-xl shadow-rose-100/60 sm:p-6" aria-label="Sample activity screen">
+            <div className="rounded-2xl bg-gradient-to-br from-pink-100 to-orange-100 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-600">Happy Birthday, Anu</p>
+              <p className="mt-1 text-xl font-extrabold leading-tight text-[#3a1530] sm:text-2xl">Anu opened it 5 times 👀</p>
+              <p className="mt-0.5 text-xs text-[#6b3a5a]">Last opened 12 min ago, first on 14 Nov</p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {ACT_TILES.map(([e, v, l, tone]) => <div key={l} className={cx("rounded-2xl px-2 py-3 text-center", tone)}><div className="text-base" aria-hidden>{e}</div><div className="text-lg font-extrabold leading-tight">{v}</div><div className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{l}</div></div>)}
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[#a07890]">What they did</p>
+                <ul className="space-y-1.5">
+                  {ACT_ROWS.map(([e, l, v]) => <li key={l} className="flex items-center gap-2 rounded-xl bg-[#fff7f3] px-2.5 py-2 text-xs text-[#3a1530]"><span aria-hidden>{e}</span><span className="min-w-0 flex-1 truncate">{l}</span><b className="shrink-0 text-emerald-700">{v}</b></li>)}
+                </ul>
+              </div>
+              <div>
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[#a07890]">Timeline</p>
+                <ol className="space-y-2 border-l-2 border-rose-100 pl-3">
+                  {ACT_LINE.map(([t, x]) => <li key={t} className="relative text-xs"><span className="absolute -left-[17px] top-1 h-2 w-2 rounded-full bg-rose-400" aria-hidden /><p className="text-[10px] font-semibold text-[#a07890]">{t}</p><p className="text-[#3a1530]">{x}</p></li>)}
+                </ol>
+                <p className="mt-3 flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-800"><MessageCircleHeart className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> “Best surprise ever, thank you!”</p>
+              </div>
+            </div>
+            <p className="mt-3 text-center text-[10px] text-[#a07890]">Sample with made-up names and numbers</p>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -377,6 +442,7 @@ function Faq({ info }) {
     ["Can I try a template before I pay?", "Yes. Every template on this page is the real thing: scroll it, tap it and switch its look. Open any of them full screen to see exactly what they will see."],
     ["Is this only for couples?", "Not at all. Birthday and Thank You pages work for friends, family, mentors and colleagues. Sorry, Proposal and Anniversary are for the people closest to you."],
     ["What if they say no to my proposal?", "The page is kind about it. A yes gets a big celebration. \"I need a little time\" and \"I'm sorry, I can't\" each get a gentle, respectful screen, and they can always go back and answer again."],
+    ["Can I see if they opened my page?", "Yes. Your Activity screen shows when they opened it, how many times, how long they stayed, which parts they played with (balloons, gifts, the ring box and so on), their answer and any message they send back. It is only visible to you. Visitors are never asked for a name or contact details."],
     ["Does the other person need an account?", "No. They just open your link. If the page is private they enter the PIN. Nothing to install and nothing to sign up for."],
     ["How long does a page stay online?", `Every page is available for ${days} days from the day you create it. After ${days} days it disappears for good: the link stops working, nobody can open it (including you), and its photos, videos, replies and activity are deleted. Share it while it's live, and make a new page if you want another round.`],
     ["Can I change the names after I create a page?", "No. The name of the person it's for and your name are fixed the moment you create the page, so please check the spelling first. If a name is wrong, create a new page with the right one."],
@@ -453,6 +519,7 @@ export default function MemoriesLanding() {
         <Templates />
         <HowItWorks />
         <Features info={info} />
+        <Activity />
         <Privacy />
         <Pricing info={info} priceLabel={priceLabel} />
         <Faq info={info} />

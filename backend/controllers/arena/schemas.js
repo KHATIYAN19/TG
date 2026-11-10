@@ -19,6 +19,8 @@ const anonymousText = (max) =>
     .refine((v) => detectContactInfo(v) === null, { message: CONTACT_INFO_MESSAGE });
 
 /* Phone: a country code ("+91") and the national number. Clients that send only `mobile` get +91. */
+/** Which site the person is on, so the right email is sent. Unknown or missing = the Arena one. */
+export const sourceField = z.enum(["arena", "memories"]).catch("arena").default("arena");
 export const countryCodeField = z
   .string()
   .trim()
@@ -47,6 +49,7 @@ export const signupSchema = z
     email: z.string().trim().toLowerCase().email("Enter a valid email").max(120),
     countryCode: countryCodeField,
     mobile: mobileField,
+    source: sourceField,
     password: passwordRule,
     confirmPassword: z.string(),
   })
@@ -63,10 +66,12 @@ export const verifySignupSchema = z.object({
 
 export const resendSignupSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
+  source: sourceField,
 });
 
 export const forgotPasswordSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email").max(120),
+  source: sourceField,
 });
 
 export const resetPasswordSchema = z

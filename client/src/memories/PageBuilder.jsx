@@ -34,7 +34,7 @@ function Preview({ template, data, themeId, scale }) {
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /* the result of "email this page", with a resend for when it didn't arrive (the address itself can never be changed) */
-function EmailResult({ pageId, email, sendsLeft: startLeft, hasPin }) {
+function EmailResult({ pageId, email, sendsLeft: startLeft, hasPin, pinPrivate }) {
   const [status, setStatus] = useState(email.status);
   const [left, setLeft] = useState(startLeft);
   const [busy, setBusy] = useState(false);
@@ -47,10 +47,52 @@ function EmailResult({ pageId, email, sendsLeft: startLeft, hasPin }) {
   return (
     <div className={cx("mx-auto mt-5 max-w-sm rounded-2xl p-4 text-left text-sm ring-1", ok ? "bg-emerald-50 text-emerald-900 ring-emerald-200" : "bg-amber-50 text-amber-900 ring-amber-200")} role="status">
       <p className="flex items-start gap-2 font-semibold"><Mail className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {ok ? <>Emailed to {email.to}</> : status === "blocked" ? <>{email.to} has asked not to get emails from Memories</> : <>We couldn&apos;t send the email to {email.to}</>}</p>
-      {ok && <p className="mt-1 text-xs opacity-80">It has the link{hasPin ? " and the PIN" : ""}. If it doesn&apos;t arrive, ask them to check spam, or resend it.</p>}
+      {ok && <p className="mt-1 text-xs opacity-80">It has the link{hasPin ? " and the PIN" : ""}. {pinPrivate && !hasPin ? "The PIN is not in the email, so send it to them yourself. " : ""}If it doesn&apos;t arrive, ask them to check spam, or resend it.</p>}
       {status !== "blocked" && left > 0 && <button type="button" onClick={again} disabled={busy} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold ring-1 ring-black/10 hover:bg-white/80 disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />} {ok ? "Send it again" : "Try again"} <span className="font-medium opacity-70">({left} left)</span></button>}
       {msg && <p role="alert" className="mt-2 text-xs text-rose-700">{msg}</p>}
-      <p className="mt-2 text-[11px] opacity-70">The address can&apos;t be changed after the page is created.</p>
+      <p className="mt-2 text-[11px] opacity-70">The address can&apos;t be changed once it is set.</p>
+    </div>
+  );
+}
+
+/*
+  EDIT PAGE: send the page to someone's email when it wasn't done at creation. It has its own Send button, so it works
+  without touching the rest of the form. The address is fixed once sent. (A page that already has one shows it, locked, in the card.)
+*/
+function SendEmailBox({ pageId, isPrivate, closed, onSent }) {
+  const [to, setTo] = useState("");
+  const [withPin, setWithPin] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [result, setResult] = useState(null);
+  const send = async () => {
+    setErr("");
+    if (!EMAIL_RX.test(to.trim())) return setErr("Enter their email address, like name@example.com.");
+    setBusy(true);
+    try {
+      const r = await updatePage(pageId, { shareEmail: to.trim().toLowerCase(), includePin: withPin });
+      setResult({ email: r.email, left: r.emailSendsLeft });
+      onSent?.({ shareEmail: r.shareEmail, emailStatus: r.emailStatus });
+    } catch (e) { setErr(errMsg(e)); } finally { setBusy(false); }
+  };
+  if (result?.email) return <EmailResult pageId={pageId} email={result.email} sendsLeft={result.left} hasPin={Boolean(result.email.includesPin)} pinPrivate={isPrivate} />;
+  return (
+    <div className="mt-3 rounded-2xl border border-rose-100 bg-[#fffaf6] p-3.5">
+      <label htmlFor="pb-email" className="flex items-center gap-1.5 text-sm font-semibold text-[#3a1530]"><Mail className="h-4 w-4 text-rose-500" aria-hidden /> Send this page to their email</label>
+      <p className="mt-0.5 text-xs text-[#8a6a80]">You didn&apos;t add an email when you created it. Add one now and we&apos;ll send them the link{isPrivate ? " (and the PIN, if you want)" : ""}.</p>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <input id="pb-email" type="email" inputMode="email" autoComplete="off" className={`${field} min-w-0 flex-1`} value={to} onChange={(e) => { setTo(e.target.value); setErr(""); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); send(); } }} placeholder="name@example.com" maxLength={254} />
+        <Button type="button" onClick={send} loading={busy} disabled={closed} className="shrink-0"><Mail className="h-4 w-4" aria-hidden /> Send email</Button>
+      </div>
+      {isPrivate && (
+        <label className="mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl bg-white p-3 text-sm ring-1 ring-rose-100">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-rose-500" checked={withPin} onChange={(e) => setWithPin(e.target.checked)} />
+          <span><span className="font-semibold text-[#3a1530]">Put the PIN in the email too</span><span className="block text-xs text-[#8a6a80]">{withPin ? "They get the link and the PIN together." : "The email has only the link. Send them the PIN yourself."}</span></span>
+        </label>
+      )}
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800"><Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Check the address. It can&apos;t be changed after it is sent. Only use the email of someone who knows you.</p>
+      {closed && <p className="mt-2 text-xs font-medium text-amber-800">This page is disabled. Enable it in My pages first, then send the email.</p>}
+      {err && <p role="alert" className="mt-2 text-xs font-medium text-rose-700">{err}</p>}
     </div>
   );
 }
@@ -67,7 +109,7 @@ function Created({ template, page, pin, credits, edited, limits, files, email, o
         <h1 className="mt-3 text-2xl font-bold text-[#3a1530]">{edited ? "Changes saved" : "Your page is created!"}</h1>
         <p className="mt-1 text-sm text-[#7a5370]">&ldquo;{page.title}&rdquo; is in My pages.{edited ? " Your changes are live." : <> <b>1 credit used</b>, {credits} left.</>}</p>
         {!edited && page.expiresAt && <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">⏳ Online for {page.daysLeft} days, until {new Date(page.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>}
-        {email && <EmailResult pageId={page.id} email={email} sendsLeft={page.emailSendsLeft} hasPin={Boolean(pin)} />}
+        {email && <EmailResult pageId={page.id} email={email} sendsLeft={page.emailSendsLeft} hasPin={email.includesPin ?? Boolean(pin)} pinPrivate={page.visibility === "private"} />}
         {pin && (
           <div className="mx-auto mt-5 max-w-xs rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-800">Your PIN. Save it now</p>
@@ -114,7 +156,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const [title, setTitle] = useState("");
   const [visibility, setVisibility] = useState("public");
   const [pin, setPin] = useState("");
-  const [emailOn, setEmailOn] = useState(false); // "email this page to someone"
+  const [includePin, setIncludePin] = useState(true); // private page: write the PIN in the email, or give it to them yourself
   const [shareEmail, setShareEmail] = useState("");
   const [loadError, setLoadError] = useState("");
   const [error, setError] = useState("");
@@ -126,6 +168,9 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const [done, setDone] = useState(null);
   const [sheet, setSheet] = useState(false);
   const errRef = useRef(null);
+  const isPrivate = edit ? info?.visibility === "private" : visibility === "private";
+  // The "send to their email" box on the create form. On the edit page it lives in the "Link and access" card at the top (SendEmailBox).
+  const canAddEmail = cfg.emailEnabled !== false && !edit;
 
   const template = TEMPLATES.find((t) => t.id === templateId);
   const meta = META[templateId];
@@ -184,7 +229,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
     if (builder.fields.includes("question") && !(data.question || "").trim()) return fail(templateId === "proposal" ? "Write the question you want to ask." : "Add a greeting, like “Happy Thanksgiving”.");
     if (data.since && new Date(`${data.since}T00:00:00`) > new Date()) return fail("The date can't be in the future.");
     if (visibility === "private" && pin && !/^\d{6}$/.test(pin)) return fail("A PIN is exactly 6 digits, or leave it empty and we'll make one.");
-    if (!edit && emailOn && !EMAIL_RX.test(shareEmail.trim())) return fail("Enter the email address to send the page to, like name@example.com.");
+    if (shareEmail.trim() && !EMAIL_RX.test(shareEmail.trim())) return fail("That email address doesn't look right. Use something like name@example.com, or leave it empty.");
     return true;
   };
 
@@ -201,7 +246,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
       } else {
         const occasion = cfg.occasions?.find((o) => o.theme === template.theme);
         if (!occasion) return fail("This template isn't available right now. Please try another.");
-        const r = await createPage({ ...body, occasionId: occasion.id, visibility, ...(visibility === "private" && pin ? { pin } : {}), ...(emailOn && shareEmail.trim() ? { shareEmail: shareEmail.trim().toLowerCase() } : {}) });
+        const r = await createPage({ ...body, occasionId: occasion.id, visibility, ...(visibility === "private" && pin ? { pin } : {}), ...(shareEmail.trim() ? { shareEmail: shareEmail.trim().toLowerCase(), includePin } : {}) });
         try { localStorage.removeItem(draftKey(templateId)); } catch { /* ignore */ }
         const left = Math.max(0, cfg.credits - 1);
         setCredits(left); onPageCreated?.();
@@ -254,6 +299,9 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
                 ? <PinChip pin={info.pin} className="mt-2" />
                 : <p className="mt-2 flex items-center gap-1.5 text-xs text-[#8a6a80]"><Globe2 className="h-3.5 w-3.5 text-rose-400" aria-hidden /> Public: anyone with the link can open it.</p>}
               {info.shareEmail && <p className="mt-2 flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900 ring-1 ring-sky-200"><Mail className="h-3.5 w-3.5 shrink-0" aria-hidden /> Emailed to {info.shareEmail} ({info.emailStatus || "pending"}). <span className="inline-flex items-center gap-1 text-sky-700"><Lock className="h-3 w-3" aria-hidden /> Can&apos;t be changed</span></p>}
+              {!info.shareEmail && (cfg.emailEnabled !== false
+                ? <SendEmailBox pageId={params.id} isPrivate={info.visibility === "private"} closed={info.status === "closed"} onSent={(x) => setInfo((i) => ({ ...i, ...x }))} />
+                : <p className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Emailing pages is switched off right now, so this page can&apos;t be sent by email. You can still share the link yourself.</p>)}
               {info.expiresAt && <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900 ring-1 ring-amber-200">⏳ Online until {new Date(info.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })} ({info.daysLeft === 1 ? "1 day" : `${info.daysLeft} days`} left). After that the page and its files are deleted.</p>}
               <p className="mt-2 text-xs text-[#8a6a80]">Change the PIN, switch public or private, or make a new link from <Link to="/memories/app/pages" className="font-semibold text-rose-600 hover:underline">My pages</Link>.</p>
             </div>
@@ -299,19 +347,18 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
                 )}
               </fieldset>
             )}
-            {!edit && cfg.emailEnabled !== false && (
+            {canAddEmail && (
               <div className="rounded-2xl border border-rose-100 bg-[#fffaf6] p-3.5">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input type="checkbox" className="mt-1 h-4 w-4 accent-rose-500" checked={emailOn} onChange={(e) => { setEmailOn(e.target.checked); setError(""); }} />
-                  <span><span className="flex items-center gap-1.5 text-sm font-semibold text-[#3a1530]"><Mail className="h-4 w-4 text-rose-500" aria-hidden /> Email this page to them</span><span className="text-xs text-[#8a6a80]">We&apos;ll send the link{visibility === "private" ? " and the PIN" : ""} to their email the moment you create it, in the colours of the look you chose.</span></span>
-                </label>
-                {emailOn && (
-                  <div className="mt-3">
-                    <label className={label} htmlFor="pb-email">Their email address</label>
-                    <input id="pb-email" type="email" inputMode="email" autoComplete="off" className={field} value={shareEmail} onChange={(e) => { setShareEmail(e.target.value); setError(""); }} placeholder="name@example.com" maxLength={254} />
-                    <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-800"><Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Check the address. It can&apos;t be changed after you create the page. Only use the email of someone who knows you.</p>
-                  </div>
+                <label className={label} htmlFor="pb-email"><span className="inline-flex items-center gap-1.5"><Mail className="h-4 w-4 text-rose-500" aria-hidden /> Send it to their email <span className="font-medium normal-case tracking-normal text-[#c4a8b8]">(optional)</span></span></label>
+                <input id="pb-email" type="email" inputMode="email" autoComplete="off" className={field} value={shareEmail} onChange={(e) => { setShareEmail(e.target.value); setError(""); }} placeholder="name@example.com" maxLength={254} />
+                <p className="mt-1.5 text-xs text-[#8a6a80]">We&apos;ll email them the link {edit ? "when you save" : "the moment you create the page"}, in the colours of the look you chose. Leave it empty to share the link yourself.</p>
+                {shareEmail.trim() && isPrivate && (
+                  <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl bg-white p-3 text-sm ring-1 ring-rose-100">
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-rose-500" checked={includePin} onChange={(e) => setIncludePin(e.target.checked)} />
+                    <span><span className="font-semibold text-[#3a1530]">Put the PIN in the email too</span><span className="block text-xs text-[#8a6a80]">{includePin ? "They get the link and the PIN together." : "The email has only the link and says you'll give them the PIN. Send it to them yourself, for example by message."}</span></span>
+                  </label>
                 )}
+                {shareEmail.trim() && <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800"><Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Check the address. It can&apos;t be changed after {edit ? "you save" : "you create the page"}. Only use the email of someone who knows you.</p>}
               </div>
             )}
           </div>

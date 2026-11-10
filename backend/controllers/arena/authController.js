@@ -76,6 +76,7 @@ export const signup = handle(async (req, res) => {
       email: data.email,
       countryCode: data.countryCode,
       mobile: data.mobile,
+      source: data.source, // which site the sign-up came from: decides which email template is used
       passwordHash: await hashPassword(data.password),
       otpHash: otpHash(data.email, otp),
       attempts: 0,
@@ -85,7 +86,7 @@ export const signup = handle(async (req, res) => {
     { ex: PENDING_TTL }
   );
 
-  await sendSignupOtp(data.email, data.name, otp, Math.round(PENDING_TTL / 60));
+  await sendSignupOtp(data.email, data.name, otp, Math.round(PENDING_TTL / 60), data.source);
 
   res.status(201).json({
     success: true,
@@ -96,7 +97,7 @@ export const signup = handle(async (req, res) => {
 }, "Unable to start signup");
 
 export const resendSignupOtp = handle(async (req, res) => {
-  const { email } = resendSignupSchema.parse(req.body);
+  const { email, source: askedSource } = resendSignupSchema.parse(req.body);
 
   const who = { email, ip: req.ip };
   await assertNotLocked("signup", who);
@@ -127,7 +128,7 @@ export const resendSignupOtp = handle(async (req, res) => {
     { ex: PENDING_TTL }
   );
 
-  await sendSignupOtp(email, pending.name, otp, Math.round(PENDING_TTL / 60));
+  await sendSignupOtp(email, pending.name, otp, Math.round(PENDING_TTL / 60), pending.source || askedSource);
 
   res.json({ success: true, message: "A new code is on its way.", resendInSeconds: RESEND_COOLDOWN_MS / 1000 });
 }, "Unable to resend code");
@@ -226,7 +227,7 @@ const GENERIC_SENT = "If an account exists for this email, we've sent a 6-digit 
 const BAD_CODE = "That code is invalid or has expired. Request a new one.";
 
 export const forgotPassword = handle(async (req, res) => {
-  const { email } = forgotPasswordSchema.parse(req.body);
+  const { email, source } = forgotPasswordSchema.parse(req.body);
 
   // 5 wrong codes / resends per 24 h locks this email and this IP for 24 h.
   const who = { email, ip: req.ip };
@@ -265,7 +266,7 @@ export const forgotPassword = handle(async (req, res) => {
 
   if (eligible) {
     // Not awaited: mail latency must not reveal that the account exists.
-    void sendPasswordResetOtp(user.email, user.name, otp, Math.round(RESET_TTL / 60));
+    void sendPasswordResetOtp(user.email, user.name, otp, Math.round(RESET_TTL / 60), source);
   }
 
   res.json({

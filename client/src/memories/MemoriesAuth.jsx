@@ -260,7 +260,7 @@ export default function MemoriesAuth() {
     setBusy(true);
     setFormError("");
     try {
-      const { data } = await http.post("/signup", values);
+      const { data } = await http.post("/signup", { ...values, source: "memories" });
       setPendingEmail(values.email.toLowerCase());
       setCooldown(data.resendInSeconds ?? 60);
       setOtp("");
@@ -297,7 +297,7 @@ export default function MemoriesAuth() {
     setBusy(true);
     setFormError("");
     try {
-      const { data } = await http.post("/signup/resend", { email: pendingEmail });
+      const { data } = await http.post("/signup/resend", { email: pendingEmail, source: "memories" });
       setCooldown(data.resendInSeconds ?? 60);
       setOtp("");
       toast.success("New code sent", { id: "memories-otp-sent" });
@@ -369,7 +369,7 @@ export default function MemoriesAuth() {
     setBusy(true);
     setFormError("");
     try {
-      const { data } = await http.post("/password/forgot", { email });
+      const { data } = await http.post("/password/forgot", { email, source: "memories" });
       setPendingEmail(email);
       setCooldown(data.resendInSeconds ?? 60);
       setOtp("");

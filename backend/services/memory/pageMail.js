@@ -35,7 +35,7 @@ export const lookFor = (theme, style) => {
 };
 
 /** The whole message: subject, plain text and themed HTML. Pure, so it can be tested and previewed. */
-export const buildPageMail = ({ theme, style, senderName, recipientName, url, pin, expiresAt }) => {
+export const buildPageMail = ({ theme, style, senderName, recipientName, url, pin, pinHidden = false, expiresAt }) => {
   const c = COPY[theme] || COPY.birthday;
   const look = lookFor(theme, style);
   const sender = senderName || "Someone";
@@ -50,7 +50,7 @@ export const buildPageMail = ({ theme, style, senderName, recipientName, url, pi
     `${headline}`, "",
     line, "",
     `${c.button}: ${url}`,
-    ...(pin ? ["", `It's private. The PIN to open it is: ${pin}`, "Please keep the PIN to yourself."] : []),
+    ...(pin ? ["", `It's private. The PIN to open it is: ${pin}`, "Please keep the PIN to yourself."] : pinHidden ? ["", `It's private. ${sender} will give you the PIN to open it.`] : []),
     ...(until ? ["", until] : []),
     "", "—", why, "",
     "Memories by Target Trek · https://www.targettrek.in/memories",
@@ -79,7 +79,7 @@ export const buildPageMail = ({ theme, style, senderName, recipientName, url, pi
               <div style="font-family:'Courier New',monospace;font-size:30px;font-weight:bold;letter-spacing:.3em;color:${look.ink};padding:4px 0 2px;">${esc(pin)}</div>
               <div style="font-size:12px;color:${look.muted};">Please keep it to yourself.</div>
             </td></tr></table>
-          </td></tr>` : ""}
+          </td></tr>` : pinHidden ? `<tr><td align="center" style="padding:18px 34px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:${look.muted};">This page is private. ${esc(sender)} will give you the PIN to open it.</td></tr>` : ""}
           <tr><td style="padding:22px 34px 6px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:${look.muted};text-align:center;">If the button doesn't work, copy this link into your browser:<br><a href="${esc(url)}" style="color:${look.accent};word-break:break-all;">${esc(url)}</a></td></tr>
           ${until ? `<tr><td style="padding:6px 34px 26px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:${look.muted};text-align:center;">${esc(until)}</td></tr>` : `<tr><td style="height:22px;font-size:0;line-height:0;">&nbsp;</td></tr>`}
         </table>
@@ -94,13 +94,13 @@ export const buildPageMail = ({ theme, style, senderName, recipientName, url, pi
 };
 
 /** Send (or resend) the page's email. Records the result on the page. Never throws: the page exists either way. */
-export const sendPageMail = async ({ page, senderName, theme, pin, to }) => {
+export const sendPageMail = async ({ page, senderName, theme, pin, pinHidden = false, to }) => {
   const address = String(to || page.shareEmail || "").toLowerCase();
   if (await MemoryMailBlock.exists({ email: address })) {
     await MemoryPage.updateOne({ _id: page._id }, { $set: { emailStatus: "blocked" } });
     return { status: "blocked" };
   }
-  const mail = buildPageMail({ theme, style: page.style, senderName, recipientName: page.recipientName, url: shareUrl(page.slug), pin, expiresAt: page.expiresAt });
+  const mail = buildPageMail({ theme, style: page.style, senderName, recipientName: page.recipientName, url: shareUrl(page.slug), pin, pinHidden, expiresAt: page.expiresAt });
   try {
     await sendMail(address, mail.subject, mail.text, mail.html, {
       sync: true,

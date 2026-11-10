@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 
 import { errMsg } from "../arena/api";
-import { changePin, closePage, deletePage, listPages, regenerateLink, reopenPage, resendEmail, setVisibility } from "./memApi";
+import { changePin, closePage, deletePage, listPages, regenerateLink, reopenPage, resendEmail, setVisibility, updatePage } from "./memApi";
 import { META } from "./Showcase";
 import { Loading } from "./AppShell";
 import PinChip from "./PinChip";
@@ -73,6 +73,36 @@ function PinForm({ title, intro, cta, busy, onSubmit, onClose }) {
   );
 }
 
+const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/* Email a page that was made without an address. It is sent once, with or without the PIN, and the address is fixed after that. */
+function EmailForm({ page, busy, onSubmit, onClose }) {
+  const [to, setTo] = useState("");
+  const [withPin, setWithPin] = useState(true);
+  const [err, setErr] = useState("");
+  const private_ = page.visibility === "private";
+  const go = (e) => { e.preventDefault(); if (!EMAIL_RX.test(to.trim())) return setErr("Enter their email address, like name@example.com."); onSubmit(to.trim().toLowerCase(), withPin); };
+  return (
+    <Sheet title="Send it by email" onClose={onClose}>
+      <p className="mt-1 text-sm text-[#7a5370]">We&apos;ll email &ldquo;{page.title}&rdquo; to them, in the colours of the look you chose{private_ ? "" : ", with the link"}.</p>
+      <form onSubmit={go} className="mt-4" noValidate>
+        <label htmlFor="mp-email" className="text-xs font-bold uppercase tracking-wider text-[#a07890]">Their email address</label>
+        <input id="mp-email" type="email" inputMode="email" autoComplete="off" autoFocus maxLength={254} value={to} onChange={(e) => { setTo(e.target.value); setErr(""); }} placeholder="name@example.com"
+          className="mt-1.5 w-full rounded-xl border border-rose-100 px-3.5 py-3 text-[#3a1530] outline-none placeholder:text-[#c4a8b8] focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
+        {private_ && (
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl bg-[#fffaf6] p-3 text-sm ring-1 ring-rose-100">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-rose-500" checked={withPin} onChange={(e) => setWithPin(e.target.checked)} />
+            <span><span className="font-semibold text-[#3a1530]">Put the PIN in the email too</span><span className="block text-xs text-[#8a6a80]">{withPin ? "They get the link and the PIN together." : "The email has only the link. Send them the PIN yourself."}</span></span>
+          </label>
+        )}
+        <p className="mt-3 flex items-start gap-1.5 text-xs text-amber-800"><Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Check the address. It can&apos;t be changed after it is sent. Only use the email of someone who knows you.</p>
+        {err && <p role="alert" className="mt-2 text-sm text-rose-600">{err}</p>}
+        <Button type="submit" size="lg" className="mt-4 w-full" loading={busy}><Mail className="h-4 w-4" aria-hidden /> Send email</Button>
+      </form>
+    </Sheet>
+  );
+}
+
 function Confirm({ title, text, cta, danger, busy, onYes, onClose }) {
   return (
     <Sheet title={title} onClose={onClose}>
@@ -93,7 +123,7 @@ const Row = ({ icon: Icon, label, hint, onClick, danger, disabled }) => (
 );
 
 /* The pages this person made, and everything they can do with each: link, preview, edit, disable, public or private, PIN, new link, delete. */
-export default function MyPages({ credits }) {
+export default function MyPages({ credits, emailEnabled = true }) {
   const navigate = useNavigate();
   const lifetime = useLifetimeDays();
   const [pages, setPages] = useState(null);
@@ -187,6 +217,10 @@ export default function MyPages({ credits }) {
                   <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">{p.visibility === "private" ? <Lock className="h-3 w-3" aria-hidden /> : <Globe2 className="h-3 w-3" aria-hidden />}{p.visibility === "private" ? "Private · PIN" : "Public"}</span>
                   {lifeChip(p) && <span title={`Online until ${when(p.expiresAt)}. Then it is deleted.`} className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-1", lifeChip(p).cls)}>⏳ {lifeChip(p).text}</span>}
                   {p.shareEmail && <span title={`Emailed to ${p.shareEmail}`} className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-1", p.emailStatus === "sent" ? "bg-sky-50 text-sky-700" : "bg-amber-100 text-amber-800")}><Mail className="h-3 w-3" aria-hidden /> {p.emailStatus === "sent" ? `Emailed to ${maskEmail(p.shareEmail)}` : `Email ${p.emailStatus || "pending"}`}</span>}
+                  {!p.shareEmail && !blocked && (
+                    <button type="button" onClick={() => (emailEnabled && !closed ? setDialog({ kind: "email", page: p }) : flash(!emailEnabled ? "Emailing pages is switched off right now. You can still share the link yourself." : "This page is disabled. Enable it first, then send the email."))}
+                      className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-1 ring-1", emailEnabled && !closed ? "bg-white text-rose-600 ring-rose-200 hover:bg-rose-50" : "bg-slate-50 text-slate-400 ring-slate-200")}><Mail className="h-3 w-3" aria-hidden /> Send by email</button>
+                  )}
                   {p.answer && <span className={cx("rounded-full px-2.5 py-1", p.answer === "yes" ? "bg-rose-100 text-rose-700" : p.answer === "no" ? "bg-slate-100 text-slate-700" : "bg-amber-100 text-amber-800")}>{p.answer === "yes" ? "✔ Said YES" : p.answer === "no" ? "Said no" : "Needs time"}</span>}
                   {p.repliesCount > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-sky-700"><MessageCircleHeart className="h-3 w-3" aria-hidden /> {p.repliesCount} repl{p.repliesCount === 1 ? "y" : "ies"}</span>}
                   <span className="inline-flex items-center gap-1 text-[#8a6a80]"><Eye className="h-3 w-3" aria-hidden /> {p.opens ? `Opened ${p.opens}×` : "Not opened yet"}</span>
@@ -221,6 +255,11 @@ export default function MyPages({ credits }) {
             <Row icon={Share2} label="Share the link" hint="Send it on WhatsApp or anywhere" onClick={() => share(open)} />
             <Row icon={ExternalLink} label="Open the link" hint="See it the way they will" onClick={() => window.open(open.url, "_blank", "noopener,noreferrer")} />
             <Row icon={Activity} label="Responses & activity" hint="Their answer, replies and everything they did" onClick={() => navigate(`/memories/app/pages/${open.id}/activity`)} />
+            {!open.shareEmail && open.status !== "blocked" && (
+              <Row icon={Mail} label="Send it by email" disabled={!emailEnabled || open.status === "closed"}
+                hint={!emailEnabled ? "Emailing pages is switched off right now" : open.status === "closed" ? "Enable the page first" : "Add their email. We send the link, with or without the PIN"}
+                onClick={() => setDialog({ kind: "email", page: open })} />
+            )}
             {open.shareEmail && open.emailStatus !== "blocked" && (
               <Row icon={Mail} label={`Send the email again (${open.emailSendsLeft} left)`} hint={`To ${open.shareEmail}. The address can't be changed`} disabled={open.emailSendsLeft < 1 || open.status === "closed"}
                 onClick={() => run(async () => { const r = await resendEmail(open.id); replace({ id: open.id, emailStatus: r.status, emailSendsLeft: r.sendsLeft }); if (r.status !== "sent") throw new Error("The email couldn't be sent. Please try again in a moment."); }, { done: `Email sent to ${open.shareEmail}.` })} />
@@ -250,6 +289,11 @@ export default function MyPages({ credits }) {
       {dialog?.kind === "delete" && <Confirm danger title="Delete this page for good?" text={`"${d.title}", its link and its photos and videos will be removed. This can't be undone, and the credit you used isn't returned.`} cta="Delete forever" busy={busy} onClose={() => setDialog(null)} onYes={() => run(async () => { await deletePage(d.id); setPages((l) => l.filter((x) => x.id !== d.id)); }, { done: "The page was deleted." })} />}
       {dialog?.kind === "private" && <PinForm title="Make it private" intro="Only people with the 6-digit PIN can open it. Choose your own PIN, or we'll make one." cta="Make private" busy={busy} onClose={() => setDialog(null)} onSubmit={(pin) => run(async () => { const r = await setVisibility(d.id, "private", pin); replace(r.page); setPinShown(r.pin); }, {})} />}
       {dialog?.kind === "pin" && <PinForm title="New PIN" intro="Anyone who unlocked the page before is locked out and needs the new PIN. Choose your own, or we'll make one." cta="Set new PIN" busy={busy} onClose={() => setDialog(null)} onSubmit={(pin) => run(async () => { const r = await changePin(d.id, pin); replace({ id: d.id, pin: r.pin }); setPinShown(r.pin); }, {})} />}
+      {dialog?.kind === "email" && <EmailForm page={d} busy={busy} onClose={() => setDialog(null)} onSubmit={(to, withPin) => run(async () => {
+        const r = await updatePage(d.id, { shareEmail: to, includePin: withPin });
+        replace({ id: d.id, shareEmail: r.shareEmail, emailStatus: r.emailStatus, emailSendsLeft: r.emailSendsLeft, emailIncludesPin: r.emailIncludesPin });
+        if (r.email?.status !== "sent") throw new Error(r.email?.status === "blocked" ? "That address has asked not to get emails from Memories." : "The page is saved with that address, but the email couldn't be sent. Open Manage and use \"Send the email again\".");
+      }, { done: "Email sent. Ask them to check spam if it doesn't arrive." })} />}
       {pinShown && <PinReveal pin={pinShown} onClose={() => setPinShown(null)} />}
 
       {pages.some((p) => p.status === "blocked") && <p className="mt-4 flex items-start gap-2 text-xs text-[#8a6a80]"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" aria-hidden /> A page blocked by an admin can&apos;t be changed. Contact support if you think that&apos;s a mistake.</p>}

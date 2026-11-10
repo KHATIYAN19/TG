@@ -30,8 +30,18 @@ export const BIRTHDAY_EDITOR = {
   messageTitle: "Your message",
 };
 
-let gid = 1000;
-const newGift = (title = "") => ({ id: `g${++gid}`, title, note: "", emoji: "" });
+/*
+  Every row needs an id that no other row in the SAME list has: editing a row finds it by id, so two rows with one id
+  change together. A plain counter restarts at every page load while saved drafts keep their old ids, which made new rows
+  collide with old ones. Random ids, checked against the list, cannot.
+*/
+const freshId = (prefix, list = []) => {
+  const taken = new Set(list.map((x) => x.id));
+  let id;
+  do id = `${prefix}${Math.random().toString(36).slice(2, 9)}`; while (taken.has(id));
+  return id;
+};
+const newGift = (title = "", list = []) => ({ id: freshId("g", list), title, note: "", emoji: "" });
 
 const field = "block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-4 focus:ring-pink-100";
 const label = "mb-1 block text-xs font-semibold text-slate-600";
@@ -46,6 +56,23 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
   let step = 0;
   const n = () => ++step;
   const set = (patch) => onData({ ...data, ...patch });
+
+  // Drafts saved before the id fix can hold two rows with one id (they then change together). Give the repeats new ids, once.
+  useEffect(() => {
+    const fixes = {};
+    for (const [key, prefix] of [["gifts", "g"], ["people", "pp"], ["timeline", "t"], ["stats", "s"]]) {
+      const list = data[key];
+      if (!Array.isArray(list) || new Set(list.map((x) => x.id)).size === list.length) continue;
+      const seen = new Set();
+      fixes[key] = list.map((x) => {
+        if (x.id && !seen.has(x.id)) { seen.add(x.id); return x; }
+        const id = freshId(prefix, [...list, ...[...seen].map((i) => ({ id: i }))]);
+        seen.add(id);
+        return { ...x, id };
+      });
+    }
+    if (Object.keys(fixes).length) onData({ ...data, ...fixes });
+  }, [data, onData]);
   const setGift = (id, patch) => set({ gifts: gifts.map((g) => (g.id === id ? { ...g, ...patch } : g)) });
 
   return (
@@ -135,14 +162,14 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
               ))}
             </ul>
 
-            <button type="button" disabled={gifts.length >= MAX_GIFTS} onClick={() => set({ gifts: [...gifts, newGift()] })}
+            <button type="button" disabled={gifts.length >= MAX_GIFTS} onClick={() => set({ gifts: [...gifts, newGift("", gifts)] })}
               className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40">
               <Plus className="h-4 w-4" /> Add a gift
             </button>
             {gifts.length < MAX_GIFTS && (
               <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Gift ideas">
                 {config.giftSuggestions.filter((x) => !gifts.some((g) => g.title === x)).slice(0, 6).map((x) => (
-                  <button key={x} type="button" onClick={() => set({ gifts: [...gifts, newGift(x)] })} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-pink-100 hover:text-pink-700">+ {x}</button>
+                  <button key={x} type="button" onClick={() => set({ gifts: [...gifts, newGift(x, gifts)] })} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-pink-100 hover:text-pink-700">+ {x}</button>
                 ))}
               </div>
             )}
@@ -166,7 +193,7 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
                   </li>
                 ))}
               </ul>
-              <button type="button" disabled={people.length >= MAX_PEOPLE} onClick={() => set({ people: [...people, { id: `pp${++gid}`, date: "", title: "", note: "" }] })}
+              <button type="button" disabled={people.length >= MAX_PEOPLE} onClick={() => set({ people: [...people, { id: freshId("pp", people), date: "", title: "", note: "" }] })}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add a person</button>
             </section>
           )}
@@ -187,7 +214,7 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
                   </li>
                 ))}
               </ul>
-              <button type="button" disabled={timeline.length >= MAX_TIMELINE} onClick={() => set({ timeline: [...timeline, { id: `t${++gid}`, date: "", title: "", note: "" }] })}
+              <button type="button" disabled={timeline.length >= MAX_TIMELINE} onClick={() => set({ timeline: [...timeline, { id: freshId("t", timeline), date: "", title: "", note: "" }] })}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add a moment</button>
             </section>
           )}
@@ -224,7 +251,7 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
                   </li>
                 ))}
               </ul>
-              <button type="button" disabled={stats.length >= MAX_STATS} onClick={() => set({ stats: [...stats, { id: `s${++gid}`, label: "", value: "" }] })}
+              <button type="button" disabled={stats.length >= MAX_STATS} onClick={() => set({ stats: [...stats, { id: freshId("s", stats), label: "", value: "" }] })}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add a fact</button>
             </section>
           )}

@@ -317,6 +317,7 @@ export const pageView = async (page, { withMedia = false, withPin = false } = {}
     status: page.status,
     shareEmail: page.shareEmail || "",
     emailStatus: page.emailStatus || "",
+    emailIncludesPin: page.emailIncludesPin !== false,
     emailSendsLeft: page.shareEmail ? Math.max(0, MAX_EMAIL_SENDS - (page.emailSends || 0)) : 0,
     expiresAt: page.expiresAt || null,
     daysLeft: daysLeft(page),

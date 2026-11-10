@@ -86,6 +86,7 @@ const memoryPageSchema = new Schema(
       goes to this address. The sender can ask for it to be sent again a couple of times if it didn't arrive.
     */
     shareEmail: { type: String, lowercase: true, trim: true, maxlength: 254, default: "" },
+    emailIncludesPin: { type: Boolean, default: true }, // private page: is the PIN written in the email, or does the sender give it separately?
     emailStatus: { type: String, enum: ["", "sent", "failed", "blocked"], default: "" },
     emailSends: { type: Number, default: 0 },
     emailSentAt: { type: Date, default: null },
