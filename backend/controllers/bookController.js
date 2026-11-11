@@ -959,8 +959,10 @@ export const createBook = asyncHandler(
     const book = await Book.create({
       ...productData,
 
-      showInMainBooks:
-        productData.showInMainBooks ?? true,
+      showInMainBooks: parseBoolean(
+        req.body.showInMainBooks,
+        false
+      ),
 
       coverPageUrl: coverUpload.secure_url,
 

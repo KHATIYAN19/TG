@@ -62,6 +62,10 @@ const PAGES = {
     file: "src/component/GenaiRAG.jsx",
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "FAQS"],
   },
+  "/book/computer-network": {
+    file: "src/component/ComputerNetworkBook.jsx",
+    pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
+  },
 };
 
 // Return the source text of `const NAME = <expr>;` using bracket matching.

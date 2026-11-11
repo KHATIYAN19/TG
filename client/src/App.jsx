@@ -218,6 +218,9 @@ const GenaiRAG = lazy(() =>
 const OperatingSystemBook = lazy(() =>
   import("./component/OperatingSystemBook.jsx")
 );
+const ComputerNetworkBook = lazy(() =>
+  import("./component/ComputerNetworkBook.jsx")
+);
 const JavaInterviewHandbook = lazy(() =>
   import("./component/JavaInterviewHandbook.jsx")
 );
@@ -1220,6 +1223,10 @@ function App() {
           <Route
             path="/books/operating-systems"
             element={<OperatingSystemBook />}
+          />
+          <Route
+            path="/book/computer-network"
+            element={<ComputerNetworkBook />}
           />
           {/* <Route
             path="/book/language/java"

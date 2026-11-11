@@ -78,6 +78,10 @@
       "destination": "/api/page?p=/book/genai/rag"
     },
     {
+      "source": "/book/computer-network",
+      "destination": "/api/page?p=/book/computer-network"
+    },
+    {
       "source": "/resources",
       "destination": "/prerendered/resources.html"
     },

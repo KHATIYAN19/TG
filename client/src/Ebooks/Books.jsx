@@ -76,6 +76,8 @@ const SEARCH_EXAMPLES = [
 
 const QUICK_FILTERS = [
   { label: "All books", value: "" },
+  { label: "Placement", value: "placement" },
+  { label: "Cloud", value: "cloud" },
   { label: "System Design", value: "system design" },
   { label: "Java", value: "java" },
   { label: "GenAI", value: "genai" },
@@ -873,6 +875,7 @@ export default function Books() {
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [tag, setTag] = useState("");
   const [resourceType, setResourceType] = useState("");
   const [sort, setSort] = useState("");
 
@@ -1028,6 +1031,25 @@ export default function Books() {
     ].sort((a, b) => a.localeCompare(b));
   }, [books]);
 
+  // Tags set by admin on each book (e.g. "College Placement"), most used first
+  const tagOptions = useMemo(() => {
+    const counts = new Map();
+    for (const book of books) {
+      const seen = new Set();
+      for (const raw of Array.isArray(book?.tags) ? book.tags : []) {
+        const label = String(raw || "").trim();
+        const key = label.toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        const prev = counts.get(key);
+        counts.set(key, { label: prev?.label || label, key, count: (prev?.count || 0) + 1 });
+      }
+    }
+    return [...counts.values()].sort(
+      (a, b) => b.count - a.count || a.label.localeCompare(b.label)
+    );
+  }, [books]);
+
   const resourceTypes = useMemo(() => {
     return [
       ...new Set(
@@ -1099,7 +1121,13 @@ export default function Books() {
       const matchesType =
         !resourceType || book?.resourceType === resourceType;
 
-      return matchesSearch && matchesCategory && matchesType;
+      const matchesTag =
+        !tag ||
+        (Array.isArray(book?.tags) ? book.tags : []).some(
+          (t) => String(t || "").trim().toLowerCase() === tag
+        );
+
+      return matchesSearch && matchesCategory && matchesType && matchesTag;
     });
 
     return [...result].sort((a, b) => {
@@ -1126,10 +1154,10 @@ export default function Books() {
 
       return 0;
     });
-  }, [books, search, category, resourceType, sort]);
+  }, [books, search, category, resourceType, tag, sort]);
 
   const hasFilters = Boolean(
-    search || category || resourceType || sort
+    search || category || resourceType || tag || sort
   );
 
   // Show the featured book once on the default page.
@@ -1148,6 +1176,7 @@ export default function Books() {
     setSearch("");
     setCategory("");
     setResourceType("");
+    setTag("");
     setSort("");
   };
 
@@ -1655,12 +1684,20 @@ export default function Books() {
           background: var(--tb-surface); color: var(--tb-muted); font-size: 12px; font-weight: 800;
           transition: color .25s, border-color .25s, box-shadow .25s;
         }
-        .tb-chip:hover { border-color: var(--tb-orange); color: var(--tb-orange); }
+        .tb-chip:hover:not([aria-pressed="true"]) { border-color: var(--tb-orange); color: var(--tb-orange); background: var(--tb-soft); }
         .tb-chip[aria-pressed="true"] {
           color: #fff; border-color: transparent;
           box-shadow: 0 8px 22px rgba(28,25,23,.38), 0 0 0 2px rgba(249,115,22,.65);
         }
         .tb-root[data-theme="dark"] .tb-chip[aria-pressed="true"] { color: #1C1917; box-shadow: 0 8px 22px rgba(249,115,22,.35), 0 0 0 2px rgba(253,186,116,.7); }
+        /* tag chips: own solid active background (no pill element) */
+        .tb-chip-tag { background: var(--tb-soft); border-color: var(--tb-orange-b); color: var(--tb-orange); padding: 7px 14px; }
+        .tb-chip-tag[aria-pressed="true"] { background: linear-gradient(135deg,#F97316,#EA580C); color: #fff; border-color: transparent; box-shadow: 0 8px 20px rgba(249,115,22,.4); }
+        .tb-root[data-theme="dark"] .tb-chip-tag[aria-pressed="true"] { color: #1C1917; background: linear-gradient(135deg,#FDBA74,#F97316); }
+        .tb-chip-tag[aria-pressed="true"] .tb-chip-label::before { background: #fff; box-shadow: none; animation: none; }
+        .tb-tag-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+        .tb-tag-row > span { flex-shrink: 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--tb-subtle); padding-top: 8px; }
+        .tb-tag-row .tb-chips { margin-top: 8px; flex: 1; min-width: 0; }
         .tb-chip-label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; }
         .tb-chip[aria-pressed="true"] .tb-chip-label::before {
           content: ""; width: 7px; height: 7px; border-radius: 50%; background: #F97316; box-shadow: 0 0 10px #F97316;
@@ -1850,6 +1887,7 @@ export default function Books() {
           .tb-icon-btn { padding: 0 13px; }
           .tb-filter-grid { grid-template-columns: 1fr; }
           .tb-grid { grid-template-columns: 1fr; gap: 18px; }
+          .tb-tag-row > span { display: none; }
           .tb-card-list { flex-direction: column; }
           .tb-card-list .tb-card-media { width: 100%; height: 240px; }
           .tb-support { flex-direction: column; align-items: flex-start; padding: 28px 22px; }
@@ -2194,6 +2232,7 @@ export default function Books() {
                           setSearch(item.value);
                           setCategory("");
                           setResourceType("");
+                          setTag("");
                         }}
                       >
                         {active && (
@@ -2212,6 +2251,30 @@ export default function Books() {
                     );
                   })}
                 </nav>
+
+                {tagOptions.length > 0 && (
+                  <div className="tb-tag-row">
+                  <span>Tags</span>
+                  <nav className="tb-chips" aria-label="Browse by tag">
+                    {tagOptions.map((item) => {
+                      const active = tag === item.key;
+                      return (
+                        <motion.button
+                          type="button"
+                          key={item.key}
+                          className="tb-chip tb-chip-tag"
+                          aria-pressed={active}
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => setTag(active ? "" : item.key)}
+                        >
+                          <span className="tb-chip-label">#{item.label}</span>
+                        </motion.button>
+                      );
+                    })}
+                  </nav>
+                  </div>
+                )}
 
                 <AnimatePresence initial={false}>
                   {showFilters && (

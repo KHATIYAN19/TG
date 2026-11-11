@@ -15,6 +15,7 @@ const STATIC_PAGES = [
   "/book/genai/google-adk",
   "/book/genai/mcp",
   "/book/genai/rag",
+  "/book/computer-network",
   "/resources",
   "/resources/hld",
   "/resources/hld/cache",

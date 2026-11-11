@@ -52,6 +52,7 @@ export default async function handler(req, res) {
     `- [Google ADK Handbook](${SITE_URL}/book/genai/google-adk)`,
     `- [MCP Ebook](${SITE_URL}/book/genai/mcp)`,
     `- [RAG Ebook](${SITE_URL}/book/genai/rag)`,
+    `- [Computer Networks Ebook](${SITE_URL}/book/computer-network)`,
     "",
     "## Sections",
     `- [Learn hub](${SITE_URL}/learn)`,
