@@ -28,6 +28,7 @@ import BookRoute from "./routes/bookRoute.js";
 import BookSalesRoute from "./routes/bookSales.js";
 import OrderMailRoute from "./routes/orderMailRoute.js";
 import CouponRoute from "./routes/couponRoute.js";
+import { publicRouter as bookOfferPublicRoutes, adminRouter as bookOfferAdminRoutes } from "./routes/bookOfferRoute.js";
 import { memberRouter as membershipRoutes, adminRouter as membershipAdminRoutes } from "./routes/membershipRoute.js";
 
 import payuRoutes from "./routes/payuRoutes.js";
@@ -700,6 +701,8 @@ app.use(
 );
 
 /* All-Books pass: plans page, member status, book suggestions, admin */
+app.use("/api/book-offers", bookOfferPublicRoutes);
+app.use("/api/admin/book-offers", bookOfferAdminRoutes);
 app.use("/api/membership", membershipRoutes);
 app.use("/api/admin/membership", membershipAdminRoutes);
 

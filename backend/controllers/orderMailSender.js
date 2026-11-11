@@ -115,6 +115,19 @@ const getPurchasedBook = async (order) =>
     "coverImage coverPageUrl isActive isPublished"
   );
 
+// Multi-book offer orders: titles of every book the buyer owns
+const getOfferBookTitles = async (order) => {
+  if (!order?.offer?.offerId) return [];
+
+  const ids = (order.purchasedBookIds || []).map(String);
+  if (!ids.length) return [];
+
+  const found = await Book.find({ _id: { $in: ids } }).select("title").lean();
+  const map = new Map(found.map((b) => [String(b._id), b.title]));
+
+  return ids.map((id) => map.get(id)).filter(Boolean);
+};
+
 const getCoverUrl = (book) => {
   const cover =
     book?.coverImage ||
@@ -1168,6 +1181,11 @@ const sendPendingPurchaseMail = async (req, res) => {
       });
     }
 
+    // Offer order: the mail names the whole bundle, not just its first book
+    if (order.offer?.offerId && order.book?.title) {
+      book.title = order.book.title;
+    }
+
     if (book.isActive === false || book.isPublished === false) {
       return res.status(400).json({
         success: false,
@@ -1316,9 +1334,26 @@ const buildBookAccessEmail = ({
   accessUrl,
   accessExpiresAt,
   generatedNewAccess = true,
+  includedTitles = [],
 }) => {
   const name = order.customer?.name || "there";
-  const title = book.title || order.book?.title || "Your book";
+  const isOffer = includedTitles.length > 0;
+  const title = isOffer
+    ? order.book?.title || "Your book bundle"
+    : book.title || order.book?.title || "Your book";
+
+  const booksText = isOffer
+    ? `\nBooks in this order:\n${includedTitles.map((t) => `- ${t}`).join("\n")}\n`
+    : "";
+
+  const booksHtml = isOffer
+    ? `<div style="margin-top:14px;padding:14px;border:1px solid #fed7aa;border-radius:10px;background:#fff7ed;">
+         <strong>Books in this order (${includedTitles.length})</strong>
+         <ul style="margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.7;">
+           ${includedTitles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}
+         </ul>
+       </div>`
+    : emailBookCard(book);
   const currency = getCurrency(order);
 
   const amount = getPaidAmount(order);
@@ -1332,6 +1367,7 @@ Hi ${name},
 
 Thank you for purchasing "${title}" from Target Trek.
 
+${booksText}
 Your secure book access link is ready:
 
 ${accessUrl}
@@ -1366,9 +1402,9 @@ Team Target Trek
         <strong>${escapeHtml(title)}</strong>.
       </p>
 
-      ${emailBookCard(book)}
+      ${booksHtml}
 
-      ${emailButton(accessUrl, "Access Your Book")}
+      ${emailButton(accessUrl, isOffer ? "Access Your Books" : "Access Your Book")}
 
       <div style="
         margin-top:18px;
@@ -1604,6 +1640,7 @@ const resendBookAccessMail = async (req, res) => {
       accessUrl,
       accessExpiresAt: expiresAt,
       generatedNewAccess: true,
+      includedTitles: await getOfferBookTitles(updated),
     });
 
     try {

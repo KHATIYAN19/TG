@@ -4,7 +4,15 @@ import Book from "../models/Book.js";
 import Order from "../models/Order.js";
 import { buildAttribution, publicAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
-import { scheduleEbookEmail } from "../utils/ebookEmailDelivery.js";
+import { scheduleEbookEmail, isAutoEbookEmailEnabled } from "../utils/ebookEmailDelivery.js";
+import {
+  resolveOfferCheckout,
+  applyOfferToBook,
+  offerOrderFields,
+  offerErrorResponse,
+  recordOfferPurchase,
+} from "../services/bundleOffers.js";
+
 
 import {
   PAYU_KEY,
@@ -158,10 +166,23 @@ export const createPayUPayment = async (
 
     let pricing;
 
+    let offerCheckout = null;
 
     try {
-      pricing =
-        await validateCouponForPayment({
+      offerCheckout = await resolveOfferCheckout(req.body);
+    } catch (error) {
+      return offerErrorResponse(res, error);
+    }
+
+    if (offerCheckout) {
+      applyOfferToBook(book, offerCheckout);
+    }
+
+
+    try {
+      pricing = offerCheckout
+        ? offerCheckout.pricing
+        : await validateCouponForPayment({
           couponCode,
 
           book,
@@ -344,6 +365,8 @@ export const createPayUPayment = async (
 
         bookId:
           book._id,
+
+        ...offerOrderFields(offerCheckout),
 
 
         book: {
@@ -1004,6 +1027,8 @@ export const payUSuccess = async (
         console.error("Unable to increment book purchases:", error)
       );
 
+      recordOfferPurchase(updatedOrder);
+
       // Queue PDF email in the background (never awaited), so the
       // redirect below is not delayed by large attachments.
       scheduleEbookEmail(updatedOrder);
@@ -1449,7 +1474,7 @@ export const getPurchasedBookAccess = async (req, res) => {
     const order = await Order.findOne(orderQuery)
       .select(
         "orderId bookId book customer.email " +
-        "payment.amount purchasedBookIds " +
+        "payment.amount purchasedBookIds offer " +
         "metadata.attribution access.expiresAt"
       )
       .lean();
@@ -1503,8 +1528,12 @@ export const getPurchasedBookAccess = async (req, res) => {
     // 3. IDENTIFY SINGLE OR BUNDLE
     // -----------------------------------------
 
+    const isOfferOrder = Boolean(order.offer?.offerId);
+
+    const autoEbookMail = await isAutoEbookEmailEnabled();
+
     const isBundle =
-      purchasedProduct.resourceType === "bundle";
+      purchasedProduct.resourceType === "bundle" || isOfferOrder;
 
     let purchasedBooks = [];
 
@@ -1686,7 +1715,9 @@ export const getPurchasedBookAccess = async (req, res) => {
         // Only the masked address is exposed.
         emailDelivery: {
           enabled:
-            purchasedProduct.sendEbookEmailOnPurchase === true,
+            autoEbookMail &&
+            (purchasedProduct.sendEbookEmailOnPurchase === true ||
+              isOfferOrder),
           maskedEmail: maskEmail(order.customer?.email)
         },
 

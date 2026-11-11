@@ -59,6 +59,26 @@ const orderSchema = new mongoose.Schema(
     },
 
     /* ==========================================
+       MULTI-BOOK OFFER (set only for offer orders)
+       bookId = first picked book, purchasedBookIds = every picked book
+    ========================================== */
+
+    offer: {
+      offerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "BookOffer",
+        default: null,
+        index: true,
+      },
+      name: { type: String, default: null, trim: true },
+      type: { type: String, default: null },
+      bookCount: { type: Number, default: 0, min: 0 },
+      originalAmount: { type: Number, default: 0, min: 0 },
+      discountAmount: { type: Number, default: 0, min: 0 },
+      finalAmount: { type: Number, default: 0, min: 0 },
+    },
+
+    /* ==========================================
        CUSTOMER DETAILS
     ========================================== */
 

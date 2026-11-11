@@ -1,5 +1,6 @@
 import Order from "../models/Order.js";
 import Book from "../models/Book.js";
+import EbookMailSettings from "../models/EbookMailSettings.js";
 import sendMail from "./MailSender.js";
 import { scheduleMembershipActivation } from "../services/membership/membershipService.js";
 
@@ -69,6 +70,11 @@ const resolvePurchasedBooks = async (order) => {
 
   if (!product) {
     throw new Error("Purchased product not found.");
+  }
+
+  // Multi-book offer orders always get their PDFs by mail.
+  if (order.offer?.offerId) {
+    product.sendEbookEmailOnPurchase = true;
   }
 
   const snapshot = Array.isArray(order.purchasedBookIds)
@@ -685,10 +691,59 @@ export const enqueueEbookEmail = (id, opts = {}) => {
    Synchronous; returns immediately.
 ----------------------------------------------------- */
 
+/*
+  MASTER SWITCH for the automatic "PDFs by email after payment" mail.
+  OFF by default. An admin turns it on/off on /admin/book-offers/payments
+  (stored in the database, no redeploy). Admins can always send PDFs / access
+  links by hand from the payments pages.
+*/
+const SETTINGS_TTL_MS = 10 * 1000;
+let settingsCache = { value: false, at: 0 };
+
+export const isAutoEbookEmailEnabled = async () => {
+  if (Date.now() - settingsCache.at < SETTINGS_TTL_MS) return settingsCache.value;
+
+  try {
+    const doc = await EbookMailSettings.findOne({ key: "global" }).select("autoEbookEmail").lean();
+    settingsCache = { value: doc?.autoEbookEmail === true, at: Date.now() };
+  } catch (error) {
+    console.error("[EBOOK EMAIL] settings read failed, keeping last value:", error.message);
+    settingsCache = { ...settingsCache, at: Date.now() };
+  }
+
+  return settingsCache.value;
+};
+
+export const setAutoEbookEmailEnabled = async (enabled, adminId = null) => {
+  const doc = await EbookMailSettings.findOneAndUpdate(
+    { key: "global" },
+    { $set: { autoEbookEmail: Boolean(enabled), updatedBy: adminId } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  ).lean();
+
+  settingsCache = { value: doc.autoEbookEmail === true, at: Date.now() };
+
+  return doc;
+};
+
+export const getEbookMailSettings = async () => {
+  const doc = await EbookMailSettings.findOne({ key: "global" }).lean();
+  return {
+    autoEbookEmail: doc?.autoEbookEmail === true,
+    updatedAt: doc?.updatedAt || null,
+    updatedBy: doc?.updatedBy || null,
+  };
+};
+
 export const scheduleEbookEmail = (order) => {
   if (order?._id) {
-    console.log("[EBOOK EMAIL] queued order", order.orderId || String(order._id));
-    enqueueEbookEmail(order._id, { trigger: "auto" });
+    isAutoEbookEmailEnabled()
+      .then((enabled) => {
+        if (!enabled) return;
+        console.log("[EBOOK EMAIL] queued order", order.orderId || String(order._id));
+        enqueueEbookEmail(order._id, { trigger: "auto" });
+      })
+      .catch((error) => console.error("[EBOOK EMAIL] schedule failed:", error.message));
     // Books with Prep Arena matches / packs: record the purchase, grant matches, send the thank-you mail (no-op for other books).
     scheduleMembershipActivation(order);
   }
@@ -706,6 +761,8 @@ const SWEEP_RETRY_GAP_MS = 5 * 60 * 1000;
 const SWEEP_BATCH = 200;
 
 export const sweepPendingEbookEmails = async () => {
+  if (!(await isAutoEbookEmailEnabled())) return;
+
   const now = Date.now();
 
   const orders = await Order.find({

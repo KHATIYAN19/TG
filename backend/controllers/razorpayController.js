@@ -5,6 +5,14 @@ import Order from "../models/Order.js";
 import { buildAttribution } from "../utils/attribution.js";
 import Coupon from "../models/Coupon.js";
 import { scheduleEbookEmail } from "../utils/ebookEmailDelivery.js";
+import {
+  resolveOfferCheckout,
+  applyOfferToBook,
+  offerOrderFields,
+  offerErrorResponse,
+  recordOfferPurchase,
+} from "../services/bundleOffers.js";
+
 
 import {
   RAZORPAY_KEY_ID,
@@ -298,6 +306,8 @@ const incrementSuccessfulPurchaseStats =
         error
       );
     }
+
+    await recordOfferPurchase(updatedOrder);
   };
 
 // ======================================================
@@ -767,9 +777,23 @@ export const createRazorpayPayment =
 
       let pricing;
 
+      let offerCheckout = null;
+
       try {
-        pricing =
-          await validateCouponForPayment(
+        offerCheckout =
+          await resolveOfferCheckout(req.body);
+      } catch (error) {
+        return offerErrorResponse(res, error);
+      }
+
+      if (offerCheckout) {
+        applyOfferToBook(book, offerCheckout);
+      }
+
+      try {
+        pricing = offerCheckout
+          ? offerCheckout.pricing
+          : await validateCouponForPayment(
             {
               couponCode,
 
@@ -931,6 +955,8 @@ export const createRazorpayPayment =
 
           bookId:
             book._id,
+
+          ...offerOrderFields(offerCheckout),
 
           book: {
             title:
