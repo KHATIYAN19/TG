@@ -410,29 +410,8 @@ export const trackPurchase = (order) => {
       order?.bookIds
     );
 
-  // ----------------------------------------------------------
-  // META-ONLY GATE
-  //
-  // Purchase is reported only for orders the backend recorded
-  // as coming from a Meta ad. Organic, direct and other-platform
-  // sales are never sent to Meta.
-  // ----------------------------------------------------------
-
   const attribution =
     order?.attribution || {};
-
-  if (attribution.platform !== "meta") {
-    debugLog(
-      "Purchase skipped: order is not from a Meta ad",
-      {
-        platform:
-          attribution.platform ||
-          "unknown",
-      }
-    );
-
-    return false;
-  }
 
   const validOrder =
     Boolean(orderId) &&

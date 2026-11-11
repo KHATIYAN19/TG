@@ -824,10 +824,8 @@ function reportMetaPurchase(
     });
   }
 
-  if (platform !== "meta") {
-    return false;
-  }
-
+  // Every paid order is reported to Meta (the pixel dedupes by
+  // order id), as it was before the attribution gate was added.
   try {
     if (
       typeof window.fbq !==
@@ -1429,11 +1427,19 @@ export default function PaymentSuccess() {
         }
 
         // Track a verified, payment-gated purchase.
-        reportMetaPurchase(
-          result,
-          data,
-          books
-        );
+        // Isolated: tracking must never block book access.
+        try {
+          reportMetaPurchase(
+            result,
+            data,
+            books
+          );
+        } catch (trackingError) {
+          console.error(
+            "[Ad Purchase] Tracking failed:",
+            trackingError
+          );
+        }
 
         setPurchase({
           ...data,
