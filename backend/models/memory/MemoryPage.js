@@ -10,6 +10,8 @@ const mediaSchema = new Schema(
     size: { type: Number, required: true },
     originalName: { type: String, maxlength: 200 },
     isMain: { type: Boolean, default: false },
+    /* a few words shown under the picture, e.g. "Our first trip" (4 words at most; see cleanCaption in the user controller) */
+    caption: { type: String, trim: true, maxlength: 40, default: "" },
     /* measured in the browser before upload (the server never opens the file). Lets the page lay a 16:9 video and a 9:16 video out differently. */
     width: { type: Number, min: 1, max: 20000, default: null },
     height: { type: Number, min: 1, max: 20000, default: null },

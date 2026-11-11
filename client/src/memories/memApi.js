@@ -46,6 +46,7 @@ export const deletePage = (id) => memoriesHttp.delete(`/pages/${pid(id)}`).then(
 export const presignMedia = (id, body) => memoriesHttp.post(`/pages/${pid(id)}/media/presign`, body).then(data);
 export const confirmMedia = (id, body) => memoriesHttp.post(`/pages/${pid(id)}/media/confirm`, body).then(data);
 export const setMainMedia = (id, mediaId) => memoriesHttp.post(`/pages/${pid(id)}/media/${pid(mediaId)}/main`).then(data);
+export const captionMedia = (id, mediaId, caption) => memoriesHttp.patch(`/pages/${pid(id)}/media/${pid(mediaId)}`, { caption }).then(data);
 export const removeMedia = (id, mediaId) => memoriesHttp.delete(`/pages/${pid(id)}/media/${pid(mediaId)}`).then(data);
 
 /**
@@ -75,7 +76,7 @@ export const measureMedia = (file, kind) =>
     }
   });
 
-export async function uploadMedia(pageId, kind, file, onProgress) {
+export async function uploadMedia(pageId, kind, file, onProgress, caption = "") {
   const dims = await measureMedia(file, kind);
   const t = await presignMedia(pageId, { kind, contentType: file.type, size: file.size, filename: file.name });
   const form = new FormData();
@@ -92,7 +93,7 @@ export async function uploadMedia(pageId, kind, file, onProgress) {
     x.send(form);
   });
   onProgress?.(1);
-  return confirmMedia(pageId, { key: t.key, kind, originalName: file.name, ...(dims.width > 0 && dims.height > 0 ? { width: dims.width, height: dims.height } : {}), ...(dims.durationSec > 0 ? { durationSec: dims.durationSec } : {}) });
+  return confirmMedia(pageId, { key: t.key, kind, originalName: file.name, ...(caption ? { caption } : {}), ...(dims.width > 0 && dims.height > 0 ? { width: dims.width, height: dims.height } : {}), ...(dims.durationSec > 0 ? { durationSec: dims.durationSec } : {}) });
 }
 
 /* the public page viewer: no login, so a plain request with no session or cookies */

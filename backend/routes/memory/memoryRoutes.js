@@ -83,6 +83,7 @@ userRouter.post("/pages/:id/regenerate-link", U.regenerateLink);
 userRouter.post("/pages/:id/media/presign", uploadLimit, U.presignMedia);
 userRouter.post("/pages/:id/media/confirm", uploadLimit, U.confirmMedia);
 userRouter.post("/pages/:id/media/:mediaId/main", U.setMainMedia);
+userRouter.patch("/pages/:id/media/:mediaId", U.captionMedia);
 userRouter.delete("/pages/:id/media/:mediaId", U.removeMedia);
 
 /* =====================================================

@@ -490,12 +490,15 @@ export const presignMedia = handler(async (req, res) => {
   ok(res, { kind: b.kind, ...target }, 201);
 });
 
+/* A caption is 4 words at most ("Our first trip"), on one line, 40 characters at most. */
+const cleanCaption = (text) => String(text || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 4).join(" ").slice(0, 40).trim();
+
 export const confirmMedia = handler(async (req, res) => {
   const page = await ownPage(req, { populate: false });
   editable(page);
   const b = parse(
     z.object({
-      key: z.string().max(1024), kind: z.enum(["photo", "video"]), originalName: z.string().max(200).optional(),
+      key: z.string().max(1024), kind: z.enum(["photo", "video"]), originalName: z.string().max(200).optional(), caption: z.string().max(200).optional(),
       width: z.number().int().min(1).max(20000).optional(), height: z.number().int().min(1).max(20000).optional(), durationSec: z.number().min(0).max(86400).optional(),
     }),
     req.body
@@ -521,7 +524,7 @@ export const confirmMedia = handler(async (req, res) => {
   const first = !page.media.some((m) => m.kind === b.kind && m.isMain);
   const updated = await MemoryPage.findOneAndUpdate(
     { _id: page._id, $expr: { $lt: [{ $size: { $filter: { input: "$media", cond: { $eq: ["$$this.kind", b.kind] } } } }, max] } },
-    { $push: { media: { kind: b.kind, key: b.key, contentType: obj.contentType, size: obj.size, originalName: b.originalName, isMain: first, ...(b.width && b.height ? { width: b.width, height: b.height } : {}), ...(b.kind === "video" && b.durationSec != null ? { durationSec: b.durationSec } : {}) } } },
+    { $push: { media: { kind: b.kind, key: b.key, contentType: obj.contentType, size: obj.size, originalName: b.originalName, caption: cleanCaption(b.caption), isMain: first, ...(b.width && b.height ? { width: b.width, height: b.height } : {}), ...(b.kind === "video" && b.durationSec != null ? { durationSec: b.durationSec } : {}) } } },
     { new: true }
   );
   if (!updated) await reject(400, `You can add up to ${max} ${b.kind}s.`, "MEDIA_LIMIT");
@@ -535,6 +538,18 @@ export const setMainMedia = handler(async (req, res) => {
   const media = page.media.id(req.params.mediaId);
   if (!media) throw new MemoryError(404, "Media not found.", "MEDIA_NOT_FOUND");
   page.media.forEach((m) => { if (m.kind === media.kind) m.isMain = m._id.equals(media._id); });
+  await page.save();
+  ok(res, await reload(page._id, { withMedia: true }));
+});
+
+/* change the few words under one photo or video */
+export const captionMedia = handler(async (req, res) => {
+  const page = await ownPage(req, { populate: false });
+  editable(page);
+  const b = parse(z.object({ caption: z.string().max(200) }), req.body);
+  const media = page.media.id(req.params.mediaId);
+  if (!media) throw new MemoryError(404, "Media not found.", "MEDIA_NOT_FOUND");
+  media.caption = cleanCaption(b.caption);
   await page.save();
   ok(res, await reload(page._id, { withMedia: true }));
 });

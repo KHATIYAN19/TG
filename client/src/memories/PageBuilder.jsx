@@ -210,9 +210,9 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
     const real = galleryFrom(media);
     if (real) return { ...data, ...real };
     if (!staged.length) return data;
-    const photos = staged.filter((x) => x.kind === "photo").map((x) => ({ id: `s${x.id}`, url: x.preview, caption: "" }));
+    const photos = staged.filter((x) => x.kind === "photo").map((x) => ({ id: `s${x.id}`, url: x.preview, caption: (x.caption || "").trim() }));
     const v = staged.find((x) => x.kind === "video");
-    return { ...data, photos, video: v ? { id: `s${v.id}`, url: v.preview, caption: "" } : null, mainPhotoId: photos[0]?.id };
+    return { ...data, photos, video: v ? { id: `s${v.id}`, url: v.preview, caption: (v.caption || "").trim() } : null, mainPhotoId: photos[0]?.id };
   }, [data, media, staged]);
   const autoTitle = useMemo(() => (data?.recipientName?.trim() && TITLE[templateId] ? TITLE[templateId](data.recipientName.trim()) : ""), [data?.recipientName, templateId]);
 
@@ -250,7 +250,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
         try { localStorage.removeItem(draftKey(templateId)); } catch { /* ignore */ }
         const left = Math.max(0, cfg.credits - 1);
         setCredits(left); onPageCreated?.();
-        setDone({ page: r.page, pin: r.pin, credits: left, files: staged.map((x) => x.file), email: r.email });
+        setDone({ page: r.page, pin: r.pin, credits: left, files: staged.map((x) => ({ file: x.file, caption: (x.caption || "").trim() })), email: r.email });
       }
     } catch (err) {
       fail(errMsg(err));

@@ -122,7 +122,7 @@ export default function ScratchCard({ photo, name, sound, fx, nextId, text }) {
       <h2 className="mx-h">It&apos;s Your <em>Birthday!</em></h2>
       <p className="mx-sub">Scratch the card and see what special surprise is waiting for you 🎁</p>
 
-      <div ref={wrap} className={`mx-scr-card ${done ? "done" : ""}`} style={{ "--t1": photo?.tone?.[0] || "#ffd1dc", "--t2": photo?.tone?.[1] || "#ffa6c1" }}>
+      <div ref={wrap} className={`mx-scr-card ${done ? "done" : ""}`} style={{ "--t1": photo?.tone?.[0] || "#ffd1dc", "--t2": photo?.tone?.[1] || "#ffa6c1", ...(photo?.w && photo?.h ? { aspectRatio: String(Math.min(1.3, Math.max(0.75, photo.w / photo.h))) } : {}) }}>
         <div className="mx-scr-under">
           {photo?.url ? <img src={photo.url} alt={photo.caption || "Your surprise"} draggable={false} /> : <span className="mx-art" aria-hidden>{photo?.emoji || "🎁"}</span>}
           <p className="mx-scr-cap">{photo?.caption || `Happy Birthday ${name}!`} ❤</p>

@@ -29,11 +29,14 @@ export function createSound() {
   let noiseBuf = null;
   let volume = 0.7;
   let muted = false;
-  let song = null; // { gain, timer }
+  let song = null; // { bus, timer }
+  let dead = false; // the page was closed: nothing may make a sound any more
+  let held = false; // the page is hidden (other tab, phone locked, preview scrolled away): everything waits
 
   const gainValue = () => (muted ? 0 : volume * volume * 1.15);
 
   function ensure() {
+    if (dead || held) return null;
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
@@ -49,7 +52,7 @@ export function createSound() {
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (ctx.state === "suspended") ctx.resume();
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
     return ctx;
   }
 
@@ -93,6 +96,23 @@ export function createSound() {
   }
 
   const now = () => ctx.currentTime;
+  /* the song is over when the AUDIO clock says so (that clock stops while the page is hidden) */
+  function watch(bus, secs, onEnd) {
+    const endAt = now() + secs;
+    const s = { bus, timer: setInterval(() => {
+      if (!ctx || ctx.currentTime < endAt) return;
+      clearInterval(s.timer);
+      if (song === s) song = null;
+      onEnd?.();
+    }, 250) };
+    return s;
+  }
+  const applyGain = () => {
+    if (!master) return;
+    const t = now();
+    master.gain.cancelScheduledValues(t);
+    master.gain.setTargetAtTime(gainValue(), t, 0.015);
+  };
   const run = (fn) => (...a) => { if (!ensure()) return; fn(...a); };
 
   const sfx = {
@@ -190,8 +210,7 @@ export function createSound() {
       [1, 2].forEach((k) => chord.forEach((c) => tone(NOTE[c], bt + k * beat, beat * 0.55, { type: "sine", gain: 0.06, attack: 0.01, release: 0.15, dest: bus })));
     });
     const total = t - t0;
-    const timer = setTimeout(() => { song = null; onEnd?.(); }, (total + 0.6) * 1000);
-    song = { bus, timer };
+    song = watch(bus, total + 0.6, onEnd);
     return total;
   }
 
@@ -219,8 +238,7 @@ export function createSound() {
       }
     }
     const total = bars * 4 * beat;
-    const timer = setTimeout(() => { song = null; onEnd?.(); }, (total + 0.8) * 1000);
-    song = { bus, timer };
+    song = watch(bus, total + 0.8, onEnd);
     return total;
   }
 
@@ -250,8 +268,7 @@ export function createSound() {
       tone(NOTE[mel[0]] * 2, bt, beat * 0.5, { type: "sine", gain: 0.03, attack: 0.004, release: 0.5, dest: bus });
     }
     const total = bars * 3 * beat;
-    const timer = setTimeout(() => { song = null; onEnd?.(); }, (total + 0.8) * 1000);
-    song = { bus, timer };
+    song = watch(bus, total + 0.8, onEnd);
     return total;
   }
 
@@ -274,7 +291,7 @@ export function createSound() {
 
   function stopSong(silent) {
     if (!song) return;
-    clearTimeout(song.timer);
+    clearInterval(song.timer);
     try {
       song.bus.gain.cancelScheduledValues(now());
       song.bus.gain.setTargetAtTime(0, now(), 0.04);
@@ -294,10 +311,30 @@ export function createSound() {
     rain,
     stopSong,
     isSongPlaying: () => Boolean(song),
-    setVolume(v) { volume = Math.max(0, Math.min(1, v)); if (master) master.gain.setTargetAtTime(gainValue(), now(), 0.03); },
-    setMuted(m) { muted = Boolean(m); if (master) master.gain.setTargetAtTime(gainValue(), now(), 0.03); },
+    setVolume(v) { volume = Math.max(0, Math.min(1, Number(v) || 0)); applyGain(); },
+    setMuted(m) { muted = Boolean(m); applyGain(); },
     get volume() { return volume; },
     get muted() { return muted; },
-    destroy() { stopSong(); try { rainNode?.src.stop(); ctx?.close(); } catch { /* ignore */ } },
+    /** Page hidden: freeze every sound exactly where it is. Page back: carry on. */
+    hold() {
+      if (held || dead) return;
+      held = true;
+      if (ctx && ctx.state === "running") ctx.suspend().catch(() => {});
+    },
+    release() {
+      if (!held || dead) return;
+      held = false;
+      if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+    },
+    /** Used when the page mounts again with the same sound object (React re-runs effects in development). */
+    wake() { dead = false; },
+    destroy() {
+      dead = true;
+      stopSong();
+      try { rainNode?.src.stop(); } catch { /* ignore */ }
+      rainNode = null;
+      try { master?.disconnect(); ctx?.close(); } catch { /* ignore */ }
+      ctx = null; master = null;
+    },
   };
 }

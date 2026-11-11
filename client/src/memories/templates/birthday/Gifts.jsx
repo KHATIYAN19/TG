@@ -31,6 +31,16 @@ const PATTERNS = {
 };
 const BOXES = ["classic", "hat", "tall", "bag"];
 
+/* a satin bow: two loops, the knot and two tails */
+const Bow = () => (
+  <svg viewBox="0 0 88 58" focusable="false">
+    <path className="tail" d="M41 34 26 56l9-3 4 5 8-21Z" /><path className="tail" d="M47 34 62 56l-9-3-4 5-8-21Z" />
+    <path className="loop" d="M44 33C30 6 3 3 6 24c2 16 25 15 38 9Z" /><path className="loop" d="M44 33C58 6 85 3 82 24c-2 16-25 15-38 9Z" />
+    <path className="fold" d="M40 30C31 15 14 11 15 23c1 9 15 10 25 7Z" /><path className="fold" d="M48 30C57 15 74 11 73 23c-1 9-15 10-25 7Z" />
+    <rect className="knot" x="36" y="24" width="16" height="15" rx="5.5" />
+  </svg>
+);
+
 export default function Gifts({ gifts, sender, recipient, pattern = "dots", boxes = BOXES, tagText, fx, sound, onAllOpen, onOpen }) {
   const [state, setState] = useState({}); // id -> opening | open
   const refs = useRef({});
@@ -83,18 +93,26 @@ export default function Gifts({ gifts, sender, recipient, pattern = "dots", boxe
               aria-label={st === "closed" ? `Open gift ${i + 1} of ${gifts.length}` : g.title}
               aria-pressed={st !== "closed"}
             >
-              <span className="bd-gift-stage" aria-hidden>
-                <span className="bd-gift-rays" />
-                <span className="bd-gift-item">{emojiFor(g)}</span>
-                <span className="bd-gift-body" />
-                <span className="bd-gift-lid"><span className="bd-gift-bow" /></span>
-                <span className="bd-gift-tag">{tagText || (recipient ? `For ${recipient}` : "For you")}</span>
+              <span className="bd-gift-scale" aria-hidden>
+                <span className="bd-gift-stage">
+                  <span className="bd-gift-floor" />
+                  <span className="bd-gift-rays" />
+                  <span className="bd-gift-in" />
+                  <span className="bd-gift-item">{emojiFor(g)}</span>
+                  <span className="bd-gift-body" />
+                  <span className="bd-gift-lid"><span className="bd-gift-bow"><Bow /></span></span>
+                  <span className="bd-gift-tag">{tagText || (recipient ? `For ${recipient}` : "For you")}</span>
+                </span>
               </span>
               <span className="bd-gift-label">{st === "closed" ? <span className="bd-gift-tap">Tap to open</span> : g.title}</span>
-              <span className="bd-ticket" aria-hidden={st !== "open"}>
-                <b>{emojiFor(g)} {g.title}</b>
-                {g.note && <small>{g.note}</small>}
-                <em>— from {sender}</em>
+              <span className="bd-ticket-wrap" aria-hidden={st !== "open"}>
+                <span className="bd-ticket">
+                  <i className="bd-ticket-top"><span>Gift voucher</span><span>No. {String(i + 1).padStart(2, "0")}</span></i>
+                  <span className="bd-ticket-emoji" aria-hidden>{emojiFor(g)}</span>
+                  <b>{g.title}</b>
+                  {g.note && <small>{g.note}</small>}
+                  <em>from {sender}</em>
+                </span>
               </span>
             </button>
           );

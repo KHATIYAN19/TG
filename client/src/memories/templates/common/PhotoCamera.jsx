@@ -80,6 +80,10 @@ export default function PhotoCamera({ photo, name, sound, fx, nextId, caption })
   };
   const next = () => document.getElementById(nextId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const cap = caption ?? photo?.caption;
+  // the print is shaped like the photo (a little less extreme, so it still looks like an instant photo)
+  const [seen, setSeen] = useState(null);
+  const ratio = photo?.w && photo?.h ? photo.w / photo.h : seen;
+  const shape = ratio ? Math.min(1.5, Math.max(0.72, ratio)) : 1;
 
   return (
     <div className="mx mx-cam" data-stage={stage}>
@@ -92,9 +96,9 @@ export default function PhotoCamera({ photo, name, sound, fx, nextId, caption })
           <CameraArt flash={stage === "flash"} />
           {stage === "idle" && <span className="mx-cam-ring" aria-hidden><i>Tap</i></span>}
         </button>
-        <figure className="mx-cam-pol">
-          <span className="mx-cam-pic" style={{ "--t1": photo?.tone?.[0] || "#ffd1dc", "--t2": photo?.tone?.[1] || "#ffa6c1" }}>
-            {photo?.url ? <img src={photo.url} alt={cap || "Your photo"} draggable={false} /> : <span className="mx-art" aria-hidden>{photo?.emoji || "📷"}</span>}
+        <figure className="mx-cam-pol" style={shape < 0.95 ? { width: "56%" } : shape > 1.15 ? { width: "78%" } : undefined}>
+          <span className="mx-cam-pic" style={{ "--t1": photo?.tone?.[0] || "#ffd1dc", "--t2": photo?.tone?.[1] || "#ffa6c1", aspectRatio: String(shape) }}>
+            {photo?.url ? <img src={photo.url} alt={cap || "Your photo"} draggable={false} onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) setSeen(w / h); }} /> : <span className="mx-art" aria-hidden>{photo?.emoji || "📷"}</span>}
           </span>
           <figcaption>{cap || ""}</figcaption>
         </figure>

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Check, Film, ImagePlus, Loader2, RotateCw, Star, Trash2, UploadCloud, X } from "lucide-react";
 
 import { errMsg } from "../arena/api";
-import { removeMedia, setMainMedia, uploadMedia } from "./memApi";
-import { ACCEPT, checkFiles, mbOf } from "./mediaRules";
+import { captionMedia, removeMedia, setMainMedia, uploadMedia } from "./memApi";
+import { ACCEPT, CAPTION_CHARS, CAPTION_IDEAS, checkFiles, mbOf, tidyCaption } from "./mediaRules";
 import { cx } from "./ui";
 
 let uid = 0;
@@ -30,7 +30,7 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
   const runOne = async (item) => {
     patch(item.id, { status: "up", progress: 0, error: "" });
     try {
-      const page = await uploadMedia(pageId, item.kind, item.file, (p) => patch(item.id, { progress: p }));
+      const page = await uploadMedia(pageId, item.kind, item.file, (p) => patch(item.id, { progress: p }), (item.caption || "").trim());
       onChange(page.media);
       setQueue((q) => q.filter((x) => x.id !== item.id));
       if (item.preview) URL.revokeObjectURL(item.preview);
@@ -48,13 +48,17 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
     running.current = false;
   };
 
+  // `fileList` is what a file picker gives, or a list of { file, caption } from the create form
   const addFiles = (fileList) => {
     setError("");
+    const given = Array.from(fileList).map((x) => (x instanceof File ? { file: x, caption: "" } : x));
+    const captionOf = new Map(given.map((x) => [x.file, x.caption || ""]));
+    fileList = given.map((x) => x.file);
     const have = { photo: photos.length + queue.filter((x) => x.kind === "photo").length, video: videos.length + queue.filter((x) => x.kind === "video").length };
     const { accepted, problems } = checkFiles(fileList, have, limits);
     if (problems.length) setError(problems.join(" "));
     if (!accepted.length) return;
-    const items = accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, preview: kind === "photo" ? URL.createObjectURL(file) : "", progress: 0, status: "up", error: "" }));
+    const items = accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, caption: captionOf.get(file) || "", preview: kind === "photo" ? URL.createObjectURL(file) : "", progress: 0, status: "up", error: "" }));
     setQueue((q) => [...q, ...items]);
     drain(items);
   };
@@ -72,6 +76,18 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
   useEffect(() => { onBusy?.(uploading); }, [uploading, onBusy]);
 
   const act = async (fn, id) => { setError(""); setBusyId(id); try { onChange((await fn(pageId, id)).media); } catch (e) { setError(errMsg(e)); } finally { setBusyId(""); } };
+  // captions: typed here, saved when you leave the box (or press Enter)
+  const [drafts, setDrafts] = useState({}); // media id -> text being typed
+  const [savedId, setSavedId] = useState("");
+  const saveCaption = async (m) => {
+    const text = drafts[m.id];
+    if (text == null) return;
+    const done = () => setDrafts((d) => { const rest = { ...d }; delete rest[m.id]; return rest; });
+    if (text.trim() === (m.caption || "")) return done();
+    setError("");
+    try { onChange((await captionMedia(pageId, m.id, text.trim())).media); done(); setSavedId(m.id); setTimeout(() => setSavedId((x) => (x === m.id ? "" : x)), 1600); }
+    catch (e) { setError(errMsg(e)); }
+  };
   const drop = (e) => { e.preventDefault(); setOver(false); if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files); };
 
   return (
@@ -121,20 +137,33 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
       )}
 
       {media.length > 0 && (
-        <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="Uploaded photos and videos">
-          {media.map((m) => (
-            <li key={m.id} className="relative aspect-square overflow-hidden rounded-2xl bg-rose-50 ring-1 ring-rose-100">
-              {m.kind === "photo" ? <img src={m.url} alt={m.name || "Photo"} loading="lazy" className="h-full w-full object-cover" /> : <video src={m.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
-              {m.kind === "video" && <span className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"><Film className="h-3.5 w-3.5" aria-hidden /></span>}
-              {m.isMain && <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950"><Check className="h-3 w-3" aria-hidden /> Main</span>}
-              <div className="absolute right-1 top-1 flex flex-col gap-1">
-                {!m.isMain && (m.kind === "photo" ? photos.length > 1 : videos.length > 1) && <button type="button" onClick={() => act(setMainMedia, m.id)} aria-label="Make this the main one" className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-amber-600 shadow hover:bg-white"><Star className="h-4 w-4" aria-hidden /></button>}
-                <button type="button" onClick={() => act(removeMedia, m.id)} aria-label={`Remove ${m.name || "this file"}`} className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-rose-600 shadow hover:bg-white"><Trash2 className="h-4 w-4" aria-hidden /></button>
-              </div>
-              {busyId === m.id && <span className="absolute inset-0 grid place-items-center bg-white/70"><Loader2 className="h-5 w-5 animate-spin text-rose-500" aria-hidden /></span>}
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="mt-4 text-xs font-semibold text-slate-700">Captions <span className="font-normal text-slate-500">· 3 to 4 words under each picture, like &ldquo;Our first trip&rdquo;. Saved when you tap outside the box.</span></p>
+          <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Uploaded photos and videos">
+            {media.map((m, i) => (
+              <li key={m.id} className="overflow-hidden rounded-2xl bg-white ring-1 ring-rose-100">
+                <div className="relative aspect-square bg-rose-50">
+                  {m.kind === "photo" ? <img src={m.url} alt={m.caption || m.name || "Photo"} loading="lazy" className="h-full w-full object-cover" /> : <video src={m.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
+                  {m.kind === "video" && <span className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"><Film className="h-3.5 w-3.5" aria-hidden /></span>}
+                  {m.isMain && <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950"><Check className="h-3 w-3" aria-hidden /> Main</span>}
+                  <div className="absolute right-1 top-1 flex flex-col gap-1">
+                    {!m.isMain && (m.kind === "photo" ? photos.length > 1 : videos.length > 1) && <button type="button" onClick={() => act(setMainMedia, m.id)} aria-label="Make this the main one" className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-amber-600 shadow hover:bg-white"><Star className="h-4 w-4" aria-hidden /></button>}
+                    <button type="button" onClick={() => act(removeMedia, m.id)} aria-label={`Remove ${m.name || "this file"}`} className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-rose-600 shadow hover:bg-white"><Trash2 className="h-4 w-4" aria-hidden /></button>
+                  </div>
+                  {busyId === m.id && <span className="absolute inset-0 grid place-items-center bg-white/70"><Loader2 className="h-5 w-5 animate-spin text-rose-500" aria-hidden /></span>}
+                  {savedId === m.id && <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-0.5 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white" role="status"><Check className="h-3 w-3" aria-hidden /> Saved</span>}
+                </div>
+                <input
+                  type="text" value={drafts[m.id] ?? m.caption ?? ""} maxLength={CAPTION_CHARS}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [m.id]: tidyCaption(e.target.value) }))}
+                  onBlur={() => saveCaption(m)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
+                  placeholder={CAPTION_IDEAS[i % CAPTION_IDEAS.length]} aria-label={`Caption for ${m.name || "this file"} (up to 4 words)`}
+                  className="block w-full border-0 border-t border-rose-100 bg-white px-2.5 py-2 text-center text-sm text-[#3a1530] outline-none placeholder:text-[#c4a8b8] focus:bg-rose-50/60"
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {!media.length && !queue.length && <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400"><ImagePlus className="h-3.5 w-3.5" aria-hidden /> No photos or videos yet. You can skip this and add them later by editing the page.</p>}
     </div>

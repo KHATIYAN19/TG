@@ -394,3 +394,115 @@
 .bd-flutter { transform-box: fill-box; transform-origin: 100% 50%; animation: bd-flap .5s ease-in-out infinite alternate; }
 .bd-flutter.r { transform-origin: 0% 50%; }
 @keyframes bd-flap { from { transform: scaleX(1); } to { transform: scaleX(.35); } }
+
+/* =====================================================
+   v3: GIFTS. Real-looking wrapped boxes (shaded paper, satin ribbon, a proper bow, a shadow on the floor)
+   and a paper gift voucher with a tear-off stub that slides out when the box is opened.
+===================================================== */
+.bd-gifts { gap: 12px; margin-top: 1.4rem; }
+@media (min-width: 768px) { .bd-gifts { gap: 18px; } }
+.bd-gift {
+  --rb: color-mix(in srgb, var(--g) 10%, #fffdf8); --bh: 60px; --bx: 14px;
+  justify-content: flex-start; min-height: 244px; padding: 14px 10px 14px; border-radius: 26px; isolation: isolate;
+  background: radial-gradient(120% 64% at 50% 0%, color-mix(in srgb, var(--g) 20%, transparent), transparent 72%), var(--bd-card);
+  border: 1px solid color-mix(in srgb, var(--g) 34%, var(--bd-line));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 18px 30px -24px color-mix(in srgb, var(--g) 60%, #000);
+}
+.bd-gift[data-box="hat"] { --bh: 66px; --bx: 16px; } .bd-gift[data-box="tall"] { --bh: 86px; --bx: 30px; }
+.bd-gift[data-box="bag"] { --bh: 72px; --bx: 20px; } .bd-gift[data-box="velvet"] { --bh: 56px; --bx: 22px; }
+.bd-gift[data-state="open"] { box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 22px 36px -22px color-mix(in srgb, var(--g) 80%, #000); }
+.bd-gift-scale { display: block; margin-top: 34px; transform: scale(1.2); transform-origin: 50% 100%; }
+.bd-gift-stage { display: block; margin-top: 0; }
+.bd-gift-floor { position: absolute; left: 2px; right: 2px; bottom: -3px; height: 18px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.4), rgba(0,0,0,.16) 55%, transparent); transition: transform .5s, opacity .5s; }
+.bd-gift[data-state="open"] .bd-gift-floor { transform: scaleX(.86); opacity: .8; }
+
+/* wrapping paper: light from the top left, a darker right edge, the lid's shadow across the top */
+.bd-gift-body {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.2), rgba(0,0,0,0) 15%, rgba(255,255,255,.24) 36%, rgba(255,255,255,0) 58%, rgba(0,0,0,.26)),
+    linear-gradient(180deg, rgba(0,0,0,.3), rgba(0,0,0,0) 13px),
+    linear-gradient(180deg, color-mix(in srgb, var(--g) 92%, #fff), color-mix(in srgb, var(--g) 84%, #000));
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 1px rgba(255,255,255,.14), 0 14px 16px -14px rgba(0,0,0,.7);
+}
+.bd-gift-lid {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.18), rgba(0,0,0,0) 15%, rgba(255,255,255,.3) 36%, rgba(255,255,255,0) 58%, rgba(0,0,0,.24)),
+    linear-gradient(180deg, color-mix(in srgb, var(--g) 74%, #fff), color-mix(in srgb, var(--g) 94%, #000));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 0 rgba(0,0,0,.2), 0 7px 8px -5px rgba(0,0,0,.6);
+}
+/* satin ribbon, on top of the paper pattern */
+.bd-gift-body::before, .bd-gift-lid::before {
+  z-index: 1; width: 20px; margin-left: -10px;
+  background: linear-gradient(90deg, rgba(0,0,0,.2), rgba(255,255,255,0) 24%, rgba(255,255,255,.95) 50%, rgba(255,255,255,0) 76%, rgba(0,0,0,.2)), var(--rb);
+  box-shadow: -3px 0 4px -3px rgba(0,0,0,.45), 3px 0 4px -3px rgba(0,0,0,.45);
+}
+.bd-gift-bow { top: -29px; width: 62px; height: 41px; margin-left: -31px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+.bd-gift-bow::before, .bd-gift-bow::after { display: none; }
+.bd-gift-bow svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.bd-gift-bow .loop { fill: var(--rb); stroke: rgba(0,0,0,.16); stroke-width: 1; }
+.bd-gift-bow .fold { fill: rgba(0,0,0,.15); }
+.bd-gift-bow .tail { fill: color-mix(in srgb, var(--rb) 88%, #000); stroke: rgba(0,0,0,.14); stroke-width: 1; }
+.bd-gift-bow .knot { fill: var(--rb); stroke: rgba(0,0,0,.22); stroke-width: 1; }
+.bd-gift[data-box="velvet"] .bd-gift-bow svg { display: none; }
+.bd-gift[data-box="velvet"] .bd-gift-bow { filter: none; }
+/* the dark inside of the box, seen once the lid is off */
+.bd-gift-in { position: absolute; left: calc(var(--bx) + 2px); right: calc(var(--bx) + 2px); bottom: calc(var(--bh) - 5px); height: 13px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.75), color-mix(in srgb, var(--g) 40%, #000)); opacity: 0; transition: opacity .3s .35s; }
+.bd-gift[data-state="open"] .bd-gift-in { opacity: 1; }
+.bd-gift[data-box="bag"] .bd-gift-in { display: none; }
+.bd-gift-item { filter: drop-shadow(0 8px 8px rgba(0,0,0,.3)); }
+.bd-gift-body { z-index: 2; }
+.bd-gift-tag { font-family: var(--f-script); font-size: .78rem; padding: 0 9px 1px 12px; background: linear-gradient(180deg, #fff, #f6eee6); }
+.bd-gift-label { margin-top: 14px; }
+.bd-gift[data-state="closed"] .bd-gift-tap { padding: .3rem .85rem; border-radius: 999px; font-size: .74rem; font-weight: 700; color: var(--bd-on-accent, #fff); background: linear-gradient(135deg, var(--bd-accent), var(--bd-accent-2)); box-shadow: 0 8px 14px -8px var(--bd-accent); animation: bd-tap 1.6s ease-in-out infinite; }
+
+/* the voucher */
+.bd-ticket-wrap { display: block; width: 100%; max-height: 0; opacity: 0; margin-top: 0; filter: drop-shadow(0 10px 10px rgba(60,20,40,.28)); transform: translateY(-14px) scale(.94); transition: max-height .7s, opacity .45s .3s, margin .4s, transform .6s cubic-bezier(.3,1.5,.5,1) .3s; }
+.bd-gift[data-state="open"] .bd-ticket-wrap { max-height: 22em; opacity: 1; margin-top: 16px; transform: none; }
+.bd-ticket {
+  --cut: 30px; display: grid; justify-items: center; gap: 2px; width: 100%; max-height: none; opacity: 1; overflow: hidden; margin: 0; padding: 0 0 11px;
+  border: 0; border-radius: 12px; text-align: center; color: #4a2340;
+  background: linear-gradient(180deg, #fffdf7, #fff4e2);
+  -webkit-mask: radial-gradient(circle 8px at 0 var(--cut), #0000 96%, #000) left / 51% 100% no-repeat, radial-gradient(circle 8px at 100% var(--cut), #0000 96%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle 8px at 0 var(--cut), #0000 96%, #000) left / 51% 100% no-repeat, radial-gradient(circle 8px at 100% var(--cut), #0000 96%, #000) right / 51% 100% no-repeat;
+}
+.bd-gift[data-state="open"] .bd-ticket { max-height: none; margin: 0; padding: 0 0 11px; }
+.bd-ticket-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; height: var(--cut); padding: 0 16px; font-style: normal; font-size: .58rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--g) 70%, #4a2340); background: linear-gradient(90deg, color-mix(in srgb, var(--g) 16%, #fff), color-mix(in srgb, var(--g) 7%, #fff)); border-bottom: 2px dashed color-mix(in srgb, var(--g) 45%, #d8c8b8); }
+.bd-ticket-top span:last-child { opacity: .7; letter-spacing: .06em; }
+.bd-ticket-emoji { margin-top: 8px; font-size: 1.7rem; line-height: 1; }
+.bd-ticket b { padding: 0 14px; font-size: 1.02rem; overflow-wrap: anywhere; }
+.bd-ticket small { padding: 0 14px; color: #8a6a80; overflow-wrap: anywhere; }
+.bd-ticket em { margin-top: 2px; padding: 0 14px; color: color-mix(in srgb, var(--g) 75%, #4a2340); }
+.bd-ticket em::before { content: "— "; }
+
+/* =====================================================
+   v3: VOLUME. The slider's filled part and the icon always show the volume you hear.
+===================================================== */
+.bd-vol input[type="range"] { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; margin-right: 6px; }
+.bd-vol input[type="range"]::-webkit-slider-runnable-track { height: 5px; border-radius: 999px; background: linear-gradient(90deg, var(--bd-accent) var(--v, 0%), color-mix(in srgb, var(--bd-ink) 22%, transparent) var(--v, 0%)); }
+.bd-vol input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--bd-ink) 22%, transparent); }
+.bd-vol input[type="range"]::-moz-range-progress { height: 5px; border-radius: 999px; background: var(--bd-accent); }
+.bd-vol input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; margin-top: -5px; border-radius: 50%; border: 2px solid #fff; background: var(--bd-accent); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.bd-vol input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; background: var(--bd-accent); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.bd-vol[data-off] .bd-vol-mute { color: var(--bd-muted); background: var(--bd-line); }
+.bd-vol[data-off] input[type="range"]::-webkit-slider-thumb { background: var(--bd-muted); }
+.bd-vol[data-off] input[type="range"]::-moz-range-thumb { background: var(--bd-muted); }
+.bd-eq[data-off] i { animation-play-state: paused; opacity: .45; }
+
+/* =====================================================
+   v3: GALLERY. Rows of polaroids, each one shaped like its own photo (tall for 9:16, wide for 16:9).
+   The rows are worked out in Gallery.jsx from how many pictures there are and how wide the screen is;
+   here every row simply shares its width so all its pictures end up the same height.
+===================================================== */
+.bd-gal { columns: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 1.5rem; }
+.bd-gal-row { display: flex; align-items: flex-start; justify-content: center; gap: 10px; width: var(--rw, 100%); max-width: 100%; }
+.bd-gal-row > .bd-pol { --pad: 6px; flex: var(--fr, 1) 1 calc(var(--pad) * 2); min-width: 0; width: auto; max-width: none; margin: 0; padding: var(--pad) var(--pad) 8px; }
+.bd-gal-row > .bd-pol.main { --pad: 7px; }
+.bd-gal-row .bd-pol-cap { min-height: 1.15em; overflow-wrap: anywhere; }
+.bd-gal[data-count="1"] .bd-pol-cap, .bd-gal[data-count="2"] .bd-pol-cap { font-size: 1.25rem; }
+@media (min-width: 768px) {
+  .bd-gal { gap: 26px; }
+  .bd-gal-row { gap: 20px; }
+  .bd-gal-row > .bd-pol { --pad: 9px; padding-bottom: 12px; border-radius: 8px; }
+  .bd-gal-row > .bd-pol.main { --pad: 10px; }
+  .bd-gal-row .bd-pol-cap { font-size: 1.3rem; margin-top: 9px; }
+}

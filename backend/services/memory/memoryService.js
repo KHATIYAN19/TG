@@ -181,7 +181,7 @@ const mediaOut = async (m) => {
   const height = m.height || null;
   // landscape (16:9 and friends), portrait (9:16) or square: the page uses this to choose how to show it
   const orientation = width && height ? (width / height > 1.05 ? "landscape" : width / height < 0.95 ? "portrait" : "square") : null;
-  return { id: String(m._id), kind: m.kind, isMain: Boolean(m.isMain), contentType: m.contentType, size: m.size, name: m.originalName, url, width, height, orientation, durationSec: m.durationSec ?? null };
+  return { id: String(m._id), kind: m.kind, isMain: Boolean(m.isMain), contentType: m.contentType, size: m.size, name: m.originalName, caption: m.caption || "", url, width, height, orientation, durationSec: m.durationSec ?? null };
 };
 
 export const signMedia = (page) => Promise.all((page.media || []).map(mediaOut));

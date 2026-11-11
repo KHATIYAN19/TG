@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Film, UploadCloud, X } from "lucide-react";
 
-import { ACCEPT, checkFiles, mbOf } from "./mediaRules";
+import { ACCEPT, CAPTION_CHARS, CAPTION_IDEAS, checkFiles, mbOf, tidyCaption } from "./mediaRules";
 import { cx } from "./ui";
 
 let uid = 0;
@@ -24,8 +24,9 @@ export default function StagedMedia({ staged, onChange, limits }) {
   const add = (fileList) => {
     const { accepted, problems: p } = checkFiles(fileList, { photo: photos, video: videos }, limits);
     setProblems(p);
-    if (accepted.length) onChange([...staged, ...accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, preview: URL.createObjectURL(file) }))]);
+    if (accepted.length) onChange([...staged, ...accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, caption: "", preview: URL.createObjectURL(file) }))]);
   };
+  const setCaption = (id, text) => onChange(staged.map((x) => (x.id === id ? { ...x, caption: tidyCaption(text) } : x)));
   const remove = (s) => { if (s.preview) URL.revokeObjectURL(s.preview); onChange(staged.filter((x) => x.id !== s.id)); };
 
   return (
@@ -43,16 +44,27 @@ export default function StagedMedia({ staged, onChange, limits }) {
       </button>
       {problems.length > 0 && <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-relaxed text-rose-700 ring-1 ring-rose-200">{problems.join(" ")}</p>}
       {staged.length > 0 && (
-        <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="Files ready to upload">
-          {staged.map((s) => (
-            <li key={s.id} className="relative aspect-square overflow-hidden rounded-2xl bg-rose-50 ring-1 ring-rose-100">
-              {s.kind === "photo" ? <img src={s.preview} alt={s.file.name} className="h-full w-full object-cover" /> : <video src={s.preview} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
-              {s.kind === "video" && <span className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"><Film className="h-3.5 w-3.5" aria-hidden /></span>}
-              <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">{mbOf(s.file.size)} MB</span>
-              <button type="button" onClick={() => remove(s)} aria-label={`Remove ${s.file.name}`} className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-rose-600 shadow hover:bg-white"><X className="h-4 w-4" aria-hidden /></button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="mt-4 text-xs font-semibold text-slate-700">Add a caption to each one <span className="font-normal text-slate-500">· 3 to 4 words, like &ldquo;Our first trip&rdquo;. It shows under the picture.</span></p>
+          <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Files ready to upload">
+            {staged.map((s, i) => (
+              <li key={s.id} className="overflow-hidden rounded-2xl bg-white ring-1 ring-rose-100">
+                <div className="relative aspect-square bg-rose-50">
+                  {s.kind === "photo" ? <img src={s.preview} alt={s.file.name} className="h-full w-full object-cover" /> : <video src={s.preview} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
+                  {s.kind === "video" && <span className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"><Film className="h-3.5 w-3.5" aria-hidden /></span>}
+                  <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">{mbOf(s.file.size)} MB</span>
+                  <button type="button" onClick={() => remove(s)} aria-label={`Remove ${s.file.name}`} className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-rose-600 shadow hover:bg-white"><X className="h-4 w-4" aria-hidden /></button>
+                </div>
+                <input
+                  type="text" value={s.caption || ""} onChange={(e) => setCaption(s.id, e.target.value)} maxLength={CAPTION_CHARS}
+                  placeholder={CAPTION_IDEAS[i % CAPTION_IDEAS.length]} aria-label={`Caption for ${s.file.name} (up to 4 words)`}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
+                  className="block w-full border-0 border-t border-rose-100 bg-white px-2.5 py-2 text-center text-sm text-[#3a1530] outline-none placeholder:text-[#c4a8b8] focus:bg-rose-50/60"
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

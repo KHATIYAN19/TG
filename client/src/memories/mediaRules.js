@@ -26,3 +26,14 @@ export function checkFiles(fileList, have, limits) {
   }
   return { accepted, problems };
 }
+
+/* A caption is a few words under a photo or video, like "Our first trip". Kept to 4 words so it fits on the picture. */
+export const CAPTION_WORDS = 4;
+export const CAPTION_CHARS = 40;
+export const CAPTION_IDEAS = ["Our first trip", "That silly selfie", "Best day ever", "Coffee and gossip", "Sunset walk", "Just us two"];
+/** While typing: at most 4 words (a space after the 4th word is not allowed) and 40 characters. */
+export const tidyCaption = (text) => {
+  const clean = String(text || "").replace(/\s+/g, " ").replace(/^ /, "");
+  const words = clean.split(" ");
+  return (words.length > CAPTION_WORDS ? words.slice(0, CAPTION_WORDS).join(" ") : clean).slice(0, CAPTION_CHARS);
+};

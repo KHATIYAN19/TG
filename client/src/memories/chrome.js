@@ -53,7 +53,14 @@ export function useReveal(deps = []) {
       { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
     );
     nodes.forEach((n) => io.observe(n));
-    return () => io.disconnect();
+    // sections that appear later (a gift or photo added in the live preview) fade in too, instead of staying invisible
+    let queued = 0;
+    const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => {
+      if (queued) return;
+      queued = requestAnimationFrame(() => { queued = 0; document.querySelectorAll(".mem-reveal:not(.in)").forEach((n) => io.observe(n)); });
+    });
+    mo?.observe(document.body, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo?.disconnect(); cancelAnimationFrame(queued); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
