@@ -13,6 +13,7 @@ import "./anniversary.css";
 import { createFx, prefersReducedMotion } from "../birthday/fx";
 import { createSound } from "../birthday/audio";
 import Gifts from "../birthday/Gifts";
+import { VoiceSection } from "../../VoiceNote";
 import Gallery from "../birthday/Gallery";
 import PhotoCamera from "../common/PhotoCamera";
 import Letter from "../birthday/Letter";
@@ -226,6 +227,8 @@ export default function AnniversaryPage({ data = DUMMY_ANNIVERSARY, theme: theme
           </div>
         </section>
         )}
+
+        <VoiceSection data={data} />
 
         {/* ---- cheers ---- */}
         <section className="bd-sec">

@@ -3,8 +3,8 @@ import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  ArrowRight, Camera, Check, ChevronDown, Gift, Heart, KeyRound, Link2, Lock, Menu, Music2, Plus,
-  Eye, MessageCircleHeart, Palette, PenLine, ShieldCheck, Smartphone, Sparkles, Ticket, Timer, Video, X,
+  ArrowRight, Camera, Check, ChevronDown, Gift, Heart, KeyRound, Link2, Lock, Menu, Mic, Music2, Plus,
+  Eye, MessageCircleHeart, Palette, PenLine, ShieldCheck, Share2, Smartphone, Sparkles, Ticket, Timer, Video, X,
 } from "lucide-react";
 
 import { logout } from "../Redux/authSlice";
@@ -13,6 +13,7 @@ import { useMemoriesChrome, useReveal } from "./chrome";
 import { TEMPLATES } from "./templates";
 import MemoriesFooter from "./legal/MemoriesFooter";
 import { useLifetimeDays } from "./legal/useLifetime";
+import VoiceNote from "./VoiceNote";
 import Showcase, { LivePhone, META, THEME_TOTAL, useScale } from "./Showcase";
 import { Button, FONT_LINKS, Logo, cx } from "./ui";
 import { trackCtaClick, trackLandingView } from "./metaTracking";
@@ -135,7 +136,7 @@ function Hero({ priceLabel }) {
             Say it with a page they will <span className="mem-script mem-gradient-text text-[1.12em]">never forget</span>
           </h1>
           <p className="mem-reveal in mx-auto mt-5 max-w-xl text-base leading-relaxed text-[#7a5370] sm:text-lg lg:mx-0" style={{ "--rd": ".16s" }}>
-            Pick an occasion, add your words, photos and videos, and send one beautiful link that stays online for {days} days. They pop balloons, mend a heart, open the ring box, climb a gratitude tree, and feel every word. The phone you see here is the real thing.
+            Pick an occasion, add your words, photos, videos and even your own voice, and send one beautiful link that stays online for {days} days. They pop balloons, mend a heart, open the ring box, climb a gratitude tree, and feel every word. The phone you see here is the real thing.
           </p>
           <div className="mem-reveal in mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start" style={{ "--rd": ".24s" }}>
             <Button as={Link} to="/memories/login?mode=signup" size="lg" className="w-full sm:w-auto">Create your page <ArrowRight className="h-4 w-4" aria-hidden /></Button>
@@ -151,7 +152,7 @@ function Hero({ priceLabel }) {
             ))}
           </dl>
           <ul className="mem-reveal in mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-[#6b3a5a] lg:justify-start" style={{ "--rd": ".4s" }}>
-            {[[Lock, "Private with a PIN"], [Link2, "Your own link"], [Camera, "Photos & videos"]].map(([Icon, tx]) => (
+            {[[Lock, "Private with a PIN"], [Link2, "Your own link"], [Camera, "Photos & videos"], [Mic, "Your voice"]].map(([Icon, tx]) => (
               <li key={tx} className="inline-flex items-center gap-2"><Icon className="h-4 w-4 text-rose-500" aria-hidden /> {tx}</li>
             ))}
             {priceLabel && <li className="inline-flex items-center gap-2 font-semibold text-rose-600"><Ticket className="h-4 w-4" aria-hidden /> {priceLabel === "Free" ? "Free right now" : `From ${priceLabel}`}</li>}
@@ -198,14 +199,15 @@ function Strip({ info }) {
   const items = [
     [Camera, l ? `Up to ${l.photos} photos` : "Photos", "on every page"],
     [Video, l ? `Up to ${l.videos} videos` : "Videos", "of your favourite moments"],
+    [Mic, "Your own voice", "record up to 2 minutes"],
     [KeyRound, "6-digit PIN", "to keep it private"],
     [Smartphone, "Any phone", "nothing to install"],
   ];
   return (
     <div className="relative mx-auto -mt-2 max-w-5xl px-4 sm:px-6">
-      <div className="mem-reveal grid grid-cols-2 gap-px overflow-hidden rounded-3xl bg-rose-100 shadow-lg shadow-rose-100/70 md:grid-cols-4">
+      <div className="mem-reveal grid grid-cols-2 gap-px overflow-hidden rounded-3xl bg-rose-100 shadow-lg shadow-rose-100/70 md:grid-cols-5">
         {items.map(([Icon, a, b]) => (
-          <div key={a} className="flex items-center gap-3 bg-white p-4 sm:p-5">
+          <div key={a} className="flex items-center gap-3 bg-white p-4 last:col-span-2 sm:p-5 md:last:col-span-1">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-500"><Icon className="h-5 w-5" aria-hidden /></span>
             <div className="min-w-0"><p className="text-sm font-bold text-[#3a1530]">{a}</p><p className="text-xs text-[#8a6a80]">{b}</p></div>
           </div>
@@ -261,10 +263,12 @@ function Features({ info }) {
     [Gift, "Games and surprises", "Pop balloons, cut the cake, mend a heart, pull reasons from a jar, build a bouquet, climb a gratitude tree, open the ring box."],
     [Timer, "Your story, counted", "A live counter of years, days and seconds together, a timeline that draws itself and numbers that count up."],
     [Camera, "Photos and videos", l ? `Add up to ${l.photos} photos and ${l.videos} videos, up to ${l.photoMb} MB and ${l.videoMb} MB each. Pick a main photo and video to set the mood.` : "Add your best photos and videos. Pick a main photo and video to set the mood."],
+    [Mic, "Your voice, as a gift", `Record a message with your microphone (up to 2 minutes) or upload one${l?.audioMb ? `, up to ${l.audioMb} MB` : ""}. It appears on the page in a velvet-and-gold player they can replay.`],
+    [Share2, "Share anywhere", "Once it is made, send the link (and the PIN, if private) to WhatsApp, Telegram, Messages, email and more in one tap."],
     [Heart, "Kind to every answer", "A proposal has a celebration for yes and gentle, respectful screens for \"I need time\" and no. Thank-you pages let them reply on WhatsApp."],
     [Eye, "See what they did", "An activity screen shows when they opened it, how long they stayed, every balloon, gift and answer, and any message they send back."],
     [Music2, "Music they control", "Play a song with one tap, with a volume slider so it is never too loud."],
-    [ShieldCheck, "Your files stay protected", "Photos and videos are stored privately and only reachable through your page."],
+    [ShieldCheck, "Your files stay protected", "Photos, videos and voice messages are stored privately and only reachable through your page."],
     [Smartphone, "Perfect on every phone", "Designed phone-first, lovely on tablets and desktops. They open the link and it just works, nothing to install."],
   ];
   return (
@@ -290,6 +294,40 @@ function Features({ info }) {
 const ACT_TILES = [["👀", "5", "times opened", "bg-sky-50 text-sky-800"], ["🧑", "2", "visitors", "bg-violet-50 text-violet-800"], ["⏱️", "4m 12s", "on the page", "bg-amber-50 text-amber-800"], ["💌", "1", "message", "bg-rose-50 text-rose-800"]];
 const ACT_ROWS = [["🎁", "Opened the surprise", "Done"], ["🎈", "Balloons popped", "12"], ["🕯️", "Blew out the candles", "Done"], ["🍰", "Cut the cake", "Done"], ["🎀", "Gifts opened", "2 of 3"], ["🖼️", "Looked at your photos and videos", "5 of 6"]];
 const ACT_LINE = [["Today, 8:41 pm", "Opened your page on a phone"], ["Today, 8:42 pm", "Popped 12 balloons"], ["Today, 8:44 pm", "Cut the cake"], ["Today, 8:49 pm", "Replied: “Best surprise ever, thank you!”"]];
+
+/* a real (pretend-recording) voice card, so visitors see exactly what their person will get */
+function VoiceShowcase({ info }) {
+  const l = info?.limits;
+  const points = [
+    ["Record or upload", `Tap the microphone and speak for up to 2 minutes, or upload a file${l?.audioMb ? ` of up to ${l.audioMb} MB` : ""}.`],
+    ["Sits under your photos", "On every template it appears right below the pictures and videos, like a gift waiting to be opened."],
+    ["Feels special", "A glowing gold play button, a waveform they can scrub, and your name on it. Not a plain audio bar."],
+  ];
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-b from-white via-amber-50/50 to-white py-20 sm:py-28">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
+        <div>
+          <p className="mem-reveal text-xs font-bold uppercase tracking-[0.2em] text-rose-500">Voice messages</p>
+          <h2 className="mem-reveal mt-3 text-balance text-3xl font-bold tracking-tight text-[#3a1530] sm:text-4xl" style={{ "--rd": ".06s" }}>Let them hear <span className="mem-script mem-gradient-text">your voice</span></h2>
+          <p className="mem-reveal mt-3 max-w-md text-[#7a5370]" style={{ "--rd": ".12s" }}>Words are lovely. Your voice saying them is unforgettable. Add a voice message to any page and it shows up as a little luxury moment for them.</p>
+          <ul className="mt-7 space-y-4">
+            {points.map(([t, d], i) => (
+              <li key={t} className="mem-reveal flex gap-3" style={{ "--rd": `${0.16 + i * 0.07}s` }}>
+                <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-rose-100 text-rose-600"><Check className="h-4 w-4" aria-hidden /></span>
+                <p className="text-sm leading-relaxed text-[#7a5370]"><b className="text-[#3a1530]">{t}.</b> {d}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="mem-reveal relative mx-auto w-full max-w-md rounded-[32px] bg-gradient-to-br from-[#2b1631] via-[#3a1c3f] to-[#1d1021] p-6 shadow-2xl shadow-rose-200/60 sm:p-8" style={{ "--rd": ".12s" }}>
+          <p className="mb-5 text-center text-xs uppercase tracking-[0.3em] text-[#e3bd6a]/80">Tap play to try it</p>
+          <VoiceNote inline demo from="Ravi" />
+          <p className="mt-5 text-center text-xs text-white/50">A sample. Yours plays your own voice.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function Activity() {
   const points = [
@@ -395,6 +433,7 @@ function Pricing({ info, priceLabel }) {
   const l = info?.limits;
   const included = [
     l ? `Up to ${l.photos} photos and ${l.videos} videos` : "Photos and videos",
+    "A voice message of up to 2 minutes",
     "Your choice of any available template",
     "A unique link, public or PIN-protected",
     `Online for ${days} days from the day you create it`,
@@ -440,6 +479,7 @@ function Faq({ info }) {
     ["Can I make my page private?", "Yes. Choose private and set a 6-digit PIN. Whoever opens your link must enter the PIN first. Public pages open straight away for anyone with the link."],
     ["What if the link gets shared with the wrong person?", "You can close the link in one tap, change the PIN, or create a completely new link. The old link stops working immediately."],
     ["How many photos and videos can I add?", l ? `Up to ${l.photos} photos (${l.photoMb} MB each) and ${l.videos} videos (${l.videoMb} MB each). You pick one main photo and one main video to open the page.` : "You can add several photos and videos, and choose a main photo and video. Exact limits are shown while you build your page."],
+    ["Can I add my own voice?", l?.audioMb ? `Yes. Record up to 2 minutes with your microphone, or upload an audio file up to ${l.audioMb} MB. It shows on the page, under your photos, as a beautiful voice message they can play.` : "Yes. Record up to 2 minutes with your microphone, or upload an audio file. It shows on the page, under your photos, as a beautiful voice message they can play."],
     ["Can I try a template before I pay?", "Yes. Every template on this page is the real thing: scroll it, tap it and switch its look. Open any of them full screen to see exactly what they will see."],
     ["Is this only for couples?", "Not at all. Birthday and Thank You pages work for friends, family, mentors and colleagues. Sorry, Proposal and Anniversary are for the people closest to you."],
     ["What if they say no to my proposal?", "The page is kind about it. A yes gets a big celebration. \"I need a little time\" and \"I'm sorry, I can't\" each get a gentle, respectful screen, and they can always go back and answer again."],
@@ -449,7 +489,7 @@ function Faq({ info }) {
     ["How long does a page stay online?", `Every page is available for ${days} days from the day you create it. After ${days} days it disappears for good: the link stops working, nobody can open it (including you), and its photos, videos, replies and activity are deleted. Share it while it's live, and make a new page if you want another round.`],
     ["Can I change the names after I create a page?", "No. The name of the person it's for and your name are fixed the moment you create the page, so please check the spelling first. If a name is wrong, create a new page with the right one."],
     ["What can I change after I create a page?", `While your page is online you can edit the message, gifts, reasons, promises, photos and videos, switch between public and private, change the PIN, close or reopen the link, or make a new link. The names can't be changed, and a page can't be extended past its ${days} days.`],
-    ["Is my media safe?", "Your photos and videos are stored privately. They can only be viewed through your page, and private pages stay locked behind the PIN. When a page is deleted, or reaches the end of its time, its photos and videos are removed from storage."],
+    ["Is my media safe?", "Your photos, videos and voice message are stored privately. They can only be viewed through your page, and private pages stay locked behind the PIN. When a page is deleted, or reaches the end of its time, its photos and videos are removed from storage."],
     ["Can I get a refund?", "Purchases are final, so please check the live preview before you pay. The one exception is a double payment: if you are charged more than once for the same purchase, we refund the extra payment in full. Paid but no credit? We add the credit you paid for."],
     ["Which payment methods work?", "UPI, cards and netbanking through secure payment gateways. You are only charged when you confirm the payment."],
   ];
@@ -517,7 +557,7 @@ export default function MemoriesLanding() {
     <div className="mem-root min-h-screen overflow-x-clip">
       <Helmet>
         <title>Memories: Birthday, proposal, sorry, anniversary and thank-you pages | Target Trek</title>
-        <meta name="description" content="Create a beautiful interactive page for a birthday, proposal, apology, anniversary or thank-you. Pick a look, add your words, photos and videos, then share a private or public link." />
+        <meta name="description" content="Create a beautiful interactive page for a birthday, proposal, apology, anniversary or thank-you. Pick a look, add your words, photos, videos and your own voice, then share a private or public link." />
         <link rel="canonical" href="https://www.targettrek.in/memories" />
         <meta property="og:title" content="Memories: pages they will never forget" />
         <meta property="og:description" content="Birthday, proposal, sorry, anniversary and thank-you pages with your photos and videos. Share a link or lock it with a PIN." />
@@ -532,6 +572,7 @@ export default function MemoriesLanding() {
         <Templates />
         <HowItWorks />
         <Features info={info} />
+        <VoiceShowcase info={info} />
         <Activity />
         <Privacy />
         <Pricing info={info} priceLabel={priceLabel} />

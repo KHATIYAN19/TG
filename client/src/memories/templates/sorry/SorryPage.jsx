@@ -13,6 +13,7 @@ import { createFx, prefersReducedMotion } from "../birthday/fx";
 import { createSound } from "../birthday/audio";
 import Gifts from "../birthday/Gifts";
 import Chocolate from "../birthday/Chocolate";
+import { VoiceSection } from "../../VoiceNote";
 import Gallery from "../birthday/Gallery";
 import PhotoCamera from "../common/PhotoCamera";
 import Letter from "../birthday/Letter";
@@ -357,6 +358,8 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
           </div>
         </section>
         )}
+
+        <VoiceSection data={data} />
 
         {/* ---- the question ---- */}
         <section id="forgive" className="bd-sec sr-final">

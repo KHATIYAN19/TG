@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { ArrowLeft, Check, Copy, Eye, Globe2, ImagePlus, Link2, Loader2, Lock, Mail, PartyPopper, RotateCcw, Save, Ticket, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, Eye, Globe2, ImagePlus, Link2, Loader2, Lock, Mail, Mic, PartyPopper, RotateCcw, Save, Ticket, X } from "lucide-react";
 
 import { errMsg } from "../arena/api";
-import { createPage, getPage, resendEmail, updatePage } from "./memApi";
+import { createPage, getPage, removeMedia, resendEmail, updatePage, uploadMedia } from "./memApi";
 import { BUILDERS, emptyData, galleryFrom, toForm, toPayload } from "./builderConfig";
 import MediaManager from "./MediaManager";
 import StagedMedia from "./StagedMedia";
+import VoiceRecorder from "./VoiceRecorder";
 import PinChip from "./PinChip";
 import SharePanel from "./SharePanel";
 import { useMedia } from "./chrome";
@@ -98,6 +99,34 @@ function SendEmailBox({ pageId, isPrivate, closed, onSent }) {
   );
 }
 
+/* the voice message box: on the create form it is kept in the browser until the page exists; on the edit screen it saves at once */
+function VoiceBox({ pageId, media, onMedia, staged, onStaged, limits }) {
+  const saved = media?.find((m) => m.kind === "audio");
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [err, setErr] = useState("");
+  const preview = useMemo(() => (staged ? URL.createObjectURL(staged.file) : ""), [staged]);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const onFile = async (file, dur) => {
+    setErr("");
+    if (!pageId) return onStaged({ file, dur });
+    setBusy(true); setProgress(0);
+    try {
+      if (saved) await removeMedia(pageId, saved.id);
+      const page = await uploadMedia(pageId, "audio", file, setProgress, "", dur);
+      onMedia(page.media);
+    } catch (e) { setErr(errMsg(e)); try { const p = await getPage(pageId); onMedia(p.media || []); } catch { /* keep what we have */ } }
+    finally { setBusy(false); }
+  };
+  const onRemove = async () => {
+    if (!pageId) return onStaged(null);
+    setBusy(true); setErr("");
+    try { onMedia((await removeMedia(pageId, saved.id)).media); } catch (e) { setErr(errMsg(e)); } finally { setBusy(false); }
+  };
+  return <VoiceRecorder src={pageId ? saved?.url : preview} durationSec={pageId ? saved?.durationSec : staged?.dur} sizeBytes={pageId ? saved?.size : staged?.file.size} limits={limits} onFile={onFile} onRemove={onRemove} busy={busy} progress={progress} error={err} />;
+}
+
 function Created({ template, page, pin, credits, edited, limits, files, email, onAnother }) {
   const [copied, setCopied] = useState(false);
   const [media, setMedia] = useState([]);
@@ -151,6 +180,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const xl = useMedia("(min-width: 1280px)");
   const scale = xl ? 1.12 : 0.95;
   const edit = mode === "edit";
+  const limitsOf = cfg.limits || { photos: 10, videos: 1, photoMb: 5, videoMb: 50, audioMb: 10, audioSec: 120 };
 
   const [templateId, setTemplateId] = useState(edit ? null : params.template);
   const [data, setData] = useState(null);
@@ -167,6 +197,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const [info, setInfo] = useState(null); // link, visibility and PIN of the page being edited
   const [copiedLink, setCopiedLink] = useState(false);
   const [staged, setStaged] = useState([]); // photos and videos chosen before the page exists
+  const [voice, setVoice] = useState(null); // { file, dur } voice message chosen before the page exists
   const [done, setDone] = useState(null);
   const [sheet, setSheet] = useState(false);
   const errRef = useRef(null);
@@ -207,15 +238,23 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   }, [edit, data, themeId, title, templateId, done]);
 
   // what the phone shows: the form, plus the page's real photos and video once it has them
+  const [voiceBlob, setVoiceBlob] = useState("");
+  useEffect(() => {
+    if (!voice) { setVoiceBlob(""); return undefined; }
+    const u = URL.createObjectURL(voice.file); setVoiceBlob(u);
+    return () => URL.revokeObjectURL(u);
+  }, [voice]);
+  const savedVoice = media.find((m) => m.kind === "audio" && m.url);
   const previewData = useMemo(() => {
     if (!data) return data;
+    const withVoice = (d) => (savedVoice || voiceBlob ? { ...d, voiceUrl: savedVoice?.url || voiceBlob, voiceDur: savedVoice?.durationSec || voice?.dur } : d);
     const real = galleryFrom(media);
-    if (real) return { ...data, ...real };
-    if (!staged.length) return data;
+    if (real) return withVoice({ ...data, ...real });
+    if (!staged.length) return withVoice(data);
     const photos = staged.filter((x) => x.kind === "photo").map((x) => ({ id: `s${x.id}`, url: x.preview, caption: (x.caption || "").trim() }));
     const v = staged.find((x) => x.kind === "video");
-    return { ...data, photos, video: v ? { id: `s${v.id}`, url: v.preview, caption: (v.caption || "").trim() } : null, mainPhotoId: photos[0]?.id };
-  }, [data, media, staged]);
+    return withVoice({ ...data, photos, video: v ? { id: `s${v.id}`, url: v.preview, caption: (v.caption || "").trim() } : null, mainPhotoId: photos[0]?.id });
+  }, [data, media, staged, savedVoice, voiceBlob, voice]);
   const autoTitle = useMemo(() => (data?.recipientName?.trim() && TITLE[templateId] ? TITLE[templateId](data.recipientName.trim()) : ""), [data?.recipientName, templateId]);
 
   if (!edit && !BUILDERS[params.template]) return <Navigate to="/memories/app" replace />;
@@ -252,7 +291,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
         try { localStorage.removeItem(draftKey(templateId)); } catch { /* ignore */ }
         const left = Math.max(0, cfg.credits - 1);
         setCredits(left); onPageCreated?.();
-        setDone({ page: r.page, pin: r.pin, credits: left, files: staged.map((x) => ({ file: x.file, caption: (x.caption || "").trim() })), email: r.email });
+        setDone({ page: r.page, pin: r.pin, credits: left, files: [...staged.map((x) => ({ file: x.file, caption: (x.caption || "").trim() })), ...(voice ? [{ file: voice.file, caption: "", durationSec: voice.dur }] : [])], email: r.email });
       }
     } catch (err) {
       fail(errMsg(err));
@@ -314,16 +353,22 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
           {!edit && (
             <div className="rounded-[24px] border border-rose-100 bg-white p-4 text-slate-900 shadow-sm sm:p-6 lg:rounded-[28px]">
               <h3 className="mb-1 text-base font-bold">Photos and videos</h3>
-              <StagedMedia staged={staged} onChange={setStaged} limits={cfg.limits || { photos: 10, videos: 1, photoMb: 5, videoMb: 50 }} />
+              <StagedMedia staged={staged} onChange={setStaged} limits={limitsOf} />
             </div>
           )}
 
           {edit && (
             <div className="rounded-[24px] border border-rose-100 bg-white p-4 text-slate-900 shadow-sm sm:p-6 lg:rounded-[28px]">
               <h3 className="mb-1 text-base font-bold">Photos and videos</h3>
-              <MediaManager pageId={params.id} media={media} limits={cfg.limits || { photos: 10, videos: 1, photoMb: 5, videoMb: 50 }} onChange={setMedia} />
+              <MediaManager pageId={params.id} media={media} limits={limitsOf} onChange={setMedia} />
             </div>
           )}
+
+          <div className="rounded-[24px] border border-rose-100 bg-white p-4 text-slate-900 shadow-sm sm:p-6 lg:rounded-[28px]">
+            <h3 className="mb-1 flex items-center gap-2 text-base font-bold"><Mic className="h-4 w-4 text-rose-500" aria-hidden /> Voice message <span className="text-xs font-medium text-[#c4a8b8]">(optional)</span></h3>
+            <p className="mb-3 text-xs text-slate-500">Say it in your own voice. It appears on the page like a little gift to play.</p>
+            <VoiceBox pageId={edit ? params.id : null} media={media} onMedia={setMedia} staged={voice} onStaged={setVoice} limits={limitsOf} />
+          </div>
 
           <div className="space-y-5 rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[28px]">
             <div>

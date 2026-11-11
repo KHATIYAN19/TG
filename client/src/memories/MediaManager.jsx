@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Check, Film, ImagePlus, Loader2, RotateCw, Star, Trash2, UploadCloud, X } from "lucide-react";
+import { AlertCircle, Check, Film, ImagePlus, Loader2, Mic, RotateCw, Star, Trash2, UploadCloud, X } from "lucide-react";
 
 import { errMsg } from "../arena/api";
 import { captionMedia, removeMedia, setMainMedia, uploadMedia } from "./memApi";
@@ -12,12 +12,13 @@ let uid = 0;
   PHOTOS AND VIDEOS for a page that exists. Drop files (or tap to pick): each one is checked against the limits, then uploaded
   straight to storage with a signed form (see uploadMedia) with a progress bar. A failed file can be retried. The star marks the main one.
 */
-export default function MediaManager({ pageId, media, limits, onChange, initialFiles, onBusy }) {
+export default function MediaManager({ pageId, media: allMedia, limits, onChange, initialFiles, onBusy }) {
   const [queue, setQueue] = useState([]); // { id, file, kind, preview, progress, status: "up" | "err", error }
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
   const [over, setOver] = useState(false);
   const input = useRef(null);
+  const media = allMedia.filter((m) => m.kind !== "audio"); // the voice message has its own box
   const mediaRef = useRef(media);
   mediaRef.current = media;
   const pending = useRef([]);
@@ -30,7 +31,7 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
   const runOne = async (item) => {
     patch(item.id, { status: "up", progress: 0, error: "" });
     try {
-      const page = await uploadMedia(pageId, item.kind, item.file, (p) => patch(item.id, { progress: p }), (item.caption || "").trim());
+      const page = await uploadMedia(pageId, item.kind, item.file, (p) => patch(item.id, { progress: p }), (item.caption || "").trim(), item.durationSec);
       onChange(page.media);
       setQueue((q) => q.filter((x) => x.id !== item.id));
       if (item.preview) URL.revokeObjectURL(item.preview);
@@ -53,12 +54,13 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
     setError("");
     const given = Array.from(fileList).map((x) => (x instanceof File ? { file: x, caption: "" } : x));
     const captionOf = new Map(given.map((x) => [x.file, x.caption || ""]));
+    const durOf = new Map(given.map((x) => [x.file, x.durationSec]));
     fileList = given.map((x) => x.file);
-    const have = { photo: photos.length + queue.filter((x) => x.kind === "photo").length, video: videos.length + queue.filter((x) => x.kind === "video").length };
+    const have = { photo: photos.length + queue.filter((x) => x.kind === "photo").length, video: videos.length + queue.filter((x) => x.kind === "video").length, audio: allMedia.filter((m) => m.kind === "audio").length + queue.filter((x) => x.kind === "audio").length };
     const { accepted, problems } = checkFiles(fileList, have, limits);
     if (problems.length) setError(problems.join(" "));
     if (!accepted.length) return;
-    const items = accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, caption: captionOf.get(file) || "", preview: kind === "photo" ? URL.createObjectURL(file) : "", progress: 0, status: "up", error: "" }));
+    const items = accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, caption: captionOf.get(file) || "", durationSec: durOf.get(file), preview: kind === "photo" ? URL.createObjectURL(file) : "", progress: 0, status: "up", error: "" }));
     setQueue((q) => [...q, ...items]);
     drain(items);
   };
@@ -111,7 +113,7 @@ export default function MediaManager({ pageId, media, limits, onChange, initialF
           {queue.map((it) => (
             <li key={it.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2 ring-1 ring-slate-200">
               <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-pink-50 text-pink-500">
-                {it.preview ? <img src={it.preview} alt="" className="h-full w-full object-cover" /> : <Film className="h-5 w-5" aria-hidden />}
+                {it.preview ? <img src={it.preview} alt="" className="h-full w-full object-cover" /> : it.kind === "audio" ? <Mic className="h-5 w-5" aria-hidden /> : <Film className="h-5 w-5" aria-hidden />}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-slate-800">{it.file.name} <span className="font-normal text-slate-500">· {mbOf(it.file.size)} MB</span></p>

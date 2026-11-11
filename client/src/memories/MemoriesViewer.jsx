@@ -6,7 +6,7 @@ import { ArrowRight, Heart, Loader2, Lock, SearchX, TimerOff } from "lucide-reac
 import { errCode, errMsg } from "../arena/api";
 import { viewPage, unlockPage, sendAnswer, sendEvents, sendEventsOnExit, sendReply } from "./memApi";
 import { setTracker } from "./track";
-import { galleryFrom } from "./builderConfig";
+import { galleryFrom, voiceFrom } from "./builderConfig";
 import { useMemoriesChrome } from "./chrome";
 import { FONT_LINKS, Logo, cx } from "./ui";
 import "./memories.css";
@@ -37,6 +37,7 @@ const toPageData = (v) => ({
   people: v.people || [], timeline: v.timeline || [], reasons: v.reasons || [], stats: v.stats || [],
   photos: [], video: null, mainPhotoId: null,
   ...(galleryFrom(v.media || []) || {}),
+  ...voiceFrom(v.media),
 });
 
 const Shell = ({ children, title = "Memories" }) => (

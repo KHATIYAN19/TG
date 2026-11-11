@@ -13,6 +13,7 @@ import "./proposal.css";
 
 import { createFx, prefersReducedMotion } from "../birthday/fx";
 import { createSound } from "../birthday/audio";
+import { VoiceSection } from "../../VoiceNote";
 import Gallery from "../birthday/Gallery";
 import PhotoCamera from "../common/PhotoCamera";
 import Letter from "../birthday/Letter";
@@ -223,6 +224,8 @@ export default function ProposalPage({ data = DUMMY_PROPOSAL, theme: themeId = D
           </div>
         </section>
         )}
+
+        <VoiceSection data={data} />
 
         {promises.length > 0 && (
           <section className="bd-sec" aria-label="My promises">

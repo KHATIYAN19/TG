@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useEmbed, useLivePreview } from "../../chrome";
+import { withDemoVoice } from "../../VoiceNote";
 
 import ThanksPage from "./ThanksPage";
 import SenderEditor, { CustomizeButton } from "../birthday/SenderEditor";
@@ -39,7 +40,7 @@ export default function ThanksPreview() {
 
   return (
     <>
-      <ThanksPage data={data} theme={themeId} />
+      <ThanksPage data={withDemoVoice(data)} theme={themeId} />
       {!embed && <CustomizeButton onClick={() => setOpen(true)} giftCount={data.gifts?.length || 0} />}
       {!embed && <SenderEditor open={open} onClose={() => setOpen(false)} data={data} onData={setData} themeId={themeId} onTheme={setThemeId} onReset={reset} config={EDITOR} />}
     </>

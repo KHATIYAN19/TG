@@ -88,7 +88,7 @@ export const publicInfo = handler(async (req, res) => {
       price: s.price,
       currency: "INR",
       pageLifetimeDays: lifetimeDays(s),
-      limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, messageChars: s.maxMessageChars },
+      limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, audioMb: s.maxAudioMb ?? 10, audioSec: 120, messageChars: s.maxMessageChars },
       themes: TEMPLATE_THEMES, // the looks a sender can choose from, per template
       occasions: occasions.map((o) => ({ name: o.name, theme: o.theme })),
     },

@@ -66,3 +66,9 @@ export const galleryFrom = (media = []) => {
   const main = media.find((m) => m.kind === "photo" && m.isMain);
   return photos.length || video ? { photos, video: video ? { id: video.id, url: video.url, caption: video.caption || "", w: video.width || null, h: video.height || null } : null, mainPhotoId: main?.id || photos[0]?.id } : null;
 };
+
+/** The page's voice message (if any), as the fields the templates read. */
+export const voiceFrom = (media = []) => {
+  const a = media.find((m) => m.kind === "audio" && m.url);
+  return a ? { voiceUrl: a.url, voiceDur: a.durationSec || null } : {};
+};

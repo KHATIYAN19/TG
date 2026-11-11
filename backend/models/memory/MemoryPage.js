@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const mediaSchema = new Schema(
   {
-    kind: { type: String, enum: ["photo", "video"], required: true },
+    kind: { type: String, enum: ["photo", "video", "audio"], required: true },
     key: { type: String, required: true }, // S3 object key (never a URL)
     contentType: { type: String, required: true },
     size: { type: Number, required: true },

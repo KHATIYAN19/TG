@@ -47,6 +47,7 @@ export const UPLOAD_PURPOSES = {
   // Memory pages: the per-page photo/video limits are enforced by the admin settings in
   // controllers/memory; these are only the hard ceilings.
   memory_photo: { types: { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" }, maxBytes: 25 * MB },
+  memory_audio: { types: { "audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a", "audio/x-m4a": ".m4a", "audio/aac": ".aac", "audio/mpeg": ".mp3", "audio/wav": ".wav", "audio/x-wav": ".wav" }, maxBytes: 25 * MB },
   memory_video: { types: { "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov" }, maxBytes: 500 * MB },
   resume: {
     types: {

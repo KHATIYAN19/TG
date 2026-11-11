@@ -692,7 +692,7 @@ function Settings({ http, run }) {
     setSaving(true);
     const body = {
       price: Number(s.price), maxPhotos: Number(s.maxPhotos), maxVideos: Number(s.maxVideos),
-      maxPhotoMb: Number(s.maxPhotoMb), maxVideoMb: Number(s.maxVideoMb), maxMessageChars: Number(s.maxMessageChars), enabled: Boolean(s.enabled),
+      maxPhotoMb: Number(s.maxPhotoMb), maxVideoMb: Number(s.maxVideoMb), maxAudioMb: Number(s.maxAudioMb ?? 10), maxMessageChars: Number(s.maxMessageChars), enabled: Boolean(s.enabled),
       pageLifetimeDays: Number(s.pageLifetimeDays), emailEnabled: s.emailEnabled !== false, maxEmailsPerUserPerDay: Number(s.maxEmailsPerUserPerDay),
       enabledGateways: [...gw.on], defaultGateway: gw.on.has(gw.def) ? gw.def : [...gw.on][0] || "",
     };
@@ -744,6 +744,7 @@ function Settings({ http, run }) {
         <Field label="Max videos"><input className={inputCls} type="number" min="0" max="100" value={s.maxVideos} onChange={num("maxVideos")} /></Field>
         <Field label="Max size per photo (MB)" hint="Up to 25"><input className={inputCls} type="number" min="0.1" max="25" step="0.1" value={s.maxPhotoMb} onChange={num("maxPhotoMb")} /></Field>
         <Field label="Max size per video (MB)" hint="Up to 500"><input className={inputCls} type="number" min="0.1" max="500" step="0.1" value={s.maxVideoMb} onChange={num("maxVideoMb")} /></Field>
+        <Field label="Max size of the voice message (MB)" hint="Up to 25. Recording is capped at 2 minutes"><input className={inputCls} type="number" min="0.1" max="25" step="0.1" value={s.maxAudioMb ?? 10} onChange={num("maxAudioMb")} /></Field>
         <Field label="Max message length (characters)"><input className={inputCls} type="number" min="10" max="10000" value={s.maxMessageChars} onChange={num("maxMessageChars")} /></Field>
       </div>
       <Btn type="submit" tone="primary" disabled={saving}>{saving && <Loader2 size={12} className="animate-spin" />} Save settings</Btn>

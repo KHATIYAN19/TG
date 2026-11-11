@@ -16,6 +16,7 @@ import Cake from "./Cake";
 import { BalloonField, BalloonStorm } from "./Balloons";
 import Gifts from "./Gifts";
 import Chocolate from "./Chocolate";
+import { VoiceSection } from "../../VoiceNote";
 import Gallery from "./Gallery";
 import Letter from "./Letter";
 import VolumeControl from "./VolumeControl";
@@ -258,6 +259,8 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
           </div>
         </section>
         )}
+
+        <VoiceSection data={data} />
 
         {/* ---- letter ---- */}
         <section id="note" className="bd-sec">

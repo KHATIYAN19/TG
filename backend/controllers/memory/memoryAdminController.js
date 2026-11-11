@@ -99,6 +99,7 @@ export const saveSettings = handler(async (req, res) => {
       maxVideos: z.number().int().min(0).max(100),
       maxPhotoMb: z.number().min(0.1).max(25),
       maxVideoMb: z.number().min(0.1).max(500),
+      maxAudioMb: z.number().min(0.1).max(25),
       maxMessageChars: z.number().int().min(10).max(10000),
       pageLifetimeDays: z.number().int().min(1).max(3650),
       emailEnabled: z.boolean(),

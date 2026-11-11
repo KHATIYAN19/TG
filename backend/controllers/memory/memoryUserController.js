@@ -69,7 +69,7 @@ export const getConfig = handler(async (req, res) => {
     currency: "INR",
     pageLifetimeDays: lifetimeDays(s),
     emailEnabled: s.emailEnabled !== false,
-    limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, messageChars: s.maxMessageChars },
+    limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, audioMb: s.maxAudioMb ?? 10, audioSec: 120, messageChars: s.maxMessageChars },
     occasions: occasions.map((o) => ({ id: String(o._id), name: o.name, theme: o.theme })),
     credits,
     gumroad: await gumroadOffer(),
@@ -462,16 +462,17 @@ export const deletePage = handler(async (req, res) => {
    MEDIA  (direct-to-S3 via presigned POST, limits from admin settings)
 ===================================================== */
 
-const KIND_PURPOSE = { photo: "memory_photo", video: "memory_video" };
+export const AUDIO_MAX_SEC = 120;
+const KIND_PURPOSE = { photo: "memory_photo", video: "memory_video", audio: "memory_audio" };
 
 const limitsFor = (s, kind) =>
-  kind === "photo" ? { max: s.maxPhotos, mb: s.maxPhotoMb } : { max: s.maxVideos, mb: s.maxVideoMb };
+  kind === "photo" ? { max: s.maxPhotos, mb: s.maxPhotoMb } : kind === "audio" ? { max: 1, mb: s.maxAudioMb ?? 10 } : { max: s.maxVideos, mb: s.maxVideoMb };
 
 export const presignMedia = handler(async (req, res) => {
   const page = await ownPage(req, { populate: false });
   editable(page);
   const b = parse(
-    z.object({ kind: z.enum(["photo", "video"]), contentType: z.string().toLowerCase(), size: z.number().int().positive(), filename: z.string().max(200).optional() }),
+    z.object({ kind: z.enum(["photo", "video", "audio"]), contentType: z.string().toLowerCase(), size: z.number().int().positive(), filename: z.string().max(200).optional() }),
     req.body
   );
   const { max, mb } = limitsFor(await getSettings(), b.kind);
@@ -484,7 +485,7 @@ export const presignMedia = handler(async (req, res) => {
   } catch (e) {
     if (e?.code !== "S3_NOT_CONFIGURED") throw e;
     console.error("[memory] uploads are unavailable:", e.message); // the server log names what's missing; visitors don't need to
-    throw new MemoryError(503, "Photo and video uploads aren't available right now. Please try again later.", "UPLOADS_UNAVAILABLE");
+    throw new MemoryError(503, "Photo, video and audio uploads aren't available right now. Please try again later.", "UPLOADS_UNAVAILABLE");
   }
   await trackUpload(target.key); // if this file never gets attached to a page, it is cleaned up
   ok(res, { kind: b.kind, ...target }, 201);
@@ -498,7 +499,7 @@ export const confirmMedia = handler(async (req, res) => {
   editable(page);
   const b = parse(
     z.object({
-      key: z.string().max(1024), kind: z.enum(["photo", "video"]), originalName: z.string().max(200).optional(), caption: z.string().max(200).optional(),
+      key: z.string().max(1024), kind: z.enum(["photo", "video", "audio"]), originalName: z.string().max(200).optional(), caption: z.string().max(200).optional(),
       width: z.number().int().min(1).max(20000).optional(), height: z.number().int().min(1).max(20000).optional(), durationSec: z.number().min(0).max(86400).optional(),
     }),
     req.body
@@ -518,13 +519,14 @@ export const confirmMedia = handler(async (req, res) => {
     throw new MemoryError(status, message, code);
   };
   if (obj.size > mb * MB) await reject(413, `Each ${b.kind} can be up to ${mb} MB.`, "FILE_TOO_LARGE");
+  if (b.kind === "audio" && b.durationSec != null && b.durationSec > AUDIO_MAX_SEC + 3) await reject(413, `A voice message can be up to ${AUDIO_MAX_SEC / 60} minutes.`, "AUDIO_TOO_LONG");
   if (page.media.filter((m) => m.kind === b.kind).length >= max) await reject(400, `You can add up to ${max} ${b.kind}s.`, "MEDIA_LIMIT");
 
   // Atomic push guarded by the count so parallel confirms cannot exceed the limit.
   const first = !page.media.some((m) => m.kind === b.kind && m.isMain);
   const updated = await MemoryPage.findOneAndUpdate(
     { _id: page._id, $expr: { $lt: [{ $size: { $filter: { input: "$media", cond: { $eq: ["$$this.kind", b.kind] } } } }, max] } },
-    { $push: { media: { kind: b.kind, key: b.key, contentType: obj.contentType, size: obj.size, originalName: b.originalName, caption: cleanCaption(b.caption), isMain: first, ...(b.width && b.height ? { width: b.width, height: b.height } : {}), ...(b.kind === "video" && b.durationSec != null ? { durationSec: b.durationSec } : {}) } } },
+    { $push: { media: { kind: b.kind, key: b.key, contentType: obj.contentType, size: obj.size, originalName: b.originalName, caption: cleanCaption(b.caption), isMain: first, ...(b.width && b.height ? { width: b.width, height: b.height } : {}), ...((b.kind === "video" || b.kind === "audio") && b.durationSec != null ? { durationSec: b.durationSec } : {}) } } },
     { new: true }
   );
   if (!updated) await reject(400, `You can add up to ${max} ${b.kind}s.`, "MEDIA_LIMIT");

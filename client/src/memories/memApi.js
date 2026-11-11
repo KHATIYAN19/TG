@@ -76,8 +76,9 @@ export const measureMedia = (file, kind) =>
     }
   });
 
-export async function uploadMedia(pageId, kind, file, onProgress, caption = "") {
+export async function uploadMedia(pageId, kind, file, onProgress, caption = "", knownDurationSec) {
   const dims = await measureMedia(file, kind);
+  if (knownDurationSec > 0 && !dims.durationSec) dims.durationSec = Math.round(knownDurationSec * 10) / 10;
   const t = await presignMedia(pageId, { kind, contentType: file.type, size: file.size, filename: file.name });
   const form = new FormData();
   Object.entries(t.fields || {}).forEach(([k, v]) => form.append(k, v));

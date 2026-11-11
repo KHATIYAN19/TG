@@ -14,6 +14,7 @@ import "./thanks.css";
 import { createFx, prefersReducedMotion } from "../birthday/fx";
 import { createSound } from "../birthday/audio";
 import Gifts from "../birthday/Gifts";
+import { VoiceSection } from "../../VoiceNote";
 import Gallery from "../birthday/Gallery";
 import PhotoCamera from "../common/PhotoCamera";
 import Letter from "../birthday/Letter";
@@ -230,6 +231,8 @@ export default function ThanksPage({ data = DUMMY_THANKS, theme: themeId = DEFAU
           </div>
         </section>
         )}
+
+        <VoiceSection data={data} />
 
         {gifts.length > 0 && (
           <section className="bd-sec" aria-label="Gifts">

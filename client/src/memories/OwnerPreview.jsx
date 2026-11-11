@@ -4,7 +4,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 
 import { errMsg } from "../arena/api";
 import { getPage } from "./memApi";
-import { galleryFrom, toForm } from "./builderConfig";
+import { galleryFrom, toForm, voiceFrom } from "./builderConfig";
 import { TEMPLATES } from "./templates";
 import { Loading } from "./AppShell";
 import { Button } from "./ui";
@@ -22,7 +22,7 @@ export default function OwnerPreview() {
   useEffect(() => { getPage(id).then(setPage).catch((e) => setError(errMsg(e))); }, [id]);
 
   const template = page && TEMPLATES.find((t) => t.theme === page.theme);
-  const payload = page && { ...toForm(page), recipientName: page.recipientName, senderName: page.senderName, ...(galleryFrom(page.media) || {}) };
+  const payload = page && { ...toForm(page), recipientName: page.recipientName, senderName: page.senderName, ...(galleryFrom(page.media) || {}), ...voiceFrom(page.media) };
 
   const post = useCallback(() => {
     if (payload) frame.current?.contentWindow?.postMessage({ type: "memories:live", data: payload, themeId: page.style }, window.location.origin);
@@ -43,7 +43,7 @@ export default function OwnerPreview() {
         <p className="ml-2 min-w-0 flex-1 truncate text-sm font-bold text-[#3a1530]">Preview · {page.title}</p>
         <Button as={Link} to={`/memories/app/pages/${page.id}/edit`} variant="soft" size="sm"><Pencil className="h-3.5 w-3.5" aria-hidden /> Edit</Button>
       </div>
-      <div className="mx-auto min-h-0 w-full max-w-md flex-1 lg:max-w-lg overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-xl shadow-rose-100/60">
+      <div className="relative mx-auto min-h-0 w-full max-w-md flex-1 lg:max-w-lg overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-xl shadow-rose-100/60">
         <iframe
           ref={frame} title={`Preview of ${page.title}`} onLoad={post}
           src={`${template.demo}?embed=1&auto=1&live=1&theme=${encodeURIComponent(page.style || "")}`}

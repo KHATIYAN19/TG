@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useEmbed, useLivePreview } from "../../chrome";
+import { withDemoVoice } from "../../VoiceNote";
 
 import ProposalPage from "./ProposalPage";
 import SenderEditor, { CustomizeButton } from "../birthday/SenderEditor";
@@ -33,7 +34,7 @@ export default function ProposalPreview() {
 
   return (
     <>
-      <ProposalPage data={data} theme={themeId} />
+      <ProposalPage data={withDemoVoice(data)} theme={themeId} />
       {!embed && <CustomizeButton onClick={() => setOpen(true)} giftCount={null} />}
       {!embed && <SenderEditor open={open} onClose={() => setOpen(false)} data={data} onData={setData} themeId={themeId} onTheme={setThemeId} onReset={reset} config={EDITOR} />}
     </>
