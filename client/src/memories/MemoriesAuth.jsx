@@ -16,6 +16,7 @@ import { API_ROOT, http, errMsg, errCode, retryAfterOf } from "../arena/api";
 import GoogleButton, { googleEnabled } from "../arena/GoogleButton";
 import { useMemoriesChrome } from "./chrome";
 import { Button, FONT_LINKS, Field, Logo, cx, inputClass } from "./ui";
+import { trackSignup } from "./metaTracking";
 import "./memories.css";
 
 /*
@@ -243,6 +244,7 @@ export default function MemoriesAuth() {
     setFormError("");
     try {
       const { data } = await http.post("/google/complete", { signupToken: googleSignup.signupToken, countryCode: values.countryCode, mobile: values.mobile });
+      trackSignup("google");
       finish(data);
     } catch (error) {
       if (["SIGNUP_EXPIRED", "ACCOUNT_EXISTS", "SIGNUP_ALREADY_USED"].includes(errCode(error))) {
@@ -284,6 +286,7 @@ export default function MemoriesAuth() {
     setFormError("");
     try {
       const { data } = await http.post("/signup/verify", { email: pendingEmail, otp });
+      trackSignup("email");
       finish(data);
     } catch (error) {
       if (!applyLock(error)) setFormError(errMsg(error));

@@ -11,6 +11,7 @@ import { formatPrice } from "./api";
 import { Loading } from "./AppShell";
 import { SUPPORT_EMAIL } from "./legal/constants";
 import { chooseGateway, gatewayLabel } from "./paymentGateway";
+import { trackCheckoutStart, trackPaid } from "./metaTracking";
 import { Button, cx } from "./ui";
 
 const STEPS = ["Account", "Unlock a page", "Choose a template"];
@@ -86,11 +87,12 @@ export default function MemoriesPay({ cfg, reload, firstTime = false }) {
     setPaying(true); setError("");
     try {
       const order = await createPayment(chosen);
+      trackCheckoutStart({ orderId: order.orderId, price, gateway: chosen });
       const r = await runCheckout({ checkout: order.checkout, orderId: order.orderId, user });
       if (r.status === "redirect") return; // the gateway page takes over, and brings us back to /memories/payment-result
       let status = r.status;
       if (status !== "paid") status = (await getPaymentStatus(order.orderId)).status; // they may have paid even if the window closed
-      if (status === "paid") return await done("payment");
+      if (status === "paid") { trackPaid(order.orderId, price); return await done("payment"); }
       if (r.status === "dismissed") toast("Payment cancelled. Nothing was charged.", { icon: "ℹ️", id: "memories-pay-cancel" });
       else setError(status === "pending" || status === "created" ? "We haven't received the payment yet. If you were charged, it will appear in a minute. Check again or contact us." : "The payment didn't go through. Nothing was charged. Please try again.");
     } catch (e) {

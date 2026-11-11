@@ -15,6 +15,7 @@ import MemoriesFooter from "./legal/MemoriesFooter";
 import { useLifetimeDays } from "./legal/useLifetime";
 import Showcase, { LivePhone, META, THEME_TOTAL, useScale } from "./Showcase";
 import { Button, FONT_LINKS, Logo, cx } from "./ui";
+import { trackCtaClick, trackLandingView } from "./metaTracking";
 import "./memories.css";
 
 const NAV = [["templates", "Templates"], ["how", "How it works"], ["features", "Features"], ["activity", "Activity"], ["pricing", "Pricing"], ["faq", "FAQ"]];
@@ -498,6 +499,17 @@ export default function MemoriesLanding() {
     return () => { live = false; };
   }, []);
   useReveal([info]);
+
+  // Meta Pixel: landing view, plus a click event for every "Create a page" style button
+  useEffect(() => {
+    trackLandingView();
+    const onClick = (e) => {
+      const a = e.target instanceof Element ? e.target.closest('a[href*="mode=signup"]') : null;
+      if (a) trackCtaClick(a.textContent.trim());
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
 
   const priceLabel = info ? formatPrice(info.price) : null;
 

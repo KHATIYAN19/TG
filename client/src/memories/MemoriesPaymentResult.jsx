@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
 
 import { getPaymentStatus } from "./memApi";
 import AppShell from "./AppShell";
+import { trackPaid } from "./metaTracking";
 import { Button } from "./ui";
 
 /*
@@ -29,7 +30,7 @@ export default function MemoriesPaymentResult() {
       try {
         const r = await getPaymentStatus(order);
         if (!live) return;
-        if (r.status === "paid") { setState("paid"); timer = setTimeout(() => navigate("/memories/app", { replace: true, state: { welcome: "payment" } }), 2200); return; }
+        if (r.status === "paid") { trackPaid(order); setState("paid"); timer = setTimeout(() => navigate("/memories/app", { replace: true, state: { welcome: "payment" } }), 2200); return; }
         if (r.status === "failed") return setState("failed");
         if (++tries.current < 10) { setState("checking"); timer = setTimeout(check, 3000); } else setState("pending");
       } catch {
