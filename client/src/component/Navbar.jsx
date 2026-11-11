@@ -2892,6 +2892,7 @@ import {
   Edit3,
   FileText,
   GraduationCap,
+  Heart,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -3100,8 +3101,26 @@ const getPalette = (dark) => ({
     : "text-orange-600",
 });
 
-function linkStyle(dark, active) {
+/* the Memories tab is always pink, a little stronger when you are on it */
+const pinkTab = (dark, active) =>
+  active
+    ? "bg-pink-600 text-white shadow-md shadow-pink-500/40 ring-2 ring-pink-300/70"
+    : dark
+      ? "bg-pink-500 text-white shadow-sm shadow-pink-500/30 hover:bg-pink-400"
+      : "bg-pink-500 text-white shadow-sm shadow-pink-500/30 hover:bg-pink-600";
+
+function linkStyle(dark, active, pink = false) {
   const palette = getPalette(dark);
+  if (pink) {
+    return cx(
+      "inline-flex items-center justify-center",
+      "whitespace-nowrap rounded-xl",
+      "px-3 py-2.5 text-[13px]",
+      "font-semibold transition-colors",
+      "duration-150",
+      pinkTab(dark, active)
+    );
+  }
 
   return cx(
     "inline-flex items-center justify-center",
@@ -3115,8 +3134,17 @@ function linkStyle(dark, active) {
   );
 }
 
-function mobileLinkStyle(dark, active) {
+function mobileLinkStyle(dark, active, pink = false) {
   const palette = getPalette(dark);
+  if (pink) {
+    return cx(
+      "flex w-full items-center gap-3",
+      "rounded-xl px-3.5 py-3",
+      "text-sm font-semibold",
+      "transition-colors duration-150",
+      pinkTab(dark, active)
+    );
+  }
 
   return cx(
     "flex w-full items-center gap-3",
@@ -3762,6 +3790,7 @@ const DesktopNavigation = memo(
             title: "Memories",
             path: ROUTES.memories,
             selected: active(ROUTES.memories),
+            pink: true,
           },
           {
             title: "Resources",
@@ -3815,7 +3844,8 @@ const DesktopNavigation = memo(
               to={item.path}
               className={linkStyle(
                 isDark,
-                item.selected
+                item.selected,
+                item.pink
               )}
             >
               {item.title}
@@ -3991,7 +4021,7 @@ const MobileHeader = memo(
               )
             }
             className={cx(
-              "min-w-0 truncate px-2 py-2",
+              "min-w-0 flex-1 truncate px-2 py-2 text-left",
               "text-xs font-bold",
               palette.muted
             )}
@@ -4001,17 +4031,48 @@ const MobileHeader = memo(
               : "Explore Target Trek"}
           </button>
 
-          <MockInterviewCTA
-            compact
-            isDark={isDark}
-            active={routeMatches(
-              pathname,
-              "/prep-buddy"
-            )}
-            onClick={() =>
-              onNavigate("/prep-buddy")
-            }
-          />
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onNavigate(ROUTES.memories)
+              }
+              aria-label="Memories"
+              className={cx(
+                "inline-flex shrink-0 items-center justify-center gap-1.5",
+                "rounded-xl px-3 py-2.5 text-xs font-bold shadow-sm",
+                "transition-all duration-150",
+                "focus-visible:outline-none focus-visible:ring-2",
+                "focus-visible:ring-pink-400 focus-visible:ring-offset-2",
+                isDark
+                  ? "bg-pink-500 text-white shadow-pink-500/30 ring-offset-[#16110f] hover:bg-pink-400"
+                  : "bg-pink-500 text-white shadow-pink-500/25 hover:bg-pink-600",
+                routeMatches(pathname, ROUTES.memories) &&
+                  "ring-2 ring-pink-300/80"
+              )}
+            >
+              <Heart
+                size={15}
+                fill="currentColor"
+                aria-hidden="true"
+              />
+              <span className="whitespace-nowrap">
+                Memories
+              </span>
+            </button>
+
+            <MockInterviewCTA
+              compact
+              isDark={isDark}
+              active={routeMatches(
+                pathname,
+                "/prep-buddy"
+              )}
+              onClick={() =>
+                onNavigate("/prep-buddy")
+              }
+            />
+          </div>
         </div>
       </div>
     );
@@ -4030,6 +4091,7 @@ function DrawerLink({
   active,
   onClick,
   trailing,
+  pink = false,
 }) {
   return (
     <NavLink
@@ -4037,7 +4099,8 @@ function DrawerLink({
       onClick={onClick}
       className={mobileLinkStyle(
         isDark,
-        active
+        active,
+        pink
       )}
     >
       {Icon && (
@@ -4278,6 +4341,17 @@ const MobileDrawer = memo(
                   onClick={onClose}
                 >
                   Mock Interviews
+                </DrawerLink>
+
+                <DrawerLink
+                  to={ROUTES.memories}
+                  icon={Heart}
+                  isDark={isDark}
+                  pink
+                  active={active(ROUTES.memories)}
+                  onClick={onClose}
+                >
+                  Memories
                 </DrawerLink>
 
                 <DrawerLink
