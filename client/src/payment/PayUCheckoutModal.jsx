@@ -542,7 +542,7 @@ export default function PayUCheckoutModal({
   ------------------------------------------------ */
 
   useEffect(() => {
-    if (!isOpen || !product?._id) {
+    if (!isOpen || !product?._id || product?.offer) {
       return undefined;
     }
 
@@ -990,6 +990,15 @@ export default function PayUCheckoutModal({
       return {
         bookId:
           product._id,
+
+        // Multi-book offer: the server re-validates and re-prices this
+        ...(product.offer
+          ? {
+              offerId: product.offer.offerId,
+              bookIds: product.offer.bookIds,
+              expectedAmount: product.offer.expectedAmount,
+            }
+          : {}),
 
         firstname:
           formData.firstname
@@ -1762,6 +1771,17 @@ const handlePayment = async (event) => {
                     {product?.title || "Target Trek Ebook"}
                   </p>
 
+                  {product?.offer?.titles?.length > 0 && (
+                    <ul className={`mt-1 space-y-0.5 text-[11px] leading-snug ${t.faint}`}>
+                      {product.offer.titles.slice(0, 6).map((title, i) => (
+                        <li key={i} className="line-clamp-1">• {title}</li>
+                      ))}
+                      {product.offer.titles.length > 6 && (
+                        <li>+ {product.offer.titles.length - 6} more</li>
+                      )}
+                    </ul>
+                  )}
+
                   <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className={`text-xl font-black ${t.accent}`}>
                       {formatMoney(finalAmount)}
@@ -1941,7 +1961,12 @@ const handlePayment = async (event) => {
                 error={errors.phone}
               />
 
-              {/* COUPONS */}
+              {/* COUPONS (not combinable with a multi-book offer) */}
+              {product?.offer ? (
+                <div className={`border-t pt-4 text-xs font-semibold ${t.divider} ${t.faint}`}>
+                  Offer price applied for {product.offer.bookIds.length} books. Coupons can't be combined with this offer.
+                </div>
+              ) : (
               <div className={`border-t pt-4 ${t.divider}`}>
                 {!appliedCoupon && availableCoupons.length > 0 && (
                   <div className="mb-4">
@@ -2148,6 +2173,7 @@ const handlePayment = async (event) => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* mobile / tablet: breakdown sits under the form */}
               <div className="lg:hidden">{priceSummary}</div>

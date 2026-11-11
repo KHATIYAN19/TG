@@ -123,6 +123,18 @@ const PRIORITY_ROUTES = [
     priority: 4,
   },
   {
+    path: "/admin/book-offers",
+    name: "Book Offers",
+    icon: TicketPercent,
+    description:
+      "Create multi-book deals like any 5 books at a flat price or 4+ books at 60% off, limited to tags such as college placement.",
+    category: "Books & Products",
+    keywords:
+      "bundle offers combo multi book discount placement cloud flat price",
+    featured: true,
+    priority: 4,
+  },
+  {
     path: "/admin/coupon/dashboard",
     name: "Coupon Dashboard",
     icon: TicketPercent,

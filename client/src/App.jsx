@@ -139,6 +139,15 @@ const BookCallPage = lazy(() =>
 const Books = lazy(() =>
   import("./Ebooks/Books.jsx")
 );
+const BundleOffers = lazy(() =>
+  import("./Ebooks/BundleOffers.jsx")
+);
+const AdminBookOffers = lazy(() =>
+  import("./Admin/AdminBookOffers.jsx")
+);
+const AdminOfferPayments = lazy(() =>
+  import("./Admin/AdminOfferPayments.jsx")
+);
 import BookMatchesNotice from "./Ebooks/BookMatchesNotice.jsx";
 const AllAccess = lazy(() =>
   import("./Ebooks/AllAccess.jsx")
@@ -887,6 +896,7 @@ function App() {
           <SaleCampaign />
         </Suspense>
       )}
+      <div className={hideNavbar ? "" : "mt-16 md:mt-0"}>
       <Suspense fallback={<RouteLoader />}>
         {!authReady ? <RouteLoader /> : <Routes>
           {/* ========================================
@@ -1169,6 +1179,10 @@ function App() {
             element={<Books />}
           />
           <Route
+            path="/books/bundle-offers"
+            element={<BundleOffers />}
+          />
+          <Route
             path="/book/all-books"
             element={<AllAccess />}
           />
@@ -1343,6 +1357,18 @@ function App() {
             path="/admin/books"
             element={requireAdmin(
               <AdminBooks />
+            )}
+          />
+          <Route
+            path="/admin/book-offers/payments"
+            element={requireAdmin(
+              <AdminOfferPayments />
+            )}
+          />
+          <Route
+            path="/admin/book-offers"
+            element={requireAdmin(
+              <AdminBookOffers />
             )}
           />
           <Route
@@ -1562,6 +1588,7 @@ function App() {
             too, so users never see (or get scrolled to) a footer-only screen. */}
         {!hideFooter && <Footer />}
       </Suspense>
+      </div>
     </div>
   );
 }

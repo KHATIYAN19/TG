@@ -4,6 +4,7 @@ import { SITE_URL, fetchAllPosts, fetchAllInterviews, fetchApi, send, toIso } fr
 const STATIC_PAGES = [
   "/",
   "/books",
+  "/books/bundle-offers",
   "/book/system-design/hld",
   "/book/system-design/lld",
   "/book/database/sql",

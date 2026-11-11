@@ -2941,7 +2941,7 @@ const ROUTES = {
   books: "/books",
   interviews: "/interviews",
   mockInterviews: "/mock-interviews",
-  mentorship: "/mentorship",
+  memories: "/memories",
   resources: "/resources",
   blogs: "/blogs",
   about: "/about",
@@ -3759,9 +3759,9 @@ const DesktopNavigation = memo(
             selected: mockActive,
           },
           {
-            title: "Mentorship",
-            path: ROUTES.mentorship,
-            selected: active(ROUTES.mentorship),
+            title: "Memories",
+            path: ROUTES.memories,
+            selected: active(ROUTES.memories),
           },
           {
             title: "Resources",

@@ -41,6 +41,7 @@ export default async function handler(req, res) {
     "",
     "## Ebooks",
     `- [All ebooks](${SITE_URL}/books)`,
+    `- [Bundle offers: buy multiple ebooks and save](${SITE_URL}/books/bundle-offers)`,
     `- [System Design HLD – 19 case studies](${SITE_URL}/book/system-design/hld)`,
     `- [Java LLD – 23 patterns, 16 case studies](${SITE_URL}/book/system-design/lld)`,
     `- [SQL & Database Interview Handbook – 26 chapters](${SITE_URL}/book/database/sql)`,
