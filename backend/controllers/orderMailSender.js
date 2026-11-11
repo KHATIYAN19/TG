@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../config/urls.js";
 import mongoose from "mongoose";
 import crypto from "crypto";
 
@@ -14,7 +15,7 @@ import {
    CONFIG
 ========================================================= */
 
-const SITE_URL = "https://www.targettrek.in";
+const SITE_URL = FRONTEND_URL;
 const BOOKS_URL = `${SITE_URL}/books`;
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 

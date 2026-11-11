@@ -1,3 +1,4 @@
+import { BACKEND_URL, FRONTEND_URL } from "../../config/urls.js";
 import crypto from "node:crypto";
 
 /*
@@ -14,7 +15,7 @@ import crypto from "node:crypto";
     {{{button}}}   call-to-action button              {{{products}}} featured books
 */
 
-export const SITE_URL = (process.env.PUBLIC_SITE_URL || "https://www.targettrek.in").replace(/\/$/, "");
+export const SITE_URL = (process.env.PUBLIC_SITE_URL || FRONTEND_URL).replace(/\/$/, "");
 
 export const escapeHtml = (value) =>
   String(value ?? "")
@@ -58,7 +59,7 @@ export const verifyUnsubscribeToken = (email, token) => {
 };
 
 export const unsubscribeUrl = (email, campaignId = "") => {
-  const base = (process.env.BACKEND_URL || SITE_URL).replace(/\/$/, "");
+  const base = BACKEND_URL;
   const query = new URLSearchParams({ e: email, t: unsubscribeToken(email), ...(campaignId ? { c: String(campaignId) } : {}) });
   return `${base}/api/mail/unsubscribe?${query}`;
 };

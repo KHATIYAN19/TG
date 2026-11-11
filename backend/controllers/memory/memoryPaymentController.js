@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../../config/urls.js";
 import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -21,7 +22,7 @@ const handler = (fn) =>
     }
   });
 
-const FRONTEND = () => String(process.env.FRONTEND_URL || "https://www.targettrek.in").replace(/\/+$/, "");
+const FRONTEND = () => FRONTEND_URL;
 const resultUrl = (orderId, status, origin) => `${origin || FRONTEND()}/memories/payment-result?order=${encodeURIComponent(orderId)}&status=${status}`;
 
 /* Where the buyer may be sent back to: the site's own address, its www / non-www twin, and localhost while developing. Anything else is ignored. */

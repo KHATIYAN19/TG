@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../config/urls.js";
 import Order from "../models/Order.js";
 import Book from "../models/Book.js";
 import EbookMailSettings from "../models/EbookMailSettings.js";
@@ -199,7 +200,7 @@ const uniqueFileName = (name, used) => {
    Email body
 ----------------------------------------------------- */
 
-const SITE_URL = "https://www.targettrek.in";
+const SITE_URL = FRONTEND_URL;
 
 const formatMoney = (amount, currency = "INR") => {
   try {

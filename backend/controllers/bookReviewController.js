@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../config/urls.js";
 // import crypto from "crypto";
 // import mongoose from "mongoose";
 
@@ -3303,8 +3304,7 @@ const generateReviewToken = () =>
   crypto.randomBytes(32).toString("hex");
 
 const getFrontendUrl = () =>
-  (process.env.FRONTEND_URL || "https://www.targettrek.in")
-    .replace(/\/$/, "");
+  FRONTEND_URL;
 
 const buildReviewUrl = (token) =>
   `${getFrontendUrl()}/review/${token}`;

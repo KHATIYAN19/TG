@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../../config/urls.js";
 /*
 |--------------------------------------------------------------------------
 | LINK CATALOG
@@ -18,7 +19,7 @@ import Book from "../../models/Book.js";
 
 export const SITE_URL =
   process.env.PUBLIC_SITE_URL ||
-  "https://www.targettrek.in";
+  FRONTEND_URL;
 
 const STATIC_PAGES = [
   ["All books", "/books"],

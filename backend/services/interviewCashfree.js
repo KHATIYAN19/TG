@@ -23,15 +23,7 @@ const CASHFREE_BASE_URL =
 const CASHFREE_API_VERSION =
   process.env.CASHFREE_API_VERSION || "2025-01-01";
 
-const FRONTEND_URL = (
-  process.env.FRONTEND_URL ||
-  "https://www.targettrek.in"
-).replace(/\/+$/, "");
-
-const BACKEND_URL = (
-  process.env.BACKEND_URL ||
-  "http://localhost:5001"
-).replace(/\/+$/, "");
+import { BACKEND_URL, FRONTEND_URL } from "../config/urls.js";
 
 const PAYMENT_RETURN_PATH =
   "/mock-interviews/payment-status";

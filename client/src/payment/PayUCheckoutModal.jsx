@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 import { trackInitiateCheckout } from "../lib/metaPixel";
 import { getAttribution } from "../lib/attribution";
 import React, {
@@ -29,8 +30,7 @@ import {
 
 
 const BASE_URL =
-  import.meta.env.VITE_BASE_URL ||
-  "https://target-trek.onrender.com";
+  API_BASE_URL;
 
 const rawPaymentGateway = String(
   import.meta.env.VITE_PAYMENT_GATEWAY || "payu"

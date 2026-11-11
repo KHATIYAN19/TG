@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 
 import React, {
   useCallback,
@@ -63,8 +64,7 @@ import {
 ========================================================== */
 
 const BASE_URL = (
-  import.meta.env.VITE_BASE_URL ||
-  "https://target-trek.onrender.com"
+  API_BASE_URL
 ).replace(/\/+$/, "");
 
 const ACCESS_API =

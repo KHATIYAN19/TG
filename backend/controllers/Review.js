@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../config/urls.js";
 import Review from '../models/Review.js';
 import ReviewToken from '../models/ReviewToken.js';
 import mongoose from 'mongoose';
@@ -11,7 +12,7 @@ import  sendMail  from '../utils/MailSender.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'https://targettrek.in';
+const FRONTEND_BASE_URL = FRONTEND_URL;
 
 const emailSchema = z.string().email({ message: 'Invalid email address provided.' });
 

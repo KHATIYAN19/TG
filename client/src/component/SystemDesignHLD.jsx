@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { trackViewContent } from "../lib/metaPixel.js";
 import { Helmet } from "react-helmet-async";
@@ -58,7 +59,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 const SITE_URL = "https://www.targettrek.in";
 const SITE_NAME = "Target Trek";
-const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
+const BASE_URL = API_BASE_URL;
 const THEME_STORAGE_KEY = "theme";
 const LLD_REDIRECT_URL = "/book/system-design/lld";
 const COMBO_REDIRECT_URL = "/book/system-design/hld-lld/combo";

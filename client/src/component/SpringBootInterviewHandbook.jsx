@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 
 import React, {
   useCallback,
@@ -66,8 +67,7 @@ import { trackViewContent } from "../lib/metaPixel.js";
 ========================================================== */
 
 const BASE_URL = (
-  import.meta.env.VITE_BASE_URL ||
-  "http://localhost:5001"
+  API_BASE_URL
 ).replace(/\/+$/, "");
 
 const SITE_URL = "https://www.targettrek.in";

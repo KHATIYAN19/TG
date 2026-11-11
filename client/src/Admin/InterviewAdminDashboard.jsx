@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 // import React, { useCallback, useEffect, useMemo, useState } from "react";
 // import { AnimatePresence, motion } from "framer-motion";
 // import {
@@ -8,7 +9,7 @@
 //   CalendarPlus2, ListChecks, FileText, Copy, CircleCheck, RotateCcw, SlidersHorizontal, CalendarRange, XCircle,
 // } from "lucide-react";
 
-// const BASE_URL = (import.meta.env.VITE_BASE_URL || "http://localhost:5001").replace(/\/$/, "");
+// const BASE_URL = (API_BASE_URL || "").replace(/\/$/, "");
 // const API = `${BASE_URL}/api/interviews/admin`;
 // const TOPICS = ["DSA", "LLD", "HLD", "GENAI", "PROJECTS"];
 // const EMPTY_ROW = () => ({ start: "10:00", end: "11:00", price: "599", mrp: "999" });
@@ -248,7 +249,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { CalendarDays, Plus, Search, Edit3, Trash2, Ban, CheckCircle2, Clock3, Wallet, Users, X, ChevronLeft, ChevronRight, ExternalLink, Filter, Eye, Video, Mail, Phone, BriefcaseBusiness, AlertTriangle, LoaderCircle, ArrowUpRight, IndianRupee, ShieldCheck, CalendarPlus2, ListChecks, FileText, Copy, CircleCheck, RotateCcw, SlidersHorizontal, CalendarRange, XCircle, } from "lucide-react";
-const BASE_URL = (import.meta.env.VITE_BASE_URL || "http://localhost:5001").replace(/\/+$/, "");
+const BASE_URL = (API_BASE_URL || "").replace(/\/+$/, "");
 const API = `${BASE_URL}/api/interviews/admin`;
 const TOPICS = ["DSA", "LLD", "HLD", "GENAI", "PROJECTS"];
 const EMPTY_ROW = () => ({ start: "10:00", end: "11:00", price: "599", mrp: "999" });

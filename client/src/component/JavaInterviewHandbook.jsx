@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 
 import React, {
   useCallback,
@@ -61,7 +62,7 @@ import { trackViewContent } from "../lib/metaPixel.js";
 ========================================================== */
 
 const BASE_URL = (
-  import.meta.env.VITE_BASE_URL || "http://localhost:5001"
+  API_BASE_URL
 ).replace(/\/+$/, "");
 
 const JAVA_BOOK_REDIRECT_URL = "/book/java-interview-handbook";

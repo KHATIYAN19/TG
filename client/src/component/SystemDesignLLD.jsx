@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
@@ -41,7 +42,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
-const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
+const BASE_URL = API_BASE_URL;
 // Title <= 60 chars and description <= 160 chars so SERP snippets are not truncated.
 const SEO_TITLE = "Java LLD Book: 23 Patterns & 16 Case Studies | Target Trek";
 const SEO_DESCRIPTION =

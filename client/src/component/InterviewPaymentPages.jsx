@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 
 import React, {
   useCallback,
@@ -44,8 +45,7 @@ import {
 ========================================================== */
 
 const BASE_URL = (
-  import.meta.env.VITE_BASE_URL ||
-  "http://localhost:5001"
+  API_BASE_URL
 ).replace(/\/+$/, "");
 
 const INTERVIEW_API =

@@ -1,3 +1,4 @@
+import { getFrontendUrl } from "../../config/urls.js";
 /*
   TARGET TREK EMAIL TEMPLATES
   ===========================
@@ -60,7 +61,7 @@ const FONT = "Arial,Helvetica,sans-serif";
 const MONO = "'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace";
 
 export const supportEmail = () => process.env.SUPPORT_EMAIL || "supporttargettrek@gmail.com";
-export const siteUrl = () => String(process.env.FRONTEND_URL || "https://www.targettrek.in").replace(/\/+$/, "");
+export const siteUrl = () => getFrontendUrl();
 
 const SUPPORT_SUBJECT = "Help with Prep Buddy Arena";
 const supportLink = () => `mailto:${supportEmail()}?subject=${encodeURIComponent(SUPPORT_SUBJECT)}`;

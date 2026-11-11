@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
@@ -35,7 +36,7 @@ import {
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
-const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
+const BASE_URL = API_BASE_URL;
 const PAGE_PATH = "/book/database/sql";
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 const THEME_KEY = "theme";

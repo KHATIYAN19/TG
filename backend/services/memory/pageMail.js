@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../../config/urls.js";
 import MemoryPage from "../../models/memory/MemoryPage.js";
 import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
 import sendMail from "../../utils/MailSender.js";
@@ -53,7 +54,7 @@ export const buildPageMail = ({ theme, style, senderName, recipientName, url, pi
     ...(pin ? ["", `It's private. The PIN to open it is: ${pin}`, "Please keep the PIN to yourself."] : pinHidden ? ["", `It's private. ${sender} will give you the PIN to open it.`] : []),
     ...(until ? ["", until] : []),
     "", "—", why, "",
-    "Memories by Target Trek · https://www.targettrek.in/memories",
+    `Memories by Target Trek · ${FRONTEND_URL}/memories`,
   ].join("\n");
 
   const bodyBg = look.bg;
@@ -84,7 +85,7 @@ export const buildPageMail = ({ theme, style, senderName, recipientName, url, pi
           ${until ? `<tr><td style="padding:6px 34px 26px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:${look.muted};text-align:center;">${esc(until)}</td></tr>` : `<tr><td style="height:22px;font-size:0;line-height:0;">&nbsp;</td></tr>`}
         </table>
       </td></tr>
-      <tr><td style="padding:20px 18px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.65;color:${look.muted};text-align:center;">${esc(why)}<br><br>Memories by Target Trek &middot; <a href="https://www.targettrek.in/memories" style="color:${look.muted};">www.targettrek.in/memories</a></td></tr>
+      <tr><td style="padding:20px 18px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.65;color:${look.muted};text-align:center;">${esc(why)}<br><br>Memories by Target Trek &middot; <a href="${FRONTEND_URL}/memories" style="color:${look.muted};">www.targettrek.in/memories</a></td></tr>
     </table>
   </td></tr>
 </table>

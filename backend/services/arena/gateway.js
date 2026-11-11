@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../../config/urls.js";
 import axios from "axios";
 
 import {
@@ -30,7 +31,6 @@ import { ArenaError } from "./errors.js";
     refund({ entry, amountPaise })-> refundId
 */
 
-const FRONTEND_URL = (process.env.FRONTEND_URL || "https://www.targettrek.in").replace(/\/$/, "");
 
 const rupees = (paise) => Number((paise / 100).toFixed(2));
 

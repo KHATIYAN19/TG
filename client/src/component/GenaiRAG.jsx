@@ -1,3 +1,4 @@
+import API_BASE_URL from "../utils/Url";
 
 import React, {
   useCallback,
@@ -60,8 +61,7 @@ const PAGE_PATH = "/book/genai/rag";
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 
 const BASE_URL =
-  import.meta.env.VITE_BASE_URL ||
-  "http://localhost:5001";
+  API_BASE_URL;
 
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 

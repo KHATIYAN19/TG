@@ -1,3 +1,4 @@
+import { BACKEND_URL } from "../../../config/urls.js";
 import razorpay from "./razorpay.js";
 import cashfree from "./cashfree.js";
 import payu from "./payu.js";
@@ -57,7 +58,7 @@ export const pickGateway = (settings, requested) => {
 
 /** Public URLs of this backend for one order. `ref` lets the return trip find the order again. */
 export const publicUrls = (orderId) => {
-  const base = String(process.env.BACKEND_URL || "").replace(/\/+$/, "");
+  const base = BACKEND_URL;
   return {
     base,
     callback: (id) => `${base}/api/memories/payments/callback/${id}?ref=${orderId}`,

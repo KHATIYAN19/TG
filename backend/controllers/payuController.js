@@ -34,13 +34,7 @@ import {
 } from "../controllers/couponController.js";
 
 
-const FRONTEND_URL =
-  process.env.FRONTEND_URL ||
-  "https://targettrek.in";
-
-const BACKEND_URL =
-  process.env.BACKEND_URL ||
-  "https://target-trek.onrender.com";
+import { BACKEND_URL, FRONTEND_URL } from "../config/urls.js";
 
 const ACCESS_DURATION =
   24 * 60 * 60 * 1000;

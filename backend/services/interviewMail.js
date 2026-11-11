@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../config/urls.js";
 
 import sendMail from "../utils/MailSender.js";
 
@@ -25,8 +26,7 @@ import sendMail from "../utils/MailSender.js";
 
 const BRAND = "Target Trek";
 
-const SITE_URL =
-  "https://www.targettrek.in";
+const SITE_URL = FRONTEND_URL;
 
 const SUPPORT_EMAIL =
   "supporttargettrek@gmail.com";

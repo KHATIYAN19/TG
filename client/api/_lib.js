@@ -8,7 +8,7 @@ export const LOGO_URL = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
 export const API_URL = (
   process.env.BLOG_API_URL ||
   process.env.VITE_BASE_URL ||
-  "https://target-trek.onrender.com"
+  "https://tg-540700086743.asia-south2.run.app"
 ).replace(/\/+$/, "");
 
 export const esc = (v = "") =>

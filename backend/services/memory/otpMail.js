@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../../config/urls.js";
 /*
   MEMORIES: the verification-code email (sign-up, and forgot password) sent from the Memories sign-in screens.
   It has its own look (warm peach and rose, the Memories heart) and its own wording, separate from the Prep Buddy Arena
@@ -7,7 +8,7 @@
   Reply-To a real inbox (set by the caller), no images or tracking links.
 */
 const BRAND = "Memories";
-const SITE = process.env.MEMORIES_SITE_URL || "https://www.targettrek.in/memories";
+const SITE = process.env.MEMORIES_SITE_URL || `${FRONTEND_URL}/memories`;
 const support = () => process.env.SUPPORT_EMAIL || "supporttargettrek@gmail.com";
 
 const C = { bg: "#fff7f3", card: "#ffffff", ink: "#3a1530", muted: "#7a5370", line: "#f6dfe3", accent: "#e8365d", accent2: "#ff8a4c", codeBg: "#fff1ec", warnBg: "#fff8e1", warnLine: "#f5d98a", warnInk: "#7a5a00" };

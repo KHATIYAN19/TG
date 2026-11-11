@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../config/urls.js";
 import mongoose from "mongoose";
 
 import Book from "../models/Book.js";
@@ -35,10 +36,6 @@ import {
 import {
   validateCouponForPayment,
 } from "./couponController.js";
-
-const FRONTEND_URL =
-  process.env.FRONTEND_URL ||
-  "https://www.targettrek.in";
 
 const ACCESS_DURATION =
   24 * 60 * 60 * 1000;

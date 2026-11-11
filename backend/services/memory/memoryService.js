@@ -1,3 +1,4 @@
+import { FRONTEND_URL } from "../../config/urls.js";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -146,7 +147,7 @@ export const decryptPin = (blob) => {
 export const checkPin = (pin, hash) => (hash ? bcrypt.compare(String(pin), hash) : false);
 
 export const shareUrl = (slug) =>
-  `${String(process.env.FRONTEND_URL || "https://www.targettrek.in").replace(/\/+$/, "")}/memories/${slug}`;
+  `${FRONTEND_URL}/memories/${slug}`;
 
 /* Page-unlock tokens use their own secret + audience so they can never act as a login token. */
 const pageSecret = () => `${process.env.JWT_SECRET}:memory-page`;
