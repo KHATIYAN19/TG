@@ -9,6 +9,7 @@ import { BUILDERS, emptyData, galleryFrom, toForm, toPayload } from "./builderCo
 import MediaManager from "./MediaManager";
 import StagedMedia from "./StagedMedia";
 import PinChip from "./PinChip";
+import SharePanel from "./SharePanel";
 import { useMedia } from "./chrome";
 import "./builder.css";
 import { EditorFields } from "./templates/birthday/SenderEditor";
@@ -109,6 +110,7 @@ function Created({ template, page, pin, credits, edited, limits, files, email, o
         <h1 className="mt-3 text-2xl font-bold text-[#3a1530]">{edited ? "Changes saved" : "Your page is created!"}</h1>
         <p className="mt-1 text-sm text-[#7a5370]">&ldquo;{page.title}&rdquo; is in My pages.{edited ? " Your changes are live." : <> <b>1 credit used</b>, {credits} left.</>}</p>
         {!edited && page.expiresAt && <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">⏳ Online for {page.daysLeft} days, until {new Date(page.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>}
+        {!edited && page.url && <SharePanel title={page.title} url={page.url} pin={pin} />}
         {email && <EmailResult pageId={page.id} email={email} sendsLeft={page.emailSendsLeft} hasPin={email.includesPin ?? Boolean(pin)} pinPrivate={page.visibility === "private"} />}
         {pin && (
           <div className="mx-auto mt-5 max-w-xs rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">

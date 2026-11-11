@@ -9,6 +9,7 @@ import { changePin, closePage, deletePage, listPages, regenerateLink, reopenPage
 import { META } from "./Showcase";
 import { Loading } from "./AppShell";
 import PinChip from "./PinChip";
+import { shareMessage } from "./SharePanel";
 import { useLifetimeDays } from "./legal/useLifetime";
 import { Loader2 } from "lucide-react";
 import { Button, cx } from "./ui";
@@ -156,7 +157,7 @@ export default function MyPages({ credits, emailEnabled = true }) {
     try { await navigator.clipboard.writeText(p.url); setCopied(p.id); setTimeout(() => setCopied(""), 1800); } catch { flash("Couldn't copy. Select the link and copy it."); }
   };
   const share = async (p) => {
-    if (navigator.share) { try { await navigator.share({ title: p.title, url: p.url }); return; } catch { /* cancelled */ } }
+    if (navigator.share) { try { await navigator.share({ title: p.title, text: shareMessage(p.title, p.url, p.visibility === "private" ? p.pin : "") }); return; } catch { /* cancelled */ } }
     copy(p);
   };
 
@@ -165,7 +166,7 @@ export default function MyPages({ credits, emailEnabled = true }) {
   const d = dialog?.page;
 
   return (
-    <div className="py-6 lg:py-8">
+    <div className="min-w-0 max-w-full overflow-x-hidden py-6 lg:py-8">
       <div className="flex items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#3a1530] lg:text-3xl">My pages</h1>
@@ -196,13 +197,13 @@ export default function MyPages({ credits, emailEnabled = true }) {
           {within ? <Button type="button" onClick={() => setWithin("")} className="mt-5">Clear the filter</Button> : <Button as={Link} to="/memories/app" className="mt-5">Choose a template</Button>}
         </div>
       ) : (
-        <ul className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="mt-5 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pages.map((p) => {
             const look = (META[p.theme]?.themes || []).find((x) => x.id === p.style);
             const closed = p.status === "closed";
             const blocked = p.status === "blocked";
             return (
-              <li key={p.id} className={cx("flex flex-col rounded-3xl border bg-white p-4 shadow-sm transition hover:shadow-md hover:shadow-rose-100", closed || blocked ? "border-amber-200" : "border-rose-100")}>
+              <li key={p.id} className={cx("flex min-w-0 max-w-full flex-col rounded-3xl border bg-white p-4 shadow-sm transition hover:shadow-md hover:shadow-rose-100", closed || blocked ? "border-amber-200" : "border-rose-100")}>
                 <div className="flex items-start gap-3">
                   <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-2xl" aria-hidden>{META[p.theme]?.emoji || "💌"}</span>
                   <div className="min-w-0 flex-1">
@@ -236,7 +237,7 @@ export default function MyPages({ credits, emailEnabled = true }) {
 
                 {p.visibility === "private" && <PinChip pin={p.pin} onNew={() => { setSheet(null); setDialog({ kind: "pin", page: p }); }} className="mt-2" />}
 
-                <div className="mt-auto grid grid-cols-3 gap-2 pt-3">
+                <div className="mt-auto grid grid-cols-3 gap-1.5 pt-3 sm:gap-2">
                   <Button as={Link} to={`/memories/app/pages/${p.id}/activity`} size="sm"><Activity className="h-4 w-4 shrink-0" aria-hidden /> Activity</Button>
                   <Button as={Link} to={`/memories/app/pages/${p.id}/preview`} variant="soft" size="sm"><Eye className="h-4 w-4 shrink-0" aria-hidden /> Preview</Button>
                   <Button as={Link} to={`/memories/app/pages/${p.id}/edit`} variant="soft" size="sm"><Pencil className="h-4 w-4 shrink-0" aria-hidden /> Edit</Button>

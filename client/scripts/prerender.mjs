@@ -78,6 +78,9 @@ const vite = await createServer({
   appType: "custom",
   server: { middlewareMode: true },
   ssr: { noExternal: ["react-helmet-async"] },
+  // SSR only: skip the browser dependency scan, otherwise closing the server
+  // cancels esbuild mid-scan and logs "[ERROR] The build was canceled".
+  optimizeDeps: { noDiscovery: true, include: [], entries: [] },
 });
 
 let ok = 0;
