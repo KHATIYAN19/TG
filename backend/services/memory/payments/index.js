@@ -1,7 +1,6 @@
 import { BACKEND_URL } from "../../../config/urls.js";
-import razorpay from "./razorpay.js";
-import cashfree from "./cashfree.js";
-import payu from "./payu.js";
+import { cashfreeAdapter as cashfree, razorpayAdapter as razorpay, payuAdapter as payu } from "./processorAdapters.js";
+import { resolveGatewayId } from "../../payments/config.js";
 import mock from "./mock.js";
 
 /*
@@ -33,13 +32,13 @@ export const getGateway = (id) => byId.get(String(id));
 
 /*
   WHICH GATEWAY IS USED
-  The preferred gateway comes from MEMORY_PAYMENT_GATEWAY (cashfree | razorpay | payu | mock), default cashfree.
+  The preferred gateway comes from MEMORIES_PAYMENT_GATEWAY / PAYMENT_GATEWAY (cashfree | razorpay | payu), default cashfree; test or live follows the keys (CASHFREE_ENV, PAYU_MODE, rzp_ key).
   - If it has its keys set, it is always offered and is the default, even when the admin's saved list or default says otherwise.
   - Other configured gateways are offered only if the admin switched them on in Settings (until then, every real one is).
   - If the preferred gateway has no keys, the admin's default, then the first available one, is used.
 */
 const DEFAULT_ENABLED = ["cashfree", "razorpay", "payu"]; // the mock stays opt-in
-export const preferredGatewayId = () => String(process.env.MEMORY_PAYMENT_GATEWAY || "cashfree").trim().toLowerCase();
+export const preferredGatewayId = () => resolveGatewayId("MEMORIES");
 
 /** Gateways a user can actually pay with: configured AND switched on by the admin (the preferred one is always on), preferred first. */
 export const activeGateways = (settings) => {

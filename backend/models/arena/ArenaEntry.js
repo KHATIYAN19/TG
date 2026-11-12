@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { GATEWAY_IDS } from "../../services/payments/config.js";
 
 const { Schema } = mongoose;
 
@@ -66,7 +67,8 @@ const entrySchema = new Schema(
     payment: {
       _id: false,
       // "admin" = a complimentary entry granted by the team; "pass" = matches that came with a purchased book/pack (nothing paid in the arena)
-      gateway: { type: String, enum: ["cashfree", "razorpay", "admin", "pass"] },
+      // every gateway the payment processor knows (so a new gateway needs no change here), plus the two non-gateway sources
+      gateway: { type: String, enum: [...GATEWAY_IDS, "admin", "pass"] },
       orderId: { type: String },
       paymentId: { type: String, default: null },
     },

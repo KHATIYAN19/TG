@@ -73,7 +73,7 @@ const roundMoney = (value) =>
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Same rules the live checkout uses (see resolveAffiliate in cashfreeController). */
+/** Same rules the live checkout uses (see resolveAffiliate in services/books/bookOrderHelpers.js). */
 const calculateCommission = ({ type, value, amount, currency }) => {
   if (!["percentage", "fixed"].includes(type)) {
     return { error: "invalid commission type" };

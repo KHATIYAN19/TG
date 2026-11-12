@@ -22,6 +22,7 @@ router.post("/google", arenaSignupLimiter, googleAuth);
 router.post("/google/complete", arenaSignupLimiter, googleComplete);
 router.post("/password/forgot", arenaPasswordLimiter, forgotPassword);
 router.post("/password/reset", arenaPasswordLimiter, resetPassword);
+router.all("/payments/return", pay.paymentReturn); // gateway -> browser return (Cashfree GET, PayU POST)
 
 /* ---------- everything below needs a signed-in member ---------- */
 router.use(auth);

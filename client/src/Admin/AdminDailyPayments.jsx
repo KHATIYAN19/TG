@@ -21,7 +21,8 @@ import {
   Copy,
   CreditCard,
   Download,
-  Eye,
+  ChevronDown,
+  ChevronUp,
   Filter,
   IndianRupee,
   Mail,
@@ -36,6 +37,10 @@ import {
   X,
   XCircle,
   RotateCcw,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Globe,
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url.js";
@@ -179,6 +184,173 @@ const gatewayOf = (p) =>
   p?.payment?.gateway ||
   p?.payment?.provider ||
   "—";
+
+/* ============================================================
+   BROWSER / DEVICE (parsed from the order's stored user agent)
+============================================================ */
+
+const clean = (value) => {
+  const text = String(value ?? "").trim();
+  return text && text !== "null" && text !== "undefined" ? text : "";
+};
+
+const parseUserAgent = (ua) => {
+  const s = clean(ua);
+
+  if (!s) {
+    return {
+      known: false,
+      browser: "Unknown",
+      browserVersion: "",
+      os: "Unknown",
+      device: "Unknown",
+      type: "unknown",
+    };
+  }
+
+  let browser = "Other";
+  let m;
+
+  if ((m = s.match(/(?:EdgA|EdgiOS|Edg|Edge)\/([\d.]+)/))) browser = "Edge";
+  else if ((m = s.match(/(?:OPR|Opera|OPiOS)\/([\d.]+)/))) browser = "Opera";
+  else if ((m = s.match(/SamsungBrowser\/([\d.]+)/))) browser = "Samsung Internet";
+  else if ((m = s.match(/(?:FxiOS|Firefox)\/([\d.]+)/))) browser = "Firefox";
+  else if ((m = s.match(/(?:CriOS|Chrome)\/([\d.]+)/))) browser = "Chrome";
+  else if (/Safari\//.test(s) && (m = s.match(/Version\/([\d.]+)/))) browser = "Safari";
+  else if (/MSIE |Trident\//.test(s)) {
+    browser = "Internet Explorer";
+    m = s.match(/(?:MSIE |rv:)([\d.]+)/);
+  }
+
+  if (/FBAN|FBAV/.test(s)) browser = "Facebook App";
+  else if (/Instagram/.test(s)) browser = "Instagram App";
+
+  const browserVersion = m ? m[1].split(".")[0] : "";
+
+  let os = "Unknown";
+
+  if (/Windows NT/.test(s)) os = "Windows";
+  else if (/Android/.test(s)) os = "Android";
+  else if (/iPhone|iPad|iPod/.test(s)) os = "iOS";
+  else if (/Mac OS X|Macintosh/.test(s)) os = "macOS";
+  else if (/CrOS/.test(s)) os = "ChromeOS";
+  else if (/Linux/.test(s)) os = "Linux";
+
+  let type = "desktop";
+
+  if (/iPad|Tablet/.test(s) || (/Android/.test(s) && !/Mobile/.test(s))) {
+    type = "tablet";
+  } else if (/Mobi|iPhone|iPod|Android/.test(s)) {
+    type = "mobile";
+  }
+
+  let device = type === "desktop" ? "Desktop" : type === "tablet" ? "Tablet" : "Mobile";
+
+  if (/iPhone/.test(s)) device = "iPhone";
+  else if (/iPad/.test(s)) device = "iPad";
+  else if (/Android/.test(s)) {
+    const model = s.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build|[;)])/);
+    const name = model ? clean(model[1]) : "";
+    if (name && !/^(Mobile|wv|K)$/i.test(name)) device = name;
+  }
+
+  return { known: true, browser, browserVersion, os, device, type };
+};
+
+const deviceOf = (p) => parseUserAgent(p?.metadata?.userAgent);
+
+const attributionOf = (p) => {
+  const metadata = p?.metadata || {};
+  const a = metadata.attribution || {};
+
+  return {
+    platform: clean(a.platform),
+    utmSource: clean(a.utmSource) || clean(metadata.utmSource),
+    utmMedium: clean(a.utmMedium) || clean(metadata.utmMedium),
+    utmCampaign: clean(a.utmCampaign) || clean(metadata.utmCampaign),
+    utmContent: clean(a.utmContent),
+    utmTerm: clean(a.utmTerm),
+    campaignId: clean(a.campaignId),
+    adsetId: clean(a.adsetId),
+    adId: clean(a.adId),
+    fbclid: clean(a.fbclid),
+    fbc: clean(a.fbc),
+    fbp: clean(a.fbp),
+    gclid: clean(a.gclid),
+    gbraid: clean(a.gbraid),
+    wbraid: clean(a.wbraid),
+    landingPath: clean(a.landingPath),
+    touchedAt: a.touchedAt ? fmtDate(a.touchedAt) : "",
+    referrer: clean(metadata.referrer),
+    ipAddress: clean(metadata.ipAddress),
+  };
+};
+
+const DeviceIcon = ({ type, size = 12 }) =>
+  type === "mobile" ? (
+    <Smartphone size={size} />
+  ) : type === "tablet" ? (
+    <Tablet size={size} />
+  ) : type === "desktop" ? (
+    <Monitor size={size} />
+  ) : (
+    <Globe size={size} />
+  );
+
+function DeviceChip({ payment, dark }) {
+  const d = deviceOf(payment);
+
+  return (
+    <span
+      title={clean(payment?.metadata?.userAgent) || "No user agent recorded"}
+      className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold ${
+        dark
+          ? "border-slate-700 bg-slate-800/60 text-slate-200"
+          : "border-orange-100 bg-orange-50/60 text-slate-700"
+      }`}
+    >
+      <DeviceIcon type={d.type} />
+      <span className="truncate">
+        {d.known
+          ? `${d.browser}${d.browserVersion ? ` ${d.browserVersion}` : ""} · ${d.device}`
+          : "Device unknown"}
+      </span>
+    </span>
+  );
+}
+
+function JsonBlock({ label, value, dark }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      className={`rounded-xl border ${
+        dark ? "border-slate-800" : "border-slate-200"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-bold"
+      >
+        <span>{label}</span>
+        <span className="text-orange-500">
+          {value ? (open ? "Hide" : "View") : "None"}
+        </span>
+      </button>
+
+      {open && value ? (
+        <pre
+          className={`max-h-72 overflow-auto whitespace-pre-wrap break-all border-t p-3 text-[11px] leading-5 ${
+            dark ? "border-slate-800" : "border-slate-200"
+          }`}
+        >
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      ) : null}
+    </div>
+  );
+}
 
 const copyText = async (value) => {
   if (!value || !navigator.clipboard) return;
@@ -534,8 +706,10 @@ function Modal({ title, subtitle, onClose, dark, children }) {
    PAYMENT DETAILS MODAL
 ============================================================ */
 
-function PaymentDetails({ payment, dark, onClose, onDelete }) {
+function PaymentDetails({ payment, dark, onDelete }) {
   const currency = currencyOf(payment);
+  const dev = deviceOf(payment);
+  const attr = attributionOf(payment);
 
   const groups = [
     {
@@ -545,8 +719,21 @@ function PaymentDetails({ payment, dark, onClose, onDelete }) {
         ["Database ID", payment._id, true],
         ["Book ID", payment.bookId, true],
         ["Order Status", payment.orderStatus],
+        ["Created By", payment.createdBy],
+        ["Updated By", payment.updatedBy],
         ["Created At", fmtDate(payment.createdAt)],
         ["Updated At", fmtDate(payment.updatedAt)],
+      ],
+    },
+    {
+      title: "Browser & Device",
+      rows: [
+        ["Browser", dev.known ? `${dev.browser}${dev.browserVersion ? ` ${dev.browserVersion}` : ""}` : null],
+        ["Device", dev.known ? dev.device : null],
+        ["Device Type", dev.known ? dev.type : null],
+        ["Operating System", dev.known ? dev.os : null],
+        ["IP Address", attr.ipAddress, true],
+        ["User Agent", clean(payment.metadata?.userAgent), true],
       ],
     },
     {
@@ -599,6 +786,38 @@ function PaymentDetails({ payment, dark, onClose, onDelete }) {
         ["Paid At", fmtDate(payment.payment?.paidAt)],
         ["Failed At", fmtDate(payment.payment?.failedAt)],
         ["Failure Reason", payment.payment?.failureReason],
+        ["Callback Status", payment.payment?.callbackResponse?.status],
+        [
+          "Callback Unmapped Status",
+          payment.payment?.callbackResponse?.unmappedstatus,
+        ],
+        [
+          "Verification Status",
+          payment.payment?.verificationResponse?.status,
+        ],
+      ],
+    },
+    {
+      title: "Traffic Source & Attribution",
+      rows: [
+        ["Platform", attr.platform],
+        ["UTM Source", attr.utmSource, true],
+        ["UTM Medium", attr.utmMedium, true],
+        ["UTM Campaign", attr.utmCampaign, true],
+        ["UTM Content", attr.utmContent, true],
+        ["UTM Term", attr.utmTerm, true],
+        ["Campaign ID", attr.campaignId, true],
+        ["Ad Set ID", attr.adsetId, true],
+        ["Ad ID", attr.adId, true],
+        ["fbclid", attr.fbclid, true],
+        ["fbc", attr.fbc, true],
+        ["fbp", attr.fbp, true],
+        ["gclid", attr.gclid, true],
+        ["gbraid", attr.gbraid, true],
+        ["wbraid", attr.wbraid, true],
+        ["Landing Page", attr.landingPath, true],
+        ["Referrer", attr.referrer, true],
+        ["First Touch", attr.touchedAt],
       ],
     },
     {
@@ -645,6 +864,8 @@ function PaymentDetails({ payment, dark, onClose, onDelete }) {
           money(payment.refund?.remainingAmount, currency),
         ],
         ["Refund Reason", payment.refund?.reason],
+        ["Requested At", fmtDate(payment.refund?.requestedAt)],
+        ["Processed At", fmtDate(payment.refund?.processedAt)],
         ["Refunded At", fmtDate(payment.refund?.refundedAt)],
       ],
     },
@@ -652,6 +873,9 @@ function PaymentDetails({ payment, dark, onClose, onDelete }) {
       title: "Access & Verification",
       rows: [
         ["Access Revoked", payment.access?.revoked],
+        ["Revoked At", fmtDate(payment.access?.revokedAt)],
+        ["Access Generated", fmtDate(payment.access?.generatedAt)],
+        ["Access Expires", fmtDate(payment.access?.expiresAt)],
         ["Access Count", payment.access?.accessCount],
         [
           "Last Accessed",
@@ -666,6 +890,14 @@ function PaymentDetails({ payment, dark, onClose, onDelete }) {
           "Amount Verified",
           payment.verification?.amountVerified,
         ],
+        ["Verified At", fmtDate(payment.verification?.verifiedAt)],
+      ],
+    },
+    {
+      title: "Ebook Email",
+      rows: [
+        ["Status", payment.ebookEmail?.status],
+        ["Last Error", payment.ebookEmail?.lastError],
       ],
     },
     {
@@ -685,83 +917,79 @@ function PaymentDetails({ payment, dark, onClose, onDelete }) {
     },
   ];
 
+  const wide = new Set([
+    "Payment & Gateway",
+    "Traffic Source & Attribution",
+  ]);
+
+  const card = dark
+    ? "border-slate-800 bg-slate-900/60"
+    : "border-orange-100 bg-white";
+
   return (
-    <Modal
-      title="Transaction Details"
-      subtitle={payment.orderId}
-      dark={dark}
-      onClose={onClose}
+    <div
+      className={`space-y-4 p-4 sm:p-5 ${
+        dark ? "bg-slate-950/40" : "bg-orange-50/40"
+      }`}
     >
-      <div
-        className={`mb-5 rounded-2xl border p-5 ${
-          dark
-            ? "border-orange-500/25 bg-orange-500/5"
-            : "border-orange-200 bg-orange-50"
-        }`}
-      >
-        <p className={`text-xs ${dark ? "text-slate-400" : "text-slate-500"}`}>
-          Payment Amount
-        </p>
-
-        <p
-          className={`mt-2 text-3xl font-black ${
-            dark ? "text-white" : "text-slate-900"
-          }`}
-        >
-          {money(amountOf(payment), currency)}
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <StatusBadge status={statusOf(payment)} dark={dark} />
-          <SourceBadge
-            code={affiliateCode(payment)}
-            dark={dark}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {groups.map((group) => (
-          <div key={group.title}>
-            <h3 className="mb-2 text-sm font-extrabold text-orange-500">
+          <section
+            key={group.title}
+            className={`rounded-2xl border p-4 ${card} ${
+              wide.has(group.title) ? "lg:col-span-3" : ""
+            }`}
+          >
+            <h3 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-orange-500">
               {group.title}
             </h3>
 
-            {group.rows.map(([label, value, copy]) => (
-              <Detail
-                key={label}
-                label={label}
-                value={value}
-                copy={copy}
-                dark={dark}
-              />
-            ))}
-          </div>
+            <div
+              className={
+                wide.has(group.title)
+                  ? "grid grid-cols-1 gap-x-8 md:grid-cols-2 xl:grid-cols-3"
+                  : ""
+              }
+            >
+              {group.rows.map(([label, value, copy]) => (
+                <Detail
+                  key={label}
+                  label={label}
+                  value={value}
+                  copy={copy}
+                  dark={dark}
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <JsonBlock
+          label="Gateway Callback Response"
+          value={payment.payment?.callbackResponse}
+          dark={dark}
+        />
+
+        <JsonBlock
+          label="Gateway Verification Response"
+          value={payment.payment?.verificationResponse}
+          dark={dark}
+        />
+      </div>
+
+      <div className="flex justify-end">
         <button
           type="button"
-          onClick={() => {
-            onClose();
-            onDelete(payment);
-          }}
-          className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-500"
+          onClick={() => onDelete(payment)}
+          className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs font-bold text-red-500"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
           Delete Order
         </button>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-xl bg-orange-600 px-4 py-3 text-xs font-bold text-white"
-        >
-          Close
-        </button>
       </div>
-    </Modal>
+    </div>
   );
 }
 
@@ -900,7 +1128,9 @@ export default function AdminDailyPayments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const toggleExpanded = (id) =>
+    setExpandedId((cur) => (cur === id ? null : id));
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -1077,7 +1307,7 @@ export default function AdminDailyPayments() {
         );
       }
 
-      setSelectedPayment(null);
+      setExpandedId(null);
       setDeleteTarget(null);
 
       setNotice(
@@ -1214,6 +1444,9 @@ export default function AdminDailyPayments() {
         affiliateCode(p),
         p.coupon?.code,
         p.payment?.transactionId,
+        deviceOf(p).browser,
+        deviceOf(p).device,
+        attributionOf(p).utmCampaign,
       ];
 
       return values
@@ -1244,6 +1477,13 @@ export default function AdminDailyPayments() {
       "Order Status",
       "Gateway",
       "Payment Method",
+      "Browser",
+      "Device",
+      "OS",
+      "IP Address",
+      "UTM Source",
+      "UTM Medium",
+      "UTM Campaign",
       "Revenue Source",
       "Referral Code",
       "Coupon",
@@ -1266,6 +1506,13 @@ export default function AdminDailyPayments() {
       p.orderStatus,
       gatewayOf(p),
       methodOf(p),
+      deviceOf(p).browser,
+      deviceOf(p).device,
+      deviceOf(p).os,
+      attributionOf(p).ipAddress,
+      attributionOf(p).utmSource,
+      attributionOf(p).utmMedium,
+      attributionOf(p).utmCampaign,
       sourceOf(p),
       affiliateCode(p),
       p.coupon?.code,
@@ -2040,7 +2287,7 @@ export default function AdminDailyPayments() {
                     {/* DESKTOP */}
 
                     <div className="hidden overflow-x-auto lg:block">
-                      <table className="w-full min-w-[1150px] border-collapse text-left">
+                      <table className="w-full min-w-[1350px] border-collapse text-left">
                         <thead
                           className={
                             dark
@@ -2056,6 +2303,7 @@ export default function AdminDailyPayments() {
                               "Amount / Method",
                               "Payment",
                               "Sales Source",
+                              "Browser / Device",
                               "Coupon",
                               "Actions",
                             ].map((heading) => (
@@ -2071,8 +2319,8 @@ export default function AdminDailyPayments() {
 
                         <tbody>
                           {filteredPayments.map((p) => (
+                            <React.Fragment key={p._id}>
                             <tr
-                              key={p._id}
                               className={`border-t ${c.border} ${c.hover}`}
                             >
                               <td className="px-4 py-4">
@@ -2146,6 +2394,17 @@ export default function AdminDailyPayments() {
                               </td>
 
                               <td className="px-4 py-4">
+                                <DeviceChip payment={p} dark={dark} />
+
+                                <p className={`mt-1 text-[11px] ${c.muted}`}>
+                                  {deviceOf(p).known ? deviceOf(p).os : ""}
+                                  {clean(p.metadata?.ipAddress)
+                                    ? ` · ${clean(p.metadata.ipAddress)}`
+                                    : ""}
+                                </p>
+                              </td>
+
+                              <td className="px-4 py-4">
                                 <p className={`text-xs font-bold ${c.text}`}>
                                   {p.coupon?.code || "—"}
                                 </p>
@@ -2164,17 +2423,19 @@ export default function AdminDailyPayments() {
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
-                                    title="View payment"
-                                    onClick={() =>
-                                      setSelectedPayment(p)
-                                    }
+                                    title="Toggle full details"
+                                    onClick={() => toggleExpanded(p._id)}
                                     className={`rounded-lg border p-2 ${
                                       dark
                                         ? "border-orange-500/25 bg-orange-500/10 text-orange-400"
                                         : "border-orange-200 bg-orange-50 text-orange-600"
                                     }`}
                                   >
-                                    <Eye size={16} />
+                                    {expandedId === p._id ? (
+                                      <ChevronUp size={16} />
+                                    ) : (
+                                      <ChevronDown size={16} />
+                                    )}
                                   </button>
 
                                   <button
@@ -2192,6 +2453,19 @@ export default function AdminDailyPayments() {
                                 </div>
                               </td>
                             </tr>
+
+                            {expandedId === p._id && (
+                              <tr className={`border-t ${c.border}`}>
+                                <td colSpan={9} className="p-0">
+                                  <PaymentDetails
+                                    payment={p}
+                                    dark={dark}
+                                    onDelete={openDelete}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
@@ -2218,10 +2492,13 @@ export default function AdminDailyPayments() {
                               </p>
                             </div>
 
-                            <StatusBadge
-                              status={statusOf(p)}
-                              dark={dark}
-                            />
+                            <div className="flex min-w-0 shrink-0 flex-col items-end gap-1.5">
+                              <StatusBadge
+                                status={statusOf(p)}
+                                dark={dark}
+                              />
+                              <DeviceChip payment={p} dark={dark} />
+                            </div>
                           </div>
 
                           <div
@@ -2275,11 +2552,15 @@ export default function AdminDailyPayments() {
                           <div className="mt-4 grid grid-cols-2 gap-2">
                             <button
                               type="button"
-                              onClick={() => setSelectedPayment(p)}
+                              onClick={() => toggleExpanded(p._id)}
                               className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-3 py-2.5 text-xs font-bold text-white"
                             >
-                              <Eye size={14} />
-                              Details
+                              {expandedId === p._id ? (
+                                <ChevronUp size={14} />
+                              ) : (
+                                <ChevronDown size={14} />
+                              )}
+                              {expandedId === p._id ? "Hide Details" : "Details"}
                             </button>
 
                             <button
@@ -2291,6 +2572,16 @@ export default function AdminDailyPayments() {
                               Delete
                             </button>
                           </div>
+
+                          {expandedId === p._id && (
+                            <div className="-mx-4 -mb-4 mt-4 overflow-hidden rounded-b-xl">
+                              <PaymentDetails
+                                payment={p}
+                                dark={dark}
+                                onDelete={openDelete}
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -2576,17 +2867,6 @@ export default function AdminDailyPayments() {
           </>
         ) : null}
       </div>
-
-      {/* DETAILS MODAL */}
-
-      {selectedPayment && (
-        <PaymentDetails
-          payment={selectedPayment}
-          dark={dark}
-          onClose={() => setSelectedPayment(null)}
-          onDelete={openDelete}
-        />
-      )}
 
       {/* DELETE MODAL */}
 

@@ -1549,22 +1549,13 @@ const getTodayIST = () => {
 
 // Do not expose access tokens, gateway secrets, hashes,
 // sensitive callback payloads or internal credentials.
-const pickFields = (source, fields) => {
-  if (!source || typeof source !== "object") return null;
-
-  const result = {};
-
-  for (const field of fields) {
-    if (source[field] !== undefined) {
-      result[field] = source[field];
-    }
-  }
-
-  return result;
-};
-
 const safeAdminPayment = (order) => {
+  // Full payment record (incl. provider callback/verification payloads),
+  // same as the per-book admin payments endpoint.
   const payment = order.payment || {};
+
+  // Never expose the access token hash.
+  const { tokenHash, ...safeAccess } = order.access || {};
 
   return {
     _id: order._id,
@@ -1573,65 +1564,25 @@ const safeAdminPayment = (order) => {
 
     book: order.book || null,
 
-    customer: pickFields(order.customer, [
-      "name",
-      "email",
-      "phone",
-    ]),
+    customer: order.customer || null,
 
     orderStatus: order.orderStatus,
 
-    payment: pickFields(payment, [
-      "status",
-      "amount",
-      "currency",
-      "gateway",
-      "provider",
-      "method",
-      "paymentMethod",
-      "paymentMode",
-      "transactionId",
-      "gatewayTransactionId",
-      "gatewayOrderId",
-      "paymentId",
-      "bankReference",
-      "bankReferenceNumber",
-      "paidAt",
-      "failedAt",
-      "failureReason",
-      "affiliateCode",
-    ]),
+    payment,
 
     coupon: order.coupon || null,
 
-    refund: pickFields(order.refund, [
-      "status",
-      "requestedAmount",
-      "refundedAmount",
-      "remainingAmount",
-      "requestedAt",
-      "processedAt",
-      "refundedAt",
-      "reason",
-    ]),
+    refund: order.refund || null,
 
     ebookEmail: order.ebookEmail || null,
     pendingMail: order.pendingMail || null,
 
-    access: pickFields(order.access, [
-      "revoked",
-      "revokedAt",
-      "accessCount",
-      "lastAccessedAt",
-      "expiresAt",
-    ]),
+    access: safeAccess,
 
-    verification: pickFields(order.verification, [
-      "callbackHashVerified",
-      "payuVerified",
-      "amountVerified",
-      "verifiedAt",
-    ]),
+    verification: order.verification || null,
+
+    // IP, user agent (browser/device), referrer, UTM + ad attribution
+    metadata: order.metadata || null,
 
     createdBy: order.createdBy || null,
     updatedBy: order.updatedBy || null,

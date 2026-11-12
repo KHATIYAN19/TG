@@ -11,8 +11,9 @@ export const GATEWAYS = {
   mock: { label: "Test payment" },
 };
 
-const asked = String(import.meta.env.VITE_MEMORIES_PAYMENT_GATEWAY || "cashfree").trim().toLowerCase();
-export const PREFERRED_GATEWAY = GATEWAYS[asked] ? asked : "cashfree";
+import { preferredGateway } from "../payment/gatewayConfig.js";
+
+export const PREFERRED_GATEWAY = preferredGateway("memories"); // VITE_MEMORIES_PAYMENT_GATEWAY, else VITE_PAYMENT_GATEWAY
 
 /** The gateway to use now: the preferred one if the server offers it, otherwise whatever the server defaults to. */
 export const chooseGateway = (cfg) => {

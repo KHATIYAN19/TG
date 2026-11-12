@@ -695,15 +695,6 @@ const record = (name, ok, error) => {
   }
 };
 
-// Names only, never values: shown at start-up so production logs prove what the process can see.
-export const logMailConfiguration = () => {
-  console.log("[MAIL] providers configured in this process:", {
-    mailtrap: PROVIDERS.mailtrap.configured(),
-    resend: PROVIDERS.resend.configured(),
-    ses: PROVIDERS.ses.configured(),
-  });
-};
-
 export const getMailProviderStatus = () => ({
   providers: {
     mailtrap: {

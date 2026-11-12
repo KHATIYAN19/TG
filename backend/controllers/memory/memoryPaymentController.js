@@ -97,12 +97,15 @@ export const verifyPayment = handler(async (req, res) => {
 
   let result;
   if (adapter.verifyClient) {
-    const v = adapter.verifyClient(order, req.body?.payload || {});
-    if (!v.paid) {
+    const v = await adapter.verifyClient(order, req.body?.payload || {});
+    if (v.pending) {
+      result = await refreshOrder(order, adapter); // signed, but not captured yet (or the gateway is slow): ask the gateway again
+    } else if (!v.paid) {
       await MemoryOrder.updateOne({ _id: order._id, status: "created" }, { status: "failed", failureReason: v.reason || "VERIFY_FAILED" });
       throw new MemoryError(400, "Payment verification failed.", v.reason || "VERIFY_FAILED");
+    } else {
+      result = await settleOrder(order, v);
     }
-    result = await settleOrder(order, v);
   } else {
     result = await refreshOrder(order, adapter); // gateways without a signed browser callback: ask the gateway
   }

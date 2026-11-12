@@ -9,34 +9,21 @@
   a gateway that isn't really being used. This env variable is the fallback
   shown while the server's answer is loading (or if the call fails).
 */
-const KNOWN = {
-  cashfree: {
-    name: "Cashfree",
-    methods: ["UPI", "Debit & credit cards", "Net banking", "Wallets"],
-  },
-  razorpay: {
-    name: "Razorpay",
-    methods: ["UPI", "Debit & credit cards", "Net banking", "Wallets"],
-  },
-};
+import { GATEWAYS } from "../payment/gatewayConfig.js";
+
+// Every gateway the shared config knows (Cashfree, Razorpay, PayU, ...). Add a new one there, not here.
+const KNOWN = Object.fromEntries(Object.entries(GATEWAYS).map(([id, g]) => [id, { name: g.label, methods: g.methods }]));
 
 const clean = (v) => String(v ?? "").trim().toLowerCase().replace(/^"|"$/g, "");
 
-export const ENV_GATEWAY = clean(import.meta.env.VITE_ARENA_PAYMENT_GATEWAY);
+import { preferredGateway } from "../payment/gatewayConfig.js";
 
-let warned = false;
+export const ENV_GATEWAY = clean(import.meta.env.VITE_ARENA_PAYMENT_GATEWAY || import.meta.env.VITE_PAYMENT_GATEWAY) && preferredGateway("arena");
+
 
 export const resolveGateway = (serverValue) => {
   const server = clean(serverValue);
   const key = KNOWN[server] ? server : KNOWN[ENV_GATEWAY] ? ENV_GATEWAY : null;
-
-  if (import.meta.env.DEV && !warned && KNOWN[server] && KNOWN[ENV_GATEWAY] && server !== ENV_GATEWAY) {
-    warned = true;
-    console.warn(
-      `[arena] VITE_ARENA_PAYMENT_GATEWAY="${ENV_GATEWAY}" but the server charges via "${server}". ` +
-        "Showing the server's value. Set both to the same gateway."
-    );
-  }
 
   return key ? { key, ...KNOWN[key] } : null;
 };

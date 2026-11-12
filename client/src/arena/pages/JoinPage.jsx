@@ -7,22 +7,11 @@ import { useArena } from "../ArenaContext";
 import { http, errMsg, errCode, inr } from "../api";
 import { BackgroundLine, PracticeFacts, TargetCompanies, TopicBadges } from "../MemberBits";
 import { Button, Card, Spinner, cx } from "../ui";
-import { resolveGateway } from "../gateway";
+import { resolveGateway, ENV_GATEWAY } from "../gateway";
+import { runCheckout } from "../../payment/checkoutRunner";
 import OfferBanner from "../OfferBanner";
 import { ProfileForm } from "./ProfilePage";
 
-/* ------------------------------ payment SDKs ------------------------------ */
-const loadScript = (id, src, ready) =>
-  new Promise((resolve) => {
-    if (ready()) return resolve(true);
-    const existing = document.getElementById(id);
-    const script = existing || Object.assign(document.createElement("script"), { id, src, async: true });
-    script.addEventListener("load", () => resolve(ready()));
-    script.addEventListener("error", () => resolve(false));
-    if (!existing) document.body.appendChild(script);
-  });
-
-const loadCashfree = () => loadScript("cashfree-sdk", "https://sdk.cashfree.com/js/v3/cashfree.js", () => Boolean(window.Cashfree));
 // Referral code captured globally by App.jsx (?ref= / ?referralCode=). The server validates it.
 const readReferralCode = () => {
   try {
@@ -32,8 +21,6 @@ const readReferralCode = () => {
     return undefined;
   }
 };
-
-const loadRazorpay = () => loadScript("razorpay-sdk", "https://checkout.razorpay.com/v1/checkout.js", () => Boolean(window.Razorpay));
 
 /* ------------------------------- step header ------------------------------- */
 const STEPS = ["Account", "Payment", "Your details"];
@@ -133,46 +120,26 @@ function PaymentStep({ me, refresh, onProcessing }) {
     navigate("/prep-buddy/app", { replace: true });
   };
 
-  const startRazorpay = (checkout) =>
-    new Promise((resolve, reject) => {
-      const rzp = new window.Razorpay({
-        key: checkout.key,
-        amount: checkout.amount,
-        currency: checkout.currency,
-        order_id: checkout.razorpayOrderId,
-        name: checkout.name,
-        description: checkout.description,
-        prefill: checkout.prefill,
-        theme: { color: "#ea580c" },
-        handler: async (response) => {
-          try {
-            const { data, status } = await http.post("/entry/verify", {
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-            });
-            if (status === 202) { toast(data.message, { icon: "⏳", id: "arena-pay-pending" }); onProcessing(); } else await finishPaid();
-            resolve();
-          } catch (e) { reject(e); }
-        },
-        modal: {
-          ondismiss: async () => {
-            try {
-              const { data } = await http.post("/entry/reconcile");
-              if (["paid", "consumed"].includes(data.data.status)) await finishPaid();
-            } catch { /* ignore */ }
-            resolve();
-          },
-        },
-      });
-      rzp.on("payment.failed", (resp) => toast.error(resp?.error?.description || "Payment failed. Please try again.", { id: "arena-pay-error" }));
-      rzp.open();
+  /* The Razorpay popup's signed result goes to OUR server, which asks the gateway. Cashfree / PayU verify on return instead. */
+  const verifyPopupPayment = async (response) => {
+    const { data, status } = await http.post("/entry/verify", {
+      orderId: response.razorpay_order_id,
+      paymentId: response.razorpay_payment_id,
+      signature: response.razorpay_signature,
     });
+    if (status === 202) {
+      toast(data.message, { icon: "⏳", id: "arena-pay-pending" });
+      onProcessing();
+    } else {
+      await finishPaid();
+    }
+    return { status: "verified" };
+  };
 
   const pay = async () => {
     setPaying(true);
     try {
-      const { data } = await http.post("/entry/checkout", { couponCode: applied?.coupon?.code || "", affiliateCode: readReferralCode() });
+      const { data } = await http.post("/entry/checkout", { couponCode: applied?.coupon?.code || "", affiliateCode: readReferralCode(), gateway: ENV_GATEWAY || undefined });
 
       if (data.data.free) {
         toast.success(me.profile ? "You're in the arena!" : "You're in! Now add your details to enter the arena.", { id: "arena-paid" });
@@ -181,21 +148,24 @@ function PaymentStep({ me, refresh, onProcessing }) {
         return;
       }
 
-      const { checkout } = data.data;
+      // One request for every gateway: the server says which window to open (checkout.type).
+      const result = await runCheckout({
+        checkout: data.data.checkout,
+        name: "Target Trek",
+        description: "Prep Buddy Arena – one-time entry",
+        theme: "#ea580c",
+        prefill: { name: me.user?.name, email: me.user?.email },
+        onPaid: verifyPopupPayment,
+      });
 
-      if (checkout.gateway === "cashfree") {
-        if (!(await loadCashfree())) throw new Error("Couldn't load the payment window. Check your connection and try again.");
-        // Redirects to Cashfree, then back to /prep-buddy/app/join?order_id=…
-        const result = await window.Cashfree({ mode: checkout.mode }).checkout({
-          paymentSessionId: checkout.paymentSessionId,
-          redirectTarget: "_self",
-        });
-        if (result?.error) throw new Error(result.error.message || "Unable to open the payment window");
-        return;
+      if (result.status === "failed") toast.error(result.message, { id: "arena-pay-error" });
+      if (result.status === "dismissed") {
+        // Closed the popup: it may still have been paid (slow redirect, closed early).
+        try {
+          const { data: rec } = await http.post("/entry/reconcile");
+          if (["paid", "consumed"].includes(rec.data.status)) await finishPaid();
+        } catch { /* ignore */ }
       }
-
-      if (!(await loadRazorpay())) throw new Error("Couldn't load the payment window. Check your connection and try again.");
-      await startRazorpay(checkout);
     } catch (e) {
       toast.error(e.response ? errMsg(e) : e.message || "Payment failed. Please try again.", { id: "arena-pay-error" });
       if (["ALREADY_IN_ARENA", "ALREADY_PAID"].includes(errCode(e))) { await refresh(); navigate("/prep-buddy/app", { replace: true }); }

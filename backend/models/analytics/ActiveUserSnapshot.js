@@ -7,7 +7,6 @@ const activeUserSnapshotSchema = new mongoose.Schema(
     minute: {
       type: Date,
       required: true,
-      unique: true,
     },
 
     activeSessions: {
@@ -20,7 +19,7 @@ const activeUserSnapshotSchema = new mongoose.Schema(
 
 activeUserSnapshotSchema.index(
   { minute: 1 },
-  { expireAfterSeconds: 120 * 24 * 60 * 60 }
+  { unique: true, expireAfterSeconds: 120 * 24 * 60 * 60 }
 );
 
 export default mongoose.model(

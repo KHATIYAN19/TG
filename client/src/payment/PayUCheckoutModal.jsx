@@ -1,6 +1,8 @@
 import API_BASE_URL from "../utils/Url";
 import { trackInitiateCheckout } from "../lib/metaPixel";
 import { getAttribution } from "../lib/attribution";
+import { runCheckout } from "./checkoutRunner";
+import { preferredGateway, gatewayLabel } from "./gatewayConfig";
 import React, {
   useCallback,
   useEffect,
@@ -32,26 +34,10 @@ import {
 const BASE_URL =
   API_BASE_URL;
 
-const rawPaymentGateway = String(
-  import.meta.env.VITE_PAYMENT_GATEWAY || "payu"
-)
-  .trim()
-  .toLowerCase();
-
-const Payment_gateway = [
-  "payu",
-  "razorpay",
-  "cashfree",
-].includes(rawPaymentGateway)
-  ? rawPaymentGateway
-  : "payu";
-
-const PAYMENT_PROVIDER_NAME =
-  Payment_gateway === "razorpay"
-    ? "Razorpay"
-    : Payment_gateway === "cashfree"
-      ? "Cashfree"
-      : "PayU";
+// Gateway preference from the env (VITE_BOOKS_PAYMENT_GATEWAY / VITE_PAYMENT_GATEWAY). The backend decides what really charges;
+// every gateway uses the same two requests below (create + verify), only the checkout window differs.
+const ENV_GATEWAY = preferredGateway("books");
+const PAYMENT_PROVIDER_NAME = gatewayLabel(ENV_GATEWAY);
 
 const getStoredTheme = () => {
   if (typeof window === "undefined") {
@@ -67,145 +53,6 @@ const getStoredTheme = () => {
     return "light";
   }
 };
-
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") {
-      resolve(false);
-      return;
-    }
-
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-
-    const existingScript =
-      document.getElementById(
-        "razorpay-checkout-script"
-      );
-
-    if (existingScript) {
-      existingScript.addEventListener(
-        "load",
-        () =>
-          resolve(
-            Boolean(window.Razorpay)
-          ),
-        {
-          once: true,
-        }
-      );
-
-      existingScript.addEventListener(
-        "error",
-        () => resolve(false),
-        {
-          once: true,
-        }
-      );
-
-      return;
-    }
-
-    const script =
-      document.createElement("script");
-
-    script.id =
-      "razorpay-checkout-script";
-
-    script.src =
-      "https://checkout.razorpay.com/v1/checkout.js";
-
-    script.async = true;
-
-    script.onload = () => {
-      resolve(
-        Boolean(window.Razorpay)
-      );
-    };
-
-    script.onerror = () => {
-      resolve(false);
-    };
-
-    document.body.appendChild(
-      script
-    );
-  });
-};
-
-const loadCashfreeScript = () => {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") {
-      resolve(false);
-      return;
-    }
-
-    if (window.Cashfree) {
-      resolve(true);
-      return;
-    }
-
-    const existingScript =
-      document.getElementById(
-        "cashfree-checkout-script"
-      );
-
-    if (existingScript) {
-      existingScript.addEventListener(
-        "load",
-        () =>
-          resolve(
-            Boolean(window.Cashfree)
-          ),
-        {
-          once: true,
-        }
-      );
-
-      existingScript.addEventListener(
-        "error",
-        () => resolve(false),
-        {
-          once: true,
-        }
-      );
-
-      return;
-    }
-
-    const script =
-      document.createElement("script");
-
-    script.id =
-      "cashfree-checkout-script";
-
-    script.src =
-      "https://sdk.cashfree.com/js/v3/cashfree.js";
-
-    script.async = true;
-
-    script.onload = () => {
-      resolve(
-        Boolean(window.Cashfree)
-      );
-    };
-
-    script.onerror = () => {
-      resolve(false);
-    };
-
-    document.body.appendChild(
-      script
-    );
-  });
-};
-
-
-/* =====================================================
-   VALIDATION
-===================================================== */
 
 const NAME_REGEX = /^[\p{L}][\p{L}\s.'’-]*$/u;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -1036,521 +883,78 @@ export default function PayUCheckoutModal({
         // Last paid-ad touch (Meta / Google) saved on the order
         attribution:
           getAttribution(),
+
+        // Preferred gateway from the env; the server only honours it if that gateway is configured.
+        gateway: ENV_GATEWAY,
       };
     };
 
-  const submitToPayU = (
-    paymentUrl,
-    paymentData
-  ) => {
-    if (
-      !paymentUrl ||
-      !paymentData
-    ) {
-      throw new Error(
-        "Invalid PayU payment response."
-      );
+  /* The Razorpay popup's signed result goes to our server, which asks the gateway. */
+  const verifyPopupPayment = async (orderId, razorpayResponse) => {
+    const response = await fetch(`${BASE_URL}/payment/books/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, payload: razorpayResponse }),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (response.status === 202) {
+      throw new Error("Your payment is still being confirmed. If money was deducted, you will receive access by email shortly.");
     }
 
-    const form =
-      document.createElement(
-        "form"
-      );
+    if (!response.ok || !result?.success || !result?.data?.redirectUrl) {
+      throw new Error(result?.message || "Payment verification failed. Please contact support if money was deducted.");
+    }
 
-    form.method = "POST";
-
-    form.action =
-      paymentUrl;
-
-    form.style.display =
-      "none";
-
-    Object.entries(
-      paymentData
-    ).forEach(
-      ([key, value]) => {
-        const input =
-          document.createElement(
-            "input"
-          );
-
-        input.type =
-          "hidden";
-
-        input.name =
-          key;
-
-        input.value =
-          value ?? "";
-
-        form.appendChild(
-          input
-        );
-      }
-    );
-
-    document.body.appendChild(
-      form
-    );
-
-    form.submit();
+    return result.data;
   };
 
-  const startPayUPayment =
-    async (
-      paymentPayload
-    ) => {
-      const response =
-        await fetch(
-          `${BASE_URL}/payment/payu/create`,
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                paymentPayload
-              ),
-          }
-        );
-
-      const result =
-        await response
-          .json()
-          .catch(
-            () => null
-          );
-
-      if (
-        !response.ok ||
-        !result?.success
-      ) {
-        throw new Error(
-          result?.message ||
-            "Unable to start PayU payment."
-        );
-      }
-
-      const paymentUrl =
-        result?.data
-          ?.paymentUrl;
-
-      const paymentData =
-        result?.data
-          ?.paymentData;
-
-      if (
-        !paymentUrl ||
-        !paymentData
-      ) {
-        throw new Error(
-          "Invalid PayU payment information received from server."
-        );
-      }
-
-      submitToPayU(
-        paymentUrl,
-        paymentData
-      );
-    };
-
-  const verifyRazorpayPayment =
-    async (
-      razorpayResponse
-    ) => {
-      const response =
-        await fetch(
-          `${BASE_URL}/payment/razorpay/verify`,
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                razorpay_order_id:
-                  razorpayResponse
-                    .razorpay_order_id,
-
-                razorpay_payment_id:
-                  razorpayResponse
-                    .razorpay_payment_id,
-
-                razorpay_signature:
-                  razorpayResponse
-                    .razorpay_signature,
-              }),
-          }
-        );
-
-      const result =
-        await response
-          .json()
-          .catch(
-            () => null
-          );
-
-      if (
-        !response.ok ||
-        !result?.success
-      ) {
-        throw new Error(
-          result?.message ||
-            "Unable to verify Razorpay payment."
-        );
-      }
-
-      return result;
-    };
-
-  const startRazorpayPayment =
-    async (
-      paymentPayload
-    ) => {
-      const loaded =
-        await loadRazorpayScript();
-
-      if (!loaded) {
-        throw new Error(
-          "Unable to load Razorpay checkout. Please check your internet connection and try again."
-        );
-      }
-
-      const response =
-        await fetch(
-          `${BASE_URL}/payment/razorpay/create`,
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                paymentPayload
-              ),
-          }
-        );
-
-      const result =
-        await response
-          .json()
-          .catch(
-            () => null
-          );
-
-      if (
-        !response.ok ||
-        !result?.success
-      ) {
-        throw new Error(
-          result?.message ||
-            "Unable to start Razorpay payment."
-        );
-      }
-
-      const data =
-        result?.data;
-
-      const checkout =
-        data?.checkout;
-
-      const internalOrderId =
-        data?.orderId;
-
-      if (
-        !checkout?.key ||
-        !checkout
-          ?.razorpayOrderId ||
-        !checkout?.amount ||
-        !checkout?.currency
-      ) {
-        throw new Error(
-          "Invalid Razorpay payment information received from server."
-        );
-      }
-
-      const options = {
-        key:
-          checkout.key,
-
-        amount:
-          checkout.amount,
-
-        currency:
-          checkout.currency,
-
-        name:
-          checkout.name ||
-          "Target Trek",
-
-        description:
-          checkout.description ||
-          product?.title ||
-          "Target Trek Ebook",
-
-        order_id:
-          checkout
-            .razorpayOrderId,
-
-        prefill: {
-          name:
-            checkout
-              ?.prefill
-              ?.name ||
-            formData.firstname
-              .trim(),
-
-          email:
-            checkout
-              ?.prefill
-              ?.email ||
-            formData.email
-              .trim()
-              .toLowerCase(),
-
-          contact:
-            checkout
-              ?.prefill
-              ?.contact ||
-            formData.phone
-              .trim(),
-        },
-
-        notes: {
-          targetTrekOrderId:
-            internalOrderId ||
-            "",
-        },
-
-        handler:
-          async (
-            razorpayResponse
-          ) => {
-            try {
-              setPaymentLoading(
-                true
-              );
-
-              setServerError("");
-
-              const verification =
-                await verifyRazorpayPayment(
-                  razorpayResponse
-                );
-
-              const redirectUrl =
-                verification
-                  ?.data
-                  ?.redirectUrl;
-
-              if (!redirectUrl) {
-                throw new Error(
-                  "Payment was verified, but the access redirect URL was not received."
-                );
-              }
-
-              window.location.href =
-                redirectUrl;
-            } catch (error) {
-              console.error(
-                "Razorpay verification error:",
-                error
-              );
-
-              setServerError(
-                error?.message ||
-                  "Payment verification failed. Please contact support if money was deducted."
-              );
-
-              setPaymentLoading(
-                false
-              );
-            }
-          },
-
-        retry: {
-          enabled: true,
-        },
-
-        modal: {
-          confirm_close:
-            true,
-
-          escape:
-            false,
-
-          ondismiss: () => {
-            setPaymentLoading(
-              false
-            );
-          },
-        },
-
-        theme: {
-          color:
-            "#f97316",
-        },
-      };
-
-      const razorpay =
-        new window.Razorpay(
-          options
-        );
-
-      razorpay.on(
-        "payment.failed",
-        (response) => {
-          console.error(
-            "Razorpay payment failed:",
-            response?.error
-          );
-
-          const description =
-            response
-              ?.error
-              ?.description;
-
-          setServerError(
-            description ||
-              "Payment failed. Please try again."
-          );
-
-          setPaymentLoading(
-            false
-          );
-        }
-      );
-
-      razorpay.open();
-    };
-
-  const startCashfreePayment =
-    async (
-      paymentPayload
-    ) => {
-      const loaded =
-        await loadCashfreeScript();
-
-      if (!loaded) {
-        throw new Error(
-          "Unable to load Cashfree checkout. Please check your internet connection and try again."
-        );
-      }
-
-      const response =
-        await fetch(
-          `${BASE_URL}/payment/cashfree/create`,
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                paymentPayload
-              ),
-          }
-        );
-
-      const result =
-        await response
-          .json()
-          .catch(
-            () => null
-          );
-
-      if (
-        !response.ok ||
-        !result?.success
-      ) {
-        throw new Error(
-          result?.message ||
-            "Unable to start Cashfree payment."
-        );
-      }
-
-      const data =
-        result?.data;
-
-      const paymentSessionId =
-        data?.paymentSessionId;
-
-      if (!paymentSessionId) {
-        throw new Error(
-          "Invalid Cashfree payment session received from server."
-        );
-      }
-
-      const backendEnvironment =
-        String(
-          data?.environment ||
-            ""
-        )
-          .trim()
-          .toLowerCase();
-
-      const frontendEnvironment =
-        String(
-          import.meta.env
-            .VITE_CASHFREE_MODE ||
-            "sandbox"
-        )
-          .trim()
-          .toLowerCase();
-
-      const mode = [
-        "sandbox",
-        "production",
-      ].includes(
-        backendEnvironment
-      )
-        ? backendEnvironment
-        : frontendEnvironment ===
-            "production"
-          ? "production"
-          : "sandbox";
-
-      const cashfree =
-        window.Cashfree({
-          mode,
-        });
-
-      const checkoutResult =
-        await cashfree.checkout({
-          paymentSessionId,
-
-          redirectTarget:
-            "_self",
-        });
-
-      if (
-        checkoutResult?.error
-      ) {
-        throw new Error(
-          checkoutResult.error
-            ?.message ||
-            "Unable to open Cashfree checkout."
-        );
-      }
-    };
-
+  /* ONE request for every gateway (PayU, Razorpay, Cashfree, ...): the server validates, prices, creates the order,
+     and answers with the `checkout` for whichever gateway it used. */
+  const startPayment = async (paymentPayload) => {
+    const response = await fetch(`${BASE_URL}/payment/books/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(paymentPayload),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.message || "Unable to start payment.");
+    }
+
+    const { orderId, checkout } = result.data || {};
+
+    if (!orderId || !checkout) {
+      throw new Error("Invalid payment information received from server.");
+    }
+
+    const outcome = await runCheckout({
+      checkout,
+      name: checkout.name || "Target Trek",
+      description: product?.title || "Target Trek Ebook",
+      prefill: {
+        name: formData.firstname.trim(),
+        email: formData.email.trim().toLowerCase(),
+        contact: formData.phone.trim(),
+      },
+      onPaid: async (razorpayResponse) => {
+        setPaymentLoading(true);
+        setServerError("");
+        const verified = await verifyPopupPayment(orderId, razorpayResponse);
+        window.location.href = verified.redirectUrl;
+        return { status: "verified" };
+      },
+    });
+
+    // Popup closed or failed: let the buyer try again. (Cashfree / PayU leave the page and return through the server.)
+    if (outcome.status === "dismissed" || outcome.status === "failed") {
+      if (outcome.message) setServerError(outcome.message);
+      setPaymentLoading(false);
+    }
+  };
 
 const handlePayment = async (event) => {
   event.preventDefault();
@@ -1582,18 +986,7 @@ const handlePayment = async (event) => {
       currency: product.currency || "INR",
     });
 
-    // EXISTING PAYMENT GATEWAY LOGIC
-    if (Payment_gateway === "razorpay") {
-      await startRazorpayPayment(paymentPayload);
-      return;
-    }
-
-    if (Payment_gateway === "cashfree") {
-      await startCashfreePayment(paymentPayload);
-      return;
-    }
-
-    await startPayUPayment(paymentPayload);
+    await startPayment(paymentPayload);
 
   } catch (error) {
     console.error(

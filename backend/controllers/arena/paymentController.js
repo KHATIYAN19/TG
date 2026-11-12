@@ -12,6 +12,7 @@ import { markEntryPaid, expireEntry } from "../../services/arena/entryService.js
 import { resolveAffiliate } from "../../services/arena/affiliate.js";
 import { healPaidMembers } from "../../services/arena/activation.js";
 import { emitToUser } from "../../services/arena/hub.js";
+import { FRONTEND_URL } from "../../config/urls.js";
 import { couponCodeSchema, checkoutSchema, verifyPaymentSchema } from "./schemas.js";
 
 /* Pay-first: the profile is optional at checkout (details come after payment). */
@@ -63,7 +64,7 @@ const settleExistingPending = async (userId) => {
 
 /* POST /entry/checkout */
 export const checkout = handle(async (req, res) => {
-  const { couponCode, affiliateCode } = checkoutSchema.parse(req.body);
+  const { couponCode, affiliateCode, gateway: preferredGateway } = checkoutSchema.parse(req.body);
   const settings = await getArenaSettings();
 
   if (!settings.enabled) throw new ArenaError(503, "ARENA_PAUSED", "The arena is temporarily paused");
@@ -124,7 +125,7 @@ export const checkout = handle(async (req, res) => {
     }
 
     const user = await User.findById(req.user.id).select("name email mobile").lean();
-    const { orderId, checkout: checkoutPayload } = await gateway.createOrder({ entry, user: { ...user, _id: req.user.id } });
+    const { orderId, checkout: checkoutPayload } = await gateway.createOrder({ entry, user: { ...user, _id: req.user.id }, gateway: preferredGateway });
 
     entry.payment = { gateway: checkoutPayload.gateway, orderId };
     await entry.save();
@@ -293,3 +294,14 @@ export const cancelPreview = handle(async (req, res) => {
     },
   });
 }, "Unable to preview cancellation");
+
+/*
+  ALL /payments/return  (public)
+  Redirect gateways send the buyer back here (Cashfree with GET, PayU with POST). Nothing is trusted or settled here:
+  the buyer is forwarded to the join page, which calls /entry/verify (signed in, asks the gateway) exactly like before.
+*/
+export const paymentReturn = (req, res) => {
+  const id = String(req.query.order_id || req.body?.txnid || "").trim();
+  const safe = /^[A-Za-z0-9_-]{5,64}$/.test(id) ? `?order_id=${encodeURIComponent(id)}` : "";
+  res.redirect(303, `${FRONTEND_URL}/prep-buddy/app/join${safe}`);
+};

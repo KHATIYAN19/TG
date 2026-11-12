@@ -57,12 +57,3 @@ export const validateCashfreeConfig = () => {
     );
   }
 };
-
-console.log(
-  "Cashfree configuration:",
-  {
-    environment: CASHFREE_ENV,
-    baseUrl: CASHFREE_BASE_URL,
-    apiVersion: CASHFREE_API_VERSION
-  }
-);

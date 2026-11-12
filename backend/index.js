@@ -31,9 +31,9 @@ import CouponRoute from "./routes/couponRoute.js";
 import { publicRouter as bookOfferPublicRoutes, adminRouter as bookOfferAdminRoutes } from "./routes/bookOfferRoute.js";
 import { memberRouter as membershipRoutes, adminRouter as membershipAdminRoutes } from "./routes/membershipRoute.js";
 
-import payuRoutes from "./routes/payuRoutes.js";
-import razorpayRoute from "./routes/razorpayRoute.js";
-import cashfreeRoute from "./routes/cashfreeRoute.js";
+import bookAccessRoute from "./routes/bookAccessRoute.js";
+import bookPaymentRoute from "./routes/bookPaymentRoute.js";
+import { bookPaymentWebhook } from "./controllers/books/bookPaymentController.js";
 
 import paymentRoutes from "./routes/paymentRoute.js";
 import emailCampaignRoutes from "./routes/emailCampaignRoutes.js";
@@ -41,7 +41,6 @@ import marketingCampaignRoutes from "./routes/marketingCampaignRoutes.js";
 import { unsubscribePage, unsubscribeSubmit } from "./controllers/unsubscribeController.js";
 import { publicFormLimiter } from "./Middleware/rateLimiter.js";
 import { startMailWorker } from "./services/mail/mailWorker.js";
-import { logMailConfiguration } from "./utils/MailSender.js";
 
 import InterviewExperience from "./routes/InterviewExperience.js";
 import BookReviewRoute from "./routes/bookReviewRoute.js";
@@ -288,7 +287,26 @@ app.post(
   unsubscribeSubmit
 );
 
-app.use(cors(corsOptions));
+/*
+  Payment gateway RETURN routes are skipped by CORS on purpose. PayU (and others) send the buyer's browser back with a
+  cross-site form POST whose Origin is the gateway's own site (e.g. https://test.payu.in), which is (rightly) not in the
+  site's CORS allow-list. These are plain browser navigations, not API calls: nothing here reads cookies or trusts the
+  request. Every payment is re-verified with the gateway itself, so skipping CORS is safe. (Webhooks are server-to-server
+  and have no Origin.)
+*/
+const GATEWAY_RETURN_PATHS = [
+  /^\/payment\/books\/return\/?$/,
+  /^\/api\/arena\/payments\/return\/?$/,
+  /^\/api\/memories\/payments\/callback\/[A-Za-z0-9_-]+\/?$/,
+];
+
+const corsMiddleware = cors(corsOptions);
+
+app.use((req, res, next) =>
+  GATEWAY_RETURN_PATHS.some((re) => re.test(req.path))
+    ? next()
+    : corsMiddleware(req, res, next)
+);
 
 /* =====================================================
    COOKIE PARSER
@@ -306,11 +324,6 @@ app.use(cookieParser());
 
    Interview webhook:
    /api/interviews/payment/cashfree/webhook
-
-   This is different from your existing
-   ebook Cashfree webhook:
-
-   /payment/cashfree/webhook
 
    Do not apply JWT authentication here.
 
@@ -366,6 +379,13 @@ app.post(
   memoryGatewayWebhook
 );
 
+/* Book payment webhooks (any gateway): raw body for signature checks, so it stays above express.json(). */
+app.post(
+  "/payment/books/webhook/:gateway",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  bookPaymentWebhook
+);
+
 /* =====================================================
    PUBLIC ANALYTICS TRACKING
 
@@ -396,33 +416,10 @@ app.use(
 /* =====================================================
    GENERAL REQUEST BODY PARSING
 
-   Preserve existing ebook Cashfree behavior.
-
-   IMPORTANT:
-   Your existing ebook Cashfree controller may read
-   req.rawBody. Keep that behavior unchanged.
-
-   Do not parse interview webhook here;
-   it has already been handled above.
+   Gateway webhooks are handled above (raw body).
 ===================================================== */
 
-app.use(
-  express.json({
-    limit: "10mb",
-
-    verify: (req, res, buf) => {
-      if (
-        req.originalUrl.startsWith(
-          "/payment/cashfree/webhook"
-        )
-      ) {
-        // Preserve the original implementation's
-        // string format for the existing ebook route.
-        req.rawBody = buf.toString("utf8");
-      }
-    },
-  })
-);
+app.use(express.json({ limit: "10mb" }));
 
 app.use(
   express.urlencoded({
@@ -553,19 +550,15 @@ app.use("/api/admin/memories", memoryAdminRoutes);
    Keep these routes unchanged.
 ===================================================== */
 
+/* Unified book payments: one API for Cashfree, Razorpay, PayU (and any gateway added to services/payments). */
+app.use(
+  "/payment/books",
+  bookPaymentRoute
+);
+
 app.use(
   "/payment/payu",
-  payuRoutes
-);
-
-app.use(
-  "/payment/razorpay",
-  razorpayRoute
-);
-
-app.use(
-  "/payment/cashfree",
-  cashfreeRoute
+  bookAccessRoute
 );
 
 /* =====================================================
@@ -841,7 +834,6 @@ const startServer = async () => {
     startExpirySweeper();
 
     // Background email: consumes the Amazon SQS email queue (no-op if SQS is not configured).
-    logMailConfiguration();
     startMailWorker();
 
     // Release abandoned arena checkouts (and their coupon reservations).
@@ -871,23 +863,6 @@ const startServer = async () => {
           process.env.NODE_ENV ||
           "development"
         }`
-      );
-
-      console.log(
-        "Authentication routes registered"
-      );
-
-      console.log(
-        "Interview booking routes registered"
-      );
-
-      console.log(
-        "Prep Buddy Arena routes registered"
-      );
-
-      console.log(
-        "Interview Cashfree webhook:",
-        INTERVIEW_CASHFREE_WEBHOOK
       );
     });
 
