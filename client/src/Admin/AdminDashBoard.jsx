@@ -11,6 +11,7 @@ import { useSelector } from "react-redux";
 import { Helmet } from "react-helmet-async";
 
 import { useArenaChrome } from "../arena/chrome";
+import NewQueriesNotice from "./NewQueriesNotice.jsx";
 
 import {
   ArrowRight,
@@ -45,6 +46,12 @@ import {
   UserPlus,
   Users,
   X,
+  Sparkles,
+  Activity,
+  Ticket,
+  Globe,
+  Receipt,
+  Settings,
 } from "lucide-react";
 
 /* ==========================================================
@@ -205,6 +212,18 @@ const PRIORITY_ROUTES = [
       "email campaigns marketing newsletters bulk promotions",
     featured: true,
     priority: 6,
+  },
+  {
+    path: "/admin/memories?tab=overview",
+    name: "Memories Overview",
+    icon: Sparkles,
+    description:
+      "Live summary of memory pages: pages created, active users, revenue and recent activity.",
+    category: "Memories",
+    keywords:
+      "memory memories overview dashboard summary stats revenue",
+    featured: true,
+    priority: 7,
   },
 ];
 
@@ -443,6 +462,7 @@ const EMPLOYEE_ROUTES = ADMIN_ROUTES.filter((route) =>
 );
 
 const CATEGORY_ORDER = [
+  "Memories",
   "Books & Products",
   "Finance & Revenue",
   "Interviews",
@@ -605,6 +625,44 @@ const cx = (...items) =>
   items.filter(Boolean).join(" ");
 
 /* ==========================================================
+   CARD COLORS
+
+   Every area has its own solid color so cards are recognisable at
+   a glance. All shades keep white text readable (WCAG AA).
+   A few tools override their area color (see PATH_ACCENT).
+========================================================== */
+
+const CATEGORY_ACCENT = {
+  "Books & Products": "#1D4ED8", // blue
+  "Finance & Revenue": "#047857", // green
+  Marketing: "#4338CA", // indigo
+  "Prep Buddy": "#C84F08", // orange
+  Memories: "#DB2777", // pink
+  Interviews: "#0F766E", // teal
+  "Content & Publishing": "#7E22CE", // purple
+  "Users & Access": "#475569", // slate
+  "Reviews & Support": "#0E7490", // cyan
+  "Business Operations": "#4D7C0F", // lime
+  Platform: "#27272A", // charcoal
+  "Disabled Features": "#71717A",
+};
+
+const PATH_ACCENT = {
+  "/admin/memories": "#DB2777", // pink
+  "/admin/interviews": "#0F766E",
+};
+
+const DEFAULT_ACCENT = "#C84F08";
+
+const accentFor = (route) =>
+  PATH_ACCENT[route.path] ||
+  CATEGORY_ACCENT[route.category] ||
+  DEFAULT_ACCENT;
+
+const categoryAccent = (name) =>
+  CATEGORY_ACCENT[name] || DEFAULT_ACCENT;
+
+/* ==========================================================
    COMPACT DASHBOARD UI
 
    One short tile per tool (icon, name, one-line summary), grouped
@@ -619,14 +677,13 @@ const LAYOUT_KEY = "targettrek_admin_layout";
 
 function Tile({
   route,
-  colors,
   isFavorite,
   onFavorite,
   onOpen,
   list = false,
-  accent = false,
 }) {
   const Icon = route.icon;
+  const accent = accentFor(route);
 
   return (
     <div className="group relative min-w-0">
@@ -635,42 +692,32 @@ function Tile({
         onClick={() => onOpen(route.path)}
         title={route.description}
         className={cx(
-          "flex items-center gap-3 rounded-xl border pr-10 transition-colors",
+          "flex items-center gap-3 rounded-xl pr-10 text-white shadow-sm",
+          "transition duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-          "hover:border-[var(--tile-hover)]",
-          list ? "px-3 py-2" : "px-3 py-3"
+          list ? "px-3 py-2" : "px-3 py-3.5"
         )}
         style={{
-          backgroundColor: colors.panel,
-          borderColor: accent ? colors.orange : colors.border,
-          outlineColor: colors.orange,
-          "--tile-hover": colors.orange,
+          backgroundColor: accent,
+          backgroundImage:
+            "linear-gradient(135deg, rgba(255,255,255,0.14), rgba(0,0,0,0.12))",
+          outlineColor: accent,
         }}
       >
         <span
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
-          style={{
-            backgroundColor: colors.orangeSoft,
-            color: colors.orangeText,
-          }}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/20"
           aria-hidden="true"
         >
-          <Icon size={19} />
+          <Icon size={20} />
         </span>
 
         <span className="min-w-0 flex-1">
-          <span
-            className="block truncate text-[14px] font-bold leading-5"
-            style={{ color: colors.text }}
-          >
+          <span className="block truncate text-[14px] font-bold leading-5">
             {route.name}
           </span>
 
           {!list && (
-            <span
-              className="mt-0.5 line-clamp-2 text-[12px] leading-[17px]"
-              style={{ color: colors.muted }}
-            >
+            <span className="mt-0.5 line-clamp-2 text-[12px] leading-[17px] text-white/90">
               {route.description}
             </span>
           )}
@@ -687,16 +734,12 @@ function Tile({
         }
         aria-pressed={isFavorite}
         className={cx(
-          "absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg transition-opacity",
-          "focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2",
+          "absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg text-white transition-opacity hover:bg-white/20",
+          "focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white",
           isFavorite
             ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
+            : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-70"
         )}
-        style={{
-          color: isFavorite ? colors.orangeDark : colors.muted,
-          outlineColor: colors.orange,
-        }}
       >
         <Star
           size={15}
@@ -745,22 +788,29 @@ function DisabledTile({ route, colors }) {
   );
 }
 
-function Section({ title, count, colors, children }) {
+function Section({ title, count, colors, accent, children }) {
   return (
     <section className="mt-6">
       <div className="mb-2.5 flex items-center gap-3">
+        {accent && (
+          <span
+            className="h-3 w-3 rounded-full"
+            style={{ backgroundColor: accent }}
+            aria-hidden="true"
+          />
+        )}
+
         <h2
-          className="text-[11px] font-extrabold uppercase tracking-[0.14em]"
-          style={{ color: colors.muted }}
+          className="text-[12px] font-extrabold uppercase tracking-[0.14em]"
+          style={{ color: colors.text }}
         >
           {title}
         </h2>
 
         <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+          className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
           style={{
-            backgroundColor: colors.orangeSoft,
-            color: colors.orangeText,
+            backgroundColor: accent || colors.orange,
           }}
         >
           {count}
@@ -1071,6 +1121,8 @@ export default function AdminDashboard() {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
+      {isAdmin && <NewQueriesNotice />}
+
       <main
         className="min-h-screen pb-16 pt-[calc(var(--arena-nav-h,5rem)+1rem)] transition-colors"
         style={{
@@ -1165,11 +1217,21 @@ export default function AdminDashboard() {
                     onClick={() => setCategory(name)}
                     className="shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition-colors"
                     style={{
-                      borderColor: on ? colors.orange : colors.border,
-                      backgroundColor: on ? colors.orange : colors.panel,
-                      color: on ? "#1B1B1B" : colors.muted,
+                      borderColor: on ? categoryAccent(name) : colors.border,
+                      backgroundColor: on ? categoryAccent(name) : colors.panel,
+                      color: on ? "#FFFFFF" : colors.muted,
                     }}
                   >
+                    {name !== "All" && (
+                      <span
+                        className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                        style={{
+                          backgroundColor: categoryAccent(name),
+                          boxShadow: on ? "0 0 0 1.5px #fff" : "none",
+                        }}
+                        aria-hidden="true"
+                      />
+                    )}
                     {name}
                     <span className="ml-1.5 opacity-70">{count}</span>
                   </button>
@@ -1258,7 +1320,7 @@ export default function AdminDashboard() {
                 >
                   <route.icon
                     size={13}
-                    style={{ color: colors.orangeDark }}
+                    style={{ color: accentFor(route) }}
                     aria-hidden="true"
                   />
                   {route.name}
@@ -1273,6 +1335,7 @@ export default function AdminDashboard() {
               title="Essentials"
               count={priority.length}
               colors={colors}
+              accent={colors.orange}
             >
               <div className={GRID}>
                 {priority.map((route) => tile(route, { accent: true }))}
@@ -1286,6 +1349,7 @@ export default function AdminDashboard() {
               title={group.name}
               count={group.items.length}
               colors={colors}
+              accent={categoryAccent(group.name)}
             >
               <div className={GRID}>
                 {group.items.map((route) => tile(route))}

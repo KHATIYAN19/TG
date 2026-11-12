@@ -5,6 +5,8 @@ import {
   getContactMessageById,
   toggleMessageReadStatus,
   addReplyToMessage,
+  previewReply,
+  generateReplyDraft,
   deleteContactMessage
 } from '../controllers/Contact.js';
 import {auth,isAdmin,isEmployee,isUser} from  "../Middleware/auth.js"
@@ -27,6 +29,8 @@ router.delete('/:id', auth, isAdmin, deleteContactMessage);
 
 router.patch('/:id/read', auth, isUser, toggleMessageReadStatus);
 
-router.post('/:id/reply', auth, isUser, addReplyToMessage);
+router.post('/:id/reply', auth, isAdmin, addReplyToMessage);
+router.post('/:id/reply/preview', auth, isAdmin, previewReply);
+router.post('/:id/reply/ai', auth, isAdmin, generateReplyDraft);
 
 export default router;

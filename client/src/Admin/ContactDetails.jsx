@@ -1,320 +1,543 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { Helmet } from 'react-helmet'; // Import Helmet
+import toast, { Toaster } from 'react-hot-toast';
+import { Helmet } from 'react-helmet';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import BASE_URL from "../utils/Url.js";
-import { ArrowLeft, Trash2, Eye, EyeOff, Mail, Phone, Briefcase, Clock, MessageSquare, User, Send, Loader2, AlertTriangle, Calendar, X } from 'lucide-react';
-import { useSelector } from 'react-redux'
+import {
+  ArrowLeft, Trash2, Eye, EyeOff, Mail, Phone, Briefcase, Clock, MessageSquare, Send, Loader2,
+  AlertTriangle, X, Sparkles, Bot, User as UserIcon, CheckCircle2, ChevronDown, Reply, Monitor, Smartphone,
+  PencilLine, ShieldCheck,
+} from 'lucide-react';
+import { useSelector } from 'react-redux';
 
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
-    if (!isOpen) return null;
+const REPLY_TO = 'supporttargettrek@gmail.com';
 
-    return (
-        <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4"
-            onClick={onClose}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="confirmation-modal-title"
-        >
-            <div
-                className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                    <h2 id="confirmation-modal-title" className="text-lg font-semibold text-gray-800 flex items-center">
-                        <AlertTriangle className="text-red-500 mr-2" size={20} />
-                        {title || 'Confirm Action'}
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                        aria-label="Close modal"
-                    >
-                        <X size={24} />
-                    </button>
-                </div>
-                <div className="p-6 text-sm text-gray-700">
-                    {message || 'Are you sure you want to proceed? This action cannot be undone.'}
-                </div>
-                <div className="flex justify-end items-center p-4 bg-gray-50 border-t border-gray-200 space-x-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition duration-150 ease-in-out"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out"
-                    >
-                        Confirm Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [3, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['blockquote', 'link'],
+    ['clean'],
+  ],
 };
+const QUILL_FORMATS = ['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'blockquote', 'link'];
+
+const SUGGESTIONS = [
+  'Write a friendly reply thanking them and offering a call this week',
+  'Politely ask for more details about their requirements and budget',
+  'Briefly explain how we can help with their service and suggest next steps',
+];
+
+const stripHtml = (html = '') => html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+
+const fmt = (d, long = false) =>
+  new Date(d).toLocaleString('en-US', long
+    ? { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }
+    : { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+
+const ModalShell = ({ onClose, children, wide }) => (
+  <div
+    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-3 sm:p-4"
+    onClick={onClose}
+    role="dialog"
+    aria-modal="true"
+  >
+    <div
+      className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-md'} max-h-[92vh] flex flex-col overflow-hidden`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+const DeleteModal = ({ onClose, onConfirm }) => (
+  <ModalShell onClose={onClose}>
+    <div className="p-6 flex items-start gap-4">
+      <div className="shrink-0 w-11 h-11 rounded-full bg-red-100 flex items-center justify-center"><AlertTriangle className="text-red-600" size={22} /></div>
+      <div className="flex-1">
+        <h2 className="text-lg font-semibold text-slate-900">Delete this query?</h2>
+        <p className="mt-1 text-sm text-slate-600">This permanently removes the message and its reply history. This cannot be undone.</p>
+      </div>
+    </div>
+    <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+      <button onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100">Cancel</button>
+      <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700">Delete</button>
+    </div>
+  </ModalShell>
+);
+
+/* Sandboxed iframe: shows the email exactly as rendered by the server. */
+const EmailFrame = ({ html, mobile, loading, height = 520 }) => (
+  <div className="relative rounded-xl border border-slate-200 bg-slate-100 p-2 sm:p-3 overflow-auto" style={{ height }}>
+    {loading && (
+      <div className="absolute top-3 right-4 z-10 text-xs text-slate-500 inline-flex items-center gap-1 bg-white/90 rounded-full px-2 py-1 shadow">
+        <Loader2 size={12} className="animate-spin" /> Updating
+      </div>
+    )}
+    <iframe
+      title="Email preview"
+      sandbox=""
+      srcDoc={html || ''}
+      className="mx-auto bg-white rounded-lg shadow-sm transition-all"
+      style={{ width: mobile ? 380 : '100%', maxWidth: '100%', height: '100%', border: 0 }}
+    />
+  </div>
+);
 
 const ContactDetail = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const [message, setMessage] = useState(null);
-    const [replyText, setReplyText] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [isReplying, setIsReplying] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const token = useSelector((state) => state.auth.token);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const token = useSelector((state) => state.auth.token);
+  const auth = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
+  const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-    const fetchMessage = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.get(`${BASE_URL}/messages/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            setMessage(response.data);
-        } catch (err) {
-            console.error("Error fetching message details:", err);
-            const errorMessage = err.response?.data?.message || 'Failed to fetch message details.';
-            setError(errorMessage);
-            toast.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-    useEffect(() => {
-        fetchMessage();
-    }, [id, token]);
+  // composer
+  const [subject, setSubject] = useState('');
+  const [bodyHtml, setBodyHtml] = useState('');
+  const [tab, setTab] = useState('edit'); // edit | preview
+  const [mobile, setMobile] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [sending, setSending] = useState(false);
 
-    const openDeleteModal = () => {
-        setIsModalOpen(true);
-    };
-    const closeDeleteModal = () => {
-        setIsModalOpen(false);
-    };
-    const confirmDelete = async () => {
-        const toastId = toast.loading('Deleting message...');
-        try {
-            await axios.delete(`${BASE_URL}/messages/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            toast.success('Message deleted successfully.', { id: toastId });
-            closeDeleteModal();
-            navigate('/contact-query');
-        } catch (err) {
-            console.error("Error deleting message:", err);
-            const errorMessage = err.response?.data?.message || 'Failed to delete message.';
-            toast.error(errorMessage, { id: toastId });
-            closeDeleteModal();
-        }
-    };
+  // AI agent
+  const [chat, setChat] = useState([]);
+  const [prompt, setPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const chatEnd = useRef(null);
 
-    const handleToggleRead = async () => {
-        const toastId = toast.loading('Updating status...');
-        try {
-            const response = await axios.patch(`${BASE_URL}/messages/${id}/read`, null, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            setMessage(prevMessage => ({ ...prevMessage, isRead: response.data.contact.isRead }));
-            toast.success(response.data.message || 'Status updated.', { id: toastId });
-        } catch (err) {
-            console.error("Error toggling read status:", err);
-            const errorMessage = err.response?.data?.message || 'Failed to update status.';
-            toast.error(errorMessage, { id: toastId });
-        }
-    };
+  // history
+  const [openReply, setOpenReply] = useState(null);
 
-    const handleReplySubmit = async (e) => {
-        e.preventDefault();
-        if (!replyText.trim()) {
-            toast.error('Reply text cannot be empty.');
-            return;
-        }
-        setIsReplying(true);
-        const toastId = toast.loading('Sending reply...');
-        try {
-            const response = await axios.post(
-                `${BASE_URL}/messages/${id}/reply`,
-                { replyText },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            );
-            setMessage(response.data.contact);
-            setReplyText('');
-            toast.success('Reply sent successfully.', { id: toastId });
-        } catch (err) {
-            console.error("Error sending reply:", err);
-            const errorMessage = err.response?.data?.message || 'Failed to send reply.';
-            toast.error(errorMessage, { id: toastId });
-        } finally {
-            setIsReplying(false);
-        }
-    };
+  const hasBody = stripHtml(bodyHtml).length > 0;
+  const canSend = subject.trim().length > 0 && hasBody && !sending;
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString('en-US', {
-            year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-        });
-    };
-
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center min-h-screen bg-gray-50">
-                <Loader2 className="animate-spin h-10 w-10 text-blue-600" />
-            </div>
-        );
+  const fetchMessage = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${BASE_URL}/messages/${id}`, auth);
+      setMessage(response.data);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to fetch message details.';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
+  }, [id, auth]);
 
-    if (error) {
-        return (
-            <div className="p-8 bg-gray-50 min-h-screen">
-                <Helmet>
-                    <title>Error | Contact Message</title>
-                    <meta name="description" content="Error loading contact message details." />
-                </Helmet>
-                <button onClick={() => navigate(-1)} className="mb-4 inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <ArrowLeft size={16} className="mr-1" /> Back
-                </button>
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative flex items-center" role="alert">
-                    <AlertTriangle className="mr-2" size={20} />
-                    <span className="block sm:inline">{error}</span>
-                </div>
-            </div>
-        );
+  useEffect(() => { fetchMessage(); window.scrollTo(0, 0); }, [fetchMessage]);
+  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [chat, aiLoading]);
+
+  /* ---------- preview (rendered by the server so it matches the real email) ---------- */
+  const needPreview = tab === 'preview' || confirmOpen;
+  useEffect(() => {
+    if (!needPreview || !message) return undefined;
+    let cancelled = false;
+    setPreviewLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await axios.post(`${BASE_URL}/messages/${id}/reply/preview`, { subject, bodyHtml }, auth);
+        if (!cancelled) setPreviewHtml(data.html);
+      } catch (err) {
+        if (!cancelled) toast.error(err.response?.data?.message || 'Could not build preview.');
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [needPreview, subject, bodyHtml, id, auth, message]);
+
+  /* ---------- actions ---------- */
+  const handleToggleRead = async () => {
+    try {
+      const response = await axios.patch(`${BASE_URL}/messages/${id}/read`, null, auth);
+      setMessage((m) => ({ ...m, isRead: response.data.contact.isRead }));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update status.');
     }
+  };
 
-    if (!message) {
-        return (
-            <div className="p-8 bg-gray-50 min-h-screen text-center text-gray-500">
-                <Helmet>
-                    <title>Message Not Found | Contact Message</title>
-                    <meta name="description" content="Contact message not found." />
-                </Helmet>
-                Message not found.
-                <button onClick={() => navigate(-1)} className="mt-4 inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <ArrowLeft size={16} className="mr-1" /> Back
-                </button>
-            </div>
-        );
+  const confirmDelete = async () => {
+    const toastId = toast.loading('Deleting message...');
+    try {
+      await axios.delete(`${BASE_URL}/messages/${id}`, auth);
+      toast.success('Message deleted.', { id: toastId });
+      navigate('/contact-query');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete message.', { id: toastId });
+      setDeleteOpen(false);
     }
+  };
 
+  const askAssistant = async (text) => {
+    const instruction = (text ?? prompt).trim();
+    if (!instruction || aiLoading) return;
+    const history = chat.map(({ role, content }) => ({ role, content }));
+    setChat((c) => [...c, { role: 'user', content: instruction }]);
+    setPrompt('');
+    setAiLoading(true);
+    try {
+      const { data } = await axios.post(
+        `${BASE_URL}/messages/${id}/reply/ai`,
+        {
+          prompt: instruction,
+          history,
+          currentDraft: hasBody || subject ? { subject, bodyHtml } : undefined,
+        },
+        auth
+      );
+      if (data.subject) setSubject(data.subject);
+      if (data.bodyHtml) setBodyHtml(data.bodyHtml);
+      setChat((c) => [...c, { role: 'assistant', content: data.assistantMessage || 'Draft updated.', filled: true }]);
+      toast.success('Subject and body filled in');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Assistant failed. Try again.';
+      setChat((c) => [...c, { role: 'assistant', content: msg, error: true }]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
+  const sendReply = async () => {
+    setSending(true);
+    const toastId = toast.loading('Sending email...');
+    try {
+      const { data } = await axios.post(`${BASE_URL}/messages/${id}/reply`, { subject, bodyHtml }, auth);
+      setMessage(data.contact);
+      setSubject('');
+      setBodyHtml('');
+      setChat([]);
+      setTab('edit');
+      setConfirmOpen(false);
+      toast.success(`Reply sent to ${message.email}`, { id: toastId });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send reply.', { id: toastId });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /* ---------- states ---------- */
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen bg-slate-50"><Loader2 className="animate-spin h-10 w-10 text-indigo-600" /></div>;
+  }
+
+  if (error || !message) {
     return (
-        <div className="p-4 md:p-8 bg-gray-100 min-h-screen mt-12">
-            <Helmet>
-                <title>{message.name} | Contact Message</title>
-                <meta name="description" content={`Details of contact message from ${message.name}.`} />
-            </Helmet>
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <button onClick={() => navigate(-1)} className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <ArrowLeft size={16} className="mr-2" /> Back to List
-                </button>
-                <div className="flex items-center space-x-3">
-                    <span className={`text-sm font-medium px-3 py-1 rounded-full ${message.isRead ? 'bg-gray-200 text-gray-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {message.isRead ? 'Read' : 'Unread'}
-                    </span>
-                    <button
-                        onClick={handleToggleRead}
-                        title={message.isRead ? 'Mark as Unread' : 'Mark as Read'}
-                        className="p-2 hover:bg-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
-                    >
-                        {message.isRead ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-
-                    <button
-                        onClick={openDeleteModal}
-                        title="Delete Message"
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-400"
-                    >
-                        <Trash2 size={20} />
-                    </button>
-                </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm text-gray-700 mb-4">
-                    <p className="flex items-center"><User size={16} className="mr-2 text-blue-600" /><strong>From:</strong><span className="ml-2">{message?.name}</span></p>
-                    <p className="flex items-center"><Mail size={16} className="mr-2 text-blue-600" /><strong>Email:</strong><span className="ml-2">{message?.email}</span></p>
-                    <p className="flex items-center"><Phone size={16} className="mr-2 text-blue-600" /><strong>Phone:</strong><span className="ml-2">{message?.contactNumber}</span></p>
-                    <p className="flex items-center"><Briefcase size={16} className="mr-2 text-blue-600" /><strong>Service:</strong><span className="ml-2">{message?.service}</span></p>
-                    <p className="flex items-center col-span-1 md:col-span-2"><Clock size={16} className="mr-2 text-blue-600" /><strong>Received:</strong><span className="ml-2">{formatDate(message.createdAt)}</span></p>
-                </div>
-                <div className="mt-4 pt-4 border-t">
-                    <h3 className="text-md font-semibold mb-2 text-gray-800 flex items-center"><MessageSquare size={16} className="mr-2 text-blue-600" /> Message Content:</h3>
-                    <p className="text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded border border-gray-200">{message?.message || ""}</p>
-                </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">Replies ({message.replies?.length || 0})</h2>
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {message.replies && message.replies.length > 0 ? (
-                        message.replies.sort((a, b) => new Date(a.replyDate) - new Date(b.replyDate)).map((reply, index) => (
-                            <div key={index} className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                <p className="text-gray-800 whitespace-pre-wrap mb-1">{reply.replyText}</p>
-                                <p className="text-xs text-blue-600 text-right flex items-center justify-end">
-                                    <Calendar size={12} className="mr-1" /> {formatDate(reply.replyDate)}
-                                </p>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-gray-500 text-sm italic">No replies yet.</p>
-                    )}
-                </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">Send Reply</h2>
-                <form onSubmit={handleReplySubmit}>
-                    <textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Type your reply here..."
-                        rows="4"
-                        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-                        disabled={isReplying}
-                    />
-                    <button
-                        type="submit"
-                        disabled={isReplying || !replyText.trim()}
-                        className="w-full sm:w-auto flex justify-center items-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition duration-150 ease-in-out"
-                    >
-                        {isReplying ? (
-                            <>
-                                <Loader2 className="animate-spin h-5 w-5 mr-3" /> Sending...
-                            </>
-                        ) : (
-                            <>
-                                <Send size={18} className="mr-2" /> Send Reply
-                            </>
-                        )}
-                    </button>
-                </form>
-            </div>
-
-            <ConfirmationModal
-                isOpen={isModalOpen}
-                onClose={closeDeleteModal}
-                onConfirm={confirmDelete}
-                title="Confirm Deletion"
-                message="Are you sure you want to delete this contact message? This action cannot be undone."
-            />
+      <div className="p-8 pt-24 bg-slate-50 min-h-screen">
+        <Helmet><title>Contact Query | Admin</title></Helmet>
+        <button onClick={() => navigate('/contact-query')} className="mb-4 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100">
+          <ArrowLeft size={16} /> Back
+        </button>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center" role="alert">
+          <AlertTriangle className="mr-2" size={20} /> {error || 'Message not found.'}
         </div>
+      </div>
     );
+  }
+
+  const replies = [...(message.replies || [])].sort((a, b) => new Date(b.replyDate) - new Date(a.replyDate));
+
+  return (
+    <div className="min-h-screen bg-slate-50 pt-20 pb-12 px-4 md:px-8">
+      <Helmet><title>{message.name} | Contact Query</title></Helmet>
+      <Toaster position="top-center" />
+
+      <div className="max-w-6xl mx-auto">
+        {/* top bar */}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <button onClick={() => navigate('/contact-query')} className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100">
+            <ArrowLeft size={16} /> All queries
+          </button>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${message.isRead ? 'bg-slate-200 text-slate-600' : 'bg-indigo-100 text-indigo-700'}`}>
+              {message.isRead ? 'Read' : 'Unread'}
+            </span>
+            <button onClick={handleToggleRead} title={message.isRead ? 'Mark as unread' : 'Mark as read'} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-slate-800">
+              {message.isRead ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+            <button onClick={() => setDeleteOpen(true)} title="Delete" className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50">
+              <Trash2 size={17} />
+            </button>
+          </div>
+        </div>
+
+        {/* query card */}
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+          <div className="px-5 sm:px-6 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
+            <p className="text-xs uppercase tracking-wider text-indigo-200">Customer query</p>
+            <h1 className="text-2xl font-bold mt-1">{message.name}</h1>
+            <p className="text-sm text-indigo-100 mt-1 inline-flex items-center gap-1.5"><Clock size={14} /> Received {fmt(message.createdAt, true)}</p>
+          </div>
+          <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { icon: Mail, label: 'Email', value: message.email, href: `mailto:${message.email}` },
+              { icon: Phone, label: 'Phone', value: message.contactNumber, href: `tel:${message.contactNumber}` },
+              { icon: Briefcase, label: 'Service', value: message.service },
+            ].map(({ icon: Icon, label, value, href }) => (
+              <div key={label} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><Icon size={17} /></div>
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-500">{label}</p>
+                  {href ? <a href={href} className="text-sm font-medium text-slate-900 hover:text-indigo-600 break-all">{value}</a> : <p className="text-sm font-medium text-slate-900">{value}</p>}
+                </div>
+              </div>
+            ))}
+            <div className="md:col-span-3">
+              <p className="text-xs font-medium text-slate-500 mb-2 inline-flex items-center gap-1.5"><MessageSquare size={14} /> Message</p>
+              <div className="whitespace-pre-wrap text-slate-800 text-[15px] leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-4">
+                {message.message || <span className="italic text-slate-400">No message provided.</span>}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* composer + agent */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+          {/* composer */}
+          <section className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-900 inline-flex items-center gap-2"><Reply size={19} className="text-indigo-600" /> Compose reply</h2>
+              <div className="inline-flex rounded-lg bg-slate-100 p-1 text-sm">
+                {[
+                  { k: 'edit', label: 'Write', icon: PencilLine },
+                  { k: 'preview', label: 'Preview', icon: Eye },
+                ].map(({ k, label, icon: Icon }) => (
+                  <button key={k} onClick={() => setTab(k)} className={`px-3 py-1 rounded-md inline-flex items-center gap-1.5 font-medium ${tab === k ? 'bg-white shadow text-indigo-700' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <Icon size={14} /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-500">To</label>
+                  <div className="mt-1 px-3 py-2 text-sm rounded-lg bg-slate-100 text-slate-700 border border-slate-200 truncate">{message.email}</div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Reply-To</label>
+                  <div className="mt-1 px-3 py-2 text-sm rounded-lg bg-slate-100 text-slate-700 border border-slate-200 truncate">{REPLY_TO}</div>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="subject" className="text-xs font-medium text-slate-500">Subject</label>
+                <input
+                  id="subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  maxLength={200}
+                  placeholder="e.g. Re: Your enquiry about PPC Advertising"
+                  className="mt-1 w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+
+              {tab === 'edit' ? (
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Body</label>
+                  <div className="mt-1 contact-reply-editor">
+                    <ReactQuill
+                      theme="snow"
+                      value={bodyHtml}
+                      onChange={setBodyHtml}
+                      modules={QUILL_MODULES}
+                      formats={QUILL_FORMATS}
+                      placeholder="Write your reply, or ask the AI assistant to draft it…"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">Header, signature and footer are added automatically in the final email.</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-slate-500">Email preview</p>
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                      <button onClick={() => setMobile(false)} className={`p-1.5 rounded-md ${!mobile ? 'bg-white shadow text-indigo-700' : 'text-slate-500'}`} title="Desktop"><Monitor size={15} /></button>
+                      <button onClick={() => setMobile(true)} className={`p-1.5 rounded-md ${mobile ? 'bg-white shadow text-indigo-700' : 'text-slate-500'}`} title="Mobile"><Smartphone size={15} /></button>
+                    </div>
+                  </div>
+                  <EmailFrame html={previewHtml} mobile={mobile} loading={previewLoading} />
+                </div>
+              )}
+
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <p className="text-xs text-slate-400 inline-flex items-center gap-1.5"><ShieldCheck size={14} /> You&apos;ll confirm before anything is sent.</p>
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={!canSend}
+                  className="inline-flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send size={16} /> Review &amp; send
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* AI agent */}
+          <section className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden lg:max-h-[720px]">
+            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
+              <h2 className="text-lg font-semibold text-slate-900 inline-flex items-center gap-2"><Sparkles size={18} className="text-violet-600" /> AI reply assistant</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Knows this query. Tell it what to say and it fills the subject &amp; body.</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[260px] bg-slate-50/50">
+              {chat.length === 0 && (
+                <div className="text-center py-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center"><Bot size={24} /></div>
+                  <p className="text-sm text-slate-500 mt-3 mb-4">Try one of these:</p>
+                  <div className="space-y-2">
+                    {SUGGESTIONS.map((s) => (
+                      <button key={s} onClick={() => askAssistant(s)} disabled={aiLoading} className="w-full text-left text-sm px-3 py-2 rounded-xl border border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50 text-slate-700">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {chat.map((m, i) => (
+                <div key={i} className={`flex gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-violet-100 text-violet-600'}`}>
+                    {m.role === 'user' ? <UserIcon size={14} /> : <Bot size={14} />}
+                  </div>
+                  <div className={`max-w-[85%] text-sm px-3 py-2 rounded-2xl whitespace-pre-wrap ${
+                    m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm'
+                      : m.error ? 'bg-red-50 text-red-700 border border-red-200 rounded-tl-sm'
+                        : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
+                  }`}>
+                    {m.content}
+                    {m.filled && <span className="mt-1.5 flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 size={12} /> Subject &amp; body updated</span>}
+                  </div>
+                </div>
+              ))}
+
+              {aiLoading && (
+                <div className="flex gap-2">
+                  <div className="shrink-0 w-7 h-7 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center"><Bot size={14} /></div>
+                  <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-3 py-2 text-sm text-slate-500 inline-flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" /> Drafting…
+                  </div>
+                </div>
+              )}
+              <div ref={chatEnd} />
+            </div>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); askAssistant(); }}
+              className="p-3 border-t border-slate-100 bg-white"
+            >
+              <div className="flex gap-2 items-end">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAssistant(); } }}
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={hasBody ? 'Ask for changes, e.g. “make it shorter”' : 'Describe the reply you want…'}
+                  className="flex-1 resize-none px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  disabled={aiLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={aiLoading || !prompt.trim()}
+                  className="shrink-0 h-10 w-10 rounded-xl bg-violet-600 text-white flex items-center justify-center hover:bg-violet-700 disabled:opacity-50"
+                  aria-label="Send to assistant"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1.5">Enter to send · Shift+Enter for a new line · AI can make mistakes, review before sending.</p>
+            </form>
+          </section>
+        </div>
+
+        {/* history */}
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Reply history <span className="text-slate-400 font-normal">({replies.length})</span></h2>
+          {replies.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">No replies sent yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {replies.map((r, i) => {
+                const open = openReply === i;
+                return (
+                  <div key={r._id || i} className="border border-slate-200 rounded-xl overflow-hidden">
+                    <button onClick={() => setOpenReply(open ? null : i)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><CheckCircle2 size={16} /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{r.subject || 'Reply'}</p>
+                        <p className="text-xs text-slate-500">{fmt(r.replyDate)}{r.sentBy ? ` · by ${r.sentBy}` : ''}</p>
+                      </div>
+                      <ChevronDown size={18} className={`text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+                    </button>
+                    {open && (
+                      <div className="px-4 pb-4 border-t border-slate-100 bg-slate-50">
+                        {r.sentTo && <p className="text-xs text-slate-500 pt-3">To: {r.sentTo}{r.replyTo ? ` · Reply-To: ${r.replyTo}` : ''}</p>}
+                        <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{r.replyText}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* confirm send */}
+      {confirmOpen && (
+        <ModalShell onClose={() => !sending && setConfirmOpen(false)} wide>
+          <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Send this email?</h2>
+              <p className="text-sm text-slate-500">Check the preview carefully. Sent emails can&apos;t be recalled.</p>
+            </div>
+            <button onClick={() => setConfirmOpen(false)} disabled={sending} className="text-slate-400 hover:text-slate-600" aria-label="Close"><X size={22} /></button>
+          </div>
+
+          <div className="overflow-y-auto p-6 space-y-4">
+            <dl className="grid grid-cols-[88px_1fr] gap-y-2 text-sm bg-slate-50 border border-slate-100 rounded-xl p-4">
+              <dt className="text-slate-500">To</dt><dd className="text-slate-900 font-medium break-all">{message.name} &lt;{message.email}&gt;</dd>
+              <dt className="text-slate-500">Reply-To</dt><dd className="text-slate-900 break-all">{REPLY_TO}</dd>
+              <dt className="text-slate-500">Subject</dt><dd className="text-slate-900 font-medium break-words">{subject}</dd>
+            </dl>
+            <EmailFrame html={previewHtml} loading={previewLoading} height={380} />
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+            <button onClick={() => setConfirmOpen(false)} disabled={sending} className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-60">
+              Back to editing
+            </button>
+            <button onClick={sendReply} disabled={sending || previewLoading} className="inline-flex justify-center items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">
+              {sending ? <><Loader2 size={16} className="animate-spin" /> Sending…</> : <><Send size={16} /> Yes, send email</>}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {deleteOpen && <DeleteModal onClose={() => setDeleteOpen(false)} onConfirm={confirmDelete} />}
+
+      <style>{`
+        .contact-reply-editor .ql-toolbar{border-radius:.5rem .5rem 0 0;border-color:#e2e8f0;background:#f8fafc}
+        .contact-reply-editor .ql-container{border-radius:0 0 .5rem .5rem;border-color:#e2e8f0;font-size:15px;min-height:260px}
+        .contact-reply-editor .ql-editor{min-height:260px;line-height:1.65}
+      `}</style>
+    </div>
+  );
 };
 
 export default ContactDetail;

@@ -53,6 +53,12 @@ const contactSchema = new mongoose.Schema(
             required: true,
             trim: true,
           },
+          subject: { type: String, trim: true, default: '' },
+          bodyHtml: { type: String, default: '' },
+          sentTo: { type: String, trim: true, default: '' },
+          replyTo: { type: String, trim: true, default: '' },
+          sentBy: { type: String, trim: true, default: '' },
+          emailSent: { type: Boolean, default: false },
           replyDate: {
             type: Date,
             required: true,

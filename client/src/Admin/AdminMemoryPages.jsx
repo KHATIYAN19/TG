@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -75,7 +75,13 @@ const TABS = [
 
 export default function AdminMemoryPages() {
   const token = useSelector((s) => s.auth?.token);
-  const [tab, setTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const tab = TABS.some(([key]) => key === urlTab) ? urlTab : "overview";
+  const setTab = useCallback(
+    (key) => setSearchParams(key === "overview" ? {} : { tab: key }, { replace: true }),
+    [setSearchParams]
+  );
   const [dialog, setDialog] = useState(null); // { kind, ... }
 
   const http = useMemo(
