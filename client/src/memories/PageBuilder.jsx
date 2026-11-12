@@ -373,7 +373,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
           <div className="space-y-5 rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[28px]">
             <div>
               <label className={label} htmlFor="pb-title">Page name <span className="font-medium normal-case tracking-normal text-[#c4a8b8]">(only you see this)</span></label>
-              <input id="pb-title" className={field} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={autoTitle || "Happy Birthday, Anu"} />
+              <input id="pb-title" className={field} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={autoTitle || "Happy Birthday, Emma"} />
             </div>
             {!edit && (
               <fieldset>

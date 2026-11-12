@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, Volume, Volume1, Volume2, VolumeX } from "lucide-react";
+import { Volume, Volume1, Volume2, VolumeX } from "lucide-react";
 
 const KEY_V = "memories:bd:volume";
 const KEY_M = "memories:bd:muted";
@@ -17,7 +17,7 @@ const pageVideos = () => [...document.querySelectorAll("video[controls]")];
   It also makes the page go quiet the moment it is not on screen (another tab, a locked phone, a closed or scrolled-away
   preview) and carry on when it is back. The choice is remembered on this device.
 */
-export default function VolumeControl({ sound, visible, songPlaying, onToggleSong, songReady }) {
+export default function VolumeControl({ sound, visible }) {
   const [vol, setVol] = useState(() => clamp01(read(KEY_V, DEFAULT_VOL)));
   const [muted, setMuted] = useState(() => read(KEY_M, "false") === "true");
   const lastVol = useRef(vol > 0 ? vol : DEFAULT_VOL); // what "unmute" goes back to
@@ -34,7 +34,11 @@ export default function VolumeControl({ sound, visible, songPlaying, onToggleSon
 
   // the videos: same volume, same mute. A video that starts later picks it up as it starts.
   useEffect(() => {
-    const apply = (v) => { if (Math.abs(v.volume - vol) > 0.01) v.volume = vol; if (v.muted !== off) v.muted = off; };
+    const apply = (v) => {
+      if (Math.abs(v.volume - vol) > 0.01) v.volume = vol;
+      if (v.muted !== off) v.muted = off;
+      v._bdSet = { vol: v.volume, muted: v.muted }; // remember what WE set, so its volumechange event isn't mistaken for the viewer
+    };
     pageVideos().forEach(apply);
     const onPlay = (e) => { if (e.target instanceof HTMLVideoElement && e.target.controls) apply(e.target); };
     document.addEventListener("play", onPlay, true);
@@ -46,6 +50,8 @@ export default function VolumeControl({ sound, visible, songPlaying, onToggleSon
     const onChange = (e) => {
       const v = e.target;
       if (!(v instanceof HTMLVideoElement) || !v.controls) return;
+      const mine = v._bdSet; // our own change coming back: ignore it (it used to fight the slider while dragging)
+      if (mine && Math.abs(v.volume - mine.vol) < 0.01 && v.muted === mine.muted) return;
       const now = state.current;
       const videoOff = v.muted || v.volume === 0;
       if (videoOff !== now.off) {
@@ -118,11 +124,6 @@ export default function VolumeControl({ sound, visible, songPlaying, onToggleSon
   const pct = Math.round(level * 100);
   return (
     <div className={`bd-vol ${visible ? "" : "hidden"}`} data-off={off || undefined} role="group" aria-label="Sound controls">
-      {songReady && (
-        <button type="button" onClick={onToggleSong} aria-label={songPlaying ? "Stop the song" : "Play the song"} title={songPlaying ? "Stop song" : "Play song"}>
-          {songPlaying ? <span className="bd-eq" data-off={off || undefined} aria-hidden><i /><i /><i /><i /></span> : <Play className="h-4 w-4" fill="currentColor" aria-hidden />}
-        </button>
-      )}
       <button type="button" className="bd-vol-mute" onClick={toggleMute} aria-label={off ? "Turn sound on" : "Turn sound off"} aria-pressed={off} title={off ? "Sound is off" : `Volume ${pct}%`}>
         <Icon className="h-[18px] w-[18px]" aria-hidden />
       </button>

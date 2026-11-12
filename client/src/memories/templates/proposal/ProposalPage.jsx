@@ -78,8 +78,6 @@ export default function ProposalPage({ data = DUMMY_PROPOSAL, theme: themeId = D
 
   const [opened, setOpened] = useState(false);
   const [boom, setBoom] = useState(false);
-  const [songReady, setSongReady] = useState(false);
-  const [songPlaying, setSongPlaying] = useState(false);
 
   const { recipientName: name, senderName: sender } = data;
   const question = (data.question || "").trim() || DEFAULT_QUESTION;
@@ -111,22 +109,14 @@ export default function ProposalPage({ data = DUMMY_PROPOSAL, theme: themeId = D
     sound.sfx.chime();
     setOpened(true);
     window.scrollTo(0, 0);
-    setSongReady(true);
-    setSongPlaying(true);
-    sound.playRomance({ bars: 60, onEnd: () => setSongPlaying(false) });
     const { W, H } = fx?.size() || { W: window.innerWidth, H: window.innerHeight };
     setTimeout(() => fx?.hearts(W / 2, H * 0.6, 16), 300);
   };
 
-  const toggleSong = () => {
-    if (sound.isSongPlaying()) { sound.stopSong(); setSongPlaying(false); }
-    else { sound.playRomance({ bars: 60, onEnd: () => setSongPlaying(false) }); setSongPlaying(true); }
-  };
 
   /* the answer was YES: everything at once */
   const celebrate = useCallback(() => {
     const { W, H } = fx?.size() || { W: 400, H: 700 };
-    sound.stopSong?.();
     sound.sfx.tada();
     setTimeout(() => sound.sfx.bang(), 80);
     setTimeout(() => sound.sfx.cheer(), 500);
@@ -136,7 +126,6 @@ export default function ProposalPage({ data = DUMMY_PROPOSAL, theme: themeId = D
     fx?.hearts(W / 2, H * 0.6, 40);
     [[0.2, 0.28, 200], [0.8, 0.24, 650], [0.5, 0.16, 1100], [0.32, 0.36, 1600], [0.68, 0.32, 2000], [0.5, 0.3, 2600], [0.15, 0.2, 3000], [0.85, 0.3, 3400]]
       .forEach(([x, y, d]) => setTimeout(() => { fx?.firework(W * x, H * y); sound.sfx.pop(); }, d));
-    setTimeout(() => { sound.playRomance({ bars: 60, onEnd: () => setSongPlaying(false) }); setSongPlaying(true); setSongReady(true); }, 1200);
     setBoom(true);
     setTimeout(() => setBoom(false), 3600);
   }, [fx, sound]);
@@ -165,7 +154,7 @@ export default function ProposalPage({ data = DUMMY_PROPOSAL, theme: themeId = D
       <div className="bd-bg" aria-hidden />
       <BgFloat theme={theme} spec={theme.float} />
       <canvas ref={canvasRef} className="bd-fx" aria-hidden />
-      <VolumeControl sound={sound} visible={opened} songReady={songReady} songPlaying={songPlaying} onToggleSong={toggleSong} />
+      <VolumeControl sound={sound} visible={opened} />
       {boom && <div className="bd-boom" aria-hidden><span>{name} said YES!</span></div>}
 
       {/* welcome */}

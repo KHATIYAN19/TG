@@ -81,8 +81,6 @@ export default function AnniversaryPage({ data = DUMMY_ANNIVERSARY, theme: theme
   const [opened, setOpened] = useState(false);
   const [boom, setBoom] = useState(false);
   const [forever, setForever] = useState(false);
-  const [songReady, setSongReady] = useState(false);
-  const [songPlaying, setSongPlaying] = useState(false);
 
   const { recipientName: name, senderName: sender } = data;
   const lines = data.wishes?.length ? data.wishes : DEFAULT_LINES;
@@ -111,17 +109,10 @@ export default function AnniversaryPage({ data = DUMMY_ANNIVERSARY, theme: theme
     sound.sfx.tada();
     setOpened(true);
     window.scrollTo(0, 0);
-    setSongReady(true);
-    setSongPlaying(true);
-    sound.playRomance({ bars: 60, onEnd: () => setSongPlaying(false) });
     const { W, H } = fx?.size() || { W: window.innerWidth, H: window.innerHeight };
     setTimeout(() => fx?.hearts(W / 2, H * 0.6, 24), 300);
   };
 
-  const toggleSong = () => {
-    if (sound.isSongPlaying()) { sound.stopSong(); setSongPlaying(false); }
-    else { sound.playRomance({ bars: 60, onEnd: () => setSongPlaying(false) }); setSongPlaying(true); }
-  };
 
   /* the finale */
   const foreverNow = useCallback(() => {
@@ -153,7 +144,7 @@ export default function AnniversaryPage({ data = DUMMY_ANNIVERSARY, theme: theme
       <div className="bd-bg" aria-hidden />
       <BgFloat theme={theme} spec={theme.float} />
       <canvas ref={canvasRef} className="bd-fx" aria-hidden />
-      <VolumeControl sound={sound} visible={opened} songReady={songReady} songPlaying={songPlaying} onToggleSong={toggleSong} />
+      <VolumeControl sound={sound} visible={opened} />
       {boom && <div className="bd-boom" aria-hidden><span>{happy}!</span></div>}
 
       {/* welcome */}

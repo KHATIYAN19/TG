@@ -1,3 +1,4 @@
+import { withImages, withVideo } from "../demoMedia";
 /* DUMMY DATA for the Anniversary page. Same shape the live page will be given later. */
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const yearsAgo = (y, m = 0, d = 0) => { const t = new Date(); t.setFullYear(t.getFullYear() - y); t.setMonth(t.getMonth() - m); t.setDate(t.getDate() - d); return iso(t); };
@@ -5,7 +6,7 @@ const yearsAgo = (y, m = 0, d = 0) => { const t = new Date(); t.setFullYear(t.ge
 export const DEFAULT_LINES = ["Every day with you is my favourite.", "You are my home.", "I would choose you again and again.", "Forever is just the beginning."];
 
 export const DUMMY_ANNIVERSARY = {
-  recipientName: "Anu",
+  recipientName: "Emma",
   senderName: "Ravi",
   since: yearsAgo(3, 4, 9),
   message:
@@ -48,14 +49,14 @@ export const DUMMY_ANNIVERSARY = {
     { id: 3, title: "A weekend getaway", note: "Pack a bag. I've planned everything." },
     { id: 4, title: "A promise ring", note: "A small circle for a very big promise." },
   ],
-  photos: [
+  photos: withImages([
     { id: "p1", caption: "Our first trip", tone: ["#ffb3d1", "#ff8fa3"], emoji: "🏖️" },
     { id: "p2", caption: "That silly selfie", tone: ["#ffd27d", "#ff9d5c"], emoji: "🤪" },
     { id: "p3", caption: "Coffee and gossip", tone: ["#c7b8ff", "#8f9bff"], emoji: "☕" },
     { id: "p4", caption: "Sunset walk", tone: ["#ffb199", "#ff6b9d"], emoji: "🌇" },
     { id: "p5", caption: "Road trip songs", tone: ["#9be7d0", "#4cc9f0"], emoji: "🚗" },
     { id: "p6", caption: "Our first home", tone: ["#ffe29f", "#ffa99f"], emoji: "🏡" },
-  ],
+  ]),
   mainPhotoId: "p1",
-  video: { id: "v1", caption: "Our favourite memory", tone: ["#a18cd1", "#fbc2eb"] },
+  video: withVideo({ id: "v1", caption: "Our favourite memory", tone: ["#a18cd1", "#fbc2eb"] }),
 };

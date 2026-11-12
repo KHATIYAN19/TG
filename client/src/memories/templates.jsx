@@ -27,7 +27,7 @@ export const TEMPLATES = [
       "A birthday song when the cake is cut, with a volume slider they control",
       "A photo and video gallery of your best memories",
     ],
-    sample: "Happy Birthday, Anu! Every year with you is my favourite one yet. Open your gift, there is a letter inside just for you.",
+    sample: "Happy Birthday, Emma! Every year with you is my favourite one yet. Open your gift, there is a letter inside just for you.",
   },
   {
     id: "sorry", theme: "sorry", name: "Sorry", status: "live", demo: "/memories/preview/sorry",
@@ -44,7 +44,7 @@ export const TEMPLATES = [
       "Send roses, a warm hug or a lit candle, plus a chocolate bar and your photos",
       "\"Will you forgive me?\" where the playful No dodges, and \"I need a little time\" is always answered kindly",
     ],
-    sample: "I know I made a mistake, Anu, and I never want to hurt you. You mean the world to me. Please forgive me?",
+    sample: "I know I made a mistake, Emma, and I never want to hurt you. You mean the world to me. Please forgive me?",
   },
   {
     id: "proposal", theme: "proposal", name: "Marriage Proposal", status: "live", demo: "/memories/preview/proposal",
@@ -58,7 +58,7 @@ export const TEMPLATES = [
       "A private PIN so only they can open it",
       "A big celebration when they say yes, and kind, gentle screens if they need time or say no",
     ],
-    sample: "From the first hello to every tomorrow, you are my home. Anu, will you marry me?",
+    sample: "From the first hello to every tomorrow, you are my home. Emma, will you marry me?",
   },
   {
     id: "anniversary", theme: "anniversary", name: "Anniversary", status: "live", demo: "/memories/preview/anniversary",
@@ -90,7 +90,7 @@ export const TEMPLATES = [
       "Six themes, from autumn harvest to professional",
       "Share it with a link or keep it private with a PIN",
     ],
-    sample: "Thank you for always being there, Anu. I'm lucky to have someone like you in my life.",
+    sample: "Thank you for always being there, Emma. I'm lucky to have someone like you in my life.",
   },
 ];
 
@@ -140,7 +140,7 @@ function BirthdayScene() {
       <Balloon c="#a78bfa" x={206} y={44} d={0.4} size={32} />
       <div className="absolute inset-x-0 top-[158px] text-center">
         <p className="mem-script text-[34px] leading-none text-[#c2185b]">Happy Birthday</p>
-        <p className="mem-script mem-gradient-text mt-1 text-[58px] leading-none">Anu</p>
+        <p className="mem-script mem-gradient-text mt-1 text-[58px] leading-none">Emma</p>
         <p className="mt-2 text-[11px] font-medium text-[#8e3a62]">Pop the balloons for a surprise</p>
       </div>
       <svg className="absolute bottom-[78px] left-1/2 w-[190px] -translate-x-1/2" viewBox="0 0 300 250" aria-hidden>
@@ -172,7 +172,7 @@ function SorryScene() {
       <Stars items={[[30, 70, 12, 0], [218, 96, 10, 1], [60, 300, 8, 0.5], [214, 270, 12, 1.4]]} />
       <div className="absolute inset-x-0 top-[78px] text-center">
         <div className="mem-float mx-auto w-fit text-[96px] leading-none drop-shadow-lg" role="img" aria-label="teddy bear">🧸</div>
-        <p className="mem-script mt-3 text-[40px] leading-none text-[#7e22ce]">I&apos;m sorry, Anu</p>
+        <p className="mem-script mt-3 text-[40px] leading-none text-[#7e22ce]">I&apos;m sorry, Emma</p>
         <p className="mx-auto mt-3 max-w-[200px] text-[11px] leading-relaxed text-[#6b3a82]">I know I made a mistake, and I never want to hurt you.</p>
         <div className="mt-3 flex justify-center gap-3 text-[22px]" aria-hidden><span>🌹</span><span>🥹</span><span>🌹</span></div>
       </div>
@@ -198,7 +198,7 @@ function ProposalScene() {
         <path d="M60 4l22 18H38z" fill="#dff8ff" /><path d="M48 42l12 14 12-14z" fill="#6ccbea" /><path d="M38 22l10 20 12-14z" fill="#b6efff" />
       </svg>
       <div className="absolute inset-x-0 top-[262px] text-center">
-        <p className="mem-script text-[30px] leading-none text-[#b7791f]">Anu,</p>
+        <p className="mem-script text-[30px] leading-none text-[#b7791f]">Emma,</p>
         <p className="mem-script mem-gradient-text mt-1 text-[44px] leading-[1.05]">will you marry me?</p>
       </div>
       <div className="absolute inset-x-0 bottom-[74px] flex justify-center gap-3">
@@ -245,7 +245,7 @@ function ThanksScene() {
           <span style={{ "--r": "-12deg" }} className="mem-float">🌷</span><span className="-mb-2 text-[58px]">🌸</span><span style={{ "--r": "12deg" }} className="mem-float">🌼</span>
         </div>
         <p className="mem-script mt-5 text-[52px] leading-none text-[#15803d]">Thank you</p>
-        <p className="mem-script text-[26px] text-[#4d7c0f]">Anu</p>
+        <p className="mem-script text-[26px] text-[#4d7c0f]">Emma</p>
       </div>
       <div className="absolute inset-x-5 top-[300px] rounded-2xl bg-white/85 p-4 shadow-md">
         <p className="text-center text-[11px] leading-relaxed text-[#3f6212]">Thank you for always being there. I am so lucky to have you in my life.</p>

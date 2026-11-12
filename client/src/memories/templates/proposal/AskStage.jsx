@@ -30,7 +30,7 @@ function useTyped(text, run) {
     no     -> "thank you for being honest": rain, a cracked heart. Gentle, never guilt-tripping.
   Any answer can be taken back ("Let me answer again"): it is their choice, and they can change their mind either way.
 */
-export default function AskStage({ question, name, sender, fx, sound, onYes, songStart, response, onAnswer, onReply }) {
+export default function AskStage({ question, name, sender, fx, sound, onYes, response, onAnswer, onReply }) {
   const kind = kindFor(question);
   const given = response?.answer?.value || null; // what they answered before (a reload shows it again)
   const [phase, setPhase] = useState(given === "yes" ? "yes" : given === "no" ? "no" : given === "later" ? "time" : "wait");
@@ -71,18 +71,14 @@ export default function AskStage({ question, name, sender, fx, sound, onYes, son
     setPhase("ask");
   };
 
-  const showYes = () => { stopRain(); setPhase("yes"); songStart?.(); onYes?.(); };
+  const showYes = () => { stopRain(); setPhase("yes"); onYes?.(); };
   const showTime = () => {
     sound.sfx.sniff();
-    sound.stopSong?.();
-    sound.playLullaby?.({ bars: 12 });
     setPhase("time");
   };
   const showNo = () => {
-    sound.stopSong?.();
     sound.sfx.nope();
     sound.rain(0.7);
-    sound.playLullaby?.({ bars: 12 });
     later(() => sound.sfx.sniff(), 900);
     later(() => sound.sfx.drip(), 1800);
     later(() => sound.sfx.drip(), 3300);
@@ -119,7 +115,6 @@ export default function AskStage({ question, name, sender, fx, sound, onYes, son
   const back = () => {
     if (final) return; // a final answer stays
     stopRain();
-    sound.stopSong?.();
     setPhase("ask");
     sound.sfx.chime();
   };

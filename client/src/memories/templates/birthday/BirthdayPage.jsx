@@ -84,8 +84,6 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
   const [opened, setOpened] = useState(false);
   const [popped, setPopped] = useState(0);
   const [boom, setBoom] = useState(false);
-  const [songReady, setSongReady] = useState(false);
-  const [songPlaying, setSongPlaying] = useState(false);
 
   useEffect(() => {
     const f = createFx(canvasRef.current, () => ({ colors: themeRef.current.confetti, shapes: themeRef.current.shapes }));
@@ -115,9 +113,6 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
   const celebrate = useCallback(() => {
     track("cake_cut");
     const { W, H } = fx?.size() || { W: window.innerWidth, H: window.innerHeight };
-    setSongReady(true);
-    setSongPlaying(true);
-    sound.playSong({ onEnd: () => setSongPlaying(false) });
     sound.sfx.bang();
     fx?.popper(W * 0.06, H, 1);
     fx?.popper(W * 0.94, H, -1);
@@ -135,10 +130,6 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
     sound.sfx.chime();
   }, [fx, sound]);
 
-  const toggleSong = () => {
-    if (sound.isSongPlaying()) { sound.stopSong(); setSongPlaying(false); }
-    else { sound.playSong({ onEnd: () => setSongPlaying(false) }); setSongPlaying(true); }
-  };
 
   const wishes = data.wishes?.length ? data.wishes : DEFAULT_WISHES;
   const gifts = data.gifts || [];
@@ -164,7 +155,7 @@ export default function BirthdayPage({ data = DUMMY_BIRTHDAY, theme: themeId = D
       <BgFloat theme={theme} />
       <canvas ref={canvasRef} className="bd-fx" aria-hidden />
       <BalloonStorm ref={stormRef} palette={theme.balloons} shapes={theme.balloonShapes} fx={fx} sound={sound} />
-      <VolumeControl sound={sound} visible={opened} songReady={songReady} songPlaying={songPlaying} onToggleSong={toggleSong} />
+      <VolumeControl sound={sound} visible={opened} />
       {boom && <div className="bd-boom" aria-hidden><span>Happy Birthday {name}!</span></div>}
 
       {/* welcome screen: the first tap also unlocks sound */}

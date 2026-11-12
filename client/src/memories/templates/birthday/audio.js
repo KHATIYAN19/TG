@@ -10,19 +10,6 @@ const NOTE = {
   C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, C6: 1046.5, E6: 1318.5, G6: 1568, C7: 2093,
 };
 
-/* Happy Birthday in 3/4: [note, beats]. 24 beats = 8 bars. */
-const TUNE = [
-  ["G4", 0.75], ["G4", 0.25], ["A4", 1], ["G4", 1], ["C5", 1], ["B4", 2],
-  ["G4", 0.75], ["G4", 0.25], ["A4", 1], ["G4", 1], ["D5", 1], ["C5", 2],
-  ["G4", 0.75], ["G4", 0.25], ["G5", 1], ["E5", 1], ["C5", 1], ["B4", 1], ["A4", 1],
-  ["F5", 0.75], ["F5", 0.25], ["E5", 1], ["C5", 1], ["D5", 1], ["C5", 2],
-];
-/* one chord per bar: [bass, [chord tones]] */
-const BARS = [
-  ["C2", ["E3", "G3"]], ["G2", ["D3", "B3"]], ["G2", ["D3", "B3"]], ["C2", ["E3", "G3"]],
-  ["C2", ["E3", "G3"]], ["F2", ["A3", "C4"]], ["F2", ["A3", "C4"]], ["C2", ["E3", "G3"]],
-];
-
 export function createSound() {
   let ctx = null;
   let master = null;
@@ -187,91 +174,6 @@ export function createSound() {
     rustle: run(() => noise(now(), 0.25, { type: "highpass", freq: 3000, gain: 0.12, attack: 0.05 })),
   };
 
-  function playSong({ tempo = 112, onEnd } = {}) {
-    if (!ensure()) return 0;
-    stopSong(true);
-    const beat = 60 / tempo;
-    const bus = ctx.createGain();
-    bus.gain.value = 1;
-    bus.connect(master);
-    const t0 = now() + 0.08;
-
-    let t = t0;
-    for (const [n, b] of TUNE) {
-      const dur = b * beat;
-      const f = NOTE[n];
-      tone(f, t, dur * 0.92, { type: "triangle", gain: 0.2, attack: 0.012, release: 0.16, vib: dur > 1 ? 1 : 0, dest: bus });
-      tone(f * 2, t, dur * 0.5, { type: "sine", gain: 0.05, attack: 0.005, release: 0.22, dest: bus }); // music-box sparkle
-      t += dur;
-    }
-    BARS.forEach(([bass, chord], i) => {
-      const bt = t0 + i * 3 * beat;
-      tone(NOTE[bass], bt, beat * 0.9, { type: "triangle", gain: 0.2, attack: 0.01, release: 0.2, dest: bus });
-      [1, 2].forEach((k) => chord.forEach((c) => tone(NOTE[c], bt + k * beat, beat * 0.55, { type: "sine", gain: 0.06, attack: 0.01, release: 0.15, dest: bus })));
-    });
-    const total = t - t0;
-    song = watch(bus, total + 0.6, onEnd);
-    return total;
-  }
-
-  /* Lullaby: a music-box arpeggio over C - G - Am - F. `bright` = the happy, faster, major version. Loops until stopped. */
-  function playLullaby({ bright = false, bars = 16, onEnd } = {}) {
-    if (!ensure()) return 0;
-    stopSong(true);
-    const tempo = bright ? 104 : 66;
-    const beat = 60 / tempo;
-    const bus = ctx.createGain();
-    bus.gain.value = bright ? 0.9 : 0.75;
-    bus.connect(master);
-    const t0 = now() + 0.1;
-    const PROG = [["C3", ["C4", "E4", "G4", "C5"]], ["G2", ["B3", "D4", "G4", "B4"]], ["A2", ["C4", "E4", "A4", "C5"]], ["F2", ["C4", "F4", "A4", "C5"]]];
-    for (let bar = 0; bar < bars; bar++) {
-      const [bass, chord] = PROG[bar % 4];
-      const bt = t0 + bar * 4 * beat;
-      tone(NOTE[bass] || 130, bt, beat * 3.6, { type: "triangle", gain: 0.14, attack: 0.05, release: 0.5, dest: bus });
-      for (let i = 0; i < 8; i++) { // eighth-note arpeggio
-        const pattern = [0, 1, 2, 3, 2, 1, 2, 1][i];
-        const f = NOTE[chord[pattern]] || 440;
-        const when = bt + i * (beat / 2);
-        tone(f, when, beat * 0.9, { type: "sine", gain: bright ? 0.13 : 0.1, attack: 0.004, release: 0.6, dest: bus });
-        if (bright || i % 4 === 0) tone(f * 2, when, beat * 0.4, { type: "sine", gain: 0.035, attack: 0.003, release: 0.4, dest: bus });
-      }
-    }
-    const total = bars * 4 * beat;
-    song = watch(bus, total + 0.8, onEnd);
-    return total;
-  }
-
-  /* Romance: a slow waltz in 3/4 (a warm arpeggio, a singing top line and a gentle bass). Loops until stopped. */
-  function playRomance({ bars = 24, onEnd } = {}) {
-    if (!ensure()) return 0;
-    stopSong(true);
-    const beat = 60 / 86;
-    const bus = ctx.createGain();
-    bus.gain.value = 0.85;
-    bus.connect(master);
-    const t0 = now() + 0.1;
-    // [bass, chord tones, two melody notes]
-    const PROG = [
-      ["C3", ["E4", "G4", "C5"], ["E5", "G5"]], ["E3", ["G4", "B4", "E5"], ["G5", "E5"]],
-      ["A2", ["E4", "A4", "C5"], ["A5", "E5"]], ["F2", ["F4", "A4", "C5"], ["F5", "C5"]],
-      ["D3", ["F4", "A4", "D5"], ["D5", "F5"]], ["G2", ["D4", "G4", "B4"], ["D5", "B4"]],
-      ["C3", ["E4", "G4", "C5"], ["C5", "E5"]], ["G2", ["D4", "G4", "B4"], ["D5", "C5"]],
-    ];
-    for (let bar = 0; bar < bars; bar++) {
-      const [bass, chord, mel] = PROG[bar % 8];
-      const bt = t0 + bar * 3 * beat;
-      tone(NOTE[bass], bt, beat * 2.6, { type: "triangle", gain: 0.17, attack: 0.04, release: 0.5, dest: bus });
-      [1, 2].forEach((k) => chord.forEach((c, i) => tone(NOTE[c], bt + k * beat + i * 0.025, beat * 0.9, { type: "sine", gain: 0.055, attack: 0.01, release: 0.35, dest: bus })));
-      tone(NOTE[mel[0]], bt, beat * 1.6, { type: "triangle", gain: 0.11, attack: 0.03, release: 0.5, vib: 1, dest: bus });
-      tone(NOTE[mel[1]], bt + beat * 2, beat * 0.95, { type: "triangle", gain: 0.09, attack: 0.03, release: 0.5, vib: 1, dest: bus });
-      tone(NOTE[mel[0]] * 2, bt, beat * 0.5, { type: "sine", gain: 0.03, attack: 0.004, release: 0.5, dest: bus });
-    }
-    const total = bars * 3 * beat;
-    song = watch(bus, total + 0.8, onEnd);
-    return total;
-  }
-
   /* Rain ambience: a soft filtered-noise bed. level 0..1 (0 = silent). */
   let rainNode = null;
   function rain(level) {
@@ -305,12 +207,8 @@ export function createSound() {
   return {
     unlock: ensure,
     sfx,
-    playSong,
-    playLullaby,
-    playRomance,
     rain,
     stopSong,
-    isSongPlaying: () => Boolean(song),
     setVolume(v) { volume = Math.max(0, Math.min(1, Number(v) || 0)); applyGain(); },
     setMuted(m) { muted = Boolean(m); applyGain(); },
     get volume() { return volume; },

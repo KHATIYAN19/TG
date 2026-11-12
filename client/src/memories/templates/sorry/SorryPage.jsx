@@ -79,8 +79,6 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
   const [wiggle, setWiggle] = useState(false);
   const [floaters, setFloaters] = useState([]);
   const [boom, setBoom] = useState(false);
-  const [songReady, setSongReady] = useState(false);
-  const [songPlaying, setSongPlaying] = useState(false);
   const totals = useRef({});
   const noteIdx = useRef(0);
   const mascotRef = useRef(null);
@@ -128,11 +126,10 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
     if (mood === 1) sound.sfx.chime();
     if (mood === 2) {
       sound.sfx.yes();
-      if (songPlaying) sound.playLullaby({ bright: true, bars: 32, onEnd: () => setSongPlaying(false) });
       const { W, H } = fx?.size() || { W: 400, H: 700 };
       fx?.hearts(W / 2, H * 0.55, 18);
     }
-  }, [mood, opened, sound, fx, songPlaying]);
+  }, [mood, opened, sound, fx]);
 
   const open = () => {
     track("gate_open");
@@ -140,16 +137,9 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
     sound.sfx.chime();
     setOpened(true);
     window.scrollTo(0, 0);
-    setSongReady(true);
-    setSongPlaying(true);
-    sound.playLullaby({ bright: false, bars: 32, onEnd: () => setSongPlaying(false) });
     setTimeout(() => sound.sfx.sniff(), 900);
   };
 
-  const toggleSong = () => {
-    if (sound.isSongPlaying()) { sound.stopSong(); setSongPlaying(false); }
-    else { sound.playLullaby({ bright: mood === 2, bars: 32, onEnd: () => setSongPlaying(false) }); setSongPlaying(true); }
-  };
 
   /* comfort the mascot */
   const pat = () => {
@@ -201,9 +191,7 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
     const { W, H } = fx?.size() || { W: 400, H: 700 };
     setForgiven(true);
     setComfort(100);
-    sound.stopSong();
     sound.sfx.yes();
-    setTimeout(() => { sound.playLullaby({ bright: true, bars: 32, onEnd: () => setSongPlaying(false) }); setSongPlaying(true); }, 600);
     fx?.rain(3200);
     fx?.hearts(W / 2, H * 0.6, 30);
     [[0.25, 0.3, 200], [0.75, 0.25, 600], [0.5, 0.2, 1000]].forEach(([x, y, d]) => setTimeout(() => { fx?.firework(W * x, H * y); sound.sfx.pop(); }, d));
@@ -239,7 +227,7 @@ export default function SorryPage({ data = DUMMY_SORRY, theme: themeId = DEFAULT
       {theme.id === "rain" && <Weather comfort={comfort} />}
       <BgFloat theme={theme} spec={theme.float} />
       <canvas ref={canvasRef} className="bd-fx" aria-hidden />
-      <VolumeControl sound={sound} visible={opened} songReady={songReady} songPlaying={songPlaying} onToggleSong={toggleSong} />
+      <VolumeControl sound={sound} visible={opened} />
       {boom && <div className="bd-boom" aria-hidden><span>Thank you, {name}!</span></div>}
       <HugOverlay show={hug} onDone={() => setHug(false)} sender={sender} name={name} />
       <RosesOverlay show={roses} onDone={() => setRoses(false)} sender={sender} />

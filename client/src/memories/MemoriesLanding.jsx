@@ -289,7 +289,7 @@ function Features({ info }) {
 
 /*
   ACTIVITY TRACKER: what the sender sees after they share the link. The screen below is a sample drawn with made-up data
-  (Ravi and Anu), laid out like the real Activity screen in the app.
+  (Ravi and Emma), laid out like the real Activity screen in the app.
 */
 const ACT_TILES = [["👀", "5", "times opened", "bg-sky-50 text-sky-800"], ["🧑", "2", "visitors", "bg-violet-50 text-violet-800"], ["⏱️", "4m 12s", "on the page", "bg-amber-50 text-amber-800"], ["💌", "1", "message", "bg-rose-50 text-rose-800"]];
 const ACT_ROWS = [["🎁", "Opened the surprise", "Done"], ["🎈", "Balloons popped", "12"], ["🕯️", "Blew out the candles", "Done"], ["🍰", "Cut the cake", "Done"], ["🎀", "Gifts opened", "2 of 3"], ["🖼️", "Looked at your photos and videos", "5 of 6"]];
@@ -355,8 +355,8 @@ function Activity() {
 
           <div className="mem-reveal rounded-[28px] border border-rose-100 bg-white p-4 shadow-xl shadow-rose-100/60 sm:p-6" aria-label="Sample activity screen">
             <div className="rounded-2xl bg-gradient-to-br from-pink-100 to-orange-100 p-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-600">Happy Birthday, Anu</p>
-              <p className="mt-1 text-xl font-extrabold leading-tight text-[#3a1530] sm:text-2xl">Anu opened it 5 times 👀</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-600">Happy Birthday, Emma</p>
+              <p className="mt-1 text-xl font-extrabold leading-tight text-[#3a1530] sm:text-2xl">Emma opened it 5 times 👀</p>
               <p className="mt-0.5 text-xs text-[#6b3a5a]">Last opened 12 min ago, first on 14 Nov</p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

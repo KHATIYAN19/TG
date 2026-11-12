@@ -81,8 +81,6 @@ export default function ThanksPage({ data = DUMMY_THANKS, theme: themeId = DEFAU
   const [opened, setOpened] = useState(false);
   const [boom, setBoom] = useState(false);
   const [finale, setFinale] = useState(false);
-  const [songReady, setSongReady] = useState(false);
-  const [songPlaying, setSongPlaying] = useState(false);
 
   const { recipientName: name, senderName: sender } = data;
   const greeting = (data.question || "").trim() || DEFAULT_GREETING;
@@ -111,17 +109,10 @@ export default function ThanksPage({ data = DUMMY_THANKS, theme: themeId = DEFAU
     sound.sfx.chime();
     setOpened(true);
     window.scrollTo(0, 0);
-    setSongReady(true);
-    setSongPlaying(true);
-    sound.playLullaby({ bright: true, bars: 60, onEnd: () => setSongPlaying(false) });
     const { W, H } = fx?.size() || { W: window.innerWidth, H: window.innerHeight };
     setTimeout(() => fx?.confetti(W / 2, H * 0.55, { n: 46, power: 520 }), 300);
   };
 
-  const toggleSong = () => {
-    if (sound.isSongPlaying()) { sound.stopSong(); setSongPlaying(false); }
-    else { sound.playLullaby({ bright: true, bars: 60, onEnd: () => setSongPlaying(false) }); setSongPlaying(true); }
-  };
 
   const spread = useCallback(() => {
     track("finale");
@@ -152,7 +143,7 @@ export default function ThanksPage({ data = DUMMY_THANKS, theme: themeId = DEFAU
       <div className="bd-bg" aria-hidden />
       <BgFloat theme={theme} spec={theme.float} />
       <canvas ref={canvasRef} className="bd-fx" aria-hidden />
-      <VolumeControl sound={sound} visible={opened} songReady={songReady} songPlaying={songPlaying} onToggleSong={toggleSong} />
+      <VolumeControl sound={sound} visible={opened} />
       {boom && <div className="bd-boom" aria-hidden><span>Thank you, {name}!</span></div>}
 
       {/* welcome */}
