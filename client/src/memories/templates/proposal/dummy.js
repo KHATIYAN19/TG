@@ -12,7 +12,7 @@ const yearsAgo = (y, m = 0) => { const t = new Date(); t.setFullYear(t.getFullYe
 
 export const DUMMY_PROPOSAL = {
   recipientName: "Emma",
-  senderName: "Ravi",
+  senderName: "James",
   question: DEFAULT_QUESTION,
   since: yearsAgo(2, 5),
   message:

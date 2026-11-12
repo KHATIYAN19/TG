@@ -7,7 +7,7 @@ export const DEFAULT_LINES = ["Every day with you is my favourite.", "You are my
 
 export const DUMMY_ANNIVERSARY = {
   recipientName: "Emma",
-  senderName: "Ravi",
+  senderName: "James",
   since: yearsAgo(3, 4, 9),
   message:
     "My love,\n\nI still remember the first time I saw you laugh, and how the whole room seemed to get lighter. I had no idea then that you would become my favourite person, my safest place and my best friend.\n\nThank you for every ordinary day you made feel special. For the late-night chats, the silly dances in the kitchen, the way you hold my hand when I'm nervous and never let go. You make me want to be better, every single day.\n\nI don't know what the future holds, but I know I want to spend all of it with you. Happy Anniversary, my heart.",

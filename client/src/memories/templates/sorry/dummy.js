@@ -10,7 +10,7 @@ export const DEFAULT_LINES = [
 
 export const DUMMY_SORRY = {
   recipientName: "Emma",
-  senderName: "Ravi",
+  senderName: "James",
   message:
     "Emma, I'm sorry. I know I hurt you, and no excuse in the world makes that okay. I wasn't listening, and I was careless with your feelings when you needed me most. You have always been kind to me, and you deserved the same from me.\n\nI've thought about it every day since. I miss our silly jokes, our late-night calls and the way you laugh at your own stories before you get to the end. I would give anything to take it back, but I can't, so I'm going to do better instead.\n\nWhatever you decide, thank you for reading this. You mean the world to me.",
   wishes: ["I'm so sorry, Emma", "You deserve better", "I miss your smile", "I'll do better", "Please forgive me", "You mean everything"],

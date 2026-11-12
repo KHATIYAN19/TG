@@ -8,7 +8,7 @@ export const DEFAULT_WISHES = ["You make everything brighter!", "Make a big wish
 
 export const DUMMY_BIRTHDAY = {
   recipientName: "Emma",
-  senderName: "Ravi",
+  senderName: "James",
   age: 21,
   message:
     "Happy Birthday, Emma! Another year older, and somehow even more wonderful. Thank you for every laugh, every late-night chat and every time you made a bad day better just by showing up. I hope today is full of cake, chocolate, silly photos and everything you love. You deserve all the happiness in the world, and I'll be right here cheering the loudest. Now make a wish, you've earned it!",

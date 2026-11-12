@@ -266,7 +266,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
 
   const validate = () => {
     if (!edit && !data.recipientName.trim()) return fail("Who is this page for? Add their name.");
-    if (!edit && !data.senderName.trim()) return fail("Add your name. It shows on the page, like “from Ravi”.");
+    if (!edit && !data.senderName.trim()) return fail("Add your name. It shows on the page, like “from James”.");
     if (builder.fields.includes("question") && !(data.question || "").trim()) return fail(templateId === "proposal" ? "Write the question you want to ask." : "Add a greeting, like “Happy Thanksgiving”.");
     if (data.since && new Date(`${data.since}T00:00:00`) > new Date()) return fail("The date can't be in the future.");
     if (visibility === "private" && pin && !/^\d{6}$/.test(pin)) return fail("A PIN is exactly 6 digits, or leave it empty and we'll make one.");

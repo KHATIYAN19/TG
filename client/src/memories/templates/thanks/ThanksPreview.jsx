@@ -17,8 +17,9 @@ import { EDITOR } from "./editor";
   Edits are kept on this device. ?theme=harvest|cozy|sunshine|professional|meadow|twilight picks the look,
   ?audience=friend|family|colleague|team|mentor|community picks the wording.
 */
-const KEY = "memories:thanks:preview:v2";
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
+const KEY = "memories:thanks:preview:v3";
+const SIG = JSON.stringify(DUMMY_THANKS); // saved edits are dropped when the demo data changes, so stale copies never hide new photos, videos or names
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && s.sig === SIG ? s : null; } catch { return null; } };
 
 export default function ThanksPreview() {
   const [params] = useSearchParams();
@@ -35,7 +36,7 @@ export default function ThanksPreview() {
   const [open, setOpen] = useState(false);
   useLivePreview(embed, DUMMY_THANKS, setData, setThemeId);
 
-  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId })); } catch { /* storage blocked */ } }, [data, themeId]);
+  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId, sig: SIG })); } catch { /* storage blocked */ } }, [data, themeId]);
   const reset = () => { setData(DUMMY_THANKS); setThemeId(DEFAULT_THEME); };
 
   return (

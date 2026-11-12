@@ -15,8 +15,9 @@ import { EDITOR } from "./editor";
   (theme, the question, story, reasons, vows, letter). Edits are kept on this device.
   ?theme=romance|starlit|blossom|fairytale|sunrise picks the starting look.
 */
-const KEY = "memories:proposal:preview";
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
+const KEY = "memories:proposal:preview:v3";
+const SIG = JSON.stringify(DUMMY_PROPOSAL); // saved edits are dropped when the demo data changes, so stale copies never hide new photos, videos or names
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && s.sig === SIG ? s : null; } catch { return null; } };
 
 export default function ProposalPreview() {
   const [params] = useSearchParams();
@@ -29,7 +30,7 @@ export default function ProposalPreview() {
   const [open, setOpen] = useState(false);
   useLivePreview(embed, DUMMY_PROPOSAL, setData, setThemeId);
 
-  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId })); } catch { /* storage blocked */ } }, [data, themeId]);
+  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId, sig: SIG })); } catch { /* storage blocked */ } }, [data, themeId]);
   const reset = () => { setData(DUMMY_PROPOSAL); setThemeId(DEFAULT_THEME); };
 
   return (

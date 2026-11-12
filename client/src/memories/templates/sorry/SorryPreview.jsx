@@ -15,8 +15,9 @@ import { EDITOR } from "./editor";
   (theme, names, apology, promises, peace offerings, sweet lines). Edits are kept on this device.
   ?theme=teddy|rain|rose|starry|sunflower|friends picks the starting look.
 */
-const KEY = "memories:sorry:preview";
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
+const KEY = "memories:sorry:preview:v3";
+const SIG = JSON.stringify(DUMMY_SORRY); // saved edits are dropped when the demo data changes, so stale copies never hide new photos, videos or names
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && s.sig === SIG ? s : null; } catch { return null; } };
 
 export default function SorryPreview() {
   const [params] = useSearchParams();
@@ -29,7 +30,7 @@ export default function SorryPreview() {
   const [open, setOpen] = useState(false);
   useLivePreview(embed, DUMMY_SORRY, setData, setThemeId);
 
-  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId })); } catch { /* storage blocked */ } }, [data, themeId]);
+  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId, sig: SIG })); } catch { /* storage blocked */ } }, [data, themeId]);
   const reset = () => { setData(DUMMY_SORRY); setThemeId(DEFAULT_THEME); };
 
   return (

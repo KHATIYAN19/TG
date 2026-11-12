@@ -289,7 +289,7 @@ function Features({ info }) {
 
 /*
   ACTIVITY TRACKER: what the sender sees after they share the link. The screen below is a sample drawn with made-up data
-  (Ravi and Emma), laid out like the real Activity screen in the app.
+  (James and Emma), laid out like the real Activity screen in the app.
 */
 const ACT_TILES = [["👀", "5", "times opened", "bg-sky-50 text-sky-800"], ["🧑", "2", "visitors", "bg-violet-50 text-violet-800"], ["⏱️", "4m 12s", "on the page", "bg-amber-50 text-amber-800"], ["💌", "1", "message", "bg-rose-50 text-rose-800"]];
 const ACT_ROWS = [["🎁", "Opened the surprise", "Done"], ["🎈", "Balloons popped", "12"], ["🕯️", "Blew out the candles", "Done"], ["🍰", "Cut the cake", "Done"], ["🎀", "Gifts opened", "2 of 3"], ["🖼️", "Looked at your photos and videos", "5 of 6"]];
@@ -321,7 +321,7 @@ function VoiceShowcase({ info }) {
         </div>
         <div className="mem-reveal relative mx-auto w-full max-w-md rounded-[32px] bg-gradient-to-br from-[#2b1631] via-[#3a1c3f] to-[#1d1021] p-6 shadow-2xl shadow-rose-200/60 sm:p-8" style={{ "--rd": ".12s" }}>
           <p className="mb-5 text-center text-xs uppercase tracking-[0.3em] text-[#e3bd6a]/80">Tap play to try it</p>
-          <VoiceNote inline demo from="Ravi" />
+          <VoiceNote inline demo from="James" />
           <p className="mt-5 text-center text-xs text-white/50">A sample. Yours plays your own voice.</p>
         </div>
       </div>

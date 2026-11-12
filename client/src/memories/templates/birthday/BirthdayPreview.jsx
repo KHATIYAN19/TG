@@ -14,8 +14,9 @@ import { DEFAULT_THEME, THEMES } from "./themes";
   (theme, names, message, gifts, wishes) so the choices can be tried live. Edits are kept on this device.
   ?theme=love|friendship|candy|citrus|dreamy|midnight|tropical|galaxy picks the starting look.
 */
-const KEY = "memories:bd:preview";
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
+const KEY = "memories:bd:preview:v3";
+const SIG = JSON.stringify(DUMMY_BIRTHDAY); // saved edits are dropped when the demo data changes, so stale copies never hide new photos, videos or names
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && s.sig === SIG ? s : null; } catch { return null; } };
 
 export default function BirthdayPreview() {
   const [params] = useSearchParams();
@@ -28,7 +29,7 @@ export default function BirthdayPreview() {
   const [open, setOpen] = useState(false);
   useLivePreview(embed, DUMMY_BIRTHDAY, setData, setThemeId);
 
-  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId })); } catch { /* storage blocked */ } }, [data, themeId]);
+  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId, sig: SIG })); } catch { /* storage blocked */ } }, [data, themeId]);
 
   const reset = () => { setData(DUMMY_BIRTHDAY); setThemeId(DEFAULT_THEME); };
 

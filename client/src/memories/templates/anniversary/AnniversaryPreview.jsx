@@ -15,8 +15,9 @@ import { EDITOR } from "./editor";
   (theme, anniversary date, story, reasons, numbers, gifts, promises, wishes). Edits are kept on this device.
   ?theme=lovey|golden|candlelight|garden|sunset picks the starting look.
 */
-const KEY = "memories:anniversary:preview";
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
+const KEY = "memories:anniversary:preview:v3";
+const SIG = JSON.stringify(DUMMY_ANNIVERSARY); // saved edits are dropped when the demo data changes, so stale copies never hide new photos, videos or names
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && s.sig === SIG ? s : null; } catch { return null; } };
 
 export default function AnniversaryPreview() {
   const [params] = useSearchParams();
@@ -29,7 +30,7 @@ export default function AnniversaryPreview() {
   const [open, setOpen] = useState(false);
   useLivePreview(embed, DUMMY_ANNIVERSARY, setData, setThemeId);
 
-  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId })); } catch { /* storage blocked */ } }, [data, themeId]);
+  useEffect(() => { if (embed) return; try { localStorage.setItem(KEY, JSON.stringify({ data, themeId, sig: SIG })); } catch { /* storage blocked */ } }, [data, themeId]);
   const reset = () => { setData(DUMMY_ANNIVERSARY); setThemeId(DEFAULT_THEME); };
 
   return (

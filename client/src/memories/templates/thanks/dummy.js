@@ -4,7 +4,7 @@ export const DEFAULT_GREETING = "Happy Thanksgiving";
 
 export const DUMMY_THANKS = {
   recipientName: "Emma",
-  senderName: "Ravi",
+  senderName: "James",
   audience: "friend",
   question: DEFAULT_GREETING, // the greeting shown above the title
   since: "",
