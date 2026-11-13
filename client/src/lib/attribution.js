@@ -156,7 +156,11 @@ export const getAttribution = () => {
   const stored = readStore();
 
   if (!stored) {
-    return { platform: "organic", fbp: readCookie("_fbp") };
+    // No saved touch (storage blocked or cleared), but Meta's own click cookie still proves the visitor came from a Meta ad.
+    const fbc = readCookie("_fbc");
+    return fbc
+      ? { platform: "meta", fbc, fbp: readCookie("_fbp") }
+      : { platform: "organic", fbp: readCookie("_fbp") };
   }
 
   const { expiresAt, ...touch } = stored;

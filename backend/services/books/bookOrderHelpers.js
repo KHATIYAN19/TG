@@ -4,6 +4,7 @@ import Coupon from "../../models/Coupon.js";
 import User from "../../models/User.js";
 import { scheduleEbookEmail } from "../../utils/ebookEmailDelivery.js";
 import { recordOfferPurchase } from "../bundleOffers.js";
+import { sendBookPurchase } from "./metaPurchase.js";
 import { generateDownloadToken, hashDownloadToken } from "../../utils/payu.js";
 
 /*
@@ -346,6 +347,7 @@ export const settleBookOrder = async ({ order, gateway, result, signatureVerifie
   if (first) {
     await incrementPurchaseCounters(first);
     scheduleEbookEmail(first); // background PDF email, not awaited
+    void sendBookPurchase(first); // Meta Conversions API (Meta-ad sales only); never awaited, never throws
     return { order: first, token: access?.rawToken || null, firstPayment: true };
   }
 

@@ -1,4 +1,5 @@
 import MemoryOrder from "../../../models/memory/MemoryOrder.js";
+import { sendPurchase } from "../metaCapi.js";
 import { grantCredits } from "../memoryService.js";
 
 /*
@@ -30,6 +31,7 @@ export const settleOrder = async (order, status) => {
       if (!dup) throw e; // duplicate = credit already minted
     }
   }
+  if (won) void sendPurchase(won); // Meta Conversions API; never awaited, never throws
   return "paid";
 };
 

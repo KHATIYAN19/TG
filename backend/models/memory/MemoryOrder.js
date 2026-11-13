@@ -18,6 +18,12 @@ const memoryOrderSchema = new Schema(
     paidAt: { type: Date, default: null },
     /* the site the buyer started from, so the return trip from the gateway lands on the same site (and the same login) */
     returnOrigin: { type: String, default: "", maxlength: 120 },
+    /* Meta Ads: ad attribution (utils/attribution.js) and the buyer's request context, kept so the server can report Purchase later (webhook, tab closed) */
+    attribution: { type: Schema.Types.Mixed, default: null },
+    clientIp: { type: String, default: "" },
+    clientUserAgent: { type: String, default: "" },
+    eventSourceUrl: { type: String, default: "" },
+    metaPurchaseSentAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

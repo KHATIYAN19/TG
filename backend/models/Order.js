@@ -698,6 +698,9 @@ const orderSchema = new mongoose.Schema(
         trim: true,
       },
 
+      /* set once the server has reported this sale to Meta (services/books/metaPurchase.js) */
+      metaPurchaseSentAt: { type: Date, default: null },
+
       /* Ad-platform attribution (see utils/attribution.js).
          platform: "meta" | "google" | "organic" */
       attribution: {

@@ -824,8 +824,13 @@ function reportMetaPurchase(
     });
   }
 
-  // Every paid order is reported to Meta (the pixel dedupes by
-  // order id), as it was before the attribution gate was added.
+  // Only sales that came from a Meta ad are reported to Meta, so it
+  // learns from ad-driven buyers. The backend sends the same sale
+  // (same event id) from the server, and Meta dedupes the pair.
+  if (platform !== "meta") {
+    return false;
+  }
+
   try {
     if (
       typeof window.fbq !==

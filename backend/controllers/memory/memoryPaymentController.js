@@ -9,6 +9,8 @@ import { amountToPaise } from "../../utils/razorpay.js";
 import { MemoryError, assertId, availableCredits, getSettings, parse, sendError } from "../../services/memory/memoryService.js";
 import { activeGateways, getGateway, pickGateway, publicUrls } from "../../services/memory/payments/index.js";
 import { refreshOrder, settleOrder } from "../../services/memory/payments/settle.js";
+import { buildAttribution } from "../../utils/attribution.js";
+import { captureRequestContext } from "../../services/memory/metaCapi.js";
 import { dropLegacyMemoryIndexes, isLegacyIndexError } from "../../services/memory/migrate.js";
 
 const uid = (req) => String(req.user?.id || req.user?._id);
@@ -38,7 +40,7 @@ const allowedReturnOrigin = (raw) => {
 
 /* ---------- create ---------- */
 export const createPayment = handler(async (req, res) => {
-  const b = parse(z.object({ gateway: z.string().max(30).optional(), returnOrigin: z.string().max(120).optional() }), req.body);
+  const b = parse(z.object({ gateway: z.string().max(30).optional(), returnOrigin: z.string().max(120).optional(), attribution: z.any().optional() }), req.body);
   const s = await getSettings();
   if (!s.enabled) throw new MemoryError(503, "Memory pages are paused right now.", "DISABLED");
   if (!(s.price > 0)) throw new MemoryError(400, "Pages are free right now. No payment needed.", "FREE");
@@ -72,6 +74,12 @@ export const createPayment = handler(async (req, res) => {
     throw new MemoryError(502, "The payment provider couldn't start the payment. Please try again in a moment.", "GATEWAY_ERROR");
   }
   const doc = { _id: orderId, user: uid(req), amount: amountPaise, gateway: adapter.id, gatewayOrderId, returnOrigin: b.returnOrigin ? allowedReturnOrigin(b.returnOrigin) : "" };
+  try { // Meta tracking data is best effort: it must never stop a checkout
+    doc.attribution = buildAttribution(b.attribution);
+    Object.assign(doc, captureRequestContext(req, doc.returnOrigin));
+  } catch (e) {
+    console.error("[memory] could not save ad attribution:", e?.message || e);
+  }
   try {
     await MemoryOrder.create(doc);
   } catch (e) {

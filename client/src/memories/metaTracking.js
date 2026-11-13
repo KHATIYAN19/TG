@@ -6,11 +6,11 @@
     MemoriesCtaClick    (custom) a "Create a page" button was clicked
     CompleteRegistration  signup finished (email OTP verified, or Google signup)
     InitiateCheckout    "Pay" was pressed
-    Purchase            the SERVER confirmed the order is paid (once per order)
+    Purchase            the SERVER confirmed the order is paid (once per order), and only if the buyer came from a Meta ad
 
   Every call is safe: no pixel, blocked storage or a bad value never throws or slows the page.
 */
-import { getCampaignParams } from "../lib/attribution";
+import { getCampaignParams, isFromPlatform } from "../lib/attribution";
 
 const CONTENT_ID = "memories_page_credit";
 const CONTENT_NAME = "Memories page credit";
@@ -62,6 +62,7 @@ export const trackCheckoutStart = ({ orderId, price, gateway } = {}) => {
 export const trackPaid = (orderId, price) => {
   const id = String(orderId || "").trim();
   if (!id || store((s) => s.getItem(PURCHASE_KEY + id))) return false;
+  if (!isFromPlatform("meta")) return false; // only sales that came from a Meta ad are reported (the server sends the same rule)
 
   let value = money(price);
   if (value === null) {

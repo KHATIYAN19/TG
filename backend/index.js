@@ -80,6 +80,7 @@ import {
 
 import authRoutes from "./routes/authRoutes.js";
 import { sweepSessions } from "./services/sessionCleanup.js";
+import { resendMissedMetaPurchases } from "./services/metaSweep.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import mailSettingsRoutes from "./routes/mailSettingsRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
@@ -852,6 +853,14 @@ const startServer = async () => {
       );
     sessionSweep();
     setInterval(sessionSweep, 10 * 60 * 1000).unref();
+
+    // Meta Ads: re-send any Meta-ad sale the server could not report the first time (no-op without META_CAPI_ACCESS_TOKEN).
+    const metaSweep = () =>
+      resendMissedMetaPurchases().catch((error) =>
+        console.error("[meta-capi] sweep failed:", error.message)
+      );
+    setTimeout(metaSweep, 60 * 1000).unref();
+    setInterval(metaSweep, 15 * 60 * 1000).unref();
 
     const server = app.listen(PORT, () => {
       console.log(
