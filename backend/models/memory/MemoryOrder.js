@@ -15,6 +15,24 @@ const memoryOrderSchema = new Schema(
     gatewayPaymentId: { type: String, default: null },
     failureReason: { type: String, default: null },
     status: { type: String, enum: ["created", "paid", "failed"], default: "created", index: true },
+    /*
+      "page"  = pays for one page (a template look, plus any add-ons chosen with it): fulfilled by minting a credit.
+      "addon" = pays for add-ons on a page that already exists: fulfilled by adding the room to that page.
+      "upgrade" = pays only the DIFFERENCE to move an existing page to a dearer look: fulfilled by raising what that page was bought for.
+      A "page" order that has `upgradeCredit` also pays only the difference: it raises a paid page the user has not used yet, instead of making a second one.
+    */
+    kind: { type: String, enum: ["page", "addon", "upgrade"], default: "page", index: true },
+    occasion: { type: Schema.Types.ObjectId, ref: "MemoryOccasion", default: null },
+    theme: { type: String, default: "" },
+    page: { type: Schema.Types.ObjectId, ref: "MemoryPage", default: null },
+    upgradeCredit: { type: Schema.Types.ObjectId, ref: "MemoryCredit", default: null },
+    /* the full price of the look being bought, in paise (basePaise is only what is charged after the credit for what was already paid) */
+    fullPricePaise: { type: Number, default: 0, min: 0 },
+    /* price breakdown at the time of ordering (paise) so a later price change never rewrites history */
+    basePaise: { type: Number, default: 0, min: 0 },
+    addons: { type: [{ _id: false, key: String, name: String, packs: Number, unit: Number, grant: Number, pricePaise: Number }], default: [] },
+    /* set once the order has been turned into its credit / page room. Lets a retry finish a half-done fulfilment. */
+    fulfilledAt: { type: Date, default: null },
     paidAt: { type: Date, default: null },
     /* the site the buyer started from, so the return trip from the gateway lands on the same site (and the same login) */
     returnOrigin: { type: String, default: "", maxlength: 120 },

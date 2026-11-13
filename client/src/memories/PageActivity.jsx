@@ -165,18 +165,12 @@ function AnswerCard({ a, template, recipient, sender }) {
   );
 }
 
-export default function PageActivity() {
-  const { id } = useParams();
-  const [d, setD] = useState(null);
-  const [error, setError] = useState("");
+/*
+  The activity report itself. The owner's screen (below) and the admin's page inspector both show THIS, fed by the same report,
+  so what an admin sees is exactly what the owner sees. `top` is the link back, `actions` are the buttons under the headline.
+*/
+export function ActivityReport({ d, top, actions, footer }) {
   const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    const load = () => getActivity(id).then(setD).catch((e) => setError(errMsg(e)));
-    load();
-    const t = setInterval(load, 30000); // it fills in while they're on the page
-    return () => clearInterval(t);
-  }, [id]);
-
   const view = useMemo(() => {
     if (!d) return null;
     const rows = (ROWS[d.page.theme] || common)(d.totals).filter((r) => r.of !== 0);
@@ -185,9 +179,6 @@ export default function PageActivity() {
     d.timeline.forEach((e) => { const label = dayLabel(e.at); const last = days[days.length - 1]; if (last && last.label === label) last.items.push(e); else days.push({ label, items: [e] }); });
     return { rows, done, days };
   }, [d]);
-
-  if (error) return <p role="alert" className="py-20 text-center text-rose-600">{error} <Link to="/memories/app/pages" className="font-semibold underline">Back to my pages</Link></p>;
-  if (!d) return <Loading label="Loading activity…" />;
 
   const { page, summary, answer, replies, byType } = d;
   const t = TEMPLATES.find((x) => x.theme === page.theme);
@@ -204,7 +195,7 @@ export default function PageActivity() {
 
   return (
     <div className="py-5 lg:py-8">
-      <Link to="/memories/app/pages" className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-600 hover:underline"><ArrowLeft className="h-4 w-4" aria-hidden /> My pages</Link>
+      {top}
 
       {/* the headline */}
       <div className={cx("relative mt-3 overflow-hidden rounded-[30px] bg-gradient-to-br p-5 sm:p-7", t?.tint || "from-pink-100 to-orange-100")}>
@@ -220,8 +211,7 @@ export default function PageActivity() {
           </div>
         </div>
         <div className="relative mt-4 flex flex-wrap gap-2">
-          <Button as={Link} to={`/memories/app/pages/${page.id}/preview`} variant="outline" size="sm" className="!bg-white/80"><Eye className="h-3.5 w-3.5" aria-hidden /> Preview</Button>
-          <Button as={Link} to={`/memories/app/pages/${page.id}/edit`} variant="outline" size="sm" className="!bg-white/80"><Pencil className="h-3.5 w-3.5" aria-hidden /> Edit</Button>
+          {actions}
           {d.page.url && <Button type="button" variant="outline" size="sm" onClick={copyLink} className="!bg-white/80">{copied ? <><Check className="h-3.5 w-3.5" aria-hidden /> Copied</> : <><Copy className="h-3.5 w-3.5" aria-hidden /> Copy link</>}</Button>}
         </div>
       </div>
@@ -336,9 +326,32 @@ export default function PageActivity() {
             )}
           </Card>
 
-          <p className="flex items-center justify-center gap-1.5 px-2 text-center text-xs text-[#a07890]"><Share2 className="h-3.5 w-3.5" aria-hidden /> Updates itself every 30 seconds while this page is open.</p>
+          {footer ?? <p className="flex items-center justify-center gap-1.5 px-2 text-center text-xs text-[#a07890]"><Share2 className="h-3.5 w-3.5" aria-hidden /> Updates itself every 30 seconds while this page is open.</p>}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PageActivity() {
+  const { id } = useParams();
+  const [d, setD] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const load = () => getActivity(id).then(setD).catch((e) => setError(errMsg(e)));
+    load();
+    const t = setInterval(load, 30000); // it fills in while they're on the page
+    return () => clearInterval(t);
+  }, [id]);
+
+  if (error) return <p role="alert" className="py-20 text-center text-rose-600">{error} <Link to="/memories/app/pages" className="font-semibold underline">Back to my pages</Link></p>;
+  if (!d) return <Loading label="Loading activity…" />;
+  return (
+    <ActivityReport d={d}
+      top={<Link to="/memories/app/pages" className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-600 hover:underline"><ArrowLeft className="h-4 w-4" aria-hidden /> My pages</Link>}
+      actions={<>
+        <Button as={Link} to={`/memories/app/pages/${d.page.id}/preview`} variant="outline" size="sm" className="!bg-white/80"><Eye className="h-3.5 w-3.5" aria-hidden /> Preview</Button>
+        <Button as={Link} to={`/memories/app/pages/${d.page.id}/edit`} variant="outline" size="sm" className="!bg-white/80"><Pencil className="h-3.5 w-3.5" aria-hidden /> Edit</Button>
+      </>} />
   );
 }

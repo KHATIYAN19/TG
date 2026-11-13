@@ -14,11 +14,13 @@ import { findSale, orderLookupEnabled } from "../../services/memory/gumroad.js";
 import { createUploadTarget, headObject, keyBelongsTo, userPrefix } from "../../services/storage/s3.js";
 import { removeFiles, trackUpload, uploadAttached } from "../../services/memory/storageCleanup.js";
 import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
+import User from "../../models/User.js";
 import { canResend, sendPageMail } from "../../services/memory/pageMail.js";
 import {
-  MAX_GIFTS, MAX_PEOPLE, THANKS_AUDIENCES, MAX_PROMISES, MAX_REASONS, MAX_STATS, MAX_TIMELINE, MAX_WISHES, TEMPLATE_THEMES, MemoryError, assertId, availableCredits, checkPin, ensureOccasions, getSettings, grantCredits,
+  MAX_GIFTS, MAX_PEOPLE, THANKS_AUDIENCES, MAX_PROMISES, MAX_REASONS, MAX_STATS, MAX_TIMELINE, MAX_WISHES, MemoryError, assertId, availableCredits, checkPin, ensureOccasions, getSettings, grantCredits,
   hashPin, encryptPin, newPin, newSlug, pageView, parse, sendError, deleteMediaObjects, buildActivity, purgePageEvents, MAX_EVENTS_PER_PAGE, MAX_EMAIL_SENDS, lifetimeDays, expiryFrom, isExpired, decryptPin,
 } from "../../services/memory/memoryService.js";
+import { addonCatalog, addonOut, emptyExtra, hasCoveringCredit, limitsFor, limitsOut, occasionForUser, passesFor, priceOf, resolveTheme, spendCredit, themeEnabled, themeIdsOf, toRupees } from "../../services/memory/catalog.js";
 import { gatewaysForUsers } from "./memoryPaymentController.js";
 import { pickGateway } from "../../services/memory/payments/index.js";
 
@@ -40,7 +42,7 @@ const ok = (res, data, status = 200) => res.status(status).json({ success: true,
 const ownPage = async (req, { populate = true } = {}) => {
   assertId(req.params.id, "page id");
   const q = MemoryPage.findOne({ _id: req.params.id, user: uid(req) }).select("+pinEnc");
-  const page = await (populate ? q.populate("occasion", "name theme") : q);
+  const page = await (populate ? q.populate("occasion") : q); // the whole template: its limits and prices decide what this page may hold
   if (!page) throw new MemoryError(404, "Page not found.", "PAGE_NOT_FOUND");
   if (isExpired(page)) throw new MemoryError(404, "This page has expired and has been removed.", "PAGE_EXPIRED");
   return page;
@@ -48,9 +50,21 @@ const ownPage = async (req, { populate = true } = {}) => {
 const editable = (page) => {
   if (page.status === "blocked") throw new MemoryError(403, "This page was blocked by an admin.", "PAGE_BLOCKED");
 };
-const reload = async (id, opts) => pageView(await MemoryPage.findById(id).select("+pinEnc").populate("occasion", "name theme"), { withPin: true, ...opts });
+/* the owner's view of a page, plus what it may hold (limits = the template's limits + the add-ons bought) and what it cost */
+const withRoom = async (page, view) => {
+  const s = await getSettings();
+  const extra = { ...emptyExtra(), ...(page.extra?.toObject?.() ?? page.extra ?? {}) };
+  return { ...view, limits: limitsOut(limitsFor(s, page.occasion, extra)), extra, paidPrice: page.paidPricePaise == null ? null : toRupees(page.paidPricePaise) };
+};
+const reload = async (id, opts) => {
+  const page = await MemoryPage.findById(id).select("+pinEnc").populate("occasion");
+  return withRoom(page, await pageView(page, { withPin: true, ...opts }));
+};
 
 const pinField = z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits");
+
+/* the name on the account: what the page itself shows when the sender left "from" empty, so the email says the same */
+const accountName = async (req) => (await User.findById(uid(req)).select("name").lean())?.name || "";
 
 /* =====================================================
    CONFIG + BALANCE
@@ -58,20 +72,25 @@ const pinField = z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits");
 
 export const getConfig = handler(async (req, res) => {
   await ensureOccasions();
-  const [s, occasions, credits] = await Promise.all([
+  const [s, occasions, passes, addons] = await Promise.all([
     getSettings(),
-    MemoryOccasion.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).select("name theme").lean(),
-    availableCredits(uid(req)),
+    MemoryOccasion.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).lean(),
+    passesFor(uid(req)),
+    addonCatalog({ onlyEnabled: true }),
   ]);
+  // a template whose looks are all switched off is hidden, like an inactive one
+  const visible = occasions.filter((o) => !themeIdsOf(o).length || themeIdsOf(o).some((id) => themeEnabled(o, id)));
   ok(res, {
     enabled: s.enabled,
-    price: s.price,
+    price: s.price, // the default price; each template and look can have its own (occasions[].themes[].price)
     currency: "INR",
     pageLifetimeDays: lifetimeDays(s),
     emailEnabled: s.emailEnabled !== false,
-    limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, audioMb: s.maxAudioMb ?? 10, audioSec: 120, messageChars: s.maxMessageChars },
-    occasions: occasions.map((o) => ({ id: String(o._id), name: o.name, theme: o.theme })),
-    credits,
+    limits: limitsOut(limitsFor(s, null, null)), // the default limits; occasions[].limits has each template's own
+    occasions: visible.map((o) => occasionForUser(o, s)),
+    addons: addons.map(addonOut),
+    credits: passes.length, // how many unspent passes
+    passes, // [{ maxPrice (rupees, null = any look), extra }] in the order they will be used
     gumroad: await gumroadOffer(),
     gateways: gatewaysForUsers(s),
     defaultGateway: pickGateway(s)?.id || null,
@@ -90,21 +109,22 @@ const gumroadOffer = async () => {
 ===================================================== */
 
 /* The one-and-only claim of a Gumroad sale. The unique indexes on licenseKey (holds ORDER-<sale id>) and saleId mean a sale pays out once, even if two people try at the same moment. */
-async function claimSale(userId, { licenseKey, saleId, product, email }) {
+async function claimSale(userId, { licenseKey, saleId, product, email, quantity = 1 }) {
+  const credits = product.credits * quantity; // 3 of a "1 page" product = 3 pages
   let sale;
   try {
-    sale = await MemoryGumroadSale.create({ licenseKey, saleId, productId: product.productId, productName: product.name, credits: product.credits, user: userId, buyerEmail: email });
+    sale = await MemoryGumroadSale.create({ licenseKey, saleId, productId: product.productId, productName: product.name, credits, user: userId, buyerEmail: email });
   } catch (e) {
     if (e?.code === 11000) throw new MemoryError(400, "This purchase has already been used.", "KEY_USED");
     throw e;
   }
   try {
-    await grantCredits(userId, { source: "gumroad", ref: saleId, count: product.credits });
+    await grantCredits(userId, { source: "gumroad", ref: saleId, count: credits });
   } catch (e) {
     await MemoryGumroadSale.deleteOne({ _id: sale._id }); // nothing was credited: let them try again
     throw e;
   }
-  return product.credits;
+  return credits;
 }
 
 /* Redeem by the order number from the Gumroad receipt + the email used to pay. */
@@ -126,7 +146,7 @@ export const redeemGumroadOrder = handler(async (req, res) => {
   if (!r.found) throw new MemoryError(400, "We couldn't find that order. Use the Order ID and the email from your Gumroad receipt.", "ORDER_NOT_FOUND");
   if (r.refunded) throw new MemoryError(400, "That purchase was refunded, so it can't be used.", "KEY_REFUNDED");
   const product = products.find((p) => p.productId === r.productId);
-  const added = await claimSale(userId, { licenseKey: `ORDER-${r.saleId}`, saleId: r.saleId, product, email: r.email });
+  const added = await claimSale(userId, { licenseKey: `ORDER-${r.saleId}`, saleId: r.saleId, product, email: r.email, quantity: r.quantity });
   ok(res, { added, credits: await availableCredits(userId) });
 });
 
@@ -170,13 +190,24 @@ export const redeemCode = handler(async (req, res) => {
   ok(res, { credits: await availableCredits(userId) });
 });
 
-/* When the admin sets the price to 0, a user claims their (single) page credit here. Never piles up: one unused credit at most. */
+/* A free template (price 0): the user claims their pass here. Never piles up: they get one only when they hold no unused pass. */
 export const claimFreeCredit = handler(async (req, res) => {
+  const b = parse(z.object({ occasionId: z.string(), theme: z.string().max(30).optional() }), req.body);
+  assertId(b.occasionId, "template");
   const s = await getSettings();
   if (!s.enabled) throw new MemoryError(503, "Memory pages are paused right now.", "DISABLED");
-  if (s.price > 0) throw new MemoryError(400, "Pages are not free right now. Pay or redeem a code.", "NOT_FREE");
+  const occasion = await MemoryOccasion.findOne({ _id: b.occasionId, isActive: true }).lean();
+  if (!occasion) throw new MemoryError(400, "This template isn't available right now.", "INVALID_OCCASION");
+  const themeId = resolveTheme(occasion, b.theme);
+  if (priceOf(occasion, themeId, s) > 0) throw new MemoryError(400, "This one isn't free. Pay, or redeem a code.", "NOT_FREE");
   const userId = uid(req);
-  if ((await availableCredits(userId)) < 1) await grantCredits(userId, { source: "free" });
+  // only a FREE pass counts here: a paid, code or Gumroad pass the user holds is never used for a free look
+  if (!(await hasCoveringCredit(userId, 0))) {
+    await MemoryCredit.create({ user: userId, source: "free", maxPricePaise: 0, occasion: occasion._id, theme: themeId });
+    // several claims at the same moment (a double tap, two tabs) must still leave ONE plain free pass: every request keeps the same oldest one
+    const plain = await MemoryCredit.find({ user: userId, page: null, source: "free", maxPricePaise: 0, extra: null }).sort({ _id: 1 }).select("_id").lean();
+    if (plain.length > 1) await MemoryCredit.deleteMany({ _id: { $in: plain.slice(1).map((c) => c._id) }, page: null });
+  }
   ok(res, { credits: await availableCredits(userId) });
 });
 
@@ -230,16 +261,8 @@ const checkSince = (since) => {
   if (d.getTime() > Date.now() + 36 * 3600 * 1000) throw new MemoryError(400, "The date cannot be in the future.", "DATE_IN_FUTURE");
 };
 
-/** The chosen theme must exist for this occasion's template; occasions without themes take none. */
-const checkStyle = (style, occasion) => {
-  if (!style) return;
-  const allowed = TEMPLATE_THEMES[occasion?.theme];
-  if (!allowed) throw new MemoryError(400, "This occasion has no themes to choose from.", "NO_THEMES");
-  if (!allowed.includes(style)) throw new MemoryError(400, `Unknown theme. Choose one of: ${allowed.join(", ")}.`, "INVALID_THEME");
-};
-
-const checkMessage = (s, message) => {
-  if (message && message.length > s.maxMessageChars) throw new MemoryError(400, `Message is too long (max ${s.maxMessageChars} characters).`, "MESSAGE_TOO_LONG");
+const checkMessage = (maxChars, message) => {
+  if (message && message.length > maxChars) throw new MemoryError(400, `Message is too long (max ${maxChars} characters). You can add more room with an add-on.`, "MESSAGE_TOO_LONG", { max: maxChars });
 };
 
 /** Every rule for emailing a page to an address. Throws a clear message when it can't be done. */
@@ -247,8 +270,10 @@ const assertCanEmail = async (req, s, shareEmail) => {
   if (s.emailEnabled === false) throw new MemoryError(400, "Emailing pages is switched off right now. You can still share the link yourself.", "EMAIL_DISABLED");
   if (await MemoryMailBlock.exists({ email: shareEmail })) throw new MemoryError(400, "That address has asked not to receive emails from Memories. Please share the link another way.", "EMAIL_BLOCKED");
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
-  if ((await MemoryPage.countDocuments({ user: uid(req), shareEmail: { $ne: "" }, createdAt: { $gte: dayAgo } })) >= (s.maxEmailsPerUserPerDay || 10)) throw new MemoryError(429, "You've reached today's limit for emailing pages. Try again tomorrow.", "EMAIL_DAILY_LIMIT");
-  if ((await MemoryPage.countDocuments({ shareEmail, createdAt: { $gte: dayAgo } })) >= 3) throw new MemoryError(429, "That address has already received several pages today. Please try again tomorrow.", "EMAIL_RECIPIENT_LIMIT");
+  // "today" = the page was made today OR its email was added / sent today (an address added to an older page counts too)
+  const recent = { $or: [{ createdAt: { $gte: dayAgo } }, { emailAddedAt: { $gte: dayAgo } }, { emailSentAt: { $gte: dayAgo } }] };
+  if ((await MemoryPage.countDocuments({ user: uid(req), shareEmail: { $ne: "" }, ...recent })) >= (s.maxEmailsPerUserPerDay || 10)) throw new MemoryError(429, "You've reached today's limit for emailing pages. Try again tomorrow.", "EMAIL_DAILY_LIMIT");
+  if ((await MemoryPage.countDocuments({ shareEmail, ...recent })) >= 3) throw new MemoryError(429, "That address has already received several pages today. Please try again tomorrow.", "EMAIL_RECIPIENT_LIMIT");
 };
 
 export const createPage = handler(async (req, res) => {
@@ -259,11 +284,11 @@ export const createPage = handler(async (req, res) => {
   assertId(b.occasionId, "occasion");
   const s = await getSettings();
   if (!s.enabled) throw new MemoryError(503, "Memory pages are paused right now.", "DISABLED");
-  checkMessage(s, b.message);
-  const occasion = await MemoryOccasion.findOne({ _id: b.occasionId, isActive: true }).select("theme").lean();
+  const occasion = await MemoryOccasion.findOne({ _id: b.occasionId, isActive: true }).lean();
   if (!occasion) throw new MemoryError(400, "Invalid occasion.", "INVALID_OCCASION");
-  checkStyle(b.style, occasion);
+  const style = resolveTheme(occasion, b.style); // the look must exist and be switched on
   checkSince(b.since);
+  const price = priceOf(occasion, style, s);
 
   // "Email this page": checked BEFORE a credit is spent, so a refusal never costs anything
   const shareEmail = b.shareEmail || "";
@@ -273,27 +298,31 @@ export const createPage = handler(async (req, res) => {
   const pinHash = pin ? await hashPin(pin) : null;
   const pinEnc = pin ? encryptPin(pin) : null;
 
-  // Spend one credit atomically; give it back if the page cannot be created.
+  // Spend one pass that covers this look's price (atomic); give it back if the page cannot be created.
   const pageId = new mongoose.Types.ObjectId();
-  const credit = await MemoryCredit.findOneAndUpdate({ user: uid(req), page: null }, { page: pageId }, { sort: { createdAt: 1 } });
-  if (!credit) throw new MemoryError(402, "Redeem a code or pay to create a page.", "CREDIT_REQUIRED");
+  const credit = await spendCredit(uid(req), pageId, price, { occasion: occasion._id, theme: style });
+  if (!credit) throw new MemoryError(402, "Pay for this look (or redeem a code) to create the page.", "CREDIT_REQUIRED", { price: toRupees(price), theme: style });
+  const release = () => MemoryCredit.updateOne({ _id: credit._id }, { page: null });
+  const extra = { ...emptyExtra(), ...(credit.extra || {}) };
 
   try {
+    checkMessage(limitsFor(s, occasion, extra).messageChars, b.message);
     await MemoryPage.create({
       _id: pageId, user: uid(req), occasion: b.occasionId, title: b.title, recipientName: b.recipientName,
-      senderName: b.senderName, message: b.message, visibility: b.visibility, pinHash, pinEnc, shareEmail, emailIncludesPin: b.includePin !== false, slug: newSlug(), expiresAt: expiryFrom(Date.now(), lifetimeDays(s)),
-      style: b.style || "", age: b.age ?? null, gifts: b.gifts || [], wishes: b.wishes || [], promises: b.promises || [],
+      senderName: b.senderName, message: b.message, visibility: b.visibility, pinHash, pinEnc, shareEmail, emailAddedAt: shareEmail ? new Date() : null, emailIncludesPin: b.includePin !== false, slug: newSlug(), expiresAt: expiryFrom(Date.now(), lifetimeDays(s) + (extra.days || 0)),
+      style, age: b.age ?? null, gifts: b.gifts || [], wishes: b.wishes || [], promises: b.promises || [],
       since: b.since || "", question: b.question || "", audience: b.audience || "", people: b.people || [], timeline: b.timeline || [], reasons: b.reasons || [], stats: b.stats || [],
+      paidPricePaise: credit.maxPricePaise ?? null, extra,
     });
   } catch (e) {
-    await MemoryCredit.updateOne({ _id: credit._id }, { page: null });
+    await release();
     throw e;
   }
   // The email goes out now (the page exists either way; if it can't be sent the owner can resend from My pages).
   let email = null;
   if (shareEmail) {
     const fresh = await MemoryPage.findById(pageId).populate("occasion", "theme");
-    const sent = await sendPageMail({ page: fresh, senderName: b.senderName || req.user?.name || "", theme: fresh.occasion?.theme, pin: b.includePin === false ? null : pin, pinHidden: Boolean(pin) && b.includePin === false, to: shareEmail });
+    const sent = await sendPageMail({ page: fresh, senderName: b.senderName || (await accountName(req)), theme: fresh.occasion?.theme, pin: b.includePin === false ? null : pin, pinHidden: Boolean(pin) && b.includePin === false, to: shareEmail });
     email = { status: sent.status, to: shareEmail, includesPin: Boolean(pin) && b.includePin !== false };
   }
   // The PIN is returned only now; it is stored hashed.
@@ -319,30 +348,59 @@ export const listPages = handler(async (req, res) => {
   ok(res, await Promise.all(pages.map((p) => pageView(p, { withPin: true }))));
 });
 
-export const getPage = handler(async (req, res) => ok(res, await pageView(await ownPage(req), { withMedia: true, withPin: true })));
+export const getPage = handler(async (req, res) => {
+  const page = await ownPage(req);
+  ok(res, await withRoom(page, await pageView(page, { withMedia: true, withPin: true })));
+});
 
 export const updatePage = handler(async (req, res) => {
   const page = await ownPage(req);
   editable(page);
   // The address the page was emailed to is fixed once the page exists, like the names.
   // It can be ADDED once, if the page was made without one; after that it is fixed.
-  const wantedEmail = req.body?.shareEmail === undefined ? undefined : String(req.body.shareEmail).trim().toLowerCase();
+  const wantedEmail = req.body?.shareEmail == null ? undefined : String(req.body.shareEmail).trim().toLowerCase(); // null = "no address", same as leaving it out
   if (wantedEmail !== undefined && wantedEmail !== (page.shareEmail || "") && page.shareEmail) throw new MemoryError(400, "The email address can't be changed after it has been set.", "EMAIL_LOCKED");
   const addEmail = wantedEmail && !page.shareEmail ? parse(z.string().email("Enter a valid email address.").max(254), wantedEmail) : "";
   const b = parse(z.object({ occasionId: z.string(), ...pageFields, ...extras, includePin: z.boolean().optional() }).partial(), req.body);
-  checkMessage(await getSettings(), b.message);
+  const s = await getSettings();
   // The names on a page are fixed once it exists (the page, its link and its PIN are shared with them). Everything else can be edited.
   if (b.recipientName !== undefined && b.recipientName !== page.recipientName) throw new MemoryError(400, "The name of the person it's for can't be changed after the page is created.", "NAME_LOCKED");
   if (b.senderName !== undefined && b.senderName !== (page.senderName || "")) throw new MemoryError(400, "Your name can't be changed after the page is created.", "NAME_LOCKED");
-  let occasion = page.occasion; // populated by ownPage()
-  if (b.occasionId) {
+  let occasion = page.occasion; // populated by ownPage() (the whole template)
+  const occasionChanged = Boolean(b.occasionId) && String(b.occasionId) !== String(occasion._id);
+  if (occasionChanged) {
     assertId(b.occasionId, "occasion");
-    occasion = await MemoryOccasion.findOne({ _id: b.occasionId, isActive: true }).select("theme").lean();
+    occasion = await MemoryOccasion.findOne({ _id: b.occasionId, isActive: true }).lean();
     if (!occasion) throw new MemoryError(400, "Invalid occasion.", "INVALID_OCCASION");
-    page.occasion = b.occasionId;
   }
-  if (b.style !== undefined) { checkStyle(b.style, occasion); page.style = b.style; }
-  else if (b.occasionId && page.style && !TEMPLATE_THEMES[occasion.theme]?.includes(page.style)) page.style = ""; // old theme does not exist on the new template
+  if (b.message !== undefined && b.message !== (page.message || "")) checkMessage(limitsFor(s, occasion, page.extra).messageChars, b.message);
+  if (occasionChanged) {
+    // what the page already holds must fit the template it is moving to (its own limits + the room this page bought)
+    const l = limitsFor(s, occasion, page.extra);
+    const count = (kind) => page.media.filter((m) => m.kind === kind).length;
+    const text = b.message !== undefined ? b.message : page.message || "";
+    const over = count("photo") > l.photos ? `${count("photo")} photos (it allows ${l.photos})` : count("video") > l.videos ? `${count("video")} videos (it allows ${l.videos})` : text.length > l.messageChars ? `a message of ${text.length} characters (it allows ${l.messageChars})` : "";
+    if (over) throw new MemoryError(400, `This page has ${over}, which is more than that template holds. Remove some first, or add room with an add-on.`, "TEMPLATE_TOO_SMALL", { limits: limitsOut(l) });
+  }
+
+  /*
+    Changing the look (or the template): allowed to any look that is switched on and costs the SAME or LESS than what this page was bought for.
+    A dearer look needs a new page. Saving the look the page already has is always fine, even if the admin has switched it off since.
+  */
+  const nowTheme = page.style || themeIdsOf(page.occasion)[0] || "";
+  const ids = themeIdsOf(occasion);
+  if (b.style && !ids.length) throw new MemoryError(400, "This occasion has no themes to choose from.", "NO_THEMES");
+  let wantTheme = b.style !== undefined ? b.style || ids[0] || "" : nowTheme;
+  if (occasionChanged && !ids.includes(wantTheme)) wantTheme = ""; // the old look does not exist on the new template: take its first one
+  if (occasionChanged || wantTheme !== nowTheme) {
+    const target = resolveTheme(occasion, wantTheme || undefined);
+    const price = priceOf(occasion, target, s);
+    if (page.paidPricePaise != null && price > page.paidPricePaise) {
+      throw new MemoryError(402, `That look is ${"\u20B9"}${toRupees(price)} and this page was bought for ${"\u20B9"}${toRupees(page.paidPricePaise)}. Pay the ${"\u20B9"}${toRupees(price - page.paidPricePaise)} difference to use it.`, "UPGRADE_REQUIRED", { price: toRupees(price), paid: toRupees(page.paidPricePaise), diff: toRupees(price - page.paidPricePaise), occasionId: String(occasion._id), theme: target });
+    }
+    page.occasion = occasion._id;
+    page.style = target;
+  }
   if (b.age !== undefined) page.age = b.age;
   if (b.gifts !== undefined) page.gifts = b.gifts;
   if (b.wishes !== undefined) page.wishes = b.wishes;
@@ -359,6 +417,7 @@ export const updatePage = handler(async (req, res) => {
   if (addEmail) {
     await assertCanEmail(req, await getSettings(), addEmail); // before anything is saved
     page.shareEmail = addEmail;
+    page.emailAddedAt = new Date();
     page.emailIncludesPin = b.includePin !== false;
   }
   await page.save();
@@ -367,7 +426,7 @@ export const updatePage = handler(async (req, res) => {
     const withPin = page.emailIncludesPin && Boolean(pin);
     if (page.visibility === "private" && !pin) email = { status: "failed", to: addEmail, reason: "PIN_UNKNOWN" }; // an old page whose PIN was never kept: make a new PIN, then resend
     else {
-      const sent = await sendPageMail({ page, senderName: page.senderName || req.user?.name || "", theme: page.occasion?.theme, pin: withPin ? pin : null, pinHidden: Boolean(pin) && !withPin, to: addEmail });
+      const sent = await sendPageMail({ page, senderName: page.senderName || (await accountName(req)), theme: page.occasion?.theme, pin: withPin ? pin : null, pinHidden: Boolean(pin) && !withPin, to: addEmail });
       email = { status: sent.status, to: addEmail, includesPin: withPin };
     }
   }
@@ -381,6 +440,9 @@ export const setVisibility = handler(async (req, res) => {
   const b = parse(z.object({ visibility: z.enum(["public", "private"]), pin: pinField.optional() }), req.body);
   let pin = null;
   if (b.visibility === "private") {
+    // already private and no new PIN asked for: nothing changes (the PIN people were given keeps working)
+    const kept = page.visibility === "private" && !b.pin ? decryptPin(page.pinEnc) : null;
+    if (kept) return ok(res, { page: await reload(page._id), pin: kept });
     pin = b.pin || newPin();
     page.pinHash = await hashPin(pin);
     page.pinEnc = encryptPin(pin);
@@ -417,7 +479,7 @@ export const resendEmail = handler(async (req, res) => {
   const pin = page.visibility === "private" ? decryptPin(page.pinEnc) : null;
   if (page.visibility === "private" && page.emailIncludesPin !== false && !pin) throw new MemoryError(400, "This page's PIN was set before it could be emailed. Make a new PIN in My pages, then resend.", "PIN_UNKNOWN");
   const withPin = page.emailIncludesPin !== false;
-  const sent = await sendPageMail({ page, senderName: page.senderName, theme: page.occasion?.theme, pin: withPin ? pin : null, pinHidden: Boolean(pin) && !withPin });
+  const sent = await sendPageMail({ page, senderName: page.senderName || (await accountName(req)), theme: page.occasion?.theme, pin: withPin ? pin : null, pinHidden: Boolean(pin) && !withPin });
   const fresh = await MemoryPage.findById(page._id);
   ok(res, { status: sent.status, sendsLeft: Math.max(0, MAX_EMAIL_SENDS - (fresh.emailSends || 0)) });
 });
@@ -439,12 +501,11 @@ export const reopenPage = handler(async (req, res) => {
   ok(res, await reload(page._id));
 });
 
-/** New link: the old URL stops working at once. */
+/** New link: the old URL stops working at once. A page the owner switched off stays off until they switch it on again. */
 export const regenerateLink = handler(async (req, res) => {
   const page = await ownPage(req);
   editable(page);
   page.slug = newSlug();
-  page.status = "active";
   page.accessVersion += 1;
   await page.save();
   ok(res, await reload(page._id));
@@ -462,22 +523,24 @@ export const deletePage = handler(async (req, res) => {
    MEDIA  (direct-to-S3 via presigned POST, limits from admin settings)
 ===================================================== */
 
-export const AUDIO_MAX_SEC = 120;
 const KIND_PURPOSE = { photo: "memory_photo", video: "memory_video", audio: "memory_audio" };
 
-const limitsFor = (s, kind) =>
-  kind === "photo" ? { max: s.maxPhotos, mb: s.maxPhotoMb } : kind === "audio" ? { max: 1, mb: s.maxAudioMb ?? 10 } : { max: s.maxVideos, mb: s.maxVideoMb };
+/* what THIS page may hold for one kind of file: the template's limits plus the add-ons the page has bought */
+const mediaLimits = (s, page, kind) => {
+  const l = limitsFor(s, page.occasion, page.extra);
+  return kind === "photo" ? { max: l.photos, mb: l.photoMb, sec: null } : kind === "audio" ? { max: 1, mb: l.audioMb, sec: l.audioSec } : { max: l.videos, mb: l.videoMb, sec: l.videoSec };
+};
 
 export const presignMedia = handler(async (req, res) => {
-  const page = await ownPage(req, { populate: false });
+  const page = await ownPage(req);
   editable(page);
   const b = parse(
     z.object({ kind: z.enum(["photo", "video", "audio"]), contentType: z.string().toLowerCase(), size: z.number().int().positive(), filename: z.string().max(200).optional() }),
     req.body
   );
-  const { max, mb } = limitsFor(await getSettings(), b.kind);
-  if (page.media.filter((m) => m.kind === b.kind).length >= max) throw new MemoryError(400, `You can add up to ${max} ${b.kind}s.`, "MEDIA_LIMIT");
-  if (b.size > mb * MB) throw new MemoryError(413, `Each ${b.kind} can be up to ${mb} MB.`, "FILE_TOO_LARGE");
+  const { max, mb } = mediaLimits(await getSettings(), page, b.kind);
+  if (page.media.filter((m) => m.kind === b.kind).length >= max) throw new MemoryError(400, `You can add up to ${max} ${b.kind}${max === 1 ? "" : "s"}. Get more room with an add-on.`, "MEDIA_LIMIT", { max });
+  if (b.size > mb * MB) throw new MemoryError(413, `Each ${b.kind} can be up to ${mb} MB. Get more room with an add-on.`, "FILE_TOO_LARGE", { max: mb });
 
   let target;
   try {
@@ -495,7 +558,7 @@ export const presignMedia = handler(async (req, res) => {
 const cleanCaption = (text) => String(text || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 4).join(" ").slice(0, 40).trim();
 
 export const confirmMedia = handler(async (req, res) => {
-  const page = await ownPage(req, { populate: false });
+  const page = await ownPage(req);
   editable(page);
   const b = parse(
     z.object({
@@ -513,14 +576,15 @@ export const confirmMedia = handler(async (req, res) => {
   const obj = await headObject(b.key);
   if (!obj) throw new MemoryError(404, "Upload not found. Please try again.", "OBJECT_NOT_FOUND");
 
-  const { max, mb } = limitsFor(await getSettings(), b.kind);
+  const { max, mb, sec } = mediaLimits(await getSettings(), page, b.kind);
   const reject = async (status, message, code) => {
     await removeFiles([b.key]);
     throw new MemoryError(status, message, code);
   };
   if (obj.size > mb * MB) await reject(413, `Each ${b.kind} can be up to ${mb} MB.`, "FILE_TOO_LARGE");
-  if (b.kind === "audio" && b.durationSec != null && b.durationSec > AUDIO_MAX_SEC + 3) await reject(413, `A voice message can be up to ${AUDIO_MAX_SEC / 60} minutes.`, "AUDIO_TOO_LONG");
-  if (page.media.filter((m) => m.kind === b.kind).length >= max) await reject(400, `You can add up to ${max} ${b.kind}s.`, "MEDIA_LIMIT");
+  // the length is measured in the browser (the server never opens the file), with a few seconds of slack
+  if (sec && b.durationSec != null && b.durationSec > sec + 3) await reject(413, `A ${b.kind === "audio" ? "voice message" : "video"} can be up to ${sec} seconds. Get more room with an add-on.`, b.kind === "audio" ? "AUDIO_TOO_LONG" : "VIDEO_TOO_LONG");
+  if (page.media.filter((m) => m.kind === b.kind).length >= max) await reject(400, `You can add up to ${max} ${b.kind}${max === 1 ? "" : "s"}.`, "MEDIA_LIMIT");
 
   // Atomic push guarded by the count so parallel confirms cannot exceed the limit.
   const first = !page.media.some((m) => m.kind === b.kind && m.isMain);

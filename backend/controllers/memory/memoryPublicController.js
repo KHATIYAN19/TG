@@ -5,6 +5,7 @@ import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
 import {
   TEMPLATE_THEMES, lifetimeDays, isExpired, answerOut, repliesOut, giftsOut, statsOut, styleFor, timelineOut, MemoryError, checkPin, ensureOccasions, getSettings, parse, sendError, signMedia, signPageToken, verifyPageToken,
 } from "../../services/memory/memoryService.js";
+import { addonCatalog, addonOut, limitsFor, limitsOut, occasionForUser, themeEnabled, themeIdsOf } from "../../services/memory/catalog.js";
 import { z } from "zod";
 
 const handler = (fn) =>
@@ -76,21 +77,30 @@ export const unlockPage = handler(async (req, res) => {
 /* GET /api/memories/public: what the marketing page needs (price, limits, occasions). No login, no secrets. */
 export const publicInfo = handler(async (req, res) => {
   await ensureOccasions();
-  const [s, occasions] = await Promise.all([
+  const [s, occasions, addons] = await Promise.all([
     getSettings(),
-    MemoryOccasion.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).select("name theme").lean(),
+    MemoryOccasion.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).lean(),
+    addonCatalog({ onlyEnabled: true }),
   ]);
+  const visible = occasions.filter((o) => !themeIdsOf(o).length || themeIdsOf(o).some((id) => themeEnabled(o, id)));
+  const cards = visible.map((o) => occasionForUser(o, s));
+  const prices = cards.flatMap((c) => (c.themes.length ? c.themes.map((t) => t.price) : [c.price]));
+  const from = prices.length ? Math.min(...prices) : s.price;
+  const to = prices.length ? Math.max(...prices) : s.price;
   res.set("Cache-Control", "public, max-age=60");
   res.json({
     success: true,
     data: {
       enabled: s.enabled,
-      price: s.price,
+      price: from, // "from" price: the cheapest look. Each template and look has its own (occasions[].price / themes[].price)
+      priceTo: to,
       currency: "INR",
       pageLifetimeDays: lifetimeDays(s),
-      limits: { photos: s.maxPhotos, videos: s.maxVideos, photoMb: s.maxPhotoMb, videoMb: s.maxVideoMb, audioMb: s.maxAudioMb ?? 10, audioSec: 120, messageChars: s.maxMessageChars },
-      themes: TEMPLATE_THEMES, // the looks a sender can choose from, per template
-      occasions: occasions.map((o) => ({ name: o.name, theme: o.theme })),
+      limits: limitsOut(limitsFor(s, null, null)),
+      themes: Object.fromEntries(visible.map((o) => [o.theme, themeIdsOf(o).filter((id) => themeEnabled(o, id))]).filter(([k, v]) => v.length || !TEMPLATE_THEMES[k])), // the looks a sender can choose from, per template
+      occasions: cards.map((c) => ({ name: c.name, theme: c.theme, price: c.price, themes: c.themes, limits: c.limits })), // each template: its price, its looks with prices, its own limits
+      addons: addons.map(addonOut), // what the admin sells as extras, with the admin's prices
+      onlineDays: lifetimeDays(s),
     },
   });
 });

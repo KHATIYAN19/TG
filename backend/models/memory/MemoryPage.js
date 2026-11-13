@@ -92,6 +92,8 @@ const memoryPageSchema = new Schema(
     emailStatus: { type: String, enum: ["", "sent", "failed", "blocked"], default: "" },
     emailSends: { type: Number, default: 0 },
     emailSentAt: { type: Date, default: null },
+    /* when the address was put on the page (at creation or later): the daily email limits count from this */
+    emailAddedAt: { type: Date, default: null },
     /* a page lives for PAGE_LIFETIME_DAYS (30) from the day it is created; after this it is gone for good (see services/memory/expiry.js) */
     expiresAt: { type: Date, default: null, index: true },
     viewCount: { type: Number, default: 0 },
@@ -117,6 +119,23 @@ const memoryPageSchema = new Schema(
     },
 
     media: [mediaSchema],
+
+    /* what the buyer paid for this page, in paise (null = a code / Gumroad / admin pass: any theme). The page can switch to any theme costing the same or less. */
+    paidPricePaise: { type: Number, default: null, min: 0 },
+    /* extra room bought with add-ons, on top of the template's limits */
+    extra: {
+      photos: { type: Number, default: 0 },
+      videos: { type: Number, default: 0 },
+      photoMb: { type: Number, default: 0 },
+      videoMb: { type: Number, default: 0 },
+      videoSec: { type: Number, default: 0 },
+      audioMb: { type: Number, default: 0 },
+      audioSec: { type: Number, default: 0 },
+      chars: { type: Number, default: 0 },
+      days: { type: Number, default: 0 },
+    },
+    /* add-on orders already applied to this page (makes applying an order safe to repeat) */
+    addonOrders: { type: [Schema.Types.ObjectId], default: [], select: false },
   },
   { timestamps: true }
 );

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Ban, Gift, Loader2, MinusCircle, Search, ShieldCheck, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Ban, Gift, Heart, Loader2, MinusCircle, Search, ShieldCheck, Trash2 } from "lucide-react";
 
 import { Btn, Chip, MoreSentinel, Person, STATUS, Table, inputCls, useCursorList, when } from "./AdminMemoryUi";
 
@@ -11,6 +11,7 @@ import { Btn, Chip, MoreSentinel, Person, STATUS, Table, inputCls, useCursorList
 const FILTERS = [["", "All users"], ["active", "Active"], ["suspended", "Suspended"], ["blocked", "Blocked"]];
 
 export default function UsersTab({ http, run, setDialog }) {
+  const [, setSearchParams] = useSearchParams();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const list = useCursorList({ http, path: "/users", params: { q, status } });
@@ -106,7 +107,8 @@ export default function UsersTab({ http, run, setDialog }) {
                 {u.status === "suspended"
                   ? <Btn tone="primary" onClick={() => reinstate(u)}><ShieldCheck size={12} /> Reinstate</Btn>
                   : <Btn disabled={admin} title={admin ? "Admin accounts can't be suspended" : "Suspend this account"} onClick={() => suspend(u)}><Ban size={12} /> Suspend</Btn>}
-                {u.pages > 0 && <Btn tone="danger" title="Delete all this user's memory pages" onClick={() => deletePages(u)}>Pages</Btn>}
+                {u.pages > 0 && <Btn title="See this user's pages: preview them, check activity or give more room" onClick={() => setSearchParams({ tab: "pages", q: u.email }, { replace: true })}><Heart size={12} /> Pages</Btn>}
+                {u.pages > 0 && <Btn tone="danger" title="Delete all this user's memory pages" onClick={() => deletePages(u)}><Trash2 size={12} /> All pages</Btn>}
                 <Btn tone="danger" disabled={admin} title={admin ? "Admin accounts can't be deleted" : "Delete this user permanently"} onClick={() => removeUser(u)}><Trash2 size={12} /></Btn>
               </div>
             );

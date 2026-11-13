@@ -8,6 +8,7 @@ import {
   motion,
   useInView,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -16,41 +17,43 @@ import {
 import {
   ArrowRight,
   ArrowUpRight,
+  ArrowsClockwise,
   BookOpen,
-  Boxes,
+  Broadcast,
+  CaretDown,
   Check,
-  CheckCircle2,
-  ChevronDown,
+  CheckCircle,
   Cloud,
-  Code2,
+  Cube,
   Database,
-  Download,
+  DownloadSimple,
   FileText,
+  FlowArrow,
   Gauge,
+  GitBranch,
   Globe,
+  HardDrives,
+  Lightning,
   Lock,
-  Rocket,
+  LockKey,
+  MagnifyingGlass,
+  Moon,
+  Network,
+  Plus,
+  Pulse,
+  ShieldCheck,
+  Stack,
+  Sun,
   Target,
   Timer,
-  TrendingUp,
+  TrendUp,
   XCircle,
-  GitBranch,
-  HardDrive,
-  Layers3,
-  LockKeyhole,
-  Network,
-  RadioTower,
-  RefreshCcw,
-  Search,
-  ServerCog,
-  ShieldCheck,
-  Sparkles,
-  Workflow,
-  Zap,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { pdfjs } from "react-pdf";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
+import { gatewayLabel, preferredGateway } from "../payment/gatewayConfig";
 import HLD_PREVIEW_PDF from "../assest/master_hld_preview.pdf";
+import "./SystemDesignHLD.css";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -61,6 +64,10 @@ const SITE_URL = "https://www.targettrek.in";
 const SITE_NAME = "Target Trek";
 const BASE_URL = API_BASE_URL;
 const THEME_STORAGE_KEY = "theme";
+// Same source the checkout modal uses: VITE_BOOKS_PAYMENT_GATEWAY, then
+// VITE_PAYMENT_GATEWAY, then the default gateway.
+const PAYMENT_PROVIDER_NAME = gatewayLabel(preferredGateway("books"));
+const SECURE_CHECKOUT_TEXT = `Secure checkout via ${PAYMENT_PROVIDER_NAME}`;
 const LLD_REDIRECT_URL = "/book/system-design/lld";
 const COMBO_REDIRECT_URL = "/book/system-design/hld-lld/combo";
 
@@ -339,97 +346,81 @@ const buildingBlocks = [
     title: "API Gateway",
     icon: Network,
     copy: "Authentication, routing, TLS termination, quotas and edge rate limiting.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Load Balancing",
-    icon: Workflow,
+    icon: FlowArrow,
     copy: "L4/L7 routing, health checks, horizontal scale and failure isolation.",
-    accent: "from-orange-500 to-amber-500",
   },
   {
     title: "Redis",
-    icon: Zap,
+    icon: Lightning,
     copy: "Cache, counters, TTLs, geo indexes, sorted sets, dedupe keys and locks.",
-    accent: "from-amber-500 to-amber-500",
   },
   {
     title: "Kafka",
-    icon: RadioTower,
+    icon: Broadcast,
     copy: "Durable async backbone, replay, decoupling, partition ordering and burst absorption.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "CDC",
-    icon: RefreshCcw,
+    icon: ArrowsClockwise,
     copy: "Stream database changes to search, caches and analytics without unsafe dual writes.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Elasticsearch",
-    icon: Search,
+    icon: MagnifyingGlass,
     copy: "Full-text search, faceting, autocomplete support and read-optimized search indexes.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Object Store + CDN",
     icon: Cloud,
     copy: "Store large media blobs and deliver static/video content close to users.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "SQL Databases",
     icon: Database,
     copy: "Transactions, relational integrity, locking, indexes and strongly consistent workflows.",
-    accent: "from-orange-500 to-amber-500",
   },
   {
     title: "NoSQL Databases",
-    icon: HardDrive,
+    icon: HardDrives,
     copy: "Horizontal scale for key-based, write-heavy and extremely large access patterns.",
-    accent: "from-amber-500 to-orange-500",
   },
   {
     title: "Sharding",
     icon: GitBranch,
     copy: "Partition data by user, region, city, key-range or hash while controlling hot partitions.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Replication",
-    icon: Layers3,
+    icon: Stack,
     copy: "Read scale, redundancy, failover, RPO/RTO choices and sync vs async replicas.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Rate Limiting",
     icon: Gauge,
     copy: "Token bucket, fixed/sliding windows, Redis atomicity and per-tenant policy enforcement.",
-    accent: "from-orange-500 to-amber-500",
   },
   {
     title: "Distributed Coordination",
-    icon: LockKeyhole,
+    icon: LockKey,
     copy: "Leases, locks, compare-and-set, leader election and correctness under concurrency.",
-    accent: "from-amber-500 to-orange-500",
   },
   {
     title: "Service Architecture",
-    icon: Boxes,
+    icon: Cube,
     copy: "Service boundaries, synchronous RPC, asynchronous events and graceful degradation.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Observability",
-    icon: ServerCog,
+    icon: Pulse,
     copy: "Logs, metrics, tracing, queue lag, error rate and latency SLOs for production systems.",
-    accent: "from-orange-500 to-orange-500",
   },
   {
     title: "Security + Reliability",
     icon: ShieldCheck,
     copy: "AuthN/AuthZ, secrets, encryption, retries, circuit breakers and idempotent operations.",
-    accent: "from-orange-500 to-orange-500",
   },
 ];
 
@@ -471,117 +462,6 @@ const deepDives = [
     chips: ["Inventory", "Search", "Saga", "Flash sale"],
   },
 ];
-
-const toneStyles = {
-  blue: {
-    borderLight: "border-orange-200/80",
-    borderDark: "border-orange-400/15",
-    softLight: "bg-orange-50",
-    softDark: "bg-orange-400/[0.07]",
-    textLight: "text-orange-700",
-    textDark: "text-orange-300",
-    chipLight: "bg-orange-100 text-orange-700",
-    chipDark: "bg-orange-400/10 text-orange-300",
-    icon: "from-orange-600 to-orange-500",
-    line: "from-orange-500 to-orange-400",
-  },
-  cyan: {
-    borderLight: "border-orange-200/80",
-    borderDark: "border-orange-400/15",
-    softLight: "bg-orange-50",
-    softDark: "bg-orange-400/[0.07]",
-    textLight: "text-orange-700",
-    textDark: "text-orange-300",
-    chipLight: "bg-orange-100 text-orange-700",
-    chipDark: "bg-orange-400/10 text-orange-300",
-    icon: "from-orange-500 to-orange-500",
-    line: "from-orange-500 to-orange-400",
-  },
-  indigo: {
-    borderLight: "border-orange-200/80",
-    borderDark: "border-orange-400/15",
-    softLight: "bg-orange-50",
-    softDark: "bg-orange-400/[0.07]",
-    textLight: "text-orange-700",
-    textDark: "text-orange-300",
-    chipLight: "bg-orange-100 text-orange-700",
-    chipDark: "bg-orange-400/10 text-orange-300",
-    icon: "from-orange-600 to-amber-500",
-    line: "from-orange-500 to-amber-400",
-  },
-  violet: {
-    borderLight: "border-amber-200/80",
-    borderDark: "border-amber-400/15",
-    softLight: "bg-amber-50",
-    softDark: "bg-amber-400/[0.07]",
-    textLight: "text-amber-700",
-    textDark: "text-amber-300",
-    chipLight: "bg-amber-100 text-amber-700",
-    chipDark: "bg-amber-400/10 text-amber-300",
-    icon: "from-amber-600 to-amber-500",
-    line: "from-amber-500 to-amber-400",
-  },
-  emerald: {
-    borderLight: "border-orange-200/80",
-    borderDark: "border-orange-400/15",
-    softLight: "bg-orange-50",
-    softDark: "bg-orange-400/[0.07]",
-    textLight: "text-orange-700",
-    textDark: "text-orange-300",
-    chipLight: "bg-orange-100 text-orange-700",
-    chipDark: "bg-orange-400/10 text-orange-300",
-    icon: "from-orange-500 to-orange-500",
-    line: "from-orange-500 to-orange-400",
-  },
-  amber: {
-    borderLight: "border-amber-200/80",
-    borderDark: "border-amber-400/15",
-    softLight: "bg-amber-50",
-    softDark: "bg-amber-400/[0.07]",
-    textLight: "text-amber-700",
-    textDark: "text-amber-300",
-    chipLight: "bg-amber-100 text-amber-700",
-    chipDark: "bg-amber-400/10 text-amber-300",
-    icon: "from-amber-500 to-orange-500",
-    line: "from-amber-500 to-orange-400",
-  },
-  rose: {
-    borderLight: "border-orange-200/80",
-    borderDark: "border-orange-400/15",
-    softLight: "bg-orange-50",
-    softDark: "bg-orange-400/[0.07]",
-    textLight: "text-orange-700",
-    textDark: "text-orange-300",
-    chipLight: "bg-orange-100 text-orange-700",
-    chipDark: "bg-orange-400/10 text-orange-300",
-    icon: "from-orange-500 to-orange-500",
-    line: "from-orange-500 to-orange-400",
-  },
-  sky: {
-    borderLight: "border-orange-200/80",
-    borderDark: "border-orange-400/15",
-    softLight: "bg-orange-50",
-    softDark: "bg-orange-400/[0.07]",
-    textLight: "text-orange-700",
-    textDark: "text-orange-300",
-    chipLight: "bg-orange-100 text-orange-700",
-    chipDark: "bg-orange-400/10 text-orange-300",
-    icon: "from-orange-500 to-orange-500",
-    line: "from-orange-500 to-orange-400",
-  },
-};
-
-const getTone = (tone, isDarkMode) => {
-  const styles = toneStyles[tone] || toneStyles.blue;
-  return {
-    border: isDarkMode ? styles.borderDark : styles.borderLight,
-    soft: isDarkMode ? styles.softDark : styles.softLight,
-    text: isDarkMode ? styles.textDark : styles.textLight,
-    chip: isDarkMode ? styles.chipDark : styles.chipLight,
-    icon: styles.icon,
-    line: styles.line,
-  };
-};
 
 const chapterCoverage = [
   {
@@ -1141,61 +1021,33 @@ const faqs = [
   },
 ];
 
-function SectionHeader({ eyebrow, title, description, align = "left", dark = false, id }) {
-  return (
-    <Reveal className={cx(align === "center" && "mx-auto max-w-3xl text-center")}>
-      <p
-        className={cx(
-          "text-xs font-extrabold uppercase tracking-[0.2em] sm:text-sm",
-          dark ? "text-orange-300" : "text-orange-600"
-        )}
-      >
-        {eyebrow}
-      </p>
-      <h2
-        id={id}
-        className={cx(
-          "hld-display mt-3 text-3xl font-extrabold leading-[1.08] tracking-[-0.035em] sm:text-4xl lg:text-[3.15rem]",
-          dark ? "text-white" : "text-slate-950"
-        )}
-      >
-        {title}
-      </h2>
-      {description && (
-        <p
-          className={cx(
-            "mt-4 text-base leading-7 sm:text-lg sm:leading-8",
-            dark ? "text-slate-300" : "text-slate-600"
-          )}
-        >
-          {description}
-        </p>
-      )}
-    </Reveal>
-  );
-}
-
 /* ------------------------------------------------------------------ */
-/*  Animation + conversion building blocks (framer-motion)             */
+/*  Shared presentation constants                                      */
 /* ------------------------------------------------------------------ */
 
 const EASE = [0.22, 1, 0.36, 1];
+const FLOAT_EASE = [0.37, 0, 0.63, 1];
 
-const ctaPrimary =
-  "hld-shimmer group relative inline-flex min-h-[48px] items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 px-6 py-3 text-sm font-extrabold text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:shadow-orange-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-60";
+const FONT_HREF =
+  "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500;600&display=swap";
 
+// Every section the page can jump to. `primary` links also show in the
+// compact desktop bar (the bar is hidden below the lg breakpoint).
 const NAV_LINKS = [
-  ["#book-preview", "Free preview"],
-  ["#what-is-hld", "What is HLD"],
-  ["#framework", "Framework"],
-  ["#request-flow", "Request flow"],
-  ["#playbook", "45-min plan"],
-  ["#estimator", "Estimator"],
-  ["#case-studies", "19 case studies"],
-  ["#spotlights", "Deep dives"],
-  ["#offer", "What you get"],
-  ["#faq", "FAQ"],
+  { href: "#book-preview", label: "Free preview", primary: true },
+  { href: "#what-is-hld", label: "What is HLD" },
+  { href: "#framework", label: "Framework", primary: true },
+  { href: "#request-flow", label: "Request flow" },
+  { href: "#playbook", label: "45 minute plan", primary: true },
+  { href: "#estimator", label: "Estimator", primary: true },
+  { href: "#case-studies", label: "Case studies", primary: true },
+  { href: "#spotlights", label: "Deep dives" },
+  { href: "#offer", label: "What you get", primary: true },
+  { href: "#faq", label: "FAQ", primary: true },
 ];
+
+const TAGLINE =
+  "Interviewers do not grade the diagram. They grade the reasoning behind every box you draw. This book trains that reasoning on 19 real systems.";
 
 const rotatingPrompts = [
   "a URL Shortener",
@@ -1257,8 +1109,8 @@ const valueStack = [
   { icon: FileText, title: "Digital PDF ebook", copy: "Read on laptop, tablet or phone — revise anywhere." },
   { icon: Target, title: "19 interview case studies", copy: "URL shortener to payments, each in the same 9-step structure." },
   { icon: Timer, title: "45-minute interview playbook", copy: "A minute-by-minute plan for the real round." },
-  { icon: Boxes, title: "16 core building-block primers", copy: "Redis, Kafka, CDC, sharding and more — tied to the problem they solve." },
-  { icon: TrendingUp, title: "Back-of-envelope numbers", copy: "Concrete QPS, storage and bandwidth estimates for every system." },
+  { icon: Cube, title: "16 core building-block primers", copy: "Redis, Kafka, CDC, sharding and more — tied to the problem they solve." },
+  { icon: TrendUp, title: "Back-of-envelope numbers", copy: "Concrete QPS, storage and bandwidth estimates for every system." },
   { icon: ShieldCheck, title: "Failures + trade-offs", copy: "What breaks, how you recover and what each choice costs." },
 ];
 
@@ -1278,13 +1130,13 @@ const flowStages = [
   {
     id: "service",
     label: "Services",
-    icon: Boxes,
+    icon: Cube,
     copy: "Stateless services scale horizontally behind a load balancer. Optional features degrade first when a dependency is slow.",
   },
   {
     id: "cache",
     label: "Redis cache",
-    icon: Zap,
+    icon: Lightning,
     copy: "Cache-aside: a hit returns in about a millisecond, a miss falls through to the database. TTLs and negative caching protect the store.",
   },
   {
@@ -1296,7 +1148,7 @@ const flowStages = [
   {
     id: "queue",
     label: "Kafka + workers",
-    icon: RadioTower,
+    icon: Broadcast,
     copy: "Analytics, notifications and search indexing leave the request path through a durable log, so bursts never block the user.",
   },
 ];
@@ -1343,30 +1195,53 @@ const fmtStorage = (gigabytes) => {
   return `${gigabytes.toFixed(1)} GB`;
 };
 
-function Reveal({ children, delay = 0, y = 26, className, as = "div", ...rest }) {
+/* ------------------------------------------------------------------ */
+/*  Motion + layout building blocks                                    */
+/* ------------------------------------------------------------------ */
+
+// Entrance wrapper. Hover effects live on the child (CSS), so the inline
+// transform framer-motion leaves behind never fights a hover lift.
+function Reveal({ children, delay = 0, y = 32, className, as = "div", ...rest }) {
   const reduce = useReducedMotion();
-
-  if (reduce) {
-    const Plain = as;
-    return (
-      <Plain className={className} {...rest}>
-        {children}
-      </Plain>
-    );
-  }
-
   const Tag = motion[as] || motion.div;
+
   return (
     <Tag
       className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.6, ease: EASE, delay }}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y }}
+      whileInView={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-48px" }}
+      transition={{ duration: 0.7, ease: EASE, delay }}
       {...rest}
     >
       {children}
     </Tag>
+  );
+}
+
+function Section({ id, alt = false, narrow = false, labelledBy, children }) {
+  return (
+    <section
+      id={id}
+      aria-labelledby={labelledBy}
+      className={cx("py-16 lg:py-24", alt ? "bg-alt" : "bg-base")}
+    >
+      <div className={cx("mx-auto px-4 sm:px-6 lg:px-8", narrow ? "max-w-3xl" : "max-w-6xl")}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SectionHeader({ eyebrow, title, description, align = "left", id }) {
+  return (
+    <Reveal className={cx("max-w-3xl", align === "center" && "mx-auto text-center")}>
+      <p className="eyebrow caption-3">{eyebrow}</p>
+      <h2 id={id} className="heading-2 t1 mt-3">
+        {title}
+      </h2>
+      {description && <p className="body-3 t2 mt-4">{description}</p>}
+    </Reveal>
   );
 }
 
@@ -1384,7 +1259,7 @@ function CountUp({ to, suffix = "", duration = 1.4 }) {
     }
     const controls = animate(0, to, {
       duration,
-      ease: "easeOut",
+      ease: EASE,
       onUpdate: (latest) => setValue(Math.round(latest)),
     });
     return () => controls.stop();
@@ -1404,9 +1279,38 @@ function ScrollProgress() {
   return (
     <motion.div
       aria-hidden="true"
-      className="fixed inset-x-0 top-0 z-[95] h-[3px] origin-left bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600"
+      className="progress fixed inset-x-0 top-0 z-[95] h-0.5 origin-left"
       style={{ scaleX }}
     />
+  );
+}
+
+function ThemeToggle({ theme, onToggle }) {
+  const dark = theme === "dark";
+  const reduce = useReducedMotion();
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={dark}
+      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      title={dark ? "Switch to light theme" : "Switch to dark theme"}
+      className="icon-btn focusable"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={theme}
+          className="flex"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, rotate: -60, scale: 0.7 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, rotate: 60, scale: 0.7 }}
+          transition={{ duration: 0.3, ease: EASE }}
+        >
+          {dark ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}
+        </motion.span>
+      </AnimatePresence>
+    </button>
   );
 }
 
@@ -1414,7 +1318,7 @@ function TiltBook({ children }) {
   const reduce = useReducedMotion();
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
-  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-12, 12]), { stiffness: 150, damping: 18 });
+  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 150, damping: 18 });
   const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [10, -10]), { stiffness: 150, damping: 18 });
 
   const onMove = (event) => {
@@ -1433,7 +1337,7 @@ function TiltBook({ children }) {
     <div style={{ perspective: 1000 }} onMouseMove={onMove} onMouseLeave={onLeave}>
       <motion.div
         animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 5, repeat: Infinity, ease: FLOAT_EASE }}
       >
         <motion.div style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}>
           {children}
@@ -1443,7 +1347,34 @@ function TiltBook({ children }) {
   );
 }
 
-function RotatingPrompt({ isDarkMode }) {
+// Small label that drifts next to the hero book.
+function FloatChip({ className, delay = 0, children }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      className={cx("glass absolute z-10 rounded-xl px-3 py-2", className)}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 16 }}
+      animate={
+        reduce
+          ? { opacity: 1 }
+          : { opacity: 1, scale: 1, y: [0, -8, 0] }
+      }
+      transition={
+        reduce
+          ? { duration: 0.5, delay }
+          : {
+              opacity: { duration: 0.6, ease: EASE, delay },
+              scale: { duration: 0.6, ease: EASE, delay },
+              y: { duration: 6, repeat: Infinity, ease: FLOAT_EASE, delay },
+            }
+      }
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function RotatingPrompt() {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
 
@@ -1457,40 +1388,64 @@ function RotatingPrompt({ isDarkMode }) {
   }, [reduce]);
 
   return (
-    <p
-      className={cx(
-        "mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3.5 py-2 text-sm font-bold shadow-sm",
-        isDarkMode
-          ? "border-white/10 bg-white/[0.04] text-slate-300"
-          : "border-orange-200 bg-white/80 text-stone-700"
-      )}
-    >
-      <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-500">
-        Today’s interview prompt
-      </span>
-      <span aria-live="off">
-        “Design{" "}
-        <span className="relative inline-flex h-[1.5em] min-w-[10.5ch] overflow-hidden align-bottom">
+    <p className="bd bg-s1 inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full px-4 py-2">
+      <span className="pulse-dot" aria-hidden="true" />
+      <span className="caption-3 t3 uppercase tracking-wider">Interview prompt</span>
+      <span className="body-5 t1" aria-live="off">
+        Design{" "}
+        <span className="relative inline-flex h-5 overflow-hidden align-bottom">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={rotatingPrompts[index]}
               initial={reduce ? false : { y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={reduce ? undefined : { y: "-100%", opacity: 0 }}
-              transition={{ duration: 0.35, ease: EASE }}
-              className="whitespace-nowrap font-extrabold text-orange-500"
+              transition={{ duration: 0.4, ease: EASE }}
+              className="ta whitespace-nowrap font-semibold"
             >
               {rotatingPrompts[index]}
             </motion.span>
           </AnimatePresence>
         </span>
-        ”
       </span>
     </p>
   );
 }
 
-function RequestFlowDemo({ isDarkMode }) {
+// Large type statement whose words light up one at a time as it scrolls in.
+function TaglineReveal({ text }) {
+  const reduce = useReducedMotion();
+  const ref = useRef(null);
+  const words = useMemo(() => text.split(" "), [text]);
+  const [count, setCount] = useState(0);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.85", "end 0.5"] });
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    const next = Math.round(latest * words.length);
+    setCount((current) => (next > current ? next : current));
+  });
+
+  return (
+    <section className="bg-base relative py-20 lg:py-24" aria-label="Why this book works">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <p ref={ref} className="heading-2 t1 mx-auto max-w-[680px] text-center" aria-label={text}>
+          {words.map((word, index) => (
+            <span
+              key={`${word}-${index}`}
+              aria-hidden="true"
+              className="word"
+              data-on={reduce || index < count ? "true" : "false"}
+            >
+              {word}{" "}
+            </span>
+          ))}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function RequestFlowDemo() {
   const reduce = useReducedMotion();
   const [active, setActive] = useState(0);
   const [auto, setAuto] = useState(true);
@@ -1507,93 +1462,64 @@ function RequestFlowDemo({ isDarkMode }) {
   const stage = flowStages[active];
 
   return (
-    <div
-      className={cx(
-        "mt-10 rounded-[28px] border p-4 shadow-sm sm:p-7",
-        isDarkMode ? "border-white/10 bg-white/[0.03]" : "border-orange-100 bg-white"
-      )}
-    >
-      <div className="flex flex-col items-stretch lg:flex-row lg:items-center">
-        {flowStages.map((item, index) => {
-          const Icon = item.icon;
-          const isActive = index === active;
-          return (
-            <React.Fragment key={item.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  setActive(index);
-                  setAuto(false);
-                }}
-                onMouseEnter={() => setAuto(false)}
-                aria-pressed={isActive}
-                className={cx(
-                  "group flex shrink-0 items-center gap-3 rounded-2xl border px-4 py-3 text-left transition duration-300 lg:flex-col lg:gap-2 lg:px-3 lg:py-4 lg:text-center",
-                  isActive
-                    ? "scale-[1.03] border-orange-500 bg-orange-500/10 shadow-lg shadow-orange-500/15"
-                    : isDarkMode
-                    ? "border-white/10 bg-white/[0.03] hover:border-orange-400/40"
-                    : "border-slate-200 bg-slate-50/60 hover:border-orange-300"
-                )}
-              >
-                <span
-                  className={cx(
-                    "flex h-10 w-10 items-center justify-center rounded-xl transition",
-                    isActive
-                      ? "bg-gradient-to-br from-orange-600 to-amber-500 text-white"
-                      : isDarkMode
-                      ? "bg-white/10 text-slate-300"
-                      : "bg-white text-orange-600 ring-1 ring-orange-100"
-                  )}
+    <Reveal className="mt-10">
+      <div className="card rounded-3xl p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col items-stretch lg:flex-row lg:items-center">
+          {flowStages.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = index === active;
+            return (
+              <React.Fragment key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActive(index);
+                    setAuto(false);
+                  }}
+                  onMouseEnter={() => setAuto(false)}
+                  aria-pressed={isActive}
+                  className="stage focusable flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3 text-left lg:w-28 lg:flex-col lg:gap-2 lg:px-2 lg:py-4 lg:text-center"
                 >
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-extrabold lg:text-xs">{item.label}</span>
-              </button>
-              {index < flowStages.length - 1 && (
-                <span
-                  aria-hidden="true"
-                  className="hld-conn"
-                  style={{ animationDelay: `${index * 0.35}s` }}
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
+                  <span className="tile h-10 w-10 rounded-lg">
+                    <Icon size={20} weight="duotone" />
+                  </span>
+                  <span className="body-4">{item.label}</span>
+                </button>
+                {index < flowStages.length - 1 && (
+                  <span aria-hidden="true" className="conn">
+                    <b style={{ animationDelay: `${index * 0.35}s` }} />
+                  </span>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
 
-      <div
-        className={cx(
-          "mt-6 min-h-[88px] rounded-2xl border p-4 sm:p-5",
-          isDarkMode ? "border-white/10 bg-black/20" : "border-orange-100 bg-[#fffaf5]"
-        )}
-        aria-live="polite"
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={stage.id}
-            initial={reduce ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduce ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-          >
-            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-orange-500">
-              Step {active + 1} · {stage.label}
-            </p>
-            <p className={cx("mt-2 text-sm leading-7 sm:text-base", isDarkMode ? "text-slate-300" : "text-slate-700")}>
-              {stage.copy}
-            </p>
-          </motion.div>
-        </AnimatePresence>
+        <div className="bg-s2 mt-6 min-h-24 rounded-2xl p-4 sm:p-6" aria-live="polite">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={stage.id}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: EASE }}
+            >
+              <p className="eyebrow caption-3">
+                <span className="mono">Step {active + 1}</span> · {stage.label}
+              </p>
+              <p className="body-3 t2 mt-2">{stage.copy}</p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-      <p className={cx("mt-3 text-center text-xs font-semibold", isDarkMode ? "text-slate-500" : "text-slate-500")}>
-        Tap any stage to pause the animation. Every case study in the book walks this path for its own system.
+      <p className="caption-2 t3 mt-4 text-center">
+        Select any stage to pause the animation. Every case study in the book walks this path for its own system.
       </p>
-    </div>
+    </Reveal>
   );
 }
 
-function EstimatorDemo({ isDarkMode, onBuy, canBuy }) {
+function EstimatorDemo({ onBuy, canBuy }) {
   const [dau, setDau] = useState(50);
   const [actions, setActions] = useState(10);
   const [peak, setPeak] = useState(3);
@@ -1610,300 +1536,258 @@ function EstimatorDemo({ isDarkMode, onBuy, canBuy }) {
 
   const insight =
     ratio >= 20
-      ? "Extremely read-heavy: put a CDN/Redis cache in front, keep the redirect or read path tiny and push analytics to a queue."
+      ? "Extremely read heavy. Put a CDN and a Redis cache in front, keep the read path tiny and push analytics to a queue."
       : ratio >= 5
-      ? "Read-heavy: cache-aside with Redis, read replicas and a cache-hit target above 90% will carry most traffic."
+      ? "Read heavy. Cache aside with Redis, read replicas and a cache hit target above 90% will carry most traffic."
       : ratio >= 2
-      ? "Balanced: partition by a good key, batch writes and watch replication lag."
-      : "Write-heavy: favour an append-friendly store (LSM / wide-column), partition aggressively and absorb bursts with Kafka.";
+      ? "Balanced. Partition by a good key, batch writes and watch replication lag."
+      : "Write heavy. Favour an append friendly store such as an LSM or wide column database, partition aggressively and absorb bursts with Kafka.";
 
   const sliders = [
     { id: "est-dau", label: "Daily active users", value: dau, set: setDau, min: 1, max: 500, step: 1, text: `${dau}M` },
-    { id: "est-actions", label: "Requests per user / day", value: actions, set: setActions, min: 1, max: 100, step: 1, text: String(actions) },
-    { id: "est-peak", label: "Peak-to-average multiplier", value: peak, set: setPeak, min: 1, max: 10, step: 1, text: `${peak}×` },
-    { id: "est-ratio", label: "Read : write ratio", value: ratio, set: setRatio, min: 1, max: 100, step: 1, text: `${ratio}:1` },
+    { id: "est-actions", label: "Requests per user per day", value: actions, set: setActions, min: 1, max: 100, step: 1, text: String(actions) },
+    { id: "est-peak", label: "Peak to average multiplier", value: peak, set: setPeak, min: 1, max: 10, step: 1, text: `${peak}×` },
+    { id: "est-ratio", label: "Read to write ratio", value: ratio, set: setRatio, min: 1, max: 100, step: 1, text: `${ratio}:1` },
     { id: "est-bytes", label: "Bytes per stored record", value: bytes, set: setBytes, min: 100, max: 5000, step: 100, text: `${bytes} B` },
   ];
 
   const results = [
     ["Average QPS", fmtCompact(avgQps)],
     ["Peak QPS", fmtCompact(peakQps)],
-    ["Peak reads / s", fmtCompact(peakReads)],
-    ["Peak writes / s", fmtCompact(peakWrites)],
-    ["New storage / day", fmtStorage(storagePerDayGb)],
+    ["Peak reads per second", fmtCompact(peakReads)],
+    ["Peak writes per second", fmtCompact(peakWrites)],
+    ["New storage per day", fmtStorage(storagePerDayGb)],
     ["Storage over 5 years", fmtStorage(storageFiveYearGb)],
   ];
 
   return (
-    <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_1.05fr]">
-      <Reveal
-        className={cx(
-          "rounded-[28px] border p-5 sm:p-7",
-          isDarkMode ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white"
-        )}
-      >
-        <div className="space-y-5">
-          {sliders.map((item) => (
-            <div key={item.id}>
-              <div className="flex items-center justify-between gap-3">
-                <label htmlFor={item.id} className="text-sm font-bold">
-                  {item.label}
-                </label>
-                <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-extrabold text-orange-500">
-                  {item.text}
-                </span>
+    <div className="mt-10 grid gap-6 lg:grid-cols-2">
+      <Reveal>
+        <div className="card h-full rounded-3xl p-6 sm:p-8">
+          <div className="space-y-6">
+            {sliders.map((item) => (
+              <div key={item.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor={item.id} className="body-5 t1">
+                    {item.label}
+                  </label>
+                  <span className="chip chip-accent caption-3 mono">{item.text}</span>
+                </div>
+                <input
+                  id={item.id}
+                  type="range"
+                  min={item.min}
+                  max={item.max}
+                  step={item.step}
+                  value={item.value}
+                  onChange={(event) => item.set(Number(event.target.value))}
+                  className="mt-3"
+                />
               </div>
-              <input
-                id={item.id}
-                type="range"
-                min={item.min}
-                max={item.max}
-                step={item.step}
-                value={item.value}
-                onChange={(event) => item.set(Number(event.target.value))}
-                className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-orange-500/20 accent-orange-500"
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </Reveal>
 
-      <Reveal
-        delay={0.1}
-        className={cx(
-          "flex flex-col rounded-[28px] border p-5 sm:p-7",
-          isDarkMode ? "border-orange-400/20 bg-orange-400/[0.05]" : "border-orange-200 bg-[#fff7ed]"
-        )}
-      >
-        <div className="grid grid-cols-2 gap-3">
-          {results.map(([label, value]) => (
-            <div
-              key={label}
-              className={cx(
-                "rounded-2xl border p-4",
-                isDarkMode ? "border-white/10 bg-black/20" : "border-orange-100 bg-white"
-              )}
-            >
-              <p className={cx("text-[11px] font-extrabold uppercase tracking-[0.12em]", isDarkMode ? "text-slate-400" : "text-slate-500")}>
-                {label}
-              </p>
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.p
-                  key={value}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.18 }}
-                  className="mt-1 text-2xl font-extrabold tracking-tight text-orange-500"
-                >
-                  {value}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-          ))}
-        </div>
+      <Reveal delay={0.1}>
+        <div className="card flex h-full flex-col rounded-3xl p-6 sm:p-8">
+          <div className="grid grid-cols-2 gap-3">
+            {results.map(([label, value]) => (
+              <div key={label} className="bg-s2 overflow-hidden rounded-xl p-4">
+                <p className="caption-4 t3">{label}</p>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.p
+                    key={value}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2, ease: EASE }}
+                    className="heading-5 mono ta mt-1"
+                  >
+                    {value}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+            ))}
+          </div>
 
-        <p className={cx("mt-5 rounded-2xl p-4 text-sm font-semibold leading-6", isDarkMode ? "bg-white/5 text-slate-300" : "bg-white text-slate-700")}>
-          <span className="font-extrabold text-orange-500">Design hint: </span>
-          {insight}
-        </p>
-
-        <div className="mt-auto pt-5">
-          <p className={cx("text-sm leading-6", isDarkMode ? "text-slate-400" : "text-slate-600")}>
-            The book runs this exact estimation for URL shortener, messaging, ride-hailing, video, payments and 13 more systems.
+          <p className="bd body-6 t2 mt-6 rounded-xl p-4">
+            <span className="ta font-semibold">Design hint. </span>
+            {insight}
           </p>
-          <button type="button" onClick={onBuy} disabled={!canBuy} className={cx(ctaPrimary, "mt-4 w-full")}>
-            See all 19 worked estimates
-            <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-          </button>
+
+          <div className="mt-auto pt-6">
+            <p className="body-6 t2">
+              The book runs this exact estimation for a URL shortener, messaging, ride hailing, video, payments and 14 more systems.
+            </p>
+            <button type="button" onClick={onBuy} disabled={!canBuy} className="btn btn-primary button-md mt-4 w-full">
+              See all 19 worked estimates
+              <ArrowRight className="arrow" size={18} weight="bold" />
+            </button>
+          </div>
         </div>
       </Reveal>
     </div>
   );
 }
 
-function CaseExplorer({ isDarkMode }) {
+function CaseExplorer() {
   const [filter, setFilter] = useState("All");
   const reduce = useReducedMotion();
-  const palette = ["blue", "indigo", "cyan", "violet", "emerald", "sky", "rose", "amber"];
 
-  const items = caseStudies.map((item, index) => ({
+  const items = caseStudies.map((item) => ({
     ...item,
     category: CASE_CATEGORY[item.number],
-    toneKey: palette[index % palette.length],
   }));
   const visible = filter === "All" ? items : items.filter((item) => item.category === filter);
 
   return (
     <>
-      <div className="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filter case studies">
+      <Reveal
+        className="no-scrollbar -mx-4 mt-8 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0"
+        role="group"
+        aria-label="Filter case studies"
+      >
         {caseFilters.map((name) => {
-          const selected = filter === name;
           const count = name === "All" ? items.length : items.filter((item) => item.category === name).length;
           return (
             <button
               key={name}
               type="button"
-              aria-pressed={selected}
+              aria-pressed={filter === name}
               onClick={() => setFilter(name)}
-              className={cx(
-                "rounded-full border px-4 py-2 text-xs font-extrabold transition sm:text-sm",
-                selected
-                  ? "border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/25"
-                  : isDarkMode
-                  ? "border-white/10 bg-white/[0.04] text-slate-300 hover:border-orange-400/50"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-orange-300"
-              )}
+              className="pill focusable button-sm shrink-0"
             >
-              {name} <span className="opacity-70">({count})</span>
+              {name} <span className="mono opacity-70">{count}</span>
             </button>
           );
         })}
-      </div>
+      </Reveal>
 
-      <motion.div layout={!reduce} className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <motion.div layout={!reduce} className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <AnimatePresence mode="popLayout">
-          {visible.map((item) => {
-            const tone = getTone(item.toneKey, isDarkMode);
-            return (
-              <motion.article
-                key={item.number}
-                layout={!reduce}
-                initial={reduce ? false : { opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduce ? undefined : { opacity: 0, scale: 0.94 }}
-                transition={{ duration: 0.35, ease: EASE }}
-                className={cx(
-                  "group relative overflow-hidden rounded-[26px] border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl",
-                  tone.border,
-                  isDarkMode ? "bg-white/[0.025]" : "bg-white"
-                )}
-              >
-                <div className={cx("absolute inset-x-0 top-0 h-1 bg-gradient-to-r opacity-90", tone.line)} />
+          {visible.map((item) => (
+            <motion.div
+              key={item.number}
+              layout={!reduce}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.5, ease: EASE }}
+            >
+              <article className="card lift flex h-full flex-col rounded-3xl p-6">
                 <div className="flex items-center justify-between gap-4">
-                  <span className={cx("text-sm font-extrabold tracking-[0.18em]", tone.text)}>CASE {item.number}</span>
-                  <div className={cx("flex h-9 w-9 items-center justify-center rounded-xl transition group-hover:rotate-6 group-hover:scale-110", tone.chip)}>
-                    <Code2 className="h-4 w-4" />
-                  </div>
+                  <span className="num caption-3 mono uppercase tracking-wider">Case {item.number}</span>
+                  <ArrowUpRight className="peek" size={18} weight="bold" aria-hidden="true" />
                 </div>
-                <h3 className="mt-5 text-2xl font-extrabold tracking-[-0.025em]">Design {item.title}</h3>
-                <p className={cx("mt-1 text-sm font-semibold", tone.text)}>{item.subtitle}</p>
-                <p className={cx("mt-4 text-sm leading-6", isDarkMode ? "text-slate-400" : "text-slate-600")}>{item.summary}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
+                <h3 className="heading-6 t1 mt-4">Design {item.title}</h3>
+                <p className="body-5 ta mt-1">{item.subtitle}</p>
+                <p className="body-6 t2 mt-3">{item.summary}</p>
+                <div className="mt-auto flex flex-wrap gap-2 pt-6">
                   {item.tags.map((tag) => (
-                    <span key={tag} className={cx("rounded-full px-3 py-1.5 text-xs font-semibold", tone.chip)}>
+                    <span key={tag} className="chip caption-4">
                       {tag}
                     </span>
                   ))}
                 </div>
-              </motion.article>
-            );
-          })}
+              </article>
+            </motion.div>
+          ))}
         </AnimatePresence>
       </motion.div>
     </>
   );
 }
 
-function SpotlightViewer({ isDarkMode }) {
+function SpotlightViewer() {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const item = caseStudySpotlights[index];
-  const tone = getTone(item.tone, isDarkMode);
 
   return (
     <div className="mt-10">
-      <div
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0"
+      <Reveal
+        className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0"
         role="tablist"
         aria-label="Case study deep dives"
       >
-        {caseStudySpotlights.map((spot, spotIndex) => {
-          const selected = spotIndex === index;
-          return (
-            <button
-              key={spot.caseNo}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setIndex(spotIndex)}
-              className={cx(
-                "shrink-0 rounded-full border px-4 py-2 text-xs font-extrabold transition sm:text-sm",
-                selected
-                  ? "border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/25"
-                  : isDarkMode
-                  ? "border-white/10 bg-white/[0.04] text-slate-300 hover:border-orange-400/50"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-orange-300"
-              )}
-            >
-              {spot.title}
-            </button>
-          );
-        })}
-      </div>
+        {caseStudySpotlights.map((spot, spotIndex) => (
+          <button
+            key={spot.caseNo}
+            type="button"
+            role="tab"
+            aria-selected={spotIndex === index}
+            onClick={() => setIndex(spotIndex)}
+            className="pill focusable button-sm shrink-0"
+          >
+            {spot.title}
+          </button>
+        ))}
+      </Reveal>
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.article
           key={item.caseNo}
           role="tabpanel"
-          initial={reduce ? false : { opacity: 0, y: 18 }}
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={reduce ? undefined : { opacity: 0, y: -12 }}
-          transition={{ duration: 0.35, ease: EASE }}
-          className={cx("mt-5 overflow-hidden rounded-[30px] border", tone.border, isDarkMode ? "bg-white/[0.025]" : "bg-white")}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="card mt-6 rounded-3xl p-6 lg:p-8"
         >
-          <div className={cx("h-1.5 bg-gradient-to-r", tone.line)} />
-          <div className="grid gap-7 p-6 lg:grid-cols-[.8fr_1.2fr] lg:p-8">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <span className={cx("rounded-full px-3 py-1 text-xs font-extrabold tracking-[0.15em]", tone.chip)}>CASE {item.caseNo}</span>
-                <span className={cx("text-xs font-semibold uppercase tracking-[0.12em]", tone.text)}>{item.subtitle}</span>
+                <span className="chip chip-accent caption-3 mono uppercase">Case {item.caseNo}</span>
+                <span className="caption-4 t3">{item.subtitle}</span>
               </div>
-              <h3 className="mt-4 text-2xl font-extrabold tracking-[-0.03em] sm:text-3xl">Design {item.title}</h3>
-              <p className={cx("mt-4 text-sm font-semibold leading-6", tone.text)}>{item.scale}</p>
-              <div className={cx("mt-5 rounded-2xl border p-4", tone.border, tone.soft)}>
-                <p className="text-xs font-extrabold uppercase tracking-[0.14em]">Hard part</p>
-                <p className={cx("mt-2 text-sm leading-6", isDarkMode ? "text-slate-300" : "text-slate-700")}>{item.hardPart}</p>
+              <h3 className="heading-4 t1 mt-4">Design {item.title}</h3>
+              <p className="body-5 mono ta mt-3">{item.scale}</p>
+              <div className="bg-s2 mt-6 rounded-xl p-4">
+                <p className="caption-3 t1 uppercase tracking-wider">The hard part</p>
+                <p className="body-6 t2 mt-2">{item.hardPart}</p>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap gap-2">
                 {item.concepts.map((concept) => (
-                  <span key={concept} className={cx("rounded-full px-3 py-1.5 text-xs font-semibold", tone.chip)}>{concept}</span>
+                  <span key={concept} className="chip caption-4">
+                    {concept}
+                  </span>
                 ))}
               </div>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className={cx("rounded-[24px] border p-5", tone.border, isDarkMode ? "bg-black/10" : "bg-slate-50/70")}>
-                <p className={cx("text-xs font-extrabold uppercase tracking-[0.16em]", tone.text)}>Request / state flow</p>
-                <ol className="relative mt-4 space-y-3">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="bd rounded-2xl p-4 sm:p-6">
+                <p className="eyebrow caption-3">Request and state flow</p>
+                <ol className="mt-4 space-y-3">
                   {item.flow.map((step, stepIndex) => (
                     <motion.li
                       key={step}
-                      initial={reduce ? false : { opacity: 0, x: -12 }}
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.12 + stepIndex * 0.09, duration: 0.35 }}
+                      transition={{ delay: 0.12 + stepIndex * 0.08, duration: 0.5, ease: EASE }}
                       className="flex items-start gap-3"
                     >
-                      <span className={cx("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold", tone.chip)}>{stepIndex + 1}</span>
-                      <span className={cx("text-sm leading-6", isDarkMode ? "text-slate-300" : "text-slate-700")}>{step}</span>
+                      <span className="tile caption-3 mono h-6 w-6 rounded-full">{stepIndex + 1}</span>
+                      <span className="body-6 t2">{step}</span>
                     </motion.li>
                   ))}
                 </ol>
               </div>
 
-              <div className={cx("rounded-[24px] border p-5", tone.border, isDarkMode ? "bg-black/10" : "bg-slate-50/70")}>
-                <p className={cx("text-xs font-extrabold uppercase tracking-[0.16em]", tone.text)}>Failure handling</p>
+              <div className="bd rounded-2xl p-4 sm:p-6">
+                <p className="eyebrow caption-3">Failure handling</p>
                 <ul className="mt-4 space-y-3">
                   {item.failures.map((failure, failureIndex) => (
                     <motion.li
                       key={failure}
-                      initial={reduce ? false : { opacity: 0, x: 12 }}
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, x: 12 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + failureIndex * 0.1, duration: 0.35 }}
+                      transition={{ delay: 0.2 + failureIndex * 0.08, duration: 0.5, ease: EASE }}
                       className="flex items-start gap-3"
                     >
-                      <ShieldCheck className={cx("mt-0.5 h-5 w-5 shrink-0", tone.text)} />
-                      <span className={cx("text-sm leading-6", isDarkMode ? "text-slate-300" : "text-slate-700")}>{failure}</span>
+                      <ShieldCheck className="ta mt-0.5 shrink-0" size={20} weight="duotone" />
+                      <span className="body-6 t2">{failure}</span>
                     </motion.li>
                   ))}
                 </ul>
@@ -1916,23 +1800,60 @@ function SpotlightViewer({ isDarkMode }) {
   );
 }
 
-function Section({ id, alt = false, narrow = false, isDarkMode, children }) {
+// 45 minute plan: the time bar and the cards highlight each other.
+function PlaybookTimeline() {
+  const [hovered, setHovered] = useState(null);
+  const total = interviewPlaybook.reduce((sum, item) => sum + parseInt(item.time, 10), 0);
+
   return (
-    <section
-      id={id}
-      className={cx(
-        "scroll-mt-20 py-16 sm:py-20 lg:py-24",
-        alt && "border-y",
-        alt && (isDarkMode ? "border-white/10 bg-[#161616]" : "border-orange-100 bg-[#fffaf5]")
-      )}
-    >
-      <div className={cx("mx-auto px-4 sm:px-6 lg:px-8", narrow ? "max-w-4xl" : "max-w-7xl")}>
-        {children}
+    <>
+      <Reveal className="mt-10">
+        <div
+          className="flex h-3 w-full gap-1"
+          role="img"
+          aria-label={`Time split across the ${total} minute interview`}
+        >
+          {interviewPlaybook.map((item, index) => (
+            <motion.div
+              key={item.title}
+              initial={{ scaleX: 0, opacity: 0 }}
+              whileInView={{ scaleX: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.1, ease: EASE }}
+              style={{ flexGrow: parseInt(item.time, 10), transformOrigin: "left" }}
+              className="seg h-full rounded-full"
+              data-on={hovered === null || hovered === index ? "true" : "false"}
+              title={`${item.title}: ${item.time}`}
+            />
+          ))}
+        </div>
+        <div className="caption-4 mono t3 mt-2 flex justify-between">
+          <span>0 min</span>
+          <span>{total} min</span>
+        </div>
+      </Reveal>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {interviewPlaybook.map((item, index) => (
+          <Reveal key={item.title} delay={(index % 3) * 0.07}>
+            <article
+              className="card lift h-full rounded-3xl p-6"
+              onMouseEnter={() => setHovered(index)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span className="chip chip-accent caption-3 mono">{item.time}</span>
+                <span className="num heading-5 mono">{formatTwoDigits(index + 1)}</span>
+              </div>
+              <h3 className="heading-6 t1 mt-6">{item.title}</h3>
+              <p className="body-6 t2 mt-2">{item.copy}</p>
+            </article>
+          </Reveal>
+        ))}
       </div>
-    </section>
+    </>
   );
 }
-
 function SystemDesignHLD() {
   const [theme, setTheme] = useState(readStoredTheme);
   const isDarkMode = theme === "dark";
@@ -2328,14 +2249,6 @@ function SystemDesignHLD() {
   const productName =
     product?.title || "Mastering System Design — High-Level Design";
 
-  const lldCurrentPrice = Number(lldProduct?.price ?? 0);
-  const lldMrp = Number(lldProduct?.mrp ?? 0);
-  const lldCurrency = lldProduct?.currency || "INR";
-  const lldDiscount =
-    lldMrp > lldCurrentPrice && lldCurrentPrice >= 0
-      ? Math.round(((lldMrp - lldCurrentPrice) / lldMrp) * 100)
-      : 0;
-
   const lldCover =
     lldProduct?.coverpageurl ||
     lldProduct?.coverPageUrl ||
@@ -2562,32 +2475,145 @@ function SystemDesignHLD() {
     };
   }, [bookCover, canonicalUrl, currency, currentPrice, product?._id, productName]);
 
-  const pageShell = isDarkMode
-    ? "bg-[#111111] text-slate-100"
-    : "bg-white text-slate-950";
+  /* ---------------------------------------------------------------- */
+  /*  Presentation state (theme toggle, section nav, mobile menu)      */
+  /* ---------------------------------------------------------------- */
 
-  const panel = isDarkMode
-    ? "border-white/10 bg-white/[0.04]"
-    : "border-slate-200 bg-white";
+  const reduceMotion = useReducedMotion();
+  const rootRef = useRef(null);
+  const [activeSection, setActiveSection] = useState("");
+  const pageReady = Boolean(product?._id) || loadingProduct;
 
-  const softPanel = isDarkMode
-    ? "border-white/10 bg-[#1b1b1b]"
-    : "border-orange-100 bg-[#faf9f7]";
+  // Same contract as the site navbar: persist the choice, then announce it so
+  // the navbar and the checkout modal stay in step with this page.
+  const toggleTheme = () => {
+    const nextTheme = isDarkMode ? "light" : "dark";
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch {
+      // Storage can be blocked; the page still switches for this visit.
+    }
+    setTheme(nextTheme);
+    const detail = { theme: nextTheme };
+    window.dispatchEvent(new CustomEvent("targettrek-theme-change", { detail }));
+    window.dispatchEvent(new CustomEvent("themechange", { detail }));
+  };
 
-  const muted = isDarkMode ? "text-slate-400" : "text-slate-600";
+  // The site navbar is fixed; measure it so the floating section bar and the
+  // anchor offsets always clear it, whatever its height at this breakpoint.
+  useEffect(() => {
+    const root = rootRef.current;
+    const siteNav = document.querySelector("nav.fixed.top-0");
+    if (!root || !siteNav) return undefined;
 
-  const dotBackground = {
-    backgroundImage: isDarkMode
-      ? "radial-gradient(circle, rgba(249,115,22,.14) 1.2px, transparent 1.2px)"
-      : "radial-gradient(circle, rgba(249,115,22,.09) 1.2px, transparent 1.2px)",
-    backgroundSize: "40px 40px",
+    const apply = () => {
+      const navRect = siteNav.getBoundingClientRect();
+      root.style.setProperty("--hld-nav-h", `${Math.round(navRect.height)}px`);
+      // Push the page down by whatever part of it the fixed navbar covers.
+      const rootTop = root.getBoundingClientRect().top + window.scrollY;
+      const covered = Math.max(0, Math.round(navRect.height - rootTop));
+      root.style.setProperty("--hld-pad", `${covered}px`);
+    };
+    apply();
+
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(apply);
+    observer.observe(siteNav);
+    return () => observer.disconnect();
+  }, [pageReady]);
+
+  // Highlight the section currently in view inside the floating bar.
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+    const targets = NAV_LINKS.map((link) => document.querySelector(link.href)).filter(Boolean);
+    if (!targets.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
+        });
+      },
+      { rootMargin: "-40% 0px -55% 0px" }
+    );
+    targets.forEach((target) => observer.observe(target));
+    return () => observer.disconnect();
+  }, [pageReady]);
+
+  const goToSection = (event, href) => {
+    const target = document.querySelector(href);
+    if (!target) return;
+    event.preventDefault();
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
   };
 
   // While the product API is in flight the full page still renders (good for
   // crawlers and perceived speed); only the price and buy buttons wait.
-  const priceText = loadingProduct ? "…" : formatMoney(currentPrice);
+  const priceText = loadingProduct ? (
+    <span className="skel h-5 w-14 align-middle" role="status" aria-label="Loading price" />
+  ) : (
+    formatMoney(currentPrice)
+  );
   const savingsAmount = mrp > currentPrice ? mrp - currentPrice : 0;
   const canBuy = Boolean(product?._id);
+  const hasMrp = mrp > currentPrice;
+  const showFloatNav = !heroVisible && !isCheckoutOpen;
+  const comboCover =
+    comboProduct?.coverpageurl ||
+    comboProduct?.coverPageUrl ||
+    comboProduct?.cover_page_url ||
+    "";
+
+  const bundleOffers = [
+    ...(lldProduct
+      ? [
+          {
+            key: "lld",
+            item: lldProduct,
+            eyebrow: "Low level design · Java",
+            title: lldTitle,
+            subtitle: lldSubtitle,
+            description: lldDescription,
+            cover: lldCover,
+            pills: [...lldMetaItems.slice(0, 2), ...lldCategoryPills.slice(0, 2)],
+            features: [
+              "Java, OOP, SOLID and UML",
+              "23 GoF design patterns",
+              "16 detailed LLD case studies",
+            ],
+            action: handleLldBuyNow,
+            href: LLD_REDIRECT_URL,
+            button: "Get the LLD book",
+          },
+        ]
+      : []),
+    ...(comboProduct
+      ? [
+          {
+            key: "combo",
+            item: comboProduct,
+            eyebrow: "Complete system design bundle",
+            title: comboProduct.title || "Mastering System Design: HLD + LLD Combo",
+            subtitle: "Both design rounds in one bundle",
+            description:
+              "Distributed architecture and scalable backends in HLD, plus practical Java class design in LLD.",
+            cover: comboCover,
+            pills: [],
+            features: [
+              "HLD and LLD together",
+              "19 HLD case studies plus 16 LLD problems",
+              "Architecture, Java code and design patterns",
+            ],
+            action: handleComboBuyNow,
+            href: COMBO_REDIRECT_URL,
+            button: "Get the combo",
+          },
+        ]
+      : []),
+  ];
+  const bundleSlots = bundleOffers.length + (loadingLldProduct || !lldProduct ? 1 : 0);
 
   const seoHead = (
     <Helmet htmlAttributes={{ lang: "en" }}>
@@ -2603,7 +2629,7 @@ function SystemDesignHLD() {
         name="googlebot"
         content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
       />
-      <meta name="theme-color" content={isDarkMode ? "#111111" : "#fff7ed"} />
+      <meta name="theme-color" content={isDarkMode ? "#000000" : "#ffffff"} />
       <meta name="color-scheme" content={isDarkMode ? "dark" : "light"} />
       <link rel="canonical" href={canonicalUrl} />
       <link rel="alternate" hrefLang="en-IN" href={canonicalUrl} />
@@ -2611,10 +2637,7 @@ function SystemDesignHLD() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       {bookCover && <link rel="preload" as="image" href={bookCover} />}
-      <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
-        rel="stylesheet"
-      />
+      <link href={FONT_HREF} rel="stylesheet" />
 
       <meta property="og:type" content="product" />
       <meta property="og:site_name" content={SITE_NAME} />
@@ -2649,270 +2672,192 @@ function SystemDesignHLD() {
 
   if (!loadingProduct && (!product || productError)) {
     return (
-      <div className={cx("flex min-h-screen items-center justify-center px-4", pageShell)}>
+      <div className="hld flex min-h-screen items-center justify-center px-4" data-theme={theme}>
         <Helmet>
           <title>Book Not Found | Target Trek</title>
           <meta name="robots" content="noindex, nofollow" />
+          <link href={FONT_HREF} rel="stylesheet" />
         </Helmet>
-        <div className={cx("w-full max-w-lg rounded-[28px] border p-8 text-center shadow-xl", panel)}>
-          <BookOpen className="mx-auto h-12 w-12 text-orange-500" />
-          <h1 className="mt-5 text-2xl font-extrabold">Book details are unavailable</h1>
-          <p className={cx("mt-3 text-sm leading-6", muted)}>
+        <div className="card w-full max-w-lg rounded-3xl p-8 text-center">
+          <span className="tile h-12 w-12 rounded-xl">
+            <BookOpen size={24} weight="duotone" />
+          </span>
+          <h1 className="heading-5 t1 mt-6">Book details are unavailable</h1>
+          <p className="body-6 t2 mt-3">
             {productError || "Please refresh the page and try again."}
           </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={() => window.location.reload()} className="btn btn-primary button-md">
+              Try again
+            </button>
+            <a href="/books" className="btn btn-secondary button-md">
+              Browse all books
+            </a>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className={cx("min-h-screen overflow-x-hidden pb-28", pageShell)}
-      style={{
-        fontFamily: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
-        fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
-      }}
-    >
+    <div ref={rootRef} className="hld min-h-screen overflow-x-hidden pb-28" data-theme={theme}>
       {seoHead}
-      <style>{`
-        .hld-display, .hld-hero-title { font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif; }
-        @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
-        .hld-preview-page { transition: transform .25s ease, box-shadow .25s ease; }
-        .hld-preview-page:hover { transform: translateY(-3px); box-shadow: 0 20px 55px rgba(249,115,22,.12); }
-
-        /* animated gradient headline */
-        .hld-gradient-text { background-size: 200% auto; animation: hld-gradient 6s linear infinite; }
-        @keyframes hld-gradient { to { background-position: 200% center; } }
-
-        /* floating background orbs */
-        .hld-orb { animation: hld-float 12s ease-in-out infinite; }
-        .hld-orb-2 { animation-duration: 16s; animation-delay: -4s; }
-        @keyframes hld-float {
-          0%, 100% { transform: translate3d(0,0,0) scale(1); }
-          50% { transform: translate3d(24px,-30px,0) scale(1.08); }
-        }
-
-        /* shimmer sweep on primary CTAs */
-        .hld-shimmer::after {
-          content: ""; position: absolute; inset: 0; transform: translateX(-120%);
-          background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
-          animation: hld-sheen 3.4s ease-in-out infinite;
-        }
-        @keyframes hld-sheen { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-
-        /* pulsing ring for the mobile buy button */
-        .hld-pulse { animation: hld-pulse 2.4s ease-out infinite; }
-        @media (min-width: 768px) { .md\\:hld-no-pulse { animation: none; } }
-        @keyframes hld-pulse {
-          0% { box-shadow: 0 0 0 0 rgba(249,115,22,.45); }
-          70%, 100% { box-shadow: 0 0 0 14px rgba(249,115,22,0); }
-        }
-
-        /* technology marquee */
-        .hld-marquee { display: flex; width: max-content; animation: hld-marquee 38s linear infinite; }
-        .hld-marquee-wrap:hover .hld-marquee { animation-play-state: paused; }
-        @keyframes hld-marquee { to { transform: translateX(-50%); } }
-
-        /* request-flow connector with travelling packet */
-        .hld-conn {
-          position: relative; flex: 1 1 28px; min-width: 28px; min-height: 28px;
-          align-self: center; width: 2px; height: 28px;
-          background: repeating-linear-gradient(180deg, rgba(249,115,22,.4) 0 6px, transparent 6px 12px);
-        }
-        .hld-conn::after {
-          content: ""; position: absolute; left: -3px; top: 0; width: 8px; height: 8px; border-radius: 9999px;
-          background: #f97316; box-shadow: 0 0 12px 2px rgba(249,115,22,.8);
-          animation: hld-dot-y 1.8s linear infinite; animation-delay: inherit;
-        }
-        @keyframes hld-dot-y { from { top: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } to { top: calc(100% - 8px); opacity: 0; } }
-        @media (min-width: 1024px) {
-          .hld-conn {
-            width: auto; height: 2px; min-height: 0; align-self: center;
-            background: repeating-linear-gradient(90deg, rgba(249,115,22,.4) 0 6px, transparent 6px 12px);
-          }
-          .hld-conn::after { left: 0; top: -3px; animation-name: hld-dot-x; }
-          @keyframes hld-dot-x { from { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } to { left: calc(100% - 8px); opacity: 0; } }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .hld-preview-page, .hld-gradient-text, .hld-orb, .hld-shimmer::after, .hld-pulse, .hld-marquee, .hld-conn::after { animation: none !important; transition: none !important; }
-          .hld-preview-page:hover { transform: none; }
-          .hld-marquee { flex-wrap: wrap; width: auto; }
-        }
-      `}</style>
+      <a href="#hld-main" className="skip btn btn-primary button-sm">
+        Skip to content
+      </a>
 
       <ScrollProgress />
 
-      <nav
-        aria-label="Breadcrumb"
-        className={cx(
-          "border-b px-4 py-3 text-sm",
-          isDarkMode
-            ? "border-white/10 bg-[#111111] text-slate-400"
-            : "border-slate-200 bg-white text-slate-500"
-        )}
+      {/* --------------------- FLOATING SECTION NAVIGATION ------------------ */}
+      <div
+        className="floatnav pointer-events-none fixed inset-x-0 z-40 hidden justify-center px-4 lg:flex"
+        data-show={showFloatNav ? "true" : "false"}
+        {...(showFloatNav ? {} : { inert: "" })}
       >
-        <ol className="mx-auto flex max-w-7xl items-center gap-2">
-          <li>
-            <a className="font-semibold transition hover:text-orange-500" href="/">
-              Home
-            </a>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li>
-            <a className="font-semibold transition hover:text-orange-500" href="/books">
-              Books
-            </a>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page" className={cx("font-bold", isDarkMode ? "text-slate-200" : "text-slate-800")}>
-            System Design HLD
-          </li>
-        </ol>
-      </nav>
-
-      <nav
-        aria-label="On this page"
-        className={cx(
-          "sticky top-0 z-40 border-b backdrop-blur-xl",
-          isDarkMode ? "border-white/10 bg-[#111111]/85" : "border-orange-100 bg-white/85"
-        )}
-      >
-        <ul className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2 text-xs font-bold sm:px-6 lg:px-8">
-          {NAV_LINKS.map(([href, label]) => (
-            <li key={href} className="shrink-0">
-              <a
-                href={href}
-                className={cx(
-                  "inline-block rounded-full px-3 py-1.5 transition hover:bg-orange-500/10 hover:text-orange-500",
-                  isDarkMode ? "text-slate-300" : "text-slate-600"
-                )}
-              >
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      <main>
-        {/* ------------------------------ HERO ------------------------------ */}
-        <section
-          ref={heroRef}
-          aria-labelledby="hld-hero-title"
-          className={cx(
-            "relative overflow-hidden border-b",
-            isDarkMode ? "border-orange-400/10 bg-[#111111]" : "border-orange-100 bg-[#fffaf5]"
-          )}
-          style={dotBackground}
+        <nav
+          aria-label="On this page"
+          className="glass pointer-events-auto flex max-w-full items-center gap-1 rounded-full p-1"
         >
-          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <div className="hld-orb absolute -left-24 top-20 h-72 w-72 rounded-full bg-orange-500/15 blur-3xl" />
-            <div className="hld-orb hld-orb-2 absolute -right-24 top-0 h-80 w-80 rounded-full bg-amber-500/15 blur-3xl" />
-          </div>
+          <ul className="flex items-center">
+            {NAV_LINKS.filter((link) => link.primary).map((link) => {
+              const current = activeSection === link.href;
+              return (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    onClick={(event) => goToSection(event, link.href)}
+                    aria-current={current ? "true" : undefined}
+                    className="navlink focusable title-4 isolate block"
+                  >
+                    {current && (
+                      <motion.span
+                        layoutId="hld-nav-active"
+                        className="navlink-bg"
+                        transition={{ duration: 0.5, ease: EASE }}
+                      />
+                    )}
+                    {link.label}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
 
-          <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.16fr_.84fr] lg:items-center lg:gap-10 lg:px-8 lg:py-16">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={!canBuy}
+            className="btn btn-primary button-sm lg-only rounded-full"
+          >
+            Get the ebook
+            <ArrowRight className="arrow" size={16} weight="bold" />
+          </button>
+        </nav>
+      </div>
+
+      {/* ------------------------- BREADCRUMB + THEME ----------------------- */}
+      <div className="bg-base">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+          <nav aria-label="Breadcrumb" className="min-w-0">
+            <ol className="caption-1 t3 flex items-center gap-2">
+              <li>
+                <a className="link focusable" href="/">
+                  Home
+                </a>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li>
+                <a className="link focusable" href="/books">
+                  Books
+                </a>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li aria-current="page" className="t1 truncate">
+                System Design HLD
+              </li>
+            </ol>
+          </nav>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
+      </div>
+
+      <main id="hld-main">
+        {/* ------------------------------ HERO ------------------------------ */}
+        <section ref={heroRef} aria-labelledby="hld-hero-title" className="bg-base relative">
+          <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center lg:px-8 lg:pb-24 lg:pt-12">
             <div className="min-w-0">
-              <Reveal
-                y={14}
-                className={cx(
-                  "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] shadow-sm sm:text-sm sm:tracking-[0.16em]",
-                  isDarkMode
-                    ? "border-orange-400/20 bg-white/5 text-orange-300"
-                    : "border-orange-200 bg-white/85 text-orange-700"
-                )}
-              >
-                <Sparkles className="h-4 w-4 shrink-0" />
-                <span className="truncate">HLD system design interview handbook · PDF ebook</span>
-              </Reveal>
-
-              <Reveal as="h1" delay={0.06} id="hld-hero-title" className="hld-hero-title mt-4 text-[2.25rem] font-extrabold leading-[1.08] tracking-[-0.045em] sm:text-[2.8rem] lg:text-[3.4rem]">
-                <span className={isDarkMode ? "text-white" : "text-[#1c1917]"}>
-                  Crack the System Design interview.
-                </span>
-                <span className="hld-gradient-text mt-2 block bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent">
-                  Design 19 real systems, step by step.
+              <Reveal y={16}>
+                <span className="chip chip-accent caption-3">
+                  <FileText size={14} weight="bold" />
+                  HLD interview handbook · PDF ebook
                 </span>
               </Reveal>
 
-              <Reveal delay={0.12}>
-                <RotatingPrompt isDarkMode={isDarkMode} />
+              <Reveal as="h1" delay={0.06} id="hld-hero-title" className="hero-title heading-1 mt-4 max-w-[680px] pb-1">
+                <span className="block">Crack the system</span>
+                <span className="block">design interview</span>
+                <span className="block">with 19 real systems.</span>
               </Reveal>
 
-              <Reveal
-                as="p"
-                delay={0.18}
-                className={cx(
-                  "mt-4 max-w-xl text-sm font-medium leading-6 sm:text-base sm:leading-7",
-                  isDarkMode ? "text-slate-300" : "text-[#57534e]"
-                )}
-              >
-                Learn a repeatable way to turn an open-ended prompt into requirements,
-                estimates, APIs, data models, a complete architecture, deep dives and
-                failure handling — then practice it on WhatsApp, Uber, BookMyShow,
-                payments, Netflix and 14 more systems.
+              <Reveal as="p" delay={0.12} className="body-3 t2 mt-6 max-w-[680px] sm:text-lg sm:leading-7">
+                Learn one repeatable way to turn an open prompt into requirements, estimates, APIs,
+                data models, a full architecture and failure handling. Then practice it on WhatsApp,
+                Uber, BookMyShow, payments, Netflix and 14 more systems.
               </Reveal>
 
-              <Reveal delay={0.24} className="mt-5 flex flex-wrap items-center gap-2.5">
-                <button type="button" onClick={handleBuyNow} disabled={!canBuy} className={ctaPrimary}>
+              <Reveal delay={0.18} className="mt-6">
+                <RotatingPrompt />
+              </Reveal>
+
+              <Reveal delay={0.24} className="mt-8 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={handleBuyNow} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
                   Get the ebook {priceText}
-                  <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
+                  <ArrowRight className="arrow" size={20} weight="bold" />
                 </button>
-
                 <button
                   type="button"
                   onClick={openBookPreview}
                   aria-controls="hld-preview-content"
                   aria-expanded={isPreviewOpen}
-                  className={cx(
-                    "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition hover:-translate-y-0.5",
-                    isDarkMode
-                      ? "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.07]"
-                      : "border-orange-200 bg-white/85 text-slate-800 hover:border-orange-300 hover:bg-white"
-                  )}
+                  className="btn btn-ghost btn-lg button-md"
                 >
-                  <BookOpen className="h-5 w-5" />
+                  <BookOpen size={20} weight="bold" />
                   Read free sample pages
-                  <ChevronDown className={cx("h-4 w-4 transition-transform", isPreviewOpen && "rotate-180")} />
                 </button>
               </Reveal>
 
-              <Reveal delay={0.3} className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold sm:text-[13px]">
+              <Reveal delay={0.3} className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
                 {[
-                  [Download, "Instant access after payment"],
-                  [Lock, "Secure checkout via PayU"],
+                  [DownloadSimple, "Instant access after payment"],
+                  [Lock, SECURE_CHECKOUT_TEXT],
                   [FileText, "Free preview before you buy"],
                 ].map(([Icon, text]) => (
-                  <span key={text} className={cx("inline-flex items-center gap-1.5", isDarkMode ? "text-slate-300" : "text-stone-600")}>
-                    <Icon className="h-4 w-4 text-orange-500" />
+                  <span key={text} className="caption-1 t2 inline-flex items-center gap-2">
+                    <Icon className="ta" size={16} weight="bold" />
                     {text}
                   </span>
                 ))}
               </Reveal>
-
-              <div className="mt-6 grid gap-2.5 sm:max-w-2xl sm:grid-cols-3">
-                {[
-                  "19 interview case studies",
-                  "45-minute HLD playbook",
-                  "APIs • DB • failures • trade-offs",
-                ].map((item, index) => (
-                  <Reveal key={item} delay={0.36 + index * 0.08} y={12} className="flex items-center gap-3 text-sm font-extrabold sm:text-[15px]">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-orange-500">
-                      <Check className="h-4 w-4" strokeWidth={3} />
-                    </span>
-                    <span className={isDarkMode ? "text-slate-300" : "text-[#57534e]"}>{item}</span>
-                  </Reveal>
-                ))}
-              </div>
             </div>
 
-            <div className="mx-auto w-full max-w-[310px] sm:max-w-[340px] lg:max-w-[355px]">
-              <Reveal delay={0.15} y={36}>
-                <div className="relative mx-auto w-[65%] min-w-[165px] max-w-[220px] sm:w-[65%] lg:w-[70%]">
-                  <div className="absolute -inset-8 rounded-[42px] bg-gradient-to-br from-orange-500/25 via-orange-500/10 to-amber-500/25 blur-3xl" aria-hidden="true" />
+            {/* Book + price */}
+            <Reveal delay={0.15} className="mx-auto w-full max-w-sm lg:max-w-none">
+              <div className="bg-s2 bd relative rounded-3xl p-6 sm:p-8">
+                <FloatChip className="left-3 top-6 sm:left-4" delay={0.5}>
+                  <p className="heading-6 mono ta">19</p>
+                  <p className="caption-4 t2">case studies</p>
+                </FloatChip>
+                <FloatChip className="right-3 top-1/3 sm:right-4" delay={0.8}>
+                  <p className="heading-6 mono ta">45 min</p>
+                  <p className="caption-4 t2">interview plan</p>
+                </FloatChip>
+
+                <div className="mx-auto w-40 sm:w-48">
                   <TiltBook>
-                    <div className="relative rotate-[-1.5deg] overflow-hidden rounded-[22px] border border-white/30 bg-[#171717] shadow-[0_24px_60px_rgba(0,0,0,.28)]">
+                    <div className="overflow-hidden rounded-xl bg-[#181818] shadow-[0_24px_48px_rgba(0,0,0,0.3)]">
                       {bookCover ? (
                         <img
                           src={bookCover}
@@ -2923,292 +2868,232 @@ function SystemDesignHLD() {
                           fetchPriority="high"
                         />
                       ) : (
-                        <div className="aspect-[0.72] bg-gradient-to-br from-[#181818] via-[#262626] to-[#4b2712] p-8 text-white">
-                          <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-200">The system design interview guide</p>
-                          <p className="mt-12 text-4xl font-extrabold leading-none">MASTER SYSTEM DESIGN</p>
-                          <p className="mt-5 font-bold text-orange-200">High-Level Design</p>
+                        <div className="flex aspect-[0.72] flex-col justify-between p-4 text-white">
+                          <p className="caption-3 uppercase tracking-wider text-[#fb923c]">
+                            The system design interview guide
+                          </p>
+                          <div>
+                            <p className="heading-5">Master System Design</p>
+                            <p className="body-5 mt-2 text-[#fb923c]">High Level Design</p>
+                          </div>
                         </div>
                       )}
                     </div>
                   </TiltBook>
                 </div>
 
-                <div className={cx("relative -mt-3 rounded-2xl border p-3 shadow-lg backdrop-blur-xl sm:p-4", panel)}>
-                  <div className="flex items-end justify-between gap-4">
+                <div className="card mt-8 rounded-2xl p-4">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className={cx("text-xs font-extrabold uppercase tracking-[0.18em]", isDarkMode ? "text-orange-300" : "text-orange-600")}>
-                        Digital PDF ebook
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-end gap-2">
-                        <motion.span
-                          key={priceText}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="text-2xl font-extrabold"
-                        >
-                          {priceText}
-                        </motion.span>
-                        {mrp > currentPrice && (
-                          <span className={cx("pb-1 text-sm font-bold line-through", isDarkMode ? "text-slate-500" : "text-slate-400")}>
-                            {formatMoney(mrp)}
-                          </span>
-                        )}
+                      <p className="eyebrow caption-3">Digital PDF ebook</p>
+                      <div className="mt-2 flex flex-wrap items-baseline gap-2">
+                        <span className="heading-4 mono t1">{priceText}</span>
+                        {hasMrp && <span className="body-5 mono t3 strike">{formatMoney(mrp)}</span>}
                       </div>
                     </div>
-
                     {discount > 0 && (
-                      <div className="rounded-full bg-orange-500/12 px-3 py-1.5 text-xs font-extrabold text-orange-500">
-                        {discount}% OFF
-                      </div>
+                      <span className="chip chip-accent caption-3 mono">{discount}% off</span>
                     )}
                   </div>
                   {savingsAmount > 0 && (
-                    <p className="mt-2 text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
-                      You save {formatMoney(savingsAmount)} on today’s price
-                    </p>
+                    <p className="caption-3 tok mt-2">You save {formatMoney(savingsAmount)} today</p>
                   )}
-                  <p className={cx("mt-2 text-xs leading-5", isDarkMode ? "text-slate-400" : "text-slate-500")}>
-                    Instant access after successful payment. Digital purchases are non-refundable.
+                  <p className="caption-5 t3 mt-2">
+                    Instant access after successful payment. Digital purchases are not refundable.
                   </p>
                 </div>
-              </Reveal>
-            </div>
+              </div>
+            </Reveal>
           </div>
         </section>
 
-        {/* ---------------------- BUNDLE / LLD UPSELL (unchanged data) ------- */}
-        {(lldProduct || comboProduct) && (
-          <section
-            aria-labelledby="bundle-title"
-            className={cx(
-              "border-y py-14 sm:py-16 lg:py-20",
-              isDarkMode ? "border-white/10 bg-[#15110f]" : "border-orange-100 bg-[#fffaf6]"
+        {/* ------------------------- LLD + COMBO BUNDLE ---------------------- */}
+        <Section id="lld-book" alt labelledBy="bundle-title">
+          <SectionHeader
+            id="bundle-title"
+            eyebrow="Complete your system design prep"
+            title="Go deeper with LLD, or get both books"
+            description="Move from designing scalable systems to writing clean, reliable Java classes. Pick the LLD handbook, or prepare for both design rounds with the HLD and LLD bundle."
+          />
+
+          <div className={cx("mt-10 grid gap-6", bundleSlots > 1 ? "lg:grid-cols-2" : "max-w-2xl")}>
+            {loadingLldProduct && (
+              <div className="card rounded-3xl p-6 sm:p-8" role="status" aria-label="Loading the LLD book">
+                <div className="flex gap-4">
+                  <div className="skel-block aspect-[0.72] w-24 shrink-0 rounded-lg" />
+                  <div className="flex-1 space-y-3">
+                    <div className="skel-block h-4 w-32 rounded-full" />
+                    <div className="skel-block h-6 w-full rounded-lg" />
+                    <div className="skel-block h-16 w-full rounded-lg" />
+                  </div>
+                </div>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="skel-block h-12 rounded-xl" />
+                  <div className="skel-block h-12 rounded-xl" />
+                </div>
+              </div>
             )}
-          >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <Reveal className="mb-9 max-w-3xl">
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-500">
-                  Complete your System Design preparation
-                </p>
-                <h2
-                  id="bundle-title"
-                  className={cx("mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl", isDarkMode ? "text-white" : "text-stone-900")}
-                >
-                  Go deeper with LLD — or get both books
-                </h2>
-                <p className={cx("mt-3 max-w-2xl text-base leading-7", isDarkMode ? "text-stone-300" : "text-stone-600")}>
-                  Move from designing scalable systems to implementing clean,
-                  reliable Java classes. Choose the LLD handbook or prepare for
-                  both design rounds with the HLD + LLD bundle.
-                </p>
-              </Reveal>
 
-              <div className="mx-auto grid max-w-6xl grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
-                {[
-                  ...(lldProduct
-                    ? [{
-                        key: "lld",
-                        item: lldProduct,
-                        eyebrow: "LOW-LEVEL DESIGN · JAVA",
-                        fallback: "Mastering System Design — LLD",
-                        description:
-                          "Turn requirements into clean Java code with object-oriented design, UML, SOLID, design patterns, concurrency, and real interview problems.",
-                        features: [
-                          "Java, OOP, SOLID & UML",
-                          "23 GoF design patterns",
-                          "16 detailed LLD case studies",
-                        ],
-                        action: handleLldBuyNow,
-                        href: LLD_REDIRECT_URL,
-                        button: "Get the LLD book",
-                      }]
-                    : []),
-                  ...(comboProduct
-                    ? [{
-                        key: "combo",
-                        item: comboProduct,
-                        eyebrow: "COMPLETE SYSTEM DESIGN BUNDLE",
-                        fallback: "Mastering System Design — HLD + LLD Combo",
-                        description:
-                          "Prepare for both system design rounds in one bundle: distributed architecture and scalable backends in HLD, plus practical Java class design in LLD.",
-                        features: [
-                          "HLD + LLD together",
-                          "19 HLD case studies + 16 LLD problems",
-                          "Architecture, Java code & design patterns",
-                        ],
-                        action: handleComboBuyNow,
-                        href: COMBO_REDIRECT_URL,
-                        button: "Get the combo",
-                      }]
-                    : []),
-                ].map(({ key, item, eyebrow, fallback, description, features, action, href, button }, cardIndex) => {
-                  const price = Number(item.price);
-                  const mrpValue = Number(item.mrp || 0);
-                  const currencyCode = item.currency || "INR";
-                  const savings = mrpValue > price ? Math.round(((mrpValue - price) / mrpValue) * 100) : 0;
-                  return (
-                    <Reveal
-                      as="article"
-                      key={key}
-                      delay={cardIndex * 0.1}
-                      className={cx(
-                        "relative flex h-full min-w-0 flex-col overflow-hidden rounded-[28px] border shadow-[0_16px_48px_rgba(105,54,20,0.08)] transition hover:-translate-y-1 hover:shadow-[0_22px_64px_rgba(105,54,20,0.16)]",
-                        key === "combo" && "ring-2 ring-orange-500/60",
-                        isDarkMode ? "border-stone-700 bg-[#241c17]" : "border-orange-200 bg-white"
+            {!loadingLldProduct && !lldProduct && (
+              <div className="card flex flex-col justify-between gap-6 rounded-3xl p-6 sm:p-8">
+                <div>
+                  <p className="eyebrow caption-3">Low level design · Java</p>
+                  <h3 className="heading-6 t1 mt-2">Explore the Java LLD handbook</h3>
+                  <p className="body-6 t2 mt-2">
+                    {lldProductError || "Live LLD product details could not be loaded right now."}
+                  </p>
+                </div>
+                <a href={LLD_REDIRECT_URL} className="btn btn-secondary button-md self-start">
+                  See LLD details
+                  <ArrowRight className="arrow" size={18} weight="bold" />
+                </a>
+              </div>
+            )}
+
+            {bundleOffers.map((offer, cardIndex) => {
+              const price = Number(offer.item.price);
+              const mrpValue = Number(offer.item.mrp || 0);
+              const currencyCode = offer.item.currency || "INR";
+              const savings = mrpValue > price ? Math.round(((mrpValue - price) / mrpValue) * 100) : 0;
+              const isCombo = offer.key === "combo";
+
+              return (
+                <Reveal key={offer.key} delay={cardIndex * 0.1}>
+                  <article className={cx("card lift flex h-full flex-col rounded-3xl p-6 sm:p-8", isCombo && "featured")}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="eyebrow caption-3">{offer.eyebrow}</p>
+                      {isCombo && <span className="chip chip-accent caption-3">Best value</span>}
+                    </div>
+
+                    <div className="mt-4 flex gap-4">
+                      {offer.cover && (
+                        <img
+                          src={offer.cover}
+                          alt={`${offer.title} ebook cover`}
+                          loading="lazy"
+                          decoding="async"
+                          className="bd h-auto w-24 shrink-0 self-start rounded-lg object-contain"
+                        />
                       )}
-                    >
-                      {key === "combo" && (
-                        <span className="absolute right-4 top-4 rounded-full bg-orange-500 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white">
-                          Best value
-                        </span>
-                      )}
-                      <div className="flex h-full min-w-0 flex-1 flex-col p-6 sm:p-7 lg:p-8">
-                        <p className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-orange-500">{eyebrow}</p>
-                        <h3 className={cx("mt-2 text-xl font-extrabold leading-tight sm:text-[22px]", isDarkMode ? "text-white" : "text-stone-900")}>
-                          {item.title || fallback}
-                        </h3>
-                        <p className={cx("mt-3 text-sm leading-6", isDarkMode ? "text-stone-300" : "text-stone-600")}>{description}</p>
-                        <ul className="mt-4 space-y-2">
-                          {features.map((feature) => (
-                            <li
-                              key={feature}
-                              className={cx("flex items-start gap-2 text-[13px] font-semibold leading-5", isDarkMode ? "text-stone-200" : "text-stone-700")}
-                            >
-                              <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="mt-auto pt-5">
-                          {key === "combo" && (
-                            <p className={cx("mb-1 text-xs font-semibold", isDarkMode ? "text-stone-300" : "text-stone-500")}>
-                              Current bundle price
-                            </p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className={cx("text-3xl font-extrabold tracking-tight", isDarkMode ? "text-white" : "text-stone-900")}>
-                              {formatMoney(price, currencyCode)}
-                            </span>
-                            {mrpValue > price && (
-                              <span className={cx("text-sm line-through", isDarkMode ? "text-stone-400" : "text-stone-500")}>
-                                {formatMoney(mrpValue, currencyCode)}
-                              </span>
-                            )}
-                            {savings > 0 && (
-                              <span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-xs font-extrabold text-orange-500">
-                                {savings}% OFF
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-5 grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={action}
-                              className="inline-flex min-h-12 w-full min-w-0 items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-2 py-2.5 text-center text-xs font-extrabold text-white transition hover:-translate-y-0.5 hover:bg-orange-700 sm:text-sm"
-                            >
-                              {button}
-                              <ArrowRight className="h-4 w-4" />
-                            </button>
-                            <a
-                              href={href}
-                              className={cx(
-                                "inline-flex min-h-12 w-full min-w-0 items-center justify-center rounded-xl border px-2 py-2.5 text-center text-xs font-bold transition hover:-translate-y-0.5 sm:text-sm",
-                                isDarkMode ? "border-stone-600 text-stone-100 hover:bg-white/5" : "border-orange-200 text-orange-700 hover:bg-orange-50"
-                              )}
-                            >
-                              View details
-                            </a>
-                          </div>
-                        </div>
+                      <div className="min-w-0">
+                        <h3 className="heading-6 t1">{offer.title}</h3>
+                        <p className="body-5 ta mt-1">{offer.subtitle}</p>
+                        <p className="body-6 t2 mt-2 line-clamp-3">{offer.description}</p>
                       </div>
-                    </Reveal>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        )}
+                    </div>
 
-        {/* --------------------------- TECH MARQUEE -------------------------- */}
-        <div
-          className={cx(
-            "hld-marquee-wrap overflow-hidden border-b py-4",
-            isDarkMode ? "border-white/10 bg-[#141414]" : "border-orange-100 bg-white"
-          )}
-          aria-label="Technologies and concepts covered"
-        >
-          <div className="hld-marquee">
-            {[...marqueeTerms, ...marqueeTerms].map((term, index) => (
-              <span
-                key={`${term}-${index}`}
-                aria-hidden={index >= marqueeTerms.length ? "true" : undefined}
-                className={cx(
-                  "mx-2 inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em]",
-                  isDarkMode ? "border-white/10 bg-white/[0.04] text-slate-300" : "border-orange-100 bg-orange-50/70 text-orange-700"
-                )}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                {term}
-              </span>
-            ))}
+                    <ul className="mt-6 space-y-2">
+                      {offer.features.map((feature) => (
+                        <li key={feature} className="body-5 t1 flex items-start gap-2">
+                          <Check className="ta mt-0.5 shrink-0" size={16} weight="bold" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {offer.pills.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {offer.pills.map((pill) => (
+                          <span key={pill} className="chip caption-4">
+                            {pill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-auto pt-6">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <span className="heading-4 mono t1">{formatMoney(price, currencyCode)}</span>
+                        {mrpValue > price && (
+                          <span className="body-5 mono t3 strike">{formatMoney(mrpValue, currencyCode)}</span>
+                        )}
+                        {savings > 0 && <span className="chip chip-accent caption-3 mono">{savings}% off</span>}
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={offer.action}
+                          disabled={!offer.item?._id}
+                          className="btn btn-primary button-md w-full"
+                        >
+                          {offer.button}
+                          <ArrowRight className="arrow" size={18} weight="bold" />
+                        </button>
+                        <a href={offer.href} className="btn btn-secondary button-md w-full">
+                          View details
+                        </a>
+                      </div>
+                    </div>
+                  </article>
+                </Reveal>
+              );
+            })}
           </div>
-        </div>
+        </Section>
 
-        {/* ------------------------------ STATS ------------------------------ */}
-        <section aria-label="Book at a glance" className={cx("border-b", isDarkMode ? "border-white/10 bg-[#111111]" : "border-slate-200 bg-white")}>
-          <div className="mx-auto grid max-w-7xl grid-cols-2 md:grid-cols-4">
-            {[
-              [19, "", "Case studies"],
-              [45, " min", "Interview playbook"],
-              [9, "", "Steps per case"],
-              [buildingBlocks.length, "", "Core building blocks"],
-            ].map(([value, suffix, label], index) => (
-              <div
-                key={label}
-                className={cx(
-                  "px-4 py-7 text-center",
-                  index % 2 === 0 ? "border-r" : "",
-                  index < 2 ? "border-b md:border-b-0" : "",
-                  index === 1 ? "md:border-r" : "",
-                  index === 2 ? "md:border-r" : "",
-                  isDarkMode ? "border-white/10" : "border-slate-200"
-                )}
-              >
-                <div className="text-3xl font-extrabold text-orange-500 sm:text-4xl">
-                  <CountUp to={value} suffix={suffix} />
+        {/* ------------------------------ PROOF ------------------------------ */}
+        <section aria-label="Book at a glance" className="bg-base py-16">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <Reveal className="rule bd grid grid-cols-2 gap-px overflow-hidden rounded-3xl md:grid-cols-4">
+              {[
+                [19, "", "Case studies"],
+                [45, " min", "Interview playbook"],
+                [9, "", "Steps per case"],
+                [buildingBlocks.length, "", "Core building blocks"],
+              ].map(([value, suffix, label]) => (
+                <div key={label} className="bg-s1 px-4 py-8 text-center">
+                  <div className="heading-3 mono ta">
+                    <CountUp to={value} suffix={suffix} />
+                  </div>
+                  <div className="caption-1 t2 mt-2">{label}</div>
                 </div>
-                <div className={cx("mt-1 text-xs font-bold uppercase tracking-[0.12em] sm:text-sm", isDarkMode ? "text-slate-400" : "text-slate-500")}>
-                  {label}
-                </div>
-              </div>
-            ))}
+              ))}
+            </Reveal>
+          </div>
+
+          <div className="marquee-wrap mt-8 overflow-hidden" aria-label="Technologies and concepts covered">
+            <div className="marquee">
+              {[...marqueeTerms, ...marqueeTerms].map((term, index) => (
+                <span
+                  key={`${term}-${index}`}
+                  aria-hidden={index >= marqueeTerms.length ? "true" : undefined}
+                  className="chip caption-1 mx-1 shrink-0"
+                >
+                  {term}
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* ----------------------------- PREVIEW ----------------------------- */}
-        <section id="book-preview" ref={previewSectionRef} aria-labelledby="preview-title" className={cx("scroll-mt-24 border-b py-10 sm:py-14", isDarkMode ? "border-white/10 bg-[#161616]" : "border-orange-100 bg-[#fff7ed]")}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section
+          id="book-preview"
+          ref={previewSectionRef}
+          aria-labelledby="preview-title"
+          className="bg-alt py-16 lg:py-24"
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeader
               id="preview-title"
-              eyebrow="Real book preview"
-              title="See exactly what’s inside."
-              description="A real look inside Mastering System Design — HLD. Explore the sample pages before you decide."
-              dark={isDarkMode}
+              eyebrow="Free preview"
+              title="Read the real pages before you pay"
+              description="These are actual pages from Mastering System Design HLD. Open the sample and judge the depth yourself."
             />
 
-            <div className={cx("mt-7 rounded-[24px] border p-3 shadow-sm sm:p-5", softPanel)}>
-              <div className={cx("flex flex-col gap-4 rounded-[22px] border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5", isDarkMode ? "border-white/10 bg-white/[0.025]" : "border-orange-100 bg-white")}>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 via-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/20">
-                    <BookOpen className="h-5 w-5" />
-                  </div>
+            <Reveal className="mt-10">
+              <div className="card flex flex-col gap-4 rounded-3xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex items-center gap-4">
+                  <span className="tile h-12 w-12 rounded-xl">
+                    <BookOpen size={24} weight="duotone" />
+                  </span>
                   <div>
-                    <p className="font-extrabold tracking-[-0.01em]">Mastering System Design — HLD Preview</p>
-                    <p className={cx("mt-1 text-xs font-medium", isDarkMode ? "text-slate-400" : "text-slate-500")}>
+                    <p className="title-3 t1">Mastering System Design HLD sample</p>
+                    <p className="caption-2 t3 mt-1">
                       {previewLoading
-                        ? "Rendering preview pages…"
+                        ? "Rendering preview pages"
                         : previewTotalPages
-                        ? `${previewTotalPages} preview pages `
+                        ? `${previewTotalPages} preview pages`
                         : "Preview pages"}
                     </p>
                   </div>
@@ -3219,143 +3104,149 @@ function SystemDesignHLD() {
                   onClick={() => setIsPreviewOpen((open) => !open)}
                   aria-expanded={isPreviewOpen}
                   aria-controls="hld-preview-content"
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
+                  className="btn btn-primary button-md"
                 >
-                  <BookOpen className="h-4 w-4" />
                   {isPreviewOpen ? "Close preview" : "Preview the book"}
-                  <ChevronDown className={cx("h-4 w-4 transition-transform", isPreviewOpen && "rotate-180")} />
+                  <CaretDown
+                    size={16}
+                    weight="bold"
+                    className={cx(
+                      "transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                      isPreviewOpen && "rotate-180"
+                    )}
+                  />
                 </button>
               </div>
+            </Reveal>
 
-              <div id="hld-preview-content" hidden={!isPreviewOpen}>
-                {isPreviewOpen && previewLoading && previewImages.length === 0 && (
-                  <div className="mt-5 space-y-6">
-                    {[1, 2, 3].map((item) => (
-                      <div
-                        key={item}
-                        className={cx(
-                          "mx-auto aspect-[0.707] w-full max-w-[920px] animate-pulse rounded-[18px]",
-                          isDarkMode ? "bg-white/[0.05]" : "bg-white"
-                        )}
-                      />
-                    ))}
+            <div id="hld-preview-content" hidden={!isPreviewOpen}>
+              {isPreviewOpen && previewLoading && previewImages.length === 0 && (
+                <div className="mt-6 space-y-6" role="status" aria-label="Loading preview pages">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="skel-block bd mx-auto aspect-[0.707] w-full max-w-4xl rounded-2xl"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {isPreviewOpen && previewError && previewImages.length === 0 && (
+                <div className="card mx-auto mt-6 max-w-2xl rounded-3xl p-6 text-center">
+                  <p className="title-3 t1">The preview could not be rendered</p>
+                  <p className="body-6 t2 mt-2">
+                    {previewError || "Check the preview PDF path and pdf.js worker configuration."}
+                  </p>
+                  <p className="body-6 t2 mt-2">Refresh the page to try again.</p>
+                </div>
+              )}
+
+              {isPreviewOpen && previewImages.length > 0 && (
+                <div className="mt-6 space-y-8">
+                  {previewImages.map((page) => (
+                    <motion.article
+                      key={page.pageNumber}
+                      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, ease: EASE }}
+                      className="mx-auto w-full max-w-4xl"
+                    >
+                      <div className="caption-4 mono t3 mb-2 flex items-center justify-between px-1">
+                        <span>Preview page {formatTwoDigits(page.pageNumber)}</span>
+                        <span>
+                          {page.pageNumber} / {previewTotalPages}
+                        </span>
+                      </div>
+
+                      <div className="preview-page bd overflow-hidden rounded-2xl bg-white">
+                        <img
+                          src={page.src}
+                          alt={`Mastering System Design HLD preview page ${page.pageNumber}`}
+                          width={page.width}
+                          height={page.height}
+                          loading={page.pageNumber <= 2 ? "eager" : "lazy"}
+                          decoding="async"
+                          className="block h-auto w-full bg-white"
+                        />
+                      </div>
+                    </motion.article>
+                  ))}
+
+                  <div className="card featured mx-auto flex max-w-4xl flex-col items-center gap-4 rounded-3xl p-6 text-center">
+                    <p className="title-2 t1">Liked the sample? The full book has all 19 case studies.</p>
+                    <button type="button" onClick={handleBuyNow} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+                      Get the full ebook {priceText}
+                      <ArrowRight className="arrow" size={18} weight="bold" />
+                    </button>
                   </div>
-                )}
-
-                {isPreviewOpen && previewError && previewImages.length === 0 && (
-                  <div className={cx("mx-auto mt-5 max-w-2xl rounded-[22px] border p-6 text-center", panel)}>
-                    <BookOpen className="mx-auto h-9 w-9 text-orange-500" />
-                    <p className="mt-3 font-extrabold">Preview could not be rendered</p>
-                    <p className={cx("mt-2 text-sm leading-6", muted)}>
-                      {previewError || "Check the preview PDF path and pdf.js worker configuration."}
-                    </p>
-                  </div>
-                )}
-
-                {isPreviewOpen && previewImages.length > 0 && (
-                  <div className="mt-5 space-y-5 sm:mt-7 sm:space-y-8">
-                    {previewImages.map((page) => (
-                      <motion.article
-                        key={page.pageNumber}
-                        initial={{ opacity: 0, y: 24 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, ease: EASE }}
-                        className="mx-auto w-full max-w-[940px]"
-                      >
-                        <div className="mb-2.5 flex items-center justify-between px-1">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Preview page {formatTwoDigits(page.pageNumber)}
-                          </span>
-                          <span className={cx("text-[11px] font-medium", isDarkMode ? "text-slate-600" : "text-slate-400")}>
-                            {page.pageNumber} / {previewTotalPages}
-                          </span>
-                        </div>
-
-                        <div className="hld-preview-page overflow-hidden rounded-2xl bg-white shadow-[0_12px_36px_rgba(15,23,42,.10)] ring-1 ring-black/5">
-                          <img
-                            src={page.src}
-                            alt={`Mastering System Design HLD preview page ${page.pageNumber}`}
-                            width={page.width}
-                            height={page.height}
-                            loading={page.pageNumber <= 2 ? "eager" : "lazy"}
-                            decoding="async"
-                            className="block h-auto w-full bg-white"
-                          />
-                        </div>
-                      </motion.article>
-                    ))}
-
-                    <div className="mx-auto flex max-w-[940px] flex-col items-center gap-3 rounded-2xl border border-orange-300/40 bg-orange-500/10 p-5 text-center">
-                      <p className="text-sm font-extrabold sm:text-base">Liked the sample? The full book has all 19 case studies.</p>
-                      <button type="button" onClick={handleBuyNow} disabled={!canBuy} className={ctaPrimary}>
-                        Get the full ebook {priceText}
-                        <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
+        {/* -------------------------- TAGLINE REVEAL ------------------------- */}
+        <TaglineReveal text={TAGLINE} />
+
         {/* ---------------------- WHY CANDIDATES STALL ---------------------- */}
-        <Section isDarkMode={isDarkMode}>
+        <Section alt labelledBy="pain-title">
           <SectionHeader
             id="pain-title"
-            eyebrow="Why system design rounds go wrong"
+            eyebrow="Why design rounds go wrong"
             title="Stop memorising diagrams. Start reasoning like a senior engineer."
             description="Most candidates know the tools but cannot explain why a component belongs in the design. This handbook fixes the reasoning, not just the vocabulary."
-            dark={isDarkMode}
           />
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
-            {painPoints.map((item, index) => (
-              <Reveal
-                key={item.before}
-                delay={(index % 2) * 0.08}
-                className={cx("rounded-[24px] border p-5 sm:p-6", panel)}
-              >
-                <div className="flex items-start gap-3">
-                  <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
-                  <p className={cx("text-sm font-semibold leading-6 line-through decoration-rose-400/60", isDarkMode ? "text-slate-500" : "text-slate-500")}>
-                    {item.before}
-                  </p>
+          <Reveal className="mt-10">
+            <div className="rule bd grid gap-px overflow-hidden rounded-3xl">
+              <div className="bg-s2 hidden grid-cols-2 gap-6 px-6 py-3 md:grid">
+                <p className="caption-3 t3 uppercase tracking-wider">Without a method</p>
+                <p className="caption-3 ta uppercase tracking-wider">With this handbook</p>
+              </div>
+              {painPoints.map((item) => (
+                <div
+                  key={item.before}
+                  className="bg-s1 row-hover grid gap-3 p-6 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-cols-2 md:gap-6"
+                >
+                  <div className="flex items-start gap-3">
+                    <XCircle className="tbad mt-0.5 shrink-0" size={20} weight="fill" />
+                    <p className="body-3 t3 strike">{item.before}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="tok mt-0.5 shrink-0" size={20} weight="fill" />
+                    <p className="body-1 t1">{item.after}</p>
+                  </div>
                 </div>
-                <div className="mt-3 flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-                  <p className="text-sm font-extrabold leading-6 sm:text-base">{item.after}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+              ))}
+            </div>
+          </Reveal>
         </Section>
 
         {/* ----------------------------- WHAT IS HLD ------------------------- */}
-        <Section id="what-is-hld" alt isDarkMode={isDarkMode}>
-          <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-start">
+        <Section id="what-is-hld" labelledBy="what-is-hld-title">
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
             <div>
               <SectionHeader
                 id="what-is-hld-title"
                 eyebrow="System design basics"
-                title="What is High-Level Design (HLD)?"
-                dark={isDarkMode}
+                title="What is High Level Design (HLD)?"
               />
-              <Reveal delay={0.08} className={cx("mt-5 space-y-4 text-base leading-8", muted)}>
+              <Reveal delay={0.08} className="body-3 t2 mt-6 space-y-4">
                 <p>
-                  <strong className={isDarkMode ? "text-white" : "text-slate-900"}>High-Level Design</strong> is the part of a system design
-                  interview where you describe the architecture of an entire product: which services exist, how clients
-                  talk to them, where data lives, what is cached, what runs asynchronously and how the system behaves
-                  when something breaks.
+                  <strong className="t1 font-semibold">High Level Design</strong> is the part of a system
+                  design interview where you describe the architecture of an entire product: which
+                  services exist, how clients talk to them, where data lives, what is cached, what runs
+                  asynchronously and how the system behaves when something breaks.
                 </p>
                 <p>
-                  A strong HLD answer follows a predictable path — requirements, back-of-the-envelope estimation, APIs
-                  and entities, the architecture diagram, request flows, deep dives and failure handling. This book
-                  trains exactly that path on 19 familiar systems, from a URL shortener to an e-commerce platform.
+                  A strong HLD answer follows a predictable path: requirements, quick estimation, APIs
+                  and entities, the architecture diagram, request flows, deep dives and failure
+                  handling. This book trains exactly that path on 19 familiar systems, from a URL
+                  shortener to an ecommerce platform.
                 </p>
                 <p>
-                  If you are also preparing for object-oriented design rounds, the companion{" "}
-                  <a href={LLD_REDIRECT_URL} className="font-bold text-orange-500 underline-offset-4 hover:underline">
+                  Preparing for object oriented design rounds too? The companion{" "}
+                  <a href={LLD_REDIRECT_URL} className="link ta focusable font-semibold underline">
                     Java LLD handbook
                   </a>{" "}
                   covers classes, SOLID and design patterns.
@@ -3363,140 +3254,98 @@ function SystemDesignHLD() {
               </Reveal>
             </div>
 
-            <Reveal delay={0.12} className={cx("overflow-hidden rounded-[26px] border", panel)}>
-              <div className="grid grid-cols-3 bg-gradient-to-r from-orange-600 to-amber-500 px-4 py-3 text-xs font-extrabold uppercase tracking-[0.12em] text-white">
-                <span />
-                <span>HLD</span>
-                <span>LLD</span>
-              </div>
-              {hldVsLld.map(([label, hld, lld]) => (
-                <div
-                  key={label}
-                  className={cx("grid grid-cols-3 gap-3 border-t px-4 py-4 text-sm leading-6", isDarkMode ? "border-white/10" : "border-slate-200")}
-                >
-                  <span className="font-extrabold text-orange-500">{label}</span>
-                  <span className={muted}>{hld}</span>
-                  <span className={muted}>{lld}</span>
+            <Reveal delay={0.12}>
+              <div className="rule bd grid gap-px overflow-hidden rounded-3xl">
+                <div className="bg-s2 grid grid-cols-[2fr_3fr_3fr] gap-3 px-4 py-3">
+                  <span />
+                  <span className="caption-3 ta uppercase tracking-wider">HLD</span>
+                  <span className="caption-3 t3 uppercase tracking-wider">LLD</span>
                 </div>
-              ))}
+                {hldVsLld.map(([label, hld, lld]) => (
+                  <div
+                    key={label}
+                    className="bg-s1 row-hover grid grid-cols-[2fr_3fr_3fr] gap-3 px-4 py-4 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  >
+                    <span className="body-4 t1">{label}</span>
+                    <span className="body-6 t1">{hld}</span>
+                    <span className="body-6 t2">{lld}</span>
+                  </div>
+                ))}
+              </div>
             </Reveal>
           </div>
         </Section>
 
         {/* ----------------------------- FRAMEWORK --------------------------- */}
-        <Section id="framework" isDarkMode={isDarkMode}>
+        <Section id="framework" alt labelledBy="framework-title">
           <SectionHeader
             id="framework-title"
             eyebrow="One repeatable framework"
-            title="Every case study follows the same interview-ready structure"
-            description="The point is not to memorize 19 diagrams. The point is to build one reasoning process you can reuse when the interviewer changes the product, scale or constraint."
-            dark={isDarkMode}
+            title="Every case study follows the same nine steps"
+            description="The point is not to memorise 19 diagrams. It is to build one reasoning process you can reuse when the interviewer changes the product, the scale or the constraint."
           />
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {caseStudyFramework.map((item, index) => (
-              <Reveal
-                as="article"
-                key={item.number}
-                delay={(index % 3) * 0.07}
-                className={cx("group rounded-[24px] border p-5 shadow-sm transition hover:-translate-y-1 hover:border-orange-400/60 hover:shadow-xl sm:p-6", panel)}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-sm font-extrabold tracking-[0.16em] text-orange-500">{item.number}</span>
-                  <span className="h-px flex-1 bg-gradient-to-r from-orange-500/40 to-transparent transition-all duration-500 group-hover:from-orange-500" />
-                </div>
-                <h3 className="mt-5 text-xl font-extrabold tracking-tight">{item.title}</h3>
-                <p className={cx("mt-2 text-sm leading-6", muted)}>{item.copy}</p>
+              <Reveal key={item.number} delay={(index % 3) * 0.07}>
+                <article className="card lift h-full rounded-3xl p-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="num heading-4 mono">{item.number}</span>
+                    <ArrowUpRight className="peek" size={18} weight="bold" aria-hidden="true" />
+                  </div>
+                  <h3 className="heading-6 t1 mt-6">{item.title}</h3>
+                  <p className="body-6 t2 mt-2">{item.copy}</p>
+                </article>
               </Reveal>
             ))}
           </div>
         </Section>
 
         {/* ---------------------------- REQUEST FLOW ------------------------- */}
-        <Section id="request-flow" alt isDarkMode={isDarkMode}>
+        <Section id="request-flow" labelledBy="request-flow-title">
           <SectionHeader
             id="request-flow-title"
             eyebrow="See it in motion"
             title="Follow one request through a production architecture"
-            description="Click any stage to see why it exists. These are the same building blocks you will justify in every HLD interview."
-            dark={isDarkMode}
+            description="Select any stage to see why it exists. You will justify these same building blocks in every HLD interview."
           />
-          <RequestFlowDemo isDarkMode={isDarkMode} />
+          <RequestFlowDemo />
         </Section>
 
         {/* ----------------------------- PLAYBOOK ---------------------------- */}
-        <Section id="playbook" isDarkMode={isDarkMode}>
+        <Section id="playbook" alt labelledBy="playbook-title">
           <SectionHeader
             id="playbook-title"
-            eyebrow="The 45-minute interview plan"
+            eyebrow="The 45 minute interview plan"
             title="Know what to do with every minute"
-            description="A system-design round feels less chaotic when you have a fixed order: scope first, estimate quickly, define interfaces, draw the system, then spend most of the interview on the genuinely hard parts."
-            dark={isDarkMode}
+            description="A design round feels calmer with a fixed order. Scope first, estimate quickly, define interfaces, draw the system, then spend most of the time on the hard parts."
           />
-
-          <div className="mt-10 flex h-3 w-full overflow-hidden rounded-full bg-orange-500/10" role="img" aria-label="Time split across the 45-minute interview">
-            {interviewPlaybook.map((item, index) => (
-              <motion.div
-                key={item.title}
-                initial={{ scaleX: 0, opacity: 0 }}
-                whileInView={{ scaleX: 1, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1, ease: EASE }}
-                style={{ flexGrow: parseInt(item.time, 10), transformOrigin: "left" }}
-                className={cx(
-                  "h-full border-r border-white/30 last:border-r-0",
-                  index % 2 === 0 ? "bg-orange-600" : "bg-amber-500"
-                )}
-                title={`${item.title}: ${item.time}`}
-              />
-            ))}
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {interviewPlaybook.map((item, index) => (
-              <Reveal
-                as="article"
-                key={item.title}
-                delay={(index % 3) * 0.07}
-                className={cx("relative overflow-hidden rounded-[24px] border p-6 transition hover:-translate-y-1 hover:shadow-xl", panel)}
-              >
-                <div className="absolute right-4 top-3 text-6xl font-extrabold tracking-tighter text-orange-500/[0.07]">{formatTwoDigits(index + 1)}</div>
-                <span className="inline-flex rounded-full bg-orange-500/10 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.15em] text-orange-500">
-                  {item.time}
-                </span>
-                <h3 className="mt-5 text-xl font-extrabold">{item.title}</h3>
-                <p className={cx("mt-2 text-sm leading-6", muted)}>{item.copy}</p>
-              </Reveal>
-            ))}
-          </div>
+          <PlaybookTimeline />
         </Section>
 
         {/* ---------------------------- BUILDING BLOCKS ---------------------- */}
-        <Section id="building-blocks" alt isDarkMode={isDarkMode}>
+        <Section id="building-blocks" labelledBy="building-blocks-title">
           <SectionHeader
             id="building-blocks-title"
             eyebrow="Core toolkit"
-            title="The building blocks that keep appearing in strong HLD answers"
-            description="Instead of learning Redis, Kafka, databases and CDN as isolated definitions, the book connects them to the exact problem they solve inside a production design."
-            dark={isDarkMode}
+            title="16 building blocks that show up in strong HLD answers"
+            description="The book never teaches Redis, Kafka or a CDN as an isolated definition. Each one is tied to the exact problem it solves inside a production design."
           />
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {buildingBlocks.map((item, index) => {
               const Icon = item.icon;
               return (
-                <Reveal
-                  as="article"
-                  key={item.title}
-                  delay={(index % 4) * 0.06}
-                  y={20}
-                  className={cx("group rounded-[24px] border p-5 transition hover:-translate-y-1 hover:border-orange-400/60 hover:shadow-xl", panel)}
-                >
-                  <div className={cx("flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition duration-300 group-hover:-rotate-6 group-hover:scale-110", item.accent)}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-5 text-lg font-extrabold">{item.title}</h3>
-                  <p className={cx("mt-2 text-sm leading-6", muted)}>{item.copy}</p>
+                <Reveal key={item.title} delay={(index % 4) * 0.06} y={24}>
+                  <article className="card lift flex h-full gap-4 rounded-3xl p-4 sm:flex-col sm:p-6">
+                    <span className="tile h-12 w-12 rounded-xl">
+                      <Icon size={24} weight="duotone" />
+                    </span>
+                    <div>
+                      <h3 className="title-2 t1">{item.title}</h3>
+                      <p className="body-6 t2 mt-1 sm:mt-2">{item.copy}</p>
+                    </div>
+                  </article>
                 </Reveal>
               );
             })}
@@ -3504,608 +3353,359 @@ function SystemDesignHLD() {
         </Section>
 
         {/* ------------------------------ ESTIMATOR -------------------------- */}
-        <Section id="estimator" isDarkMode={isDarkMode}>
+        <Section id="estimator" alt labelledBy="estimator-title">
           <SectionHeader
             id="estimator-title"
             eyebrow="Try it yourself"
-            title="Back-of-the-envelope estimator"
-            description="Interviewers love when you put numbers on the whiteboard. Move the sliders and watch QPS and storage change — then see which design pattern the numbers point to."
-            dark={isDarkMode}
+            title="Put numbers on the whiteboard"
+            description="Interviewers notice when you estimate before you design. Move the sliders, watch QPS and storage change, then see which pattern the numbers point to."
           />
-          <EstimatorDemo isDarkMode={isDarkMode} onBuy={handleBuyNow} canBuy={canBuy} />
+          <EstimatorDemo onBuy={handleBuyNow} canBuy={canBuy} />
         </Section>
 
         {/* ------------------------- CHAPTER COVERAGE ------------------------ */}
-        <Section id="syllabus" alt isDarkMode={isDarkMode}>
+        <Section id="syllabus" labelledBy="syllabus-title">
           <SectionHeader
             id="syllabus-title"
-            eyebrow="What the handbook actually teaches"
-            title="From the first clarification question to production failure handling"
-            description="The book is organized around the decisions you need to make in an interview. Each topic is tied to a real architecture problem rather than presented as an isolated definition."
-            dark={isDarkMode}
+            eyebrow="What the handbook teaches"
+            title="From the first clarifying question to production failure handling"
+            description="The book is organised around the decisions you make in an interview. Every topic is tied to a real architecture problem."
           />
 
           <div className="mt-10 grid gap-4 lg:grid-cols-2">
-            {chapterCoverage.map((item, index) => {
-              const tone = getTone(item.tone, isDarkMode);
-              return (
-                <Reveal
-                  as="article"
-                  key={item.number}
-                  delay={(index % 2) * 0.08}
-                  className={cx("relative overflow-hidden rounded-[28px] border p-6 sm:p-7", tone.border, tone.soft)}
-                >
-                  <div className={cx("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tone.line)} />
+            {chapterCoverage.map((item, index) => (
+              <Reveal key={item.number} delay={(index % 2) * 0.08}>
+                <article className="card lift h-full rounded-3xl p-6 sm:p-8">
                   <div className="flex items-start gap-4">
-                    <div className={cx("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-extrabold text-white shadow-lg", tone.icon)}>
-                      {item.number}
-                    </div>
+                    <span className="tile body-1 mono h-12 w-12 rounded-xl">{item.number}</span>
                     <div>
-                      <p className={cx("text-xs font-extrabold uppercase tracking-[0.18em]", tone.text)}>{item.subtitle}</p>
-                      <h3 className="mt-2 text-xl font-extrabold tracking-[-0.02em] sm:text-2xl">{item.title}</h3>
+                      <p className="eyebrow caption-3">{item.subtitle}</p>
+                      <h3 className="heading-6 t1 mt-1">{item.title}</h3>
                     </div>
                   </div>
 
-                  <p className={cx("mt-5 text-sm leading-7 sm:text-[15px]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{item.description}</p>
+                  <p className="body-6 t2 mt-6">{item.description}</p>
 
-                  <ul className="mt-5 grid gap-2.5">
+                  <ul className="mt-6 space-y-3">
                     {item.bullets.map((bullet) => (
                       <li key={bullet} className="flex items-start gap-3">
-                        <span className={cx("mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full", tone.chip)}>
-                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                        </span>
-                        <span className={cx("text-sm leading-6", muted)}>{bullet}</span>
+                        <Check className="ta mt-0.5 shrink-0" size={16} weight="bold" />
+                        <span className="body-6 t1">{bullet}</span>
                       </li>
                     ))}
                   </ul>
-                </Reveal>
-              );
-            })}
+                </article>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
         {/* --------------------------- SCALE SNAPSHOTS ----------------------- */}
-        <Section id="scale" isDarkMode={isDarkMode}>
+        <Section id="scale" alt labelledBy="scale-title">
           <SectionHeader
             id="scale-title"
             eyebrow="Scale changes the design"
-            title="Numbers from the case studies, not generic architecture claims"
-            description="The handbook uses concrete traffic and storage estimates so you can explain why a cache, partitioning strategy, connection model or consistency guarantee is actually needed."
-            dark={isDarkMode}
+            title="Real numbers from the case studies"
+            description="Concrete traffic and storage estimates let you explain why a cache, a partitioning strategy or a consistency guarantee is actually needed."
           />
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {scaleSnapshots.map((item, index) => {
-              const tone = getTone(item.tone, isDarkMode);
-              return (
-                <Reveal
-                  as="article"
-                  key={item.system}
-                  delay={(index % 4) * 0.07}
-                  className={cx("rounded-[26px] border p-5 transition hover:-translate-y-1 hover:shadow-xl", tone.border, tone.soft)}
-                >
-                  <p className={cx("text-xs font-extrabold uppercase tracking-[0.16em]", tone.text)}>{item.system}</p>
-                  <div className="mt-3 text-2xl font-extrabold tracking-[-0.03em] sm:text-3xl">{item.number}</div>
-                  <p className={cx("mt-3 text-sm leading-6", muted)}>{item.detail}</p>
-                </Reveal>
-              );
-            })}
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {scaleSnapshots.map((item, index) => (
+              <Reveal key={item.system} delay={(index % 4) * 0.07}>
+                <article className="card lift h-full rounded-3xl p-6">
+                  <p className="caption-3 t3 uppercase tracking-wider">{item.system}</p>
+                  <p className="heading-5 mono ta mt-3">{item.number}</p>
+                  <p className="body-6 t2 mt-3">{item.detail}</p>
+                </article>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
         {/* ------------------------ ARCHITECTURE DECISIONS ------------------- */}
-        <Section id="decisions" alt isDarkMode={isDarkMode}>
+        <Section id="decisions" labelledBy="decisions-title">
           <SectionHeader
             id="decisions-title"
             eyebrow="Architecture decisions"
-            title="Know why a component belongs in the diagram"
-            description="A strong HLD answer is not a collection of logos. These cards summarize the decision logic repeated across the book."
-            dark={isDarkMode}
+            title="Know why each component belongs in the diagram"
+            description="A strong HLD answer is not a collection of logos. These cards summarise the decision logic the book repeats."
           />
 
-          <div className="mt-10 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {architectureDecisions.map((item, index) => {
-              const tone = getTone(item.tone, isDarkMode);
-              return (
-                <Reveal
-                  as="article"
-                  key={item.title}
-                  delay={(index % 3) * 0.07}
-                  className={cx("rounded-[26px] border p-6 transition hover:-translate-y-1 hover:shadow-xl", tone.border, isDarkMode ? "bg-white/[0.025]" : "bg-white")}
-                >
-                  <div className={cx("h-1.5 w-16 rounded-full bg-gradient-to-r", tone.line)} />
-                  <h3 className="mt-5 text-xl font-extrabold tracking-[-0.02em]">{item.title}</h3>
-                  <p className={cx("mt-3 text-sm font-semibold leading-6", tone.text)}>{item.use}</p>
-                  <p className={cx("mt-3 text-sm leading-7", muted)}>{item.reason}</p>
-                  <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {architectureDecisions.map((item, index) => (
+              <Reveal key={item.title} delay={(index % 3) * 0.07}>
+                <article className="card lift flex h-full flex-col rounded-3xl p-6">
+                  <h3 className="heading-6 t1">{item.title}</h3>
+                  <p className="caption-3 t3 mt-4 uppercase tracking-wider">Use it for</p>
+                  <p className="body-5 ta mt-1">{item.use}</p>
+                  <p className="body-6 t2 mt-4">{item.reason}</p>
+                  <div className="mt-auto flex flex-wrap gap-2 pt-6">
                     {item.examples.map((example) => (
-                      <span key={example} className={cx("rounded-full px-3 py-1.5 text-xs font-semibold", tone.chip)}>{example}</span>
+                      <span key={example} className="chip caption-4">
+                        {example}
+                      </span>
                     ))}
                   </div>
-                </Reveal>
-              );
-            })}
+                </article>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
         {/* ------------------------------ TRADE-OFFS ------------------------- */}
-        <Section id="tradeoffs" isDarkMode={isDarkMode}>
+        <Section id="tradeoffs" alt labelledBy="tradeoffs-title">
           <SectionHeader
             id="tradeoffs-title"
-            eyebrow="Trade-offs interviewers expect"
-            title="The answer is usually ‘it depends’ — but you must explain what it depends on"
-            description="The book repeatedly compares realistic alternatives and then ties the choice back to latency, correctness, cost, scale or product behavior."
-            dark={isDarkMode}
+            eyebrow="Tradeoffs interviewers expect"
+            title="The answer is usually “it depends”. You must explain what it depends on."
+            description="The book compares realistic alternatives, then ties each choice back to latency, correctness, cost, scale or product behaviour."
           />
 
           <div className="mt-10 grid gap-4 lg:grid-cols-2">
-            {tradeoffCards.map((item, index) => {
-              const tone = getTone(item.tone, isDarkMode);
-              return (
-                <Reveal
-                  as="article"
-                  key={item.title}
-                  delay={(index % 2) * 0.08}
-                  className={cx("rounded-[28px] border p-6 sm:p-7", tone.border, isDarkMode ? "bg-white/[0.025]" : "bg-white")}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cx("h-2.5 w-2.5 rounded-full bg-gradient-to-br", tone.icon)} />
-                    <h3 className="text-xl font-extrabold tracking-[-0.02em]">{item.title}</h3>
+            {tradeoffCards.map((item, index) => (
+              <Reveal key={item.title} delay={(index % 2) * 0.08}>
+                <article className="card lift h-full rounded-3xl p-6">
+                  <h3 className="heading-6 t1">{item.title}</h3>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="bg-s2 rounded-xl p-4">
+                      <p className="caption-3 mono t3">A</p>
+                      <p className="body-6 t1 mt-2">{item.left}</p>
+                    </div>
+                    <div className="bg-s2 rounded-xl p-4">
+                      <p className="caption-3 mono t3">B</p>
+                      <p className="body-6 t1 mt-2">{item.right}</p>
+                    </div>
                   </div>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className={cx("rounded-2xl border p-4 text-sm leading-6 transition hover:-translate-y-0.5", tone.border, tone.soft)}>{item.left}</div>
-                    <div className={cx("rounded-2xl border p-4 text-sm leading-6 transition hover:-translate-y-0.5", tone.border, tone.soft)}>{item.right}</div>
-                  </div>
-                  <div className={cx("mt-4 rounded-2xl px-4 py-3 text-sm font-semibold", tone.chip)}>{item.takeaway}</div>
-                </Reveal>
-              );
-            })}
+                  <p className="note body-5 mt-3 flex items-start gap-2 rounded-xl p-4">
+                    <Lightning className="mt-0.5 shrink-0" size={16} weight="fill" />
+                    {item.takeaway}
+                  </p>
+                </article>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
         {/* --------------------------- CASE STUDIES -------------------------- */}
-        <Section id="case-studies" alt isDarkMode={isDarkMode}>
+        <Section id="case-studies" labelledBy="case-studies-title">
           <SectionHeader
             id="case-studies-title"
             eyebrow="19 complete case studies"
             title="Practice the problems interviewers keep coming back to"
-            description="All 19 use cases from the handbook are listed here. Filter by domain to find the problems closest to the company you are interviewing with."
-            dark={isDarkMode}
+            description="Every use case in the handbook is listed here. Filter by domain to find the problems closest to the company you are interviewing with."
           />
-          <CaseExplorer isDarkMode={isDarkMode} />
+          <CaseExplorer />
+          <Reveal className="mt-10 flex flex-col items-center gap-3 text-center">
+            <p className="body-2 t1">All 19 designs come in one PDF.</p>
+            <button type="button" onClick={handleBuyNow} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+              Get the ebook {priceText}
+              <ArrowRight className="arrow" size={18} weight="bold" />
+            </button>
+          </Reveal>
         </Section>
 
         {/* ---------------------------- SPOTLIGHTS --------------------------- */}
-        <Section id="spotlights" isDarkMode={isDarkMode}>
+        <Section id="spotlights" alt labelledBy="spotlights-title">
           <SectionHeader
             id="spotlights-title"
             eyebrow="Inside the hardest designs"
-            title="Detailed case-study spotlights from the handbook"
-            description="These are the parts that usually decide whether an HLD discussion stays superficial or becomes production-grade: routing, concurrency, idempotency, state transitions and recovery."
-            dark={isDarkMode}
+            title="Open a case study and see the depth"
+            description="These parts decide whether an HLD discussion stays shallow or reaches production grade: routing, concurrency, idempotency, state transitions and recovery."
           />
-          <SpotlightViewer isDarkMode={isDarkMode} />
+          <SpotlightViewer />
         </Section>
 
         {/* -------------------------- PRODUCTION PATTERNS -------------------- */}
-        <Section id="patterns" alt isDarkMode={isDarkMode}>
+        <Section id="patterns" labelledBy="patterns-title">
           <SectionHeader
             id="patterns-title"
-            eyebrow="Production patterns repeated across the book"
-            title="Patterns you can reuse when the interview problem changes"
-            description="Instead of memorizing only named systems, learn the cross-cutting ideas that appear again and again in reliable distributed architectures."
-            dark={isDarkMode}
+            eyebrow="Reusable production patterns"
+            title="Patterns you can reuse when the problem changes"
+            description="Beyond the named systems, learn the ideas that appear again and again in reliable distributed architectures."
           />
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {productionPatterns.map((item, index) => {
-              const tone = getTone(item.tone, isDarkMode);
-              return (
-                <Reveal
-                  as="article"
-                  key={item.title}
-                  delay={(index % 3) * 0.06}
-                  y={20}
-                  className={cx("rounded-[24px] border p-5 transition hover:-translate-y-1 hover:shadow-lg", tone.border, tone.soft)}
-                >
-                  <div className={cx("h-1.5 w-12 rounded-full bg-gradient-to-r", tone.line)} />
-                  <h3 className="mt-4 text-lg font-extrabold tracking-[-0.015em]">{item.title}</h3>
-                  <p className={cx("mt-2 text-sm leading-6", muted)}>{item.copy}</p>
-                </Reveal>
-              );
-            })}
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {productionPatterns.map((item, index) => (
+              <Reveal key={item.title} delay={(index % 3) * 0.06} y={24}>
+                <article className="card lift h-full rounded-3xl p-6">
+                  <span className="num caption-3 mono">{formatTwoDigits(index + 1)}</span>
+                  <h3 className="title-2 t1 mt-3">{item.title}</h3>
+                  <p className="body-6 t2 mt-2">{item.copy}</p>
+                </article>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
         {/* ------------------------------ DEEP DIVES ------------------------- */}
-        <Section id="deep-dives" isDarkMode={isDarkMode}>
+        <Section id="deep-dives" alt labelledBy="deep-dives-title">
           <SectionHeader
             id="deep-dives-title"
-            eyebrow="Production-level deep dives"
-            title="The book goes beyond drawing boxes"
-            description="The strongest HLD discussion happens after the diagram: collision handling, ordering, concurrency, idempotency, hot keys, failover and the trade-off between correctness and availability."
-            dark={isDarkMode}
+            eyebrow="Beyond drawing boxes"
+            title="The strongest discussion starts after the diagram"
+            description="Collision handling, ordering, concurrency, idempotency, hot keys, failover and the balance between correctness and availability."
           />
 
           <div className="mt-10 grid gap-4 lg:grid-cols-2">
-            {deepDives.map((item, index) => {
-              const palette = ["blue", "indigo", "cyan", "rose", "violet", "emerald"];
-              const tone = getTone(palette[index % palette.length], isDarkMode);
-              return (
-                <Reveal
-                  as="article"
-                  key={item.title}
-                  delay={(index % 2) * 0.08}
-                  className={cx("rounded-[26px] border p-6 transition hover:-translate-y-1 hover:shadow-xl sm:p-7", tone.border, isDarkMode ? "bg-white/[0.025]" : "bg-white")}
-                >
-                  <p className={cx("text-xs font-extrabold uppercase tracking-[0.18em]", tone.text)}>{item.kicker}</p>
-                  <h3 className="mt-3 text-2xl font-extrabold tracking-[-0.025em]">{item.title}</h3>
-                  <p className={cx("mt-3 text-sm leading-7 sm:text-base", muted)}>{item.copy}</p>
-                  <div className="mt-5 flex flex-wrap gap-2">
+            {deepDives.map((item, index) => (
+              <Reveal key={item.title} delay={(index % 2) * 0.08}>
+                <article className="card lift flex h-full flex-col rounded-3xl p-6 sm:p-8">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="eyebrow caption-3">{item.kicker}</p>
+                    <ArrowUpRight className="peek" size={18} weight="bold" aria-hidden="true" />
+                  </div>
+                  <h3 className="heading-5 t1 mt-3">{item.title}</h3>
+                  <p className="body-6 t2 mt-3">{item.copy}</p>
+                  <div className="mt-auto flex flex-wrap gap-2 pt-6">
                     {item.chips.map((chip) => (
-                      <span key={chip} className={cx("rounded-full px-3 py-1.5 text-xs font-semibold", tone.chip)}>{chip}</span>
+                      <span key={chip} className="chip caption-4">
+                        {chip}
+                      </span>
                     ))}
                   </div>
-                </Reveal>
-              );
-            })}
+                </article>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
         {/* ------------------------------ AUDIENCE --------------------------- */}
-        <Section id="audience" alt isDarkMode={isDarkMode}>
+        <Section id="audience" labelledBy="audience-title">
           <SectionHeader
             id="audience-title"
             eyebrow="Who this is for"
             title="Built for engineers who want a system, not another list of buzzwords"
-            description="The content is designed around interview reasoning and production trade-offs, with enough repetition in structure to make revision fast."
-            dark={isDarkMode}
+            description="The content is designed around interview reasoning and production tradeoffs, with enough repetition in structure to make revision fast."
           />
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {audience.map((item, index) => (
-              <Reveal
-                as="article"
-                key={item.title}
-                delay={index * 0.07}
-                className={cx("rounded-[24px] border p-6 transition hover:-translate-y-1 hover:shadow-xl", panel)}
-              >
-                <span className="text-sm font-extrabold text-orange-500">0{index + 1}</span>
-                <h3 className="mt-4 text-xl font-extrabold">{item.title}</h3>
-                <p className={cx("mt-3 text-sm leading-6", muted)}>{item.copy}</p>
+              <Reveal key={item.title} delay={index * 0.07}>
+                <article className="card lift h-full rounded-3xl p-6">
+                  <span className="num caption-3 mono">{formatTwoDigits(index + 1)}</span>
+                  <h3 className="heading-6 t1 mt-4">{item.title}</h3>
+                  <p className="body-6 t2 mt-2">{item.copy}</p>
+                </article>
               </Reveal>
             ))}
           </div>
         </Section>
 
         {/* ---------------------------- OFFER / VALUE ------------------------ */}
-        <Section id="offer" isDarkMode={isDarkMode}>
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_.8fr] lg:items-start">
+        <Section id="offer" alt labelledBy="offer-title">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
             <div>
               <SectionHeader
                 id="offer-title"
                 eyebrow="Everything in the ebook"
-                title="What you get when you buy the HLD handbook"
-                dark={isDarkMode}
+                title="What you get with the HLD handbook"
               />
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {valueStack.map((item, index) => {
                   const Icon = item.icon;
                   return (
-                    <Reveal
-                      key={item.title}
-                      delay={(index % 2) * 0.07}
-                      y={18}
-                      className={cx("flex items-start gap-3 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:border-orange-400/60", panel)}
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-600 to-amber-500 text-white shadow-md">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span>
-                        <span className="block text-sm font-extrabold">{item.title}</span>
-                        <span className={cx("mt-1 block text-xs leading-5", muted)}>{item.copy}</span>
-                      </span>
+                    <Reveal key={item.title} delay={(index % 2) * 0.07} y={24}>
+                      <div className="card lift flex h-full items-start gap-3 rounded-2xl p-4">
+                        <span className="tile h-10 w-10 rounded-lg">
+                          <Icon size={20} weight="duotone" />
+                        </span>
+                        <span>
+                          <span className="body-4 t1 block">{item.title}</span>
+                          <span className="body-6 t2 mt-1 block">{item.copy}</span>
+                        </span>
+                      </div>
                     </Reveal>
                   );
                 })}
               </div>
             </div>
 
-            <Reveal
-              delay={0.1}
-              className={cx(
-                "relative overflow-hidden rounded-[30px] border p-6 shadow-2xl shadow-orange-500/10 lg:sticky lg:top-24",
-                isDarkMode ? "border-orange-400/30 bg-[#1b1613]" : "border-orange-200 bg-white"
-              )}
-            >
-              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-600 via-amber-400 to-orange-600" />
-              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-500">Digital PDF ebook</p>
-              <h3 className="mt-2 text-xl font-extrabold leading-tight">{productName}</h3>
-              <div className="mt-5 flex flex-wrap items-end gap-3">
-                <span className="text-4xl font-extrabold tracking-tight">{priceText}</span>
-                {mrp > currentPrice && (
-                  <span className={cx("pb-1 text-base font-bold line-through", isDarkMode ? "text-slate-500" : "text-slate-400")}>{formatMoney(mrp)}</span>
+            <Reveal delay={0.1}>
+              <div className="card featured rounded-3xl p-6 sm:p-8">
+                <p className="eyebrow caption-3">Digital PDF ebook</p>
+                <h3 className="heading-6 t1 mt-2">{productName}</h3>
+                <div className="mt-6 flex flex-wrap items-baseline gap-3">
+                  <span className="heading-2 mono t1">{priceText}</span>
+                  {hasMrp && <span className="title-2 mono t3 strike">{formatMoney(mrp)}</span>}
+                  {discount > 0 && <span className="chip chip-accent caption-3 mono">{discount}% off</span>}
+                </div>
+                {savingsAmount > 0 && (
+                  <p className="body-4 tok mt-2">You save {formatMoney(savingsAmount)}</p>
                 )}
-                {discount > 0 && (
-                  <span className="mb-1 rounded-full bg-orange-500/12 px-3 py-1 text-xs font-extrabold text-orange-500">{discount}% OFF</span>
-                )}
+                <button type="button" onClick={handleBuyNow} disabled={!canBuy} className="btn btn-primary btn-lg button-md mt-6 w-full">
+                  Get the ebook
+                  <ArrowRight className="arrow" size={20} weight="bold" />
+                </button>
+                <button type="button" onClick={openBookPreview} className="btn btn-secondary button-md mt-3 w-full">
+                  <BookOpen size={18} weight="bold" />
+                  Read free sample pages first
+                </button>
+                <ul className="caption-1 t2 mt-6 space-y-3">
+                  <li className="flex items-center gap-2">
+                    <DownloadSimple className="ta shrink-0" size={16} weight="bold" />
+                    Instant access after successful payment
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Lock className="ta shrink-0" size={16} weight="bold" />
+                    {SECURE_CHECKOUT_TEXT}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <FileText className="ta shrink-0" size={16} weight="bold" />
+                    Digital PDF, not refundable after payment
+                  </li>
+                </ul>
               </div>
-              {savingsAmount > 0 && (
-                <p className="mt-2 text-sm font-extrabold text-emerald-600 dark:text-emerald-400">You save {formatMoney(savingsAmount)}</p>
-              )}
-              <button type="button" onClick={handleBuyNow} disabled={!canBuy} className={cx(ctaPrimary, "mt-5 w-full")}>
-                Get the ebook
-                <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
-              </button>
-              <button
-                type="button"
-                onClick={openBookPreview}
-                className={cx(
-                  "mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition hover:-translate-y-0.5",
-                  isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-orange-200 text-orange-700 hover:bg-orange-50"
-                )}
-              >
-                <BookOpen className="h-4 w-4" />
-                Read free sample pages first
-              </button>
-              <ul className={cx("mt-5 space-y-2 text-xs font-semibold", muted)}>
-                <li className="flex items-center gap-2"><Download className="h-4 w-4 text-orange-500" /> Instant access after successful payment</li>
-                <li className="flex items-center gap-2"><Lock className="h-4 w-4 text-orange-500" /> Secure checkout via PayU</li>
-                <li className="flex items-center gap-2"><FileText className="h-4 w-4 text-orange-500" /> Digital PDF — non-refundable after payment</li>
-              </ul>
             </Reveal>
           </div>
         </Section>
 
-        {/* ------------------------------ LLD PROMO -------------------------- */}
-        <section
-          id="lld-book"
-          className={cx(
-            "relative overflow-hidden border-y py-12 sm:py-14 lg:py-16",
-            isDarkMode ? "border-white/10 bg-[#081326]" : "border-[#d9e4ef] bg-[#f8fafc]"
-          )}
-        >
-          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-            <div className={cx("hld-orb absolute -left-14 top-0 h-44 w-44 rounded-full blur-3xl", isDarkMode ? "bg-[#2b66a8]/10" : "bg-[#dcecf8]/80")} />
-            <div className={cx("hld-orb hld-orb-2 absolute -right-10 bottom-0 h-44 w-44 rounded-full blur-3xl", isDarkMode ? "bg-[#8b6bb8]/10" : "bg-[#eee7f6]/85")} />
-          </div>
-
-          <div className="relative mx-auto max-w-5xl px-4 sm:px-6">
-            <Reveal className="mx-auto max-w-xl text-center">
-              <p className={cx("text-[11px] font-extrabold uppercase tracking-[0.18em]", isDarkMode ? "text-[#9bc0ea]" : "text-[#2b66a8]")}>
-                Also prepare Low-Level Design
-              </p>
-              <h2 className={cx("hld-display mt-2 text-2xl font-extrabold leading-tight tracking-[-0.035em] sm:text-[2rem]", isDarkMode ? "text-white" : "text-[#17223a]")}>
-                Continue with the Java-first LLD handbook
-              </h2>
-              <p className={cx("mx-auto mt-2 max-w-lg text-sm leading-6", isDarkMode ? "text-slate-400" : "text-[#68778b]")}>
-                Object modelling, OOP, SOLID, patterns and complete interview
-                problems — in the same interview-first style.
-              </p>
-            </Reveal>
-
-            {loadingLldProduct && (
-              <div className={cx("mx-auto mt-7 grid w-full max-w-[760px] gap-4 rounded-[24px] border p-4 shadow-[0_16px_45px_rgba(24,56,96,.08)] sm:grid-cols-[150px_minmax(0,1fr)]", isDarkMode ? "border-white/10 bg-[#0d1b32]" : "border-[#cad9e8] bg-white")}>
-                <div className={cx("mx-auto aspect-[0.72] w-full max-w-[145px] animate-pulse rounded-[16px]", isDarkMode ? "bg-white/[0.06]" : "bg-[#e7f0f8]")} />
-                <div className="flex flex-col justify-center">
-                  <div className={cx("h-4 w-32 animate-pulse rounded-full", isDarkMode ? "bg-white/[0.06]" : "bg-[#e7f0f8]")} />
-                  <div className={cx("mt-3 h-7 w-full max-w-sm animate-pulse rounded-lg", isDarkMode ? "bg-white/[0.06]" : "bg-[#edf2f7]")} />
-                  <div className={cx("mt-3 h-14 w-full animate-pulse rounded-xl", isDarkMode ? "bg-white/[0.05]" : "bg-[#f2f5f8]")} />
-                  <div className="mt-4 flex gap-2">
-                    <div className="h-10 w-28 animate-pulse rounded-xl bg-[#2b66a8]/20" />
-                    <div className={cx("h-10 w-28 animate-pulse rounded-xl", isDarkMode ? "bg-white/[0.05]" : "bg-[#eef2f6]")} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!loadingLldProduct && lldProduct && (
-              <Reveal
-                as="article"
-                delay={0.05}
-                className={cx(
-                  "mx-auto mt-7 w-full max-w-[760px] overflow-hidden rounded-[24px] border shadow-[0_18px_50px_rgba(30,64,110,.10)] transition hover:-translate-y-1",
-                  isDarkMode ? "border-[#35577f]/35 bg-[#0d1b32]" : "border-[#c8d8e8] bg-white"
-                )}
-              >
-                <div className="grid sm:grid-cols-[175px_minmax(0,1fr)]">
-                  <div className={cx("relative flex min-h-[245px] items-center justify-center overflow-hidden border-b p-4 sm:border-b-0 sm:border-r", isDarkMode ? "border-white/10 bg-[#112442]" : "border-[#d4e1ed] bg-[#eaf3fa]")}>
-                    <div className={cx("absolute left-3 top-3 rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.13em]", isDarkMode ? "border-[#6b91bd]/30 bg-[#2b66a8]/12 text-[#a8c8ea]" : "border-[#bcd1e3] bg-white/90 text-[#2b66a8]")}>
-                      Java-first LLD
-                    </div>
-                    <span className={cx("absolute -left-7 bottom-5 h-20 w-20 rounded-full blur-2xl", isDarkMode ? "bg-[#78ad83]/10" : "bg-[#dfeee2]")} />
-                    <span className={cx("absolute -right-7 top-10 h-20 w-20 rounded-full blur-2xl", isDarkMode ? "bg-[#e2ad62]/10" : "bg-[#f7ead7]")} />
-
-                    {lldCover ? (
-                      <img
-                        src={lldCover}
-                        alt={`${lldTitle} ebook cover`}
-                        loading="lazy"
-                        decoding="async"
-                        className="relative z-10 max-h-[205px] w-auto max-w-[135px] rounded-[10px] object-contain shadow-[0_14px_30px_rgba(15,23,42,.18)] ring-1 ring-black/5"
-                      />
-                    ) : (
-                      <div className="relative z-10 flex aspect-[0.72] w-full max-w-[135px] flex-col justify-between rounded-[12px] bg-[#244f88] p-4 text-white shadow-xl">
-                        <div>
-                          <p className="text-[7px] font-extrabold uppercase tracking-[0.16em] text-[#cadcf0]">The Java Interview Guide</p>
-                          <p className="mt-4 text-xl font-extrabold leading-[1.05] tracking-[-0.035em]">
-                            Master<br />System<br />Design
-                          </p>
-                        </div>
-                        <p className="text-[9px] font-bold text-[#d9e6f5]">LLD • Java</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={cx("rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.1em]", isDarkMode ? "border-[#5f86b2]/25 bg-[#2b66a8]/10 text-[#a6c7ea]" : "border-[#bed1e4] bg-[#e7f1f9] text-[#2b66a8]")}>LLD</span>
-                      <span className={cx("rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.1em]", isDarkMode ? "border-[#78ad83]/25 bg-[#78ad83]/10 text-[#a9d3b1]" : "border-[#c9e0ce] bg-[#e9f5eb] text-[#477d52]")}>Java</span>
-                      {lldDiscount > 0 && (
-                        <span className={cx("rounded-full border px-2.5 py-1 text-[9px] font-extrabold", isDarkMode ? "border-[#e2ad62]/25 bg-[#e2ad62]/10 text-[#f0c98e]" : "border-[#efd7b2] bg-[#fff0dc] text-[#9c651f]")}>
-                          {lldDiscount}% OFF
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className={cx("mt-3 text-xl font-extrabold leading-tight tracking-[-0.035em] sm:text-[1.45rem]", isDarkMode ? "text-white" : "text-[#17223a]")}>
-                      {lldTitle}
-                    </h3>
-                    <p className={cx("mt-1 text-xs font-bold sm:text-sm", isDarkMode ? "text-[#9bc0ea]" : "text-[#2b66a8]")}>{lldSubtitle}</p>
-                    <p className={cx("mt-2 line-clamp-2 text-xs leading-5 sm:text-sm", isDarkMode ? "text-slate-400" : "text-[#68778b]")}>{lldDescription}</p>
-
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      {[
-                        { label: "Object modelling", light: "border-[#bcd4e8] bg-[#e9f3fa] text-[#285f95]", dark: "border-[#4773a1]/25 bg-[#2b66a8]/10 text-[#a9c8e8]" },
-                        { label: "OOP + SOLID", light: "border-[#cae1ce] bg-[#ebf6ed] text-[#477d52]", dark: "border-[#78ad83]/25 bg-[#78ad83]/10 text-[#acd5b4]" },
-                        { label: "Design patterns", light: "border-[#efd8b8] bg-[#fff2df] text-[#9d6621]", dark: "border-[#e2ad62]/25 bg-[#e2ad62]/10 text-[#efc98f]" },
-                        { label: "LLD problems", light: "border-[#ddd2eb] bg-[#f3eff8] text-[#6d58a0]", dark: "border-[#8b6bb8]/25 bg-[#8b6bb8]/10 text-[#c8bae0]" },
-                      ].map((item) => (
-                        <div key={item.label} className={cx("flex min-h-[38px] items-center gap-2 rounded-[11px] border px-2.5 py-2", isDarkMode ? item.dark : item.light)}>
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-current/10">
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </span>
-                          <span className="text-[11px] font-bold leading-4 sm:text-xs">{item.label}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {lldMetaItems.slice(0, 2).map((item) => (
-                        <span key={item} className={cx("rounded-full border px-2.5 py-1 text-[9px] font-semibold", isDarkMode ? "border-white/10 bg-white/[0.04] text-slate-400" : "border-[#dce4ec] bg-[#f7f9fb] text-[#6e7d90]")}>
-                          {item}
-                        </span>
-                      ))}
-                      {lldCategoryPills.slice(0, 2).map((category) => (
-                        <span key={category} className={cx("rounded-full border px-2.5 py-1 text-[9px] font-semibold", isDarkMode ? "border-[#8b6bb8]/25 bg-[#8b6bb8]/10 text-[#c8bae0]" : "border-[#ddd2eb] bg-[#f3eff8] text-[#6d58a0]")}>
-                          {category}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className={cx("mt-4 rounded-[14px] border p-3", isDarkMode ? "border-[#466789]/30 bg-[#10223d]" : "border-[#d2dfeb] bg-[#f7fafc]")}>
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className={cx("text-[8px] font-extrabold uppercase tracking-[0.14em]", isDarkMode ? "text-slate-500" : "text-[#7b8999]")}>Ebook price</p>
-                          <div className="mt-1 flex items-end gap-2">
-                            <span className={cx("text-xl font-extrabold tracking-[-0.035em]", isDarkMode ? "text-white" : "text-[#17223a]")}>
-                              {formatMoney(lldCurrentPrice, lldCurrency)}
-                            </span>
-                            {lldMrp > lldCurrentPrice && (
-                              <span className={cx("pb-0.5 text-[10px] font-bold line-through", isDarkMode ? "text-slate-600" : "text-[#95a0ad]")}>
-                                {formatMoney(lldMrp, lldCurrency)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className={cx("rounded-full border px-2.5 py-1 text-[9px] font-semibold", isDarkMode ? "border-[#8fb0d3]/15 bg-[#2b66a8]/8 text-[#a8c7e7]" : "border-[#cad9e8] bg-[#eaf3fa] text-[#426b94]")}>
-                          Digital PDF
-                        </span>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={handleLldBuyNow}
-                          disabled={!lldProduct?._id}
-                          className="group inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-[11px] bg-[#2b66a8] px-3 text-[11px] font-extrabold text-white shadow-[0_7px_16px_rgba(43,102,168,.20)] transition hover:-translate-y-0.5 hover:bg-[#24598f] disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
-                        >
-                          Buy LLD
-                          <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                        </button>
-                        <a
-                          href={LLD_REDIRECT_URL}
-                          className={cx(
-                            "group inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-[11px] border px-3 text-[11px] font-extrabold transition hover:-translate-y-0.5 sm:text-xs",
-                            isDarkMode ? "border-[#6b86a5]/30 bg-[#172941] text-[#b4cde8] hover:bg-[#1b304d]" : "border-[#c5d5e5] bg-white text-[#2b66a8] hover:bg-[#eef5fa]"
-                          )}
-                        >
-                          See details
-                          <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            )}
-
-            {!loadingLldProduct && !lldProduct && (
-              <div className={cx("mx-auto mt-7 w-full max-w-[680px] rounded-[20px] border p-4 shadow-sm", isDarkMode ? "border-[#45668d]/30 bg-[#0d1b32]" : "border-[#cedbea] bg-white")}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className={cx("text-sm font-extrabold", isDarkMode ? "text-white" : "text-[#17223a]")}>Explore the Java LLD handbook</p>
-                    <p className={cx("mt-1 text-xs leading-5", isDarkMode ? "text-slate-400" : "text-[#68778b]")}>
-                      {lldProductError || "Live LLD product details could not be loaded right now."}
-                    </p>
-                  </div>
-                  <a
-                    href={LLD_REDIRECT_URL}
-                    className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-[11px] bg-[#2b66a8] px-3.5 text-[11px] font-extrabold text-white shadow-[0_7px_16px_rgba(43,102,168,.18)] transition hover:bg-[#24598f]"
-                  >
-                    See LLD details
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
         {/* -------------------------------- FAQ ------------------------------ */}
-        <Section id="faq" narrow isDarkMode={isDarkMode}>
+        <Section id="faq" alt narrow labelledBy="faq-title">
           <SectionHeader
             id="faq-title"
             eyebrow="FAQ"
             title="Before you get the HLD handbook"
-            description="Quick answers about system design HLD, the format, preview and what is covered."
-            dark={isDarkMode}
+            description="Quick answers about system design HLD, the format, the preview and what is covered."
+            align="center"
           />
 
           <div className="mt-10 space-y-3">
             {faqs.map((item, index) => {
               const isOpen = openFaq === index;
               return (
-                <Reveal
-                  as="article"
-                  key={item.q}
-                  y={16}
-                  delay={Math.min(index, 4) * 0.04}
-                  className={cx(
-                    "overflow-hidden rounded-[22px] border transition-colors",
-                    panel,
-                    isOpen && "border-orange-400/60"
-                  )}
-                >
-                  <h3>
-                    <button
-                      type="button"
-                      onClick={() => setOpenFaq(isOpen ? null : index)}
-                      className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left sm:px-6"
-                      aria-expanded={isOpen}
-                      aria-controls={`faq-answer-${index}`}
-                      id={`faq-question-${index}`}
+                <Reveal key={item.q} y={16} delay={Math.min(index, 4) * 0.04}>
+                  <article className={cx("card rounded-2xl", isOpen && "featured")}>
+                    <h3>
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaq(isOpen ? null : index)}
+                        className="focusable flex w-full items-center justify-between gap-4 rounded-2xl p-4 text-left sm:p-6"
+                        aria-expanded={isOpen}
+                        aria-controls={`faq-answer-${index}`}
+                        id={`faq-question-${index}`}
+                      >
+                        <span className="title-3 t1 sm:text-lg sm:leading-7">{item.q}</span>
+                        <Plus
+                          size={20}
+                          weight="bold"
+                          className={cx(
+                            "ta shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                            isOpen && "rotate-45"
+                          )}
+                        />
+                      </button>
+                    </h3>
+                    {/* Answers stay in the DOM so crawlers can read them. */}
+                    <div
+                      id={`faq-answer-${index}`}
+                      role="region"
+                      aria-labelledby={`faq-question-${index}`}
+                      hidden={!isOpen}
+                      className="fade-up"
                     >
-                      <span className="font-extrabold sm:text-lg">{item.q}</span>
-                      <ChevronDown className={cx("h-5 w-5 shrink-0 text-orange-500 transition-transform duration-300", isOpen && "rotate-180")} />
-                    </button>
-                  </h3>
-                  {/* Answers stay in the DOM (crawlable) and animate open via grid rows. */}
-                  <div
-                    id={`faq-answer-${index}`}
-                    role="region"
-                    aria-labelledby={`faq-question-${index}`}
-                    className={cx(
-                      "grid transition-[grid-template-rows] duration-300 ease-out",
-                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                    )}
-                  >
-                    <div className="overflow-hidden">
-                      <p className={cx("border-t px-5 py-5 text-sm leading-7 sm:px-6 sm:text-base", isDarkMode ? "border-white/10 text-slate-400" : "border-slate-200 text-slate-600")}>
-                        {item.a}
-                      </p>
+                      <p className="body-3 t2 px-4 pb-4 sm:px-6 sm:pb-6">{item.a}</p>
                     </div>
-                  </div>
+                  </article>
                 </Reveal>
               );
             })}
@@ -4113,128 +3713,83 @@ function SystemDesignHLD() {
         </Section>
 
         {/* ------------------------------ FINAL CTA -------------------------- */}
-        <section aria-labelledby="final-cta-title" className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8 lg:pb-24">
-          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[32px] bg-gradient-to-br from-orange-700 via-orange-600 to-amber-500 p-7 text-white shadow-2xl shadow-orange-600/25 sm:p-10 lg:p-14">
-            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-              <div className="hld-orb absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
-              <div className="hld-orb hld-orb-2 absolute -bottom-20 left-10 h-64 w-64 rounded-full bg-amber-300/25 blur-3xl" />
-            </div>
-            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.16em]">
-                  <Rocket className="h-4 w-4" />
-                  Interview-ready HLD revision
+        <section aria-labelledby="final-cta-title" className="bg-base px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+          <Reveal className="mx-auto max-w-6xl">
+            <div className="cta-dark rounded-3xl p-6 sm:p-10 lg:p-16">
+              <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+                <div>
+                  <p className="caption-3 uppercase tracking-wider text-[#fb923c]">Interview ready HLD revision</p>
+                  <h2 id="final-cta-title" className="heading-2 mt-4 max-w-[680px]">
+                    Build the habit of explaining why your architecture works.
+                  </h2>
+                  <p className="body-3 t2 mt-4 max-w-[680px]">
+                    19 complete designs, one consistent method, and the production tradeoffs interviewers
+                    expect you to discuss after the first diagram.
+                  </p>
                 </div>
-                <h2 id="final-cta-title" className="mt-5 max-w-3xl text-3xl font-extrabold tracking-[-0.035em] sm:text-4xl lg:text-5xl">
-                  Build the habit of explaining why your architecture works.
-                </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-orange-50 sm:text-base">
-                  19 complete designs, one consistent method, and the production trade-offs interviewers expect you to discuss after the first diagram.
-                </p>
-              </div>
 
-              <div className="min-w-[240px] rounded-[24px] bg-white/10 p-4 backdrop-blur-sm">
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-extrabold">{priceText}</span>
-                  {mrp > currentPrice && (
-                    <span className="pb-1 text-sm font-bold text-orange-100 line-through">{formatMoney(mrp)}</span>
-                  )}
+                <div>
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <span className="heading-3 mono">{priceText}</span>
+                    {hasMrp && <span className="body-5 mono strike text-[#8c8c8c]">{formatMoney(mrp)}</span>}
+                  </div>
+                  <button type="button" onClick={handleBuyNow} disabled={!canBuy} className="btn btn-primary btn-lg button-md mt-4 w-full">
+                    Get the ebook
+                    <ArrowRight className="arrow" size={20} weight="bold" />
+                  </button>
+                  <button type="button" onClick={openBookPreview} className="btn btn-light button-md mt-3 w-full">
+                    <BookOpen size={18} weight="bold" />
+                    Read the free sample first
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleBuyNow}
-                  disabled={!canBuy}
-                  className="hld-shimmer relative mt-4 flex w-full items-center justify-center gap-2 overflow-hidden rounded-[18px] bg-white px-5 py-4 font-extrabold text-orange-700 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Get the ebook
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={openBookPreview}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 text-sm font-bold text-orange-50 underline-offset-4 hover:underline"
-                >
-                  Or read the free sample first
-                  <ArrowUpRight className="h-4 w-4" />
-                </button>
               </div>
             </div>
           </Reveal>
         </section>
       </main>
 
-      <footer className={cx("border-t px-4 py-8 text-center text-xs leading-6", isDarkMode ? "border-white/10 bg-[#111111] text-slate-500" : "border-slate-200 bg-white text-slate-500")}>
-        <p>Mastering System Design — High-Level Design • Digital PDF ebook • Non-refundable digital product</p>
-        <p className="mt-1">
+      <footer className="bg-base caption-2 t3 px-4 pb-8 text-center">
+        <p>Mastering System Design: High Level Design · Digital PDF ebook · Digital purchases are not refundable</p>
+        <p className="mt-2">
           Support:{" "}
-          <a className="font-bold transition hover:text-orange-500" href="mailto:supporttargettrek@gmail.com">
+          <a className="link focusable font-semibold" href="mailto:supporttargettrek@gmail.com">
             supporttargettrek@gmail.com
           </a>
         </p>
-        <p className="mt-3 space-x-3">
-          <a className="font-semibold transition hover:text-orange-500" href={LLD_REDIRECT_URL}>System Design LLD (Java)</a>
-          <a className="font-semibold transition hover:text-orange-500" href={COMBO_REDIRECT_URL}>HLD + LLD Combo</a>
-          <a className="font-semibold transition hover:text-orange-500" href="/books">All books</a>
+        <p className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
+          <a className="link focusable font-medium" href={LLD_REDIRECT_URL}>System Design LLD (Java)</a>
+          <a className="link focusable font-medium" href={COMBO_REDIRECT_URL}>HLD + LLD Combo</a>
+          <a className="link focusable font-medium" href="/books">All books</a>
         </p>
       </footer>
 
-      {/* Sticky buy bar: one responsive card. Mobile = docked full-width strip,
-          tablet = centered card, desktop = wider card with a secondary action.
-          On md+ it appears only after the hero CTA scrolls out of view. */}
+      {/* Sticky buy bar. Mobile: always docked. Tablet and up: slides in only
+          after the hero CTA has scrolled out of view. */}
       <div
         className={cx(
-          "pointer-events-none fixed inset-x-0 bottom-0 z-[80] flex justify-center px-2.5 pb-[max(10px,env(safe-area-inset-bottom))] transition-all duration-300 sm:px-4 md:pb-5",
-          (isCheckoutOpen || (heroVisible && !loadingProduct)) && "md:translate-y-10 md:opacity-0",
-          isCheckoutOpen && "max-md:translate-y-24 max-md:opacity-0"
+          "buybar pointer-events-none fixed inset-x-0 bottom-0 z-[45] flex justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-4 md:pb-6",
+          isCheckoutOpen && "translate-y-24 opacity-0",
+          heroVisible && !loadingProduct && "md:translate-y-24 md:opacity-0"
         )}
       >
-        <div
-          className={cx(
-            "pointer-events-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 rounded-[20px] border p-2.5 shadow-[0_-10px_45px_rgba(15,23,42,.18)] backdrop-blur-xl",
-            "sm:max-w-xl sm:gap-4 sm:rounded-[22px] sm:p-3",
-            "md:max-w-2xl md:rounded-2xl md:py-3 md:pl-5 md:pr-3",
-            "lg:max-w-3xl lg:gap-6 xl:max-w-4xl 2xl:max-w-5xl",
-            isDarkMode ? "border-white/10 bg-[#191919]/95" : "border-orange-200 bg-white/95"
-          )}
-        >
-          <div className="min-w-0 pl-1">
-            <p className={cx("hidden truncate text-sm font-extrabold leading-tight sm:block lg:text-base", isDarkMode ? "text-white" : "text-slate-900")}>
-              Mastering System Design — HLD
-            </p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 sm:mt-1">
-              <span className="text-lg font-extrabold leading-none text-orange-500 sm:text-base lg:text-lg">{priceText}</span>
-              {mrp > currentPrice && (
-                <span className={cx("text-xs font-bold line-through", isDarkMode ? "text-slate-500" : "text-slate-400")}>{formatMoney(mrp)}</span>
-              )}
-              {discount > 0 && (
-                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-extrabold text-orange-500">{discount}% off</span>
-              )}
+        <div className="glass pointer-events-auto flex w-full max-w-3xl items-center justify-between gap-3 rounded-2xl p-2 pl-4">
+          <div className="min-w-0">
+            <p className="title-4 t1 truncate">Mastering System Design HLD</p>
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+              <span className="body-1 mono ta">{priceText}</span>
+              {hasMrp && <span className="caption-4 mono t3 strike">{formatMoney(mrp)}</span>}
+              {discount > 0 && <span className="caption-3 mono tok">{discount}% off</span>}
             </div>
-            <p className={cx("mt-1 truncate text-[11px] font-bold sm:hidden", isDarkMode ? "text-slate-400" : "text-[#737373]")}>
-              Mastering System Design — HLD
-            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={openBookPreview}
-              className={cx(
-                "hidden min-h-[46px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition hover:-translate-y-0.5 lg:inline-flex",
-                isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-orange-200 text-orange-700 hover:bg-orange-50"
-              )}
-            >
-              <BookOpen className="h-4 w-4" />
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={openBookPreview} className="btn btn-secondary button-sm lg-only">
+              <BookOpen size={16} weight="bold" />
               Free sample
             </button>
-            <button
-              type="button"
-              onClick={handleBuyNow}
-              disabled={!canBuy}
-              className={cx(ctaPrimary, "hld-pulse min-h-[50px] px-4 text-[13px] sm:min-h-[48px] sm:px-6 sm:text-sm md:hld-no-pulse")}
-            >
+            <button type="button" onClick={handleBuyNow} disabled={!canBuy} className="btn btn-primary button-md">
               Get the ebook
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              <ArrowRight className="arrow" size={18} weight="bold" />
             </button>
           </div>
         </div>

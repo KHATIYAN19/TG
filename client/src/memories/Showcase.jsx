@@ -100,8 +100,10 @@ export function LivePhone({ template, theme, audience, scale = 1, eager = false,
 }
 
 /** Name, looks, what's inside, who it's for and a sample line. `children` are the buttons under it. Shared by the home page and the signed-in studio. */
-export function TemplatePanel({ t, theme, onTheme, audience, onAudience, children, compact = false }) {
-  const meta = META[t.id];
+export function TemplatePanel({ t, theme, onTheme, audience, onAudience, children, compact = false, looks = null, priceOf = null }) {
+  const full = META[t.id];
+  // `looks` (ids) = the looks switched on right now; the landing page passes none and shows them all
+  const meta = looks ? { ...full, themes: full.themes.filter((x) => looks.includes(x.id)) } : full;
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -119,6 +121,7 @@ export function TemplatePanel({ t, theme, onTheme, audience, onAudience, childre
               className={cx("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition", on ? "border-rose-400 bg-rose-50 text-rose-700 ring-2 ring-rose-100" : "border-rose-100 bg-white text-[#6b3a5a] hover:bg-rose-50")}>
               <span className="flex -space-x-1" aria-hidden>{(th.swatch || []).slice(0, 3).map((c, i) => <i key={i} className="h-3.5 w-3.5 rounded-full ring-1 ring-white" style={{ background: c }} />)}</span>
               {th.name}
+              {priceOf && <span className={cx("rounded-full px-1.5 py-0.5 text-[10px] font-bold", priceOf(th.id) > 0 ? "bg-white text-rose-600 ring-1 ring-rose-100" : "bg-emerald-50 text-emerald-700")}>{priceOf(th.id) > 0 ? `\u20B9${priceOf(th.id).toLocaleString("en-IN")}` : "Free"}</span>}
             </button>
           );
         })}

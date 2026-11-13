@@ -12,12 +12,12 @@ const verify = async (orderId, payload) => (await memoriesHttp.post("/payments/v
 /* development only: the server confirms immediately */
 registerRunner("mock", async ({ orderId }) => ({ status: await verify(orderId, { paymentId: "mock_payment" }) }));
 
-export async function runCheckout({ checkout, orderId, user }) {
+export async function runCheckout({ checkout, orderId, user, description = "Memories page" }) {
   return run({
     checkout,
     orderId,
     name: "Memories by Target Trek",
-    description: "1 page credit",
+    description,
     theme: "#f43f6e",
     prefill: { name: user?.name || "", email: user?.email || "" },
     onPaid: async (response) => ({ status: await verify(orderId, response) }),

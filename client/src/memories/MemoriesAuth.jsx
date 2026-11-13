@@ -9,15 +9,19 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import PhoneInput from "../utils/PhoneInput";
 import { DEFAULT_DIAL, digitsOf, mobileProblem } from "../utils/countries";
-import { ArrowLeft, Eye, EyeOff, Gift, ImageIcon, KeyRound, Lock, MailCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, EnvelopeSimpleOpen, Eye, EyeSlash, Gift, Images, Key, LockKey, ShieldWarning, WarningCircle } from "@phosphor-icons/react";
 
 import { login as loginAction } from "../Redux/authSlice";
 import { API_ROOT, http, errMsg, errCode, retryAfterOf } from "../arena/api";
 import GoogleButton, { googleEnabled } from "../arena/GoogleButton";
-import { useMemoriesChrome } from "./chrome";
-import { Button, FONT_LINKS, Field, Logo, cx, inputClass } from "./ui";
+import { useMedia, useMemoriesChrome } from "./chrome";
+import { FONT_LINKS, Logo, cx } from "./ui";
+import { TEMPLATES, TemplateScene } from "./templates";
+import { THEME_TOTAL } from "./Showcase";
+import { Btn, OCCASION, useStickyFix } from "./landingUi";
 import { trackSignup } from "./metaTracking";
 import "./memories.css";
+import "./landing.css";
 
 /*
   MEMORIES: SIGN UP / LOG IN
@@ -64,7 +68,26 @@ const loginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
-/* ---------------------------- 6-digit OTP boxes ---------------------------- */
+/* ---------------------------- small form pieces ---------------------------- */
+// 16px text in every field: anything smaller makes iPhone Safari zoom the page when the field is tapped
+const inputClass = (invalid) => cx("ml-input", invalid && "ml-input-bad");
+
+function Field({ label, hint, error, htmlFor, children }) {
+  return (
+    <div>
+      {label && <label htmlFor={htmlFor} className="title-4 mb-2 block text-[#4a2340]">{label}</label>}
+      {children}
+      {error ? <p role="alert" className="caption-4 mt-2 flex items-center gap-1 text-[#be123c]"><WarningCircle size={14} weight="fill" className="shrink-0" aria-hidden /> {error}</p> : hint ? <p className="caption-5 mt-2 text-[#8a6a80]">{hint}</p> : null}
+    </div>
+  );
+}
+
+/* the submit button of each step, with its busy state */
+function Submit({ children, ...rest }) {
+  return <Btn type="submit" className="w-full" {...rest}>{children}</Btn>;
+}
+
+/* ---------------------------- 6 digit code boxes ---------------------------- */
 function OtpInput({ value, onChange, disabled }) {
   const refs = useRef([]);
   const digits = Array.from({ length: 6 }, (_, i) => value[i] || "");
@@ -74,18 +97,20 @@ function OtpInput({ value, onChange, disabled }) {
     onChange(next.join(""));
   };
   return (
-    <div className="flex justify-between gap-2" role="group" aria-label="6-digit verification code">
+    <div className="grid grid-cols-6 gap-2" role="group" aria-label="6 digit verification code">
       {digits.map((digit, i) => (
         <input
           key={i}
           ref={(el) => (refs.current[i] = el)}
           value={digit}
           disabled={disabled}
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           autoComplete={i === 0 ? "one-time-code" : "off"}
           maxLength={1}
           aria-label={`Digit ${i + 1}`}
-          className="h-14 w-full min-w-0 rounded-2xl border border-rose-100 bg-white text-center text-xl font-semibold text-[#3a1530] transition focus:border-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-100"
+          className={cx("ml-input ml-otp", digit && "ml-otp-on")}
           onChange={(e) => {
             const char = e.target.value.replace(/\D/g, "").slice(-1);
             setAt(i, char);
@@ -135,28 +160,75 @@ const formatWait = (s) => {
   if (m > 0) return `${m}m ${String(sec).padStart(2, "0")}s`;
   return `${sec}s`;
 };
-
 const PasswordInput = forwardRef(function PasswordInput({ id, invalid, ...rest }, ref) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
-      <input ref={ref} id={id} type={show ? "text" : "password"} className={cx(inputClass(invalid), "pr-11")} {...rest} />
-      <button type="button" onClick={() => setShow((s) => !s)} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#b79bb0] hover:text-rose-500" aria-label={show ? "Hide password" : "Show password"}>
-        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      <input ref={ref} id={id} type={show ? "text" : "password"} className={cx(inputClass(invalid), "!pr-12")} {...rest} />
+      <button type="button" onClick={() => setShow((s) => !s)} className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-xl text-[#a07890] transition-colors duration-300 hover:text-[#be123c]" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show}>
+        {show ? <EyeSlash size={20} aria-hidden /> : <Eye size={20} aria-hidden />}
       </button>
     </div>
   );
 });
 
+/* the password rules, ticked off live as they type (the same five rules the form checks) */
+const PW_RULES = [[/.{8,}/, "8 characters"], [/[A-Z]/, "Uppercase"], [/[a-z]/, "Lowercase"], [/\d/, "Number"], [/[^A-Za-z0-9]/, "Symbol"]];
+function PasswordRules({ value = "" }) {
+  return (
+    <ul className="mt-2 flex flex-wrap gap-2" aria-label="Password rules">
+      {PW_RULES.map(([re, label]) => {
+        const ok = re.test(value);
+        return (
+          <li key={label} className={cx("ml-rule-chip caption-4 inline-flex items-center gap-1 rounded-full px-2 py-1", ok ? "bg-[#ecfdf5] text-emerald-700" : "bg-[#fff1f3] text-[#8a6a80]")}>
+            <Check size={12} weight="bold" className={ok ? "opacity-100" : "opacity-30"} aria-hidden /> {label}<span className="sr-only">{ok ? ": done" : ": still needed"}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 const Divider = () => (
-  <div className="flex items-center gap-3 text-xs text-[#b79bb0]" aria-hidden>
-    <span className="h-px flex-1 bg-rose-100" /> or <span className="h-px flex-1 bg-rose-100" />
+  <div className="caption-4 flex items-center gap-3 text-[#a07890]" aria-hidden>
+    <span className="h-px flex-1 bg-[#f5dfe4]" /> or with email <span className="h-px flex-1 bg-[#f5dfe4]" />
   </div>
 );
 
-const IconBadge = ({ icon: Icon }) => (
-  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-100 text-rose-600"><Icon className="h-7 w-7" aria-hidden /></span>
-);
+/* icon, title and one line of text at the top of a step */
+function StepHead({ Icon, title, children, center = false }) {
+  return (
+    <div className={center ? "text-center" : undefined}>
+      {Icon && <span className={cx("grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1f3] text-[#e11d48]", center && "mx-auto")}><Icon size={24} weight="duotone" aria-hidden /></span>}
+      <h1 className={cx("heading-5 text-[#2a1023]", Icon && "mt-4")}>{title}</h1>
+      <p className="body-6 mt-2 text-[#7a5370]">{children}</p>
+    </div>
+  );
+}
+
+function Notice({ tone = "error", title, children }) {
+  const warn = tone === "warn";
+  const Icon = warn ? ShieldWarning : WarningCircle;
+  return (
+    <div role="alert" className={cx("ml-step body-6 flex gap-3 rounded-2xl p-4", warn ? "bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-200" : "bg-[#fff1f3] text-[#9f1239] ring-1 ring-inset ring-[#fecdd3]")}>
+      <Icon size={20} weight="fill" className="mt-0.5 shrink-0" aria-hidden />
+      <div className="min-w-0 space-y-1">{title && <p className="font-semibold">{title}</p>}{children}</div>
+    </div>
+  );
+}
+
+const PERKS = [
+  [Gift, "Ready in minutes", "Pick an occasion, write your message and share the link."],
+  [Images, "Your photos, videos and voice", "Add the moments that mean the most to the two of you."],
+  [LockKey, "Public or private", "Open to anyone with the link, or locked behind a PIN only they know."],
+];
+
+/* the template they picked on the home page (it travels here as ?template=, or was remembered for this tab) */
+const pickedTemplate = (params) => {
+  let id = params.get("template");
+  if (!id) { try { id = sessionStorage.getItem("memories:template"); } catch { /* ignore */ } }
+  return TEMPLATES.find((t) => t.theme === id) || null;
+};
 
 /* --------------------------------- page --------------------------------- */
 export default function MemoriesAuth() {
@@ -166,6 +238,9 @@ export default function MemoriesAuth() {
   const location = useLocation();
   const [params] = useSearchParams();
   const token = useSelector((s) => s.auth.token);
+  const tall = useMedia("(min-height: 860px)");
+  const rootRef = useRef(null);
+  useStickyFix(rootRef); // keeps the side panel pinned on desktop
 
   const [step, setStep] = useState(params.get("mode") === "signup" || location.pathname.endsWith("/signup") ? "signup" : "login");
   const [pendingEmail, setPendingEmail] = useState("");
@@ -281,7 +356,7 @@ export default function MemoriesAuth() {
 
   /* ---- verify signup OTP → signed in ---- */
   const onVerifySignup = async () => {
-    if (otp.length !== 6) return setFormError("Enter the 6-digit code");
+    if (otp.length !== 6) return setFormError("Enter the 6 digit code");
     setBusy(true);
     setFormError("");
     try {
@@ -341,7 +416,7 @@ export default function MemoriesAuth() {
   });
 
   const onVerifyLogin = async () => {
-    if (otp.length !== 6) return setFormError("Enter the 6-digit code");
+    if (otp.length !== 6) return setFormError("Enter the 6 digit code");
     setBusy(true);
     setFormError("");
     try {
@@ -398,7 +473,7 @@ export default function MemoriesAuth() {
   const resendReset = async () => { if (await sendResetCode(pendingEmail)) toast.success("New code sent", { id: "memories-otp-sent" }); };
 
   const onReset = resetForm.handleSubmit(async (values) => {
-    if (otp.length !== 6) return setFormError("Enter the 6-digit code from your email");
+    if (otp.length !== 6) return setFormError("Enter the 6 digit code from your email");
     setBusy(true);
     setFormError("");
     try {
@@ -415,209 +490,228 @@ export default function MemoriesAuth() {
       setBusy(false);
     }
   });
-
   const isOtpStep = step === "verify" || step === "login-otp";
   const showTabs = step === "signup" || step === "login";
   const waitLabel = cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : `Resend in ${cooldown}s`;
+  const goTo = (next) => { setStep(next); setFormError(""); };
   const goForgot = () => {
     const id = loginForm.getValues("identifier") || "";
     forgotForm.setValue("email", id.includes("@") ? id : "");
-    setFormError("");
-    setStep("forgot");
+    goTo("forgot");
   };
-  const linkBtn = "text-sm font-semibold text-rose-600 hover:underline disabled:cursor-not-allowed disabled:text-[#b79bb0] disabled:no-underline";
-  const backBtn = "text-sm text-[#8a6a80] hover:text-rose-600";
+  const linkBtn = "ml-link body-4 rounded-lg text-[#be123c]";
+  const backBtn = "ml-link body-6 inline-flex items-center gap-1 rounded-lg text-[#7a5370]";
+
+  const picked = pickedTemplate(params);
+  const signupPw = signupForm.watch("password");
+  const resetPw = resetForm.watch("password");
+  // the phones in the side panel: the picked template in the middle, two others beside it
+  const centre = picked || TEMPLATES[0];
+  const sides = TEMPLATES.filter((t) => t.id !== centre.id).slice(0, 2);
+  const phone = tall ? 0.74 : 0.56;
+  const title = { signup: "Create your account", login: "Log in", verify: "Check your email", "login-otp": "Check your email", forgot: "Forgot password", reset: "Set a new password", "google-mobile": "One last detail" }[step] || "Log in";
 
   return (
-    <main className="mem-root relative min-h-screen overflow-hidden bg-gradient-to-br from-[#fff3ee] via-[#fffaf6] to-[#ffeef5]">
+    <main ref={rootRef} className="mem-root ml-root ml-auth lg:grid lg:grid-cols-2">
       <Helmet>
-        <title>{step === "signup" ? "Create your account" : "Log in"} | Memories by Target Trek</title>
+        <title>{title} | Memories by Target Trek</title>
         <meta name="robots" content="noindex" />
+        <meta name="theme-color" content="#fffaf6" />
         {FONT_LINKS.map((l) => <link key={l.href} {...l} />)}
       </Helmet>
 
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <div className="absolute -left-24 top-20 h-96 w-96 rounded-full bg-rose-200/50 blur-3xl" />
-        <div className="absolute -right-24 bottom-10 h-96 w-96 rounded-full bg-orange-200/50 blur-3xl" />
-      </div>
+      {/* ------------------------------ the form side ------------------------------ */}
+      <div className="flex min-w-0 flex-col px-4 pb-12 sm:px-6">
+        <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 py-4 lg:max-w-none">
+          <Logo />
+          <Link to="/memories" className="ml-link title-4 inline-flex items-center gap-1 rounded-full px-3 py-2 text-[#6b3a5a]"><ArrowLeft size={16} aria-hidden /> Back to home</Link>
+        </header>
 
-      <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Logo />
-        <Link to="/memories" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#6b3a5a] hover:text-rose-600"><ArrowLeft className="h-4 w-4" aria-hidden /> Back to home</Link>
-      </div>
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-6">
+          {picked && showTabs && (
+            <p className="ml-step caption-3 mb-4 inline-flex items-center gap-2 self-start rounded-full px-3 py-2" style={{ background: OCCASION[picked.id].tint, color: OCCASION[picked.id].ink }}>
+              {(() => { const Ic = OCCASION[picked.id].Icon; return <Ic size={16} weight="fill" aria-hidden />; })()}
+              Your {picked.name.toLowerCase()} page is one step away
+            </p>
+          )}
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-2 lg:items-center lg:pt-10">
-        {/* Brand panel */}
-        <aside className="hidden lg:block">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-500">Memories</p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-[#3a1530]">
-            Make someone&apos;s day,<br /><span className="mem-script mem-gradient-text text-[1.2em]">one page at a time.</span>
-          </h1>
-          <ul className="mt-9 space-y-5">
-            {[
-              [Gift, "Ready in minutes", "Pick an occasion, write your message and share the link."],
-              [ImageIcon, "Your photos and videos", "Add the moments that mean the most, with a main photo and video."],
-              [Lock, "Public or private", "Open to anyone with the link, or locked behind a PIN only they know."],
-            ].map(([Icon, title, text]) => (
-              <li key={title} className="flex gap-4">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-rose-500 shadow-sm ring-1 ring-rose-100"><Icon className="h-5 w-5" aria-hidden /></span>
-                <div><p className="font-semibold text-[#3a1530]">{title}</p><p className="mt-0.5 text-sm text-[#7a5370]">{text}</p></div>
+          <section className="rounded-3xl bg-white p-6 ring-1 ring-[#f5dfe4] sm:p-8" aria-label={title}>
+            {showTabs && (
+              <>
+                <StepHead title={step === "signup" ? "Create your account" : "Welcome back"}>
+                  {step === "signup" ? "Joining is free. You see every price before you pay." : "Log in to build, edit and track your pages."}
+                </StepHead>
+                <div className="ml-seg relative mb-6 mt-6 grid grid-cols-2 rounded-full bg-[#fff1f3] p-1" role="tablist" aria-label="Create an account or log in">
+                  <span className={cx("ml-seg-thumb", step === "login" && "right")} aria-hidden />
+                  {[["signup", "Create account"], ["login", "Log in"]].map(([key, label]) => (
+                    <button key={key} type="button" role="tab" aria-selected={step === key} onClick={() => goTo(key)} className={cx("button-sm relative z-10 rounded-full px-3 py-2 transition-colors duration-300", step === key ? "text-[#be123c]" : "text-[#8a6a80] hover:text-[#be123c]")}>{label}</button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="space-y-4 empty:hidden [&:not(:empty)]:mb-6">
+              {authLocked && (
+                <Notice tone="warn" title="Temporarily locked for your security">
+                  <p>{authLock.message.replace(/\s*(It unlocks|Please try again)[^.]*\.?$/i, "").trim()}</p>
+                  <p>Unlocks automatically in <span className="font-semibold tabular-nums">{formatWait(authLockLeft)}</span>. If this is a mistake, <Link to="/memories/contact" className="font-semibold underline">contact support</Link> and we can unlock it.</p>
+                </Notice>
+              )}
+              {formError && <Notice><p>{formError}</p></Notice>}
+            </div>
+
+            {/* each step fades up as it arrives */}
+            <div key={step} className="ml-step">
+              {/* SIGN UP */}
+              {step === "signup" && (
+                <form onSubmit={onSignup} className="space-y-4" noValidate>
+                  {googleEnabled && (<><GoogleButton text="signup_with" onCredential={onGoogleCredential} disabled={busy || authLocked} /><Divider /></>)}
+                  <Field label="Full name" htmlFor="name" error={signupForm.formState.errors.name?.message}>
+                    <input id="name" autoComplete="name" autoCapitalize="words" enterKeyHint="next" aria-invalid={Boolean(signupForm.formState.errors.name) || undefined} className={inputClass(signupForm.formState.errors.name)} {...signupForm.register("name")} />
+                  </Field>
+                  <Field label="Email" htmlFor="email" error={signupForm.formState.errors.email?.message} hint="We send a 6 digit code here to confirm it is you.">
+                    <input id="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} enterKeyHint="next" aria-invalid={Boolean(signupForm.formState.errors.email) || undefined} className={inputClass(signupForm.formState.errors.email)} {...signupForm.register("email")} />
+                  </Field>
+                  <Field label="Mobile number" htmlFor="mobile" error={signupForm.formState.errors.mobile?.message}>
+                    <PhoneInput id="mobile" countryProps={signupForm.register("countryCode")} mobileProps={signupForm.register("mobile")} dial={signupForm.watch("countryCode")} invalid={signupForm.formState.errors.mobile} inputClass={inputClass} />
+                  </Field>
+                  <Field label="Password" htmlFor="password" error={signupForm.formState.errors.password?.message}>
+                    <PasswordInput id="password" autoComplete="new-password" invalid={signupForm.formState.errors.password} {...signupForm.register("password")} />
+                    <PasswordRules value={signupPw} />
+                  </Field>
+                  <Field label="Confirm password" htmlFor="confirmPassword" error={signupForm.formState.errors.confirmPassword?.message}>
+                    <PasswordInput id="confirmPassword" autoComplete="new-password" invalid={signupForm.formState.errors.confirmPassword} {...signupForm.register("confirmPassword")} />
+                  </Field>
+                  <Submit loading={busy} disabled={cooldown > 0 || authLocked}>
+                    {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : <>Send my code <ArrowRight size={16} weight="bold" aria-hidden /></>}
+                  </Submit>
+                  <p className="caption-5 text-center text-[#8a6a80]">
+                    By continuing you agree to our <Link className="ml-link font-semibold underline" to="/memories/terms">Terms</Link> and <Link className="ml-link font-semibold underline" to="/memories/privacy">Privacy Policy</Link>.
+                  </p>
+                </form>
+              )}
+
+              {/* LOG IN */}
+              {step === "login" && (
+                <form onSubmit={onLogin} className="space-y-4" noValidate>
+                  {googleEnabled && (<><GoogleButton text="signin_with" onCredential={onGoogleCredential} disabled={busy || authLocked} /><Divider /></>)}
+                  {isLocked && (
+                    <Notice tone="warn" title="Account locked for your safety">
+                      <p>Too many wrong passwords. It unlocks automatically in <span className="font-semibold tabular-nums">{formatWait(lockLeft)}</span>.</p>
+                      <p>In a hurry? <button type="button" className="font-semibold underline" onClick={goForgot}>Reset your password</button> with an email code.</p>
+                    </Notice>
+                  )}
+                  <Field label="Email or mobile" htmlFor="identifier" error={loginForm.formState.errors.identifier?.message}>
+                    <input id="identifier" autoComplete="username" autoCapitalize="none" spellCheck={false} enterKeyHint="next" aria-invalid={Boolean(loginForm.formState.errors.identifier) || undefined} className={inputClass(loginForm.formState.errors.identifier)} {...loginForm.register("identifier")} />
+                  </Field>
+                  <Field label="Password" htmlFor="login-password" error={loginForm.formState.errors.password?.message}>
+                    <PasswordInput id="login-password" autoComplete="current-password" invalid={loginForm.formState.errors.password} {...loginForm.register("password")} />
+                  </Field>
+                  <div className="text-right"><button type="button" className={linkBtn} onClick={goForgot}>Forgot password?</button></div>
+                  <Submit loading={busy} disabled={isLocked || authLocked}>{isLocked ? `Locked · ${formatWait(lockLeft)}` : <>Log in <ArrowRight size={16} weight="bold" aria-hidden /></>}</Submit>
+                  <p className="body-6 text-center text-[#7a5370]">New here? <button type="button" className={linkBtn} onClick={() => goTo("signup")}>Create an account</button></p>
+                </form>
+              )}
+
+              {/* GOOGLE: ONE MORE DETAIL */}
+              {step === "google-mobile" && googleSignup && (
+                <form onSubmit={onGoogleMobile} className="space-y-6" noValidate>
+                  <StepHead Icon={LockKey} title="One last detail">Signing up as <span className="break-all font-semibold text-[#2a1023]">{googleSignup.email}</span>. Add your mobile number to finish.</StepHead>
+                  <Field label="Mobile number" htmlFor="g-mobile" error={mobileForm.formState.errors.mobile?.message}>
+                    <PhoneInput id="g-mobile" autoFocus countryProps={mobileForm.register("countryCode")} mobileProps={mobileForm.register("mobile")} dial={mobileForm.watch("countryCode")} invalid={mobileForm.formState.errors.mobile} inputClass={inputClass} />
+                  </Field>
+                  <Submit loading={busy}>Create account <ArrowRight size={16} weight="bold" aria-hidden /></Submit>
+                  <div className="text-center"><button type="button" className={backBtn} onClick={() => { setGoogleSignup(null); goTo("signup"); }}>Cancel</button></div>
+                </form>
+              )}
+
+              {/* FORGOT PASSWORD: step 1 */}
+              {step === "forgot" && (
+                <form onSubmit={onForgot} className="space-y-6" noValidate>
+                  <StepHead Icon={Key} title="Forgot your password?">Enter your account email and we will send a 6 digit code to set a new one.</StepHead>
+                  <Field label="Email" htmlFor="forgot-email" error={forgotForm.formState.errors.email?.message}>
+                    <input id="forgot-email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(forgotForm.formState.errors.email) || undefined} className={inputClass(forgotForm.formState.errors.email)} {...forgotForm.register("email")} />
+                  </Field>
+                  <Submit loading={busy} disabled={cooldown > 0 || authLocked}>{cooldown > 0 ? waitLabel.replace("Resend", "Send again") : "Send reset code"}</Submit>
+                  <div className="text-center"><button type="button" className={backBtn} onClick={() => goTo("login")}><ArrowLeft size={14} aria-hidden /> Back to log in</button></div>
+                </form>
+              )}
+
+              {/* FORGOT PASSWORD: step 2 */}
+              {step === "reset" && (
+                <form onSubmit={onReset} className="space-y-6" noValidate>
+                  <StepHead Icon={EnvelopeSimpleOpen} title="Set a new password">If an account exists for <span className="break-all font-semibold text-[#2a1023]">{pendingEmail}</span>, we sent it a 6 digit code. It is valid for 10 minutes.</StepHead>
+                  <OtpInput value={otp} onChange={setOtp} disabled={busy} />
+                  <Field label="New password" htmlFor="reset-password" error={resetForm.formState.errors.password?.message}>
+                    <PasswordInput id="reset-password" autoComplete="new-password" invalid={resetForm.formState.errors.password} {...resetForm.register("password")} />
+                    <PasswordRules value={resetPw} />
+                  </Field>
+                  <Field label="Confirm new password" htmlFor="reset-confirm" error={resetForm.formState.errors.confirmPassword?.message}>
+                    <PasswordInput id="reset-confirm" autoComplete="new-password" invalid={resetForm.formState.errors.confirmPassword} {...resetForm.register("confirmPassword")} />
+                  </Field>
+                  <Submit loading={busy} disabled={otp.length !== 6 || authLocked}>Change password</Submit>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <button type="button" className={backBtn} onClick={() => { goTo("forgot"); forgotForm.setValue("email", pendingEmail); }}><ArrowLeft size={14} aria-hidden /> Change email</button>
+                    <button type="button" disabled={cooldown > 0 || busy || authLocked} onClick={resendReset} className={linkBtn}>{cooldown > 0 ? waitLabel : "Resend code"}</button>
+                  </div>
+                  <p className="caption-5 text-center text-[#8a6a80]">Changing your password signs you out of every device and lifts any lock on your account.</p>
+                </form>
+              )}
+
+              {/* CODE (sign up or log in) */}
+              {isOtpStep && (
+                <form className="space-y-6" noValidate onSubmit={(e) => { e.preventDefault(); (step === "verify" ? onVerifySignup : onVerifyLogin)(); }}>
+                  <StepHead Icon={EnvelopeSimpleOpen} title="Check your email">We sent a 6 digit code to <span className="break-all font-semibold text-[#2a1023]">{pendingEmail}</span>. It can take a minute, and it may land in spam.</StepHead>
+                  <OtpInput value={otp} onChange={setOtp} disabled={busy} />
+                  <Submit loading={busy} disabled={otp.length !== 6 || authLocked}>{step === "verify" ? "Verify and create account" : "Verify and log in"}</Submit>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <button type="button" className={backBtn} onClick={() => goTo(step === "verify" ? "signup" : "login")}><ArrowLeft size={14} aria-hidden /> Change details</button>
+                    <button type="button" disabled={cooldown > 0 || busy || authLocked} onClick={step === "verify" ? resend : resendLogin} className={linkBtn}>
+                      {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </section>
+
+          {/* what the side panel says, for phones and tablets where there is no side panel */}
+          <ul className="mt-6 grid grid-cols-3 gap-2 lg:hidden">
+            {PERKS.map(([Icon, t]) => (
+              <li key={t} className="caption-4 flex flex-col items-center gap-2 rounded-2xl bg-white p-3 text-center text-[#6b3a5a] ring-1 ring-[#f5dfe4]">
+                <Icon size={20} weight="duotone" className="text-[#e11d48]" aria-hidden /> {t}
               </li>
             ))}
           </ul>
-        </aside>
-
-        {/* Form card */}
-        <section className="mx-auto w-full max-w-md">
-          <div className="rounded-[32px] border border-rose-100 bg-white p-6 shadow-2xl shadow-rose-200/50 sm:p-8">
-            {showTabs && (
-              <div className="mb-6 grid grid-cols-2 rounded-full bg-rose-50 p-1 text-sm font-semibold" role="tablist">
-                {[["signup", "Create account"], ["login", "Log in"]].map(([key, label]) => (
-                  <button key={key} role="tab" aria-selected={step === key} onClick={() => { setStep(key); setFormError(""); }}
-                    className={cx("rounded-full py-2.5 transition", step === key ? "bg-white text-rose-600 shadow-sm" : "text-[#8a6a80] hover:text-rose-600")}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {authLocked && (
-              <div role="alert" className="mb-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
-                <p className="flex items-center gap-2 font-semibold"><ShieldAlert className="h-4 w-4 shrink-0" aria-hidden /> Temporarily locked for your security</p>
-                <p className="mt-1.5">{authLock.message.replace(/\s*(It unlocks|Please try again)[^.]*\.?$/i, "").trim()}</p>
-                <p className="mt-1.5">Unlocks automatically in <span className="font-bold tabular-nums">{formatWait(authLockLeft)}</span>. If this is a mistake, contact support and we can unlock it.</p>
-              </div>
-            )}
-
-            {formError && <div role="alert" className="mb-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-100">{formError}</div>}
-
-            {/* SIGN UP */}
-            {step === "signup" && (
-              <form onSubmit={onSignup} className="space-y-4" noValidate>
-                {googleEnabled && (<><GoogleButton text="signup_with" onCredential={onGoogleCredential} disabled={busy || authLocked} /><Divider /></>)}
-                <Field label="Full name" htmlFor="name" error={signupForm.formState.errors.name?.message}>
-                  <input id="name" autoComplete="name" className={inputClass(signupForm.formState.errors.name)} {...signupForm.register("name")} />
-                </Field>
-                <Field label="Email" htmlFor="email" error={signupForm.formState.errors.email?.message} hint="We'll send a verification code here.">
-                  <input id="email" type="email" autoComplete="email" className={inputClass(signupForm.formState.errors.email)} {...signupForm.register("email")} />
-                </Field>
-                <Field label="Mobile number" htmlFor="mobile" error={signupForm.formState.errors.mobile?.message}>
-                  <PhoneInput id="mobile" countryProps={signupForm.register("countryCode")} mobileProps={signupForm.register("mobile")} dial={signupForm.watch("countryCode")} invalid={signupForm.formState.errors.mobile} inputClass={inputClass} />
-                </Field>
-                <Field label="Password" htmlFor="password" error={signupForm.formState.errors.password?.message} hint="8+ characters with upper, lower, number and symbol.">
-                  <PasswordInput id="password" autoComplete="new-password" invalid={signupForm.formState.errors.password} {...signupForm.register("password")} />
-                </Field>
-                <Field label="Confirm password" htmlFor="confirmPassword" error={signupForm.formState.errors.confirmPassword?.message}>
-                  <PasswordInput id="confirmPassword" autoComplete="new-password" invalid={signupForm.formState.errors.confirmPassword} {...signupForm.register("confirmPassword")} />
-                </Field>
-                <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0 || authLocked} className="w-full">
-                  {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : "Send verification code"}
-                </Button>
-                <p className="text-center text-xs text-[#8a6a80]">
-                  By continuing you agree to our <Link className="underline" to="/memories/terms">Terms</Link> and <Link className="underline" to="/memories/privacy">Privacy Policy</Link>.
-                </p>
-              </form>
-            )}
-
-            {/* LOG IN */}
-            {step === "login" && (
-              <form onSubmit={onLogin} className="space-y-4" noValidate>
-                {googleEnabled && (<><GoogleButton text="signin_with" onCredential={onGoogleCredential} disabled={busy || authLocked} /><Divider /></>)}
-                {isLocked && (
-                  <div role="alert" className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
-                    <p className="flex items-center gap-2 font-semibold"><ShieldAlert className="h-4 w-4 shrink-0" aria-hidden /> Account locked for your safety</p>
-                    <p className="mt-1.5">Too many wrong passwords. It unlocks automatically in <span className="font-bold tabular-nums">{formatWait(lockLeft)}</span>.</p>
-                    <p className="mt-1.5">In a hurry? <button type="button" className="font-semibold underline" onClick={goForgot}>Reset your password</button> with an email code.</p>
-                  </div>
-                )}
-                <Field label="Email or mobile" htmlFor="identifier" error={loginForm.formState.errors.identifier?.message}>
-                  <input id="identifier" autoComplete="username" className={inputClass(loginForm.formState.errors.identifier)} {...loginForm.register("identifier")} />
-                </Field>
-                <Field label="Password" htmlFor="login-password" error={loginForm.formState.errors.password?.message}>
-                  <PasswordInput id="login-password" autoComplete="current-password" invalid={loginForm.formState.errors.password} {...loginForm.register("password")} />
-                </Field>
-                <div className="-mt-1 text-right"><button type="button" className={linkBtn} onClick={goForgot}>Forgot password?</button></div>
-                <Button type="submit" size="lg" loading={busy} disabled={isLocked || authLocked} className="w-full">{isLocked ? `Locked · ${formatWait(lockLeft)}` : "Log in"}</Button>
-              </form>
-            )}
-
-            {/* GOOGLE: ONE MORE DETAIL */}
-            {step === "google-mobile" && googleSignup && (
-              <form onSubmit={onGoogleMobile} className="space-y-5" noValidate>
-                <p className="text-sm text-[#6b3a5a]">Signing up as <span className="font-semibold">{googleSignup.email}</span>. Add your mobile number to finish.</p>
-                <Field label="Mobile number" htmlFor="g-mobile" error={mobileForm.formState.errors.mobile?.message}>
-                  <PhoneInput id="g-mobile" autoFocus countryProps={mobileForm.register("countryCode")} mobileProps={mobileForm.register("mobile")} dial={mobileForm.watch("countryCode")} invalid={mobileForm.formState.errors.mobile} inputClass={inputClass} />
-                </Field>
-                <Button type="submit" size="lg" loading={busy} className="w-full">Create account</Button>
-                <button type="button" className={cx(backBtn, "block w-full text-center")} onClick={() => { setGoogleSignup(null); setFormError(""); setStep("signup"); }}>Cancel</button>
-              </form>
-            )}
-
-            {/* FORGOT PASSWORD: step 1 */}
-            {step === "forgot" && (
-              <form onSubmit={onForgot} className="space-y-5" noValidate>
-                <div className="text-center">
-                  <IconBadge icon={KeyRound} />
-                  <h2 className="mt-4 text-xl font-semibold text-[#3a1530]">Forgot your password?</h2>
-                  <p className="mt-1.5 text-sm text-[#7a5370]">Enter your account email and we&apos;ll send a 6-digit code to set a new one.</p>
-                </div>
-                <Field label="Email" htmlFor="forgot-email" error={forgotForm.formState.errors.email?.message}>
-                  <input id="forgot-email" type="email" autoComplete="email" className={inputClass(forgotForm.formState.errors.email)} {...forgotForm.register("email")} />
-                </Field>
-                <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0 || authLocked} className="w-full">
-                  {cooldown > 0 ? waitLabel.replace("Resend", "Send again") : "Send reset code"}
-                </Button>
-                <button type="button" className={cx(backBtn, "mx-auto block")} onClick={() => { setStep("login"); setFormError(""); }}>← Back to log in</button>
-              </form>
-            )}
-
-            {/* FORGOT PASSWORD: step 2 */}
-            {step === "reset" && (
-              <form onSubmit={onReset} className="space-y-5" noValidate>
-                <div className="text-center">
-                  <IconBadge icon={MailCheck} />
-                  <h2 className="mt-4 text-xl font-semibold text-[#3a1530]">Set a new password</h2>
-                  <p className="mt-1.5 text-sm text-[#7a5370]">If an account exists for <span className="font-semibold text-[#3a1530]">{pendingEmail}</span>, we sent it a 6-digit code. It&apos;s valid for 10 minutes.</p>
-                </div>
-                <OtpInput value={otp} onChange={setOtp} disabled={busy} />
-                <Field label="New password" htmlFor="reset-password" error={resetForm.formState.errors.password?.message} hint="8+ characters with upper, lower, number and symbol.">
-                  <PasswordInput id="reset-password" autoComplete="new-password" invalid={resetForm.formState.errors.password} {...resetForm.register("password")} />
-                </Field>
-                <Field label="Confirm new password" htmlFor="reset-confirm" error={resetForm.formState.errors.confirmPassword?.message}>
-                  <PasswordInput id="reset-confirm" autoComplete="new-password" invalid={resetForm.formState.errors.confirmPassword} {...resetForm.register("confirmPassword")} />
-                </Field>
-                <Button type="submit" size="lg" loading={busy} disabled={otp.length !== 6 || authLocked} className="w-full">Change password</Button>
-                <div className="flex items-center justify-between">
-                  <button type="button" className={backBtn} onClick={() => { setStep("forgot"); setFormError(""); forgotForm.setValue("email", pendingEmail); }}>← Change email</button>
-                  <button type="button" disabled={cooldown > 0 || busy || authLocked} onClick={resendReset} className={linkBtn}>{cooldown > 0 ? waitLabel : "Resend code"}</button>
-                </div>
-                <p className="text-center text-xs text-[#8a6a80]">Changing your password signs you out of every device and lifts any lock on your account.</p>
-              </form>
-            )}
-
-            {/* OTP (signup or login) */}
-            {isOtpStep && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <IconBadge icon={MailCheck} />
-                  <h2 className="mt-4 text-xl font-semibold text-[#3a1530]">Check your email</h2>
-                  <p className="mt-1.5 text-sm text-[#7a5370]">We sent a 6-digit code to <span className="font-semibold text-[#3a1530]">{pendingEmail}</span></p>
-                </div>
-                <OtpInput value={otp} onChange={setOtp} disabled={busy} />
-                <Button size="lg" loading={busy} disabled={otp.length !== 6 || authLocked} onClick={step === "verify" ? onVerifySignup : onVerifyLogin} className="w-full">
-                  {step === "verify" ? "Verify & create account" : "Verify & log in"}
-                </Button>
-                <div className="flex items-center justify-between">
-                  <button className={backBtn} onClick={() => { setStep(step === "verify" ? "signup" : "login"); setFormError(""); }}>← Change details</button>
-                  <button disabled={cooldown > 0 || busy || authLocked} onClick={step === "verify" ? resend : resendLogin} className={linkBtn}>
-                    {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
+          <p className="caption-5 mt-6 text-center text-[#8a6a80]">One Target Trek account works across Memories and the rest of the site.</p>
+        </div>
       </div>
+
+      {/* ------------------------------ the picture side (desktop) ------------------------------ */}
+      <aside className="ml-dark ml-auth-side hidden bg-[#2a1023] p-12 text-white lg:flex lg:flex-col lg:justify-between" aria-label="What you can make">
+        <p className="caption-3 text-[#fda4af]" style={{ letterSpacing: "0.16em" }}>{TEMPLATES.length} OCCASIONS · {THEME_TOTAL} LOOKS</p>
+
+        <div className="relative mx-auto" style={{ width: 280 * phone, height: 580 * phone + 24 }} aria-hidden>
+          {sides.map((t, i) => (
+            <div key={t.id} className="absolute left-0 top-0" style={{ transform: `translate(${i ? 58 : -58}%, 6%) rotate(${i ? 9 : -9}deg) scale(0.86)`, opacity: 0.85 }}>
+              <div className="ml-bob" style={{ "--d": `${i * 1.4}s` }}><TemplateScene theme={t.theme} scale={phone} /></div>
+            </div>
+          ))}
+          <div className="ml-bob relative" style={{ "--d": "0.7s" }}><TemplateScene theme={centre.theme} scale={phone} /></div>
+        </div>
+
+        <div>
+          <h2 className="heading-3 max-w-md text-white">Make someone&apos;s day, one page at a time.</h2>
+          <ul className="ml-auth-perks mt-6 space-y-4">
+            {PERKS.map(([Icon, t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#3d1a33] text-[#fda4af]"><Icon size={20} weight="duotone" aria-hidden /></span>
+                <div className="min-w-0"><p className="body-4 text-white">{t}</p><p className="body-6 text-[#c9a9bd]">{d}</p></div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
     </main>
   );
 }

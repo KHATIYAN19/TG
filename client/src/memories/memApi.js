@@ -11,10 +11,13 @@ const data = (r) => r.data?.data;
 export const getConfig = () => memoriesHttp.get("/config").then(data);
 export const redeemCode = (code) => memoriesHttp.post("/codes/redeem", { code }).then(data);
 export const redeemGumroadOrder = (orderId, email) => memoriesHttp.post("/gumroad/redeem-order", { orderId, email }).then(data);
-export const claimFreeCredit = () => memoriesHttp.post("/credits/free").then(data);
+/* a free look: the pass is made for the template + look the user picked */
+export const claimFreeCredit = (occasionId, theme) => memoriesHttp.post("/credits/free", { occasionId, ...(theme ? { theme } : {}) }).then(data);
+/* the price of a selection (nothing is created): buy = { kind: "page", occasionId, theme, packs } or { kind: "addon", pageId, packs } */
+export const getQuote = (buy) => memoriesHttp.post("/payments/quote", buy).then(data);
 /* the buyer's mobile number is read from their account on the server, so nothing about it is sent; `returnOrigin` brings the buyer back to this same site (and login) after paying */
-export const createPayment = (gateway) =>
-  memoriesHttp.post("/payments/create", { gateway, returnOrigin: window.location.origin, attribution: getAttribution() }).then(data);
+export const createPayment = (gateway, buy) =>
+  memoriesHttp.post("/payments/create", { gateway, ...buy, returnOrigin: window.location.origin, attribution: getAttribution() }).then(data);
 export const verifyPayment = (orderId, payload) => memoriesHttp.post("/payments/verify", { orderId, payload }).then(data);
 export const getPaymentStatus = (orderId) => memoriesHttp.get(`/payments/${encodeURIComponent(orderId)}/status`).then(data);
 export const createPage = (body) => memoriesHttp.post("/pages", body).then(data);
@@ -28,7 +31,7 @@ export function useMemConfig() {
   const [cfg, setCfg] = useState(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
-    try { setCfg(await getConfig()); setError(""); } catch (e) { setError(errMsg(e)); }
+    try { const c = await getConfig(); setCfg(c); setError(""); return c; } catch (e) { setError(errMsg(e)); return null; }
   }, []);
   useEffect(() => { load(); }, [load]);
   return { cfg, error, reload: load, setCredits: (credits) => setCfg((c) => (c ? { ...c, credits } : c)) };

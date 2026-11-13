@@ -20,6 +20,7 @@ export default function MemoriesPaymentResult() {
   const order = params.get("order") || "";
   const hinted = params.get("status");
   const [state, setState] = useState(order ? "checking" : "failed"); // checking | paid | pending | failed
+  const [next, setNext] = useState("/memories/app"); // where "paid" leads: back to the look that was bought, or to the page that got extra room
   const tries = useRef(0);
 
   useEffect(() => {
@@ -30,7 +31,13 @@ export default function MemoriesPaymentResult() {
       try {
         const r = await getPaymentStatus(order);
         if (!live) return;
-        if (r.status === "paid") { trackPaid(order); setState("paid"); timer = setTimeout(() => navigate("/memories/app", { replace: true, state: { welcome: "payment" } }), 2200); return; }
+        if (r.status === "paid") {
+          trackPaid(order);
+          const to = (r.kind === "addon" || r.kind === "upgrade") && r.pageId ? `/memories/app/pages/${r.pageId}/edit` : r.template ? `/memories/app/create/${r.template}${r.theme ? `?theme=${r.theme}` : ""}` : "/memories/app";
+          setNext(to); setState("paid");
+          timer = setTimeout(() => navigate(to, { replace: true, state: { welcome: "payment" } }), 2200);
+          return;
+        }
         if (r.status === "failed") return setState("failed");
         if (++tries.current < 10) { setState("checking"); timer = setTimeout(check, 3000); } else setState("pending");
       } catch {
@@ -45,8 +52,8 @@ export default function MemoriesPaymentResult() {
 
   const view = {
     checking: [Clock3, "text-amber-500", "Confirming your payment…", "Please wait a moment. Don't close this page."],
-    paid: [CheckCircle2, "text-emerald-500", "Payment received!", "1 page credit has been added. Taking you to the templates…"],
-    pending: [Clock3, "text-amber-500", "Still waiting for the bank", "We haven't received confirmation yet. If money was deducted, your credit will appear automatically within a few minutes."],
+    paid: [CheckCircle2, "text-emerald-500", "Payment received!", "Your purchase is ready. Taking you there now…"],
+    pending: [Clock3, "text-amber-500", "Still waiting for the bank", "We haven't received confirmation yet. If money was deducted, your purchase will appear automatically within a few minutes."],
     failed: [AlertTriangle, "text-rose-500", hinted === "failed" ? "The payment didn't go through" : "We couldn't confirm a payment", "Nothing was charged for a failed payment. You can try again whenever you're ready."],
   }[state];
   const [Icon, tone, title, text] = view;
@@ -59,9 +66,9 @@ export default function MemoriesPaymentResult() {
           <h1 className="mt-4 text-xl font-bold text-[#3a1530]">{title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-[#7a5370]">{text}</p>
           <div className="mt-6 flex flex-col gap-2">
-            {state === "paid" && <Button as={Link} to="/memories/app" size="lg">Choose a template</Button>}
+            {state === "paid" && <Button as={Link} to={next} replace size="lg">Continue</Button>}
             {(state === "failed" || state === "pending") && <Button as={Link} to="/memories/app/pay" size="lg">{state === "failed" ? "Try again" : "Back to payment"}</Button>}
-            {state === "pending" && <Button as={Link} to="/memories/app" variant="soft">Check my credits</Button>}
+            {state === "pending" && <Button as={Link} to="/memories/app" variant="soft">Check my pages</Button>}
           </div>
         </div>
       </div>

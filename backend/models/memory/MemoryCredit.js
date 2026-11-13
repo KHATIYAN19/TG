@@ -13,6 +13,18 @@ const memoryCreditSchema = new Schema(
     source: { type: String, enum: ["code", "payment", "admin", "free", "gumroad"], required: true },
     ref: { type: String, default: null }, // code string, order id, or admin user id
     page: { type: Schema.Types.ObjectId, ref: "MemoryPage", default: null },
+    /*
+      What this credit can create, in paise: it works for any theme that costs this much or LESS.
+      null = any theme at any price (codes, Gumroad and admin grants).
+    */
+    maxPricePaise: { type: Number, default: null, min: 0 },
+    /* what the buyer picked when paying (information only) */
+    occasion: { type: Schema.Types.ObjectId, ref: "MemoryOccasion", default: null },
+    theme: { type: String, default: "" },
+    /* add-ons bought together with the page: extra room the page starts with ({ photos, videos, photoMb, videoMb, videoSec, audioMb, audioSec, chars, days }) */
+    extra: { type: Schema.Types.Mixed, default: null },
+    /* upgrade orders already applied to this pass (makes applying one safe to repeat) */
+    upgradeOrders: { type: [Schema.Types.ObjectId], default: [], select: false },
   },
   { timestamps: true }
 );

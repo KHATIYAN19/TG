@@ -16,6 +16,9 @@ const memorySettingsSchema = new Schema(
     maxVideoMb: { type: Number, default: 100, min: 0.1, max: 500 },
     /* a voice message on the page: recorded in the browser (up to 2 minutes) or uploaded. Only the size is set here. */
     maxAudioMb: { type: Number, default: 10, min: 0.1, max: 25 },
+    /* longest video and voice message, in seconds (checked in the browser and again when the file is attached) */
+    maxVideoSec: { type: Number, default: 60, min: 1, max: 3600 },
+    maxAudioSec: { type: Number, default: 120, min: 1, max: 1800 },
     maxMessageChars: { type: Number, default: 2000, min: 10, max: 10000 },
 
     /* payment gateways the admin switched on (ids from services/memory/payments). Empty = every configured gateway. */

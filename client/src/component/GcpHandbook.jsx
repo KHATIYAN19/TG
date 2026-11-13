@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { trackViewContent } from "../lib/metaPixel.js";
-import { styles as baseStyles, readTheme, ScrollProgress, CountUp, ScrollScale } from "./SystemDesignLLD.jsx";
+import { styles as baseStyles, readTheme, ScrollProgress, CountUp, ScrollScale } from "./lldLegacyBase.jsx";
 import { sqlStyles, CopyButton } from "./SqlInterviewHandbook.jsx";
 
 const SITE_NAME = "Target Trek";

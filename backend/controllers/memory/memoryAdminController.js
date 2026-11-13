@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import MemoryPage from "../../models/memory/MemoryPage.js";
 import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
+import MemoryAddon from "../../models/memory/MemoryAddon.js";
+import { ADDON_DEFS, addonCatalog, addonOut, baseLimits, emptyExtra, ensureAddons, limitsFor, limitsOut, occasionForAdmin } from "../../services/memory/catalog.js";
 import MemoryCode from "../../models/memory/MemoryCode.js";
 import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryOrder from "../../models/memory/MemoryOrder.js";
@@ -21,7 +23,7 @@ import { changeAccountSecurityState, invalidateUserAuth, revokeAllRedisSessions 
 import { purgeUser } from "../../services/arena/purge.js";
 import { activeGateways, knownGateways } from "../../services/memory/payments/index.js";
 import {
-  MemoryError, assertId, deleteMediaObjects, purgePageEvents, ensureOccasions, escapeRegex, getSettings, grantCredits,
+  TEMPLATE_THEMES, MemoryError, assertId, deleteMediaObjects, purgePageEvents, ensureOccasions, escapeRegex, getSettings, grantCredits,
   hashPin, encryptPin, buildActivity, MAX_EVENTS_PER_PAGE, newCode, newPin, newSlug, pageView, parse, sendError, updateSettings,
 } from "../../services/memory/memoryService.js";
 
@@ -101,6 +103,8 @@ export const saveSettings = handler(async (req, res) => {
       maxVideoMb: z.number().min(0.1).max(500),
       maxAudioMb: z.number().min(0.1).max(25),
       maxMessageChars: z.number().int().min(10).max(10000),
+      maxVideoSec: z.number().int().min(1).max(3600),
+      maxAudioSec: z.number().int().min(1).max(1800),
       pageLifetimeDays: z.number().int().min(1).max(3650),
       emailEnabled: z.boolean(),
       maxEmailsPerUserPerDay: z.number().int().min(1).max(200),
@@ -125,19 +129,61 @@ export const saveSettings = handler(async (req, res) => {
 ===================================================== */
 
 export const stats = handler(async (req, res) => {
-  const [pages, active, orders, revenue, redeemed, storage, creditsOpen] = await Promise.all([
+  const DAY = 24 * 3600 * 1000;
+  const now = Date.now();
+  const since = (d) => new Date(now - d * DAY);
+  // "today" is the day in India, whatever timezone the server runs in (the charts below group by Asia/Kolkata too)
+  const IST = 5.5 * 3600 * 1000;
+  const day0 = new Date(Math.floor((now + IST) / DAY) * DAY - IST);
+  const from14 = new Date(day0.getTime() - 13 * DAY);
+  const sum = (match) => MemoryOrder.aggregate([{ $match: { status: "paid", ...match } }, { $group: { _id: null, t: { $sum: "$amount" }, n: { $sum: 1 } } }]);
+  const [pages, active, orders, revenue, redeemed, storage, creditsOpen, views,
+    rev1, rev7, rev30, pages1, pages7, expiring7, blocked, closed, failed, unpaid, gumroadSales, answered, replies,
+    daily, pageDaily, byTemplate, byGateway, byKind, topPages] = await Promise.all([
     MemoryPage.estimatedDocumentCount(),
     MemoryPage.countDocuments({ status: "active" }),
     MemoryOrder.countDocuments({ status: "paid" }),
-    MemoryOrder.aggregate([{ $match: { status: "paid" } }, { $group: { _id: null, t: { $sum: "$amount" } } }]),
+    sum({}),
     MemoryCode.aggregate([{ $group: { _id: null, t: { $sum: "$usedCount" } } }]),
     MemoryPage.aggregate([{ $unwind: "$media" }, { $group: { _id: null, t: { $sum: "$media.size" } } }]),
     MemoryCredit.countDocuments({ page: null }),
+    MemoryPage.aggregate([{ $group: { _id: null, t: { $sum: "$viewCount" } } }]),
+    sum({ paidAt: { $gte: day0 } }), sum({ paidAt: { $gte: since(7) } }), sum({ paidAt: { $gte: since(30) } }),
+    MemoryPage.countDocuments({ createdAt: { $gte: day0 } }), MemoryPage.countDocuments({ createdAt: { $gte: since(7) } }),
+    MemoryPage.countDocuments({ status: { $ne: "blocked" }, expiresAt: { $gt: new Date(), $lte: new Date(now + 7 * DAY) } }),
+    MemoryPage.countDocuments({ status: "blocked" }), MemoryPage.countDocuments({ status: "closed" }),
+    MemoryOrder.countDocuments({ status: "failed", createdAt: { $gte: since(30) } }),
+    MemoryOrder.countDocuments({ status: "created", createdAt: { $gte: since(30) } }),
+    MemoryGumroadSale.countDocuments({}),
+    MemoryPage.countDocuments({ "answer.value": { $in: ["yes", "no", "later"] } }),
+    MemoryPage.aggregate([{ $group: { _id: null, t: { $sum: { $size: { $ifNull: ["$replies", []] } } } } }]),
+    MemoryOrder.aggregate([{ $match: { status: "paid", paidAt: { $gte: from14 } } }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$paidAt", timezone: "Asia/Kolkata" } }, revenue: { $sum: "$amount" }, orders: { $sum: 1 } } }]),
+    MemoryPage.aggregate([{ $match: { createdAt: { $gte: from14 } } }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Kolkata" } }, pages: { $sum: 1 } } }]),
+    MemoryPage.aggregate([{ $group: { _id: "$occasion", n: { $sum: 1 }, views: { $sum: "$viewCount" } } }, { $sort: { n: -1 } }, { $limit: 8 }, { $lookup: { from: "memoryoccasions", localField: "_id", foreignField: "_id", as: "o" } }, { $project: { n: 1, views: 1, name: { $arrayElemAt: ["$o.name", 0] } } }]),
+    MemoryOrder.aggregate([{ $match: { status: "paid" } }, { $group: { _id: "$gateway", n: { $sum: 1 }, revenue: { $sum: "$amount" } } }, { $sort: { revenue: -1 } }]),
+    MemoryOrder.aggregate([{ $match: { status: "paid" } }, { $group: { _id: { $ifNull: ["$kind", "page"] }, n: { $sum: 1 }, revenue: { $sum: "$amount" } } }]),
+    MemoryPage.find({}).sort({ viewCount: -1 }).limit(5).select("title recipientName viewCount status").lean(),
   ]);
-  const views = await MemoryPage.aggregate([{ $group: { _id: null, t: { $sum: "$viewCount" } } }]);
+  // every one of the last 14 days is present, even a quiet one
+  const dr = new Map(daily.map((r) => [r._id, r]));
+  const dp = new Map(pageDaily.map((r) => [r._id, r.pages]));
+  const series = Array.from({ length: 14 }, (_, k) => {
+    const d = new Date(day0.getTime() - (13 - k) * DAY);
+    const key = new Date(d.getTime() + IST).toISOString().slice(0, 10);
+    return { date: key, revenue: rupees(dr.get(key)?.revenue), orders: dr.get(key)?.orders || 0, pages: dp.get(key) || 0 };
+  });
   ok(res, {
     pages, activePages: active, paidOrders: orders, revenue: rupees(revenue[0]?.t),
     codesRedeemed: redeemed[0]?.t || 0, storageBytes: storage[0]?.t || 0, unusedCredits: creditsOpen, totalViews: views[0]?.t || 0,
+    revenueToday: rupees(rev1[0]?.t), revenue7d: rupees(rev7[0]?.t), revenue30d: rupees(rev30[0]?.t),
+    ordersToday: rev1[0]?.n || 0, orders7d: rev7[0]?.n || 0, orders30d: rev30[0]?.n || 0,
+    pagesToday: pages1, pages7d: pages7, expiringSoon: expiring7, blockedPages: blocked, closedPages: closed,
+    failedOrders30d: failed, unpaidOrders30d: unpaid, gumroadRedeemed: gumroadSales, answeredPages: answered, replies: replies[0]?.t || 0,
+    series,
+    byTemplate: byTemplate.map((r) => ({ name: r.name || "Removed template", pages: r.n, views: r.views })),
+    byGateway: byGateway.map((r) => ({ gateway: r._id, orders: r.n, revenue: rupees(r.revenue) })),
+    byKind: byKind.map((r) => ({ kind: r._id, orders: r.n, revenue: rupees(r.revenue) })),
+    topPages: topPages.map((p) => ({ id: String(p._id), title: p.title, recipientName: p.recipientName, views: p.viewCount || 0, status: p.status })),
   });
 });
 
@@ -263,8 +309,7 @@ export const reopenPage = handler(async (req, res) => {
 export const regenerateLink = handler(async (req, res) => {
   const page = await loadPage(req.params.id);
   notBlocked(page);
-  page.slug = newSlug();
-  page.status = "active";
+  page.slug = newSlug(); // a closed page stays closed: a new link must not put it back online by itself
   page.accessVersion += 1;
   await page.save();
   ok(res, await out(page._id));
@@ -273,6 +318,7 @@ export const regenerateLink = handler(async (req, res) => {
 export const blockPage = handler(async (req, res) => {
   const { blocked } = parse(z.object({ blocked: z.boolean() }), req.body);
   const page = await loadPage(req.params.id);
+  if (!blocked && page.status !== "blocked") return ok(res, await out(page._id)); // not blocked: "unblock" changes nothing (it must not close a live page)
   page.status = blocked ? "blocked" : "closed"; // unblocking leaves it closed so the owner decides when to reopen
   page.accessVersion += 1;
   await page.save();
@@ -292,6 +338,50 @@ export const removePageMedia = handler(async (req, res) => {
   await page.save();
   await removeFiles([key]);
   ok(res, await out(page._id, { withMedia: true }));
+});
+
+/* ---- room: what a page may hold, and the admin raising it for a paying user ---- */
+
+const ROOM_FIELDS = ["photos", "videos", "photoMb", "videoMb", "videoSec", "audioMb", "audioSec", "chars"];
+/* hard ceilings of what can be stored (the upload service and the page schema stop at these) */
+const ROOM_CEILING = { photos: 500, videos: 100, photoMb: 25, videoMb: 500, videoSec: 3600, audioMb: 25, audioSec: 1800, chars: 10000 };
+const BASE_KEY = { chars: "messageChars" };
+
+/* loadPage() only brings the template's name; the room needs its limits too */
+const occasionOf = (page) => MemoryOccasion.findById(page.occasion?._id || page.occasion).lean();
+
+const roomOut = async (page, occasion) => {
+  const s = await getSettings();
+  const extra = { ...emptyExtra(), ...(page.extra?.toObject?.() ?? page.extra ?? {}) };
+  const base = limitsOut(baseLimits(s, occasion));
+  const limits = limitsOut(limitsFor(s, occasion, extra));
+  const used = { photos: page.media.filter((m) => m.kind === "photo").length, videos: page.media.filter((m) => m.kind === "video").length };
+  return { base, extra, limits, used, ceiling: { ...ROOM_CEILING, chars: ROOM_CEILING.chars } };
+};
+
+export const getPageRoom = handler(async (req, res) => { const page = await loadPage(req.params.id); ok(res, await roomOut(page, await occasionOf(page))); });
+
+/** Set the EXTRA room on a page (on top of its template's limits). Each field is the extra amount; the total may not pass the hard ceiling. */
+export const setPageRoom = handler(async (req, res) => {
+  const shape = Object.fromEntries(ROOM_FIELDS.map((f) => [f, z.number().min(0).max(ROOM_CEILING[f]).optional()]));
+  const b = parse(z.object(shape), req.body);
+  const page = await loadPage(req.params.id);
+  const occasion = await occasionOf(page);
+  const s = await getSettings();
+  const base = baseLimits(s, occasion);
+  const extra = { ...emptyExtra(), ...(page.extra?.toObject?.() ?? page.extra ?? {}) };
+  for (const f of ROOM_FIELDS) {
+    if (b[f] === undefined) continue;
+    const whole = ["photos", "videos", "videoSec", "audioSec", "chars"].includes(f);
+    const v = whole ? Math.round(b[f]) : Math.round(b[f] * 100) / 100;
+    const total = (base[BASE_KEY[f] || f] || 0) + v;
+    if (total > ROOM_CEILING[f]) throw new MemoryError(400, `That is more than the most one page can hold (${ROOM_CEILING[f]}). This page's template already gives ${base[BASE_KEY[f] || f]}.`, "ROOM_TOO_BIG", { field: f, max: ROOM_CEILING[f] });
+    extra[f] = v;
+  }
+  page.extra = extra;
+  await page.save();
+  console.log(`[memory] admin ${req.user.id} set room on page ${page._id}: ${JSON.stringify(b)}`);
+  ok(res, await roomOut(page, occasion));
 });
 
 export const deletePage = handler(async (req, res) => {
@@ -577,12 +667,36 @@ export const removeMailBlock = handler(async (req, res) => {
 
 export const listOrders = handler(async (req, res) => {
   const { limit, page, skip } = paginate(req);
-  const [rows, total] = await Promise.all([
-    MemoryOrder.find().sort({ createdAt: -1 }).skip(skip).limit(limit).populate("user", "name email mobile countryCode").lean(),
-    MemoryOrder.countDocuments(),
+  const filter = {};
+  if (["paid", "created", "failed"].includes(req.query.status)) filter.status = req.query.status;
+  if (["page", "addon", "upgrade"].includes(req.query.kind)) filter.kind = req.query.kind;
+  if (req.query.gateway && /^[a-z0-9_-]{2,30}$/i.test(String(req.query.gateway))) filter.gateway = String(req.query.gateway);
+  const day = (v, end) => { const d = new Date(`${String(v)}T${end ? "23:59:59.999" : "00:00:00"}+05:30`); return Number.isNaN(d.getTime()) ? null : d; };
+  const range = {};
+  if (req.query.from && day(req.query.from)) range.$gte = day(req.query.from);
+  if (req.query.to && day(req.query.to, true)) range.$lte = day(req.query.to, true);
+  if (Object.keys(range).length) filter.createdAt = range;
+  const q = String(req.query.q || "").trim().slice(0, 80);
+  if (q) {
+    const rx = new RegExp(escapeRegex(q), "i");
+    const users = await User.find({ $or: [{ email: rx }, { name: rx }, ...(digitsOf(q).length >= 3 ? [{ mobile: new RegExp(escapeRegex(digitsOf(q))) }] : [])] }).select("_id").limit(200).lean();
+    filter.$or = [{ gatewayOrderId: rx }, { gatewayPaymentId: rx }, { user: { $in: users.map((u) => u._id) } }];
+  }
+  const [rows, total, tally] = await Promise.all([
+    MemoryOrder.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("user", "name email mobile countryCode").populate("page", "title recipientName").populate("occasion", "name").lean(),
+    MemoryOrder.countDocuments(filter),
+    MemoryOrder.aggregate([{ $match: filter }, { $group: { _id: "$status", n: { $sum: 1 }, amount: { $sum: "$amount" } } }]),
   ]);
+  const t = Object.fromEntries(tally.map((r) => [r._id, r]));
   ok(res, {
-    items: rows.map((o) => ({ id: String(o._id), user: o.user ? { name: o.user.name, email: o.user.email, phone: formatPhone(o.user.countryCode, o.user.mobile) || null } : null, amount: rupees(o.amount), status: o.status, gateway: o.gateway, gatewayOrderId: o.gatewayOrderId, gatewayPaymentId: o.gatewayPaymentId, failureReason: o.failureReason, createdAt: o.createdAt, paidAt: o.paidAt })),
+    items: rows.map((o) => ({
+      id: String(o._id), user: o.user ? { id: String(o.user._id), name: o.user.name, email: o.user.email, phone: formatPhone(o.user.countryCode, o.user.mobile) || null } : null,
+      amount: rupees(o.amount), kind: o.kind || "page", upgrade: o.kind === "upgrade" || Boolean(o.upgradeCredit), fullPrice: rupees(o.fullPricePaise), basePrice: rupees(o.basePaise),
+      template: o.occasion?.name || "", theme: o.theme || "", page: o.page ? { id: String(o.page._id), title: o.page.title, recipientName: o.page.recipientName } : null,
+      addons: (o.addons || []).map((a) => ({ name: a.name, packs: a.packs, price: rupees(a.pricePaise) })),
+      status: o.status, gateway: o.gateway, gatewayOrderId: o.gatewayOrderId, gatewayPaymentId: o.gatewayPaymentId, failureReason: o.failureReason, createdAt: o.createdAt, paidAt: o.paidAt, fulfilled: Boolean(o.fulfilledAt),
+    })),
+    summary: { paid: t.paid?.n || 0, paidAmount: rupees(t.paid?.amount), failed: t.failed?.n || 0, failedAmount: rupees(t.failed?.amount), pending: t.created?.n || 0, pendingAmount: rupees(t.created?.amount) },
     total, page, pages: Math.ceil(total / limit),
   });
 });
@@ -604,18 +718,25 @@ export const deleteOrder = handler(async (req, res) => {
    OCCASIONS
 ===================================================== */
 
-const occasionOut = (o) => ({ id: String(o._id), name: o.name, theme: o.theme, isActive: o.isActive, sortOrder: o.sortOrder });
+/* ---- templates (occasions): visibility, price, per-look controls and limits ---- */
+
+const nullableNum = (min, max, int = false) => (int ? z.number().int() : z.number()).min(min).max(max).nullable();
+const limitsPatch = z.object({
+  photos: nullableNum(0, 500, true), videos: nullableNum(0, 100, true), photoMb: nullableNum(0.1, 25), videoMb: nullableNum(0.1, 500),
+  videoSec: nullableNum(1, 3600, true), audioMb: nullableNum(0.1, 25), audioSec: nullableNum(1, 1800, true), messageChars: nullableNum(10, 10000, true),
+}).partial();
 
 export const listOccasions = handler(async (req, res) => {
   await ensureOccasions();
-  ok(res, (await MemoryOccasion.find().sort({ sortOrder: 1, name: 1 }).lean()).map(occasionOut));
+  const [s, rows] = await Promise.all([getSettings(), MemoryOccasion.find().sort({ sortOrder: 1, name: 1 }).lean()]);
+  ok(res, rows.map((o) => occasionForAdmin(o, s)));
 });
 
 export const createOccasion = handler(async (req, res) => {
   const b = parse(z.object({ name: z.string().trim().min(1).max(60), theme: z.string().trim().toLowerCase().max(40).optional() }), req.body);
   try {
     const o = await MemoryOccasion.create({ name: b.name, theme: b.theme || "default", sortOrder: await MemoryOccasion.countDocuments() });
-    ok(res, occasionOut(o), 201);
+    ok(res, occasionForAdmin(o.toObject(), await getSettings()), 201);
   } catch (e) {
     if (e?.code === 11000) throw new MemoryError(409, "That occasion already exists.", "OCCASION_EXISTS");
     throw e;
@@ -624,10 +745,36 @@ export const createOccasion = handler(async (req, res) => {
 
 export const updateOccasion = handler(async (req, res) => {
   assertId(req.params.id, "occasion id");
-  const b = parse(z.object({ name: z.string().trim().min(1).max(60), theme: z.string().trim().toLowerCase().max(40), isActive: z.boolean(), sortOrder: z.number().int() }).partial(), req.body);
-  const o = await MemoryOccasion.findByIdAndUpdate(req.params.id, { $set: b }, { new: true, runValidators: true });
+  const b = parse(
+    z.object({
+      name: z.string().trim().min(1).max(60), theme: z.string().trim().toLowerCase().max(40), isActive: z.boolean(), sortOrder: z.number().int(),
+      description: z.string().trim().max(200),
+      price: z.number().min(0).max(1000000).nullable(), // rupees; null = the default price from Settings
+      themes: z.array(z.object({ key: z.string().trim().toLowerCase().max(30), enabled: z.boolean(), price: z.number().min(0).max(1000000).nullable() })).max(40),
+      limits: limitsPatch,
+    }).partial(),
+    req.body
+  );
+  const o = await MemoryOccasion.findById(req.params.id);
   if (!o) throw new MemoryError(404, "Occasion not found.", "OCCASION_NOT_FOUND");
-  ok(res, occasionOut(o));
+  const { themes, limits, ...plain } = b;
+  Object.assign(o, plain);
+  if (themes) {
+    const known = new Set(TEMPLATE_THEMES[b.theme || o.theme] || []);
+    const bad = themes.find((t) => !known.has(t.key));
+    if (bad) throw new MemoryError(400, `"${bad.key}" is not a look of this template.`, "UNKNOWN_THEME");
+    // a look left at its defaults needs no entry
+    o.themes = themes.filter((t) => t.enabled === false || t.price != null);
+    if (known.size && themes.length === known.size && themes.every((t) => t.enabled === false)) throw new MemoryError(400, "Switch on at least one look, or hide the whole template instead.", "ALL_THEMES_OFF");
+  }
+  if (limits) for (const [k, v] of Object.entries(limits)) o.set(`limits.${k}`, v);
+  try {
+    await o.save();
+  } catch (e) {
+    if (e?.code === 11000) throw new MemoryError(409, "Another template already has that name.", "OCCASION_EXISTS");
+    throw e;
+  }
+  ok(res, occasionForAdmin(o.toObject(), await getSettings()));
 });
 
 export const deleteOccasion = handler(async (req, res) => {
@@ -636,4 +783,36 @@ export const deleteOccasion = handler(async (req, res) => {
   if (inUse) throw new MemoryError(409, `${inUse} page(s) use this occasion. Hide it instead of deleting.`, "OCCASION_IN_USE");
   await MemoryOccasion.findByIdAndDelete(req.params.id);
   ok(res, { deleted: true });
+});
+
+/* =====================================================
+   ADD-ONS  (what a user can buy to get more room on a page)
+===================================================== */
+
+export const listAddons = handler(async (req, res) => ok(res, (await addonCatalog()).map(addonOut)));
+
+export const updateAddon = handler(async (req, res) => {
+  const key = String(req.params.key);
+  if (!ADDON_DEFS[key]) throw new MemoryError(404, "Unknown add-on.", "ADDON_NOT_FOUND");
+  const b = parse(
+    z.object({
+      name: z.string().trim().min(1).max(60), description: z.string().trim().max(200), enabled: z.boolean(),
+      unit: z.number().min(0.1).max(100000), price: z.number().min(0).max(100000), maxPacks: z.number().int().min(1).max(100), sortOrder: z.number().int(),
+    }).partial(),
+    req.body
+  );
+  await ensureAddons();
+  const a = await MemoryAddon.findOneAndUpdate({ key }, { $set: b }, { new: true, runValidators: true }).lean();
+  if (!a) throw new MemoryError(404, "Add-on not found.", "ADDON_NOT_FOUND");
+  ok(res, addonOut(a));
+});
+
+/** Put an add-on back to the built-in defaults. */
+export const resetAddon = handler(async (req, res) => {
+  const key = String(req.params.key);
+  const d = ADDON_DEFS[key];
+  if (!d) throw new MemoryError(404, "Unknown add-on.", "ADDON_NOT_FOUND");
+  await ensureAddons();
+  const a = await MemoryAddon.findOneAndUpdate({ key }, { $set: { name: d.name, description: d.description, unit: d.unit, price: d.price, maxPacks: d.maxPacks, enabled: true } }, { new: true }).lean();
+  ok(res, addonOut(a));
 });

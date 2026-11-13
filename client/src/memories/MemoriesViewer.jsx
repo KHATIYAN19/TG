@@ -137,9 +137,10 @@ function createTracker(code) {
     queue = [];
     Object.entries(counts).forEach(([type, n]) => { if (n) out.push({ type, data: { n } }); delete counts[type]; });
     Object.entries(latest).forEach(([type, data]) => { out.push({ type, data }); delete latest[type]; });
+    queue = out.slice(40); // the server takes 40 at a time: the rest goes with the next batch instead of being dropped
     return out.slice(0, 40);
   };
-  const flush = () => { clearTimeout(timer); timer = null; const events = collect(); if (events.length) sendEvents(code, vid, events, token()).catch(() => {}); };
+  const flush = () => { clearTimeout(timer); timer = null; const events = collect(); if (events.length) sendEvents(code, vid, events, token()).catch(() => {}); if (queue.length) schedule(); };
   const schedule = () => { if (!timer) timer = setTimeout(flush, 2500); };
 
   const track = (type, data) => {

@@ -3,7 +3,9 @@ import { AlertCircle, Check, Film, ImagePlus, Loader2, Mic, RotateCw, Star, Tras
 
 import { errMsg } from "../arena/api";
 import { captionMedia, removeMedia, setMainMedia, uploadMedia } from "./memApi";
-import { ACCEPT, CAPTION_CHARS, CAPTION_IDEAS, checkFiles, mbOf, tidyCaption } from "./mediaRules";
+import { ACCEPT, CAPTION_CHARS, CAPTION_IDEAS, checkFilesAsync, mbOf, tidyCaption } from "./mediaRules";
+import { secLabel } from "./pricing";
+import { mmss } from "./RoomMeter";
 import { cx } from "./ui";
 
 let uid = 0;
@@ -12,7 +14,7 @@ let uid = 0;
   PHOTOS AND VIDEOS for a page that exists. Drop files (or tap to pick): each one is checked against the limits, then uploaded
   straight to storage with a signed form (see uploadMedia) with a progress bar. A failed file can be retried. The star marks the main one.
 */
-export default function MediaManager({ pageId, media: allMedia, limits, onChange, initialFiles, onBusy }) {
+export default function MediaManager({ pageId, media: allMedia, limits, onChange, initialFiles, onBusy, onMore }) {
   const [queue, setQueue] = useState([]); // { id, file, kind, preview, progress, status: "up" | "err", error }
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -50,17 +52,17 @@ export default function MediaManager({ pageId, media: allMedia, limits, onChange
   };
 
   // `fileList` is what a file picker gives, or a list of { file, caption } from the create form
-  const addFiles = (fileList) => {
+  const addFiles = async (fileList) => {
     setError("");
     const given = Array.from(fileList).map((x) => (x instanceof File ? { file: x, caption: "" } : x));
     const captionOf = new Map(given.map((x) => [x.file, x.caption || ""]));
     const durOf = new Map(given.map((x) => [x.file, x.durationSec]));
     fileList = given.map((x) => x.file);
     const have = { photo: photos.length + queue.filter((x) => x.kind === "photo").length, video: videos.length + queue.filter((x) => x.kind === "video").length, audio: allMedia.filter((m) => m.kind === "audio").length + queue.filter((x) => x.kind === "audio").length };
-    const { accepted, problems } = checkFiles(fileList, have, limits);
+    const { accepted, problems, durations } = await checkFilesAsync(fileList, have, limits);
     if (problems.length) setError(problems.join(" "));
     if (!accepted.length) return;
-    const items = accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, caption: captionOf.get(file) || "", durationSec: durOf.get(file), preview: kind === "photo" ? URL.createObjectURL(file) : "", progress: 0, status: "up", error: "" }));
+    const items = accepted.map(({ file, kind }) => ({ id: ++uid, file, kind, caption: captionOf.get(file) || "", durationSec: durOf.get(file) ?? durations.get(file), preview: kind === "photo" ? URL.createObjectURL(file) : "", progress: 0, status: "up", error: "" }));
     setQueue((q) => [...q, ...items]);
     drain(items);
   };
@@ -94,7 +96,7 @@ export default function MediaManager({ pageId, media: allMedia, limits, onChange
 
   return (
     <div>
-      <p className="mb-3 text-xs text-slate-500">Up to {limits.photos} photos ({limits.photoMb} MB each) and {limits.videos} video{limits.videos === 1 ? "" : "s"} ({limits.videoMb} MB). The star marks the main one that opens the gallery.</p>
+      <p className="mb-3 text-xs text-slate-500">Up to {limits.photos} photos ({limits.photoMb} MB each) and {limits.videos} video{limits.videos === 1 ? "" : "s"} ({limits.videoMb} MB, up to {secLabel(limits.videoSec || 60)} each). The star marks the main one that opens the gallery.{onMore && <> <button type="button" onClick={onMore} className="font-bold text-rose-600 underline-offset-2 hover:underline">Need more room?</button></>}</p>
 
       <input ref={input} type="file" accept={ACCEPT} multiple className="sr-only" tabIndex={-1} aria-label="Choose photos or videos" onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
       <button
@@ -147,6 +149,7 @@ export default function MediaManager({ pageId, media: allMedia, limits, onChange
                 <div className="relative aspect-square bg-rose-50">
                   {m.kind === "photo" ? <img src={m.url} alt={m.caption || m.name || "Photo"} loading="lazy" className="h-full w-full object-cover" /> : <video src={m.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
                   {m.kind === "video" && <span className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"><Film className="h-3.5 w-3.5" aria-hidden /></span>}
+                  {savedId !== m.id && <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white">{m.kind === "video" && m.durationSec ? `${mmss(m.durationSec)} · ` : ""}{mbOf(m.size || 0)} MB</span>}
                   {m.isMain && <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950"><Check className="h-3 w-3" aria-hidden /> Main</span>}
                   <div className="absolute right-1 top-1 flex flex-col gap-1">
                     {!m.isMain && (m.kind === "photo" ? photos.length > 1 : videos.length > 1) && <button type="button" onClick={() => act(setMainMedia, m.id)} aria-label="Make this the main one" className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-amber-600 shadow hover:bg-white"><Star className="h-4 w-4" aria-hidden /></button>}

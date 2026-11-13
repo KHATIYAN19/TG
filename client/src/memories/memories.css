@@ -53,3 +53,8 @@ html.mem-smooth { scroll-behavior: smooth; }
   .mem-reveal { opacity: 1; transform: none; }
   html.mem-smooth { scroll-behavior: auto; }
 }
+
+/* tagline reveal: each word moves from a muted tone to full colour as it crosses the trigger line (landing page) */
+.mem-word { opacity: .3; transition: opacity .5s cubic-bezier(0.22, 1, 0.36, 1); }
+.mem-word.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .mem-word { opacity: 1; transition: none; } }

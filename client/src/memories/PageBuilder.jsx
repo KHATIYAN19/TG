@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { ArrowLeft, Check, Copy, Eye, Globe2, ImagePlus, Link2, Loader2, Lock, Mail, Mic, PartyPopper, RotateCcw, Save, Ticket, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, Eye, Film, Images, Globe2, ImagePlus, Link2, Loader2, Lock, Mail, Mic, PackagePlus, PartyPopper, RotateCcw, Save, Ticket } from "lucide-react";
 
 import { errMsg } from "../arena/api";
 import { createPage, getPage, removeMedia, resendEmail, updatePage, uploadMedia } from "./memApi";
 import { BUILDERS, emptyData, galleryFrom, toForm, toPayload } from "./builderConfig";
+import AddonShop from "./AddonShop";
 import MediaManager from "./MediaManager";
+import { RoomMeter, SectionCard, UsageBar, mmss } from "./RoomMeter";
+import UpgradeSheet from "./UpgradeSheet";
+import { firstLook, limitsWithExtra, lookPrice, occasionOf, passFor, priceLabel, rupees, upgradeFrom } from "./pricing";
 import StagedMedia from "./StagedMedia";
 import VoiceRecorder from "./VoiceRecorder";
 import PinChip from "./PinChip";
@@ -18,6 +22,8 @@ import { LivePhone, META } from "./Showcase";
 import { TEMPLATES } from "./templates";
 import { Loading } from "./AppShell";
 import { Button, cx } from "./ui";
+import { Btn } from "./landingUi";
+import { Sheet } from "./appUi";
 
 const TITLE = {
   birthday: (n) => `Happy Birthday, ${n}`, sorry: (n) => `I'm sorry, ${n}`, proposal: (n) => `A question for ${n}`,
@@ -127,7 +133,7 @@ function VoiceBox({ pageId, media, onMedia, staged, onStaged, limits }) {
   return <VoiceRecorder src={pageId ? saved?.url : preview} durationSec={pageId ? saved?.durationSec : staged?.dur} sizeBytes={pageId ? saved?.size : staged?.file.size} limits={limits} onFile={onFile} onRemove={onRemove} busy={busy} progress={progress} error={err} />;
 }
 
-function Created({ template, page, pin, credits, edited, limits, files, email, onAnother }) {
+function Created({ template, page, pin, credits, edited, limits, files, email, onAnother, onMore }) {
   const [copied, setCopied] = useState(false);
   const [media, setMedia] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -137,7 +143,7 @@ function Created({ template, page, pin, credits, edited, limits, files, email, o
       <div className="rounded-[28px] border border-rose-100 bg-white p-6 shadow-xl shadow-rose-100/60 sm:p-8">
         <PartyPopper className="mx-auto h-12 w-12 text-rose-500" aria-hidden />
         <h1 className="mt-3 text-2xl font-bold text-[#3a1530]">{edited ? "Changes saved" : "Your page is created!"}</h1>
-        <p className="mt-1 text-sm text-[#7a5370]">&ldquo;{page.title}&rdquo; is in My pages.{edited ? " Your changes are live." : <> <b>1 credit used</b>, {credits} left.</>}</p>
+        <p className="mt-1 text-sm text-[#7a5370]">&ldquo;{page.title}&rdquo; is in My pages.{edited ? " Your changes are live." : " Share the link below."}</p>
         {!edited && page.expiresAt && <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">⏳ Online for {page.daysLeft} days, until {new Date(page.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>}
         {!edited && page.url && <SharePanel title={page.title} url={page.url} pin={pin} />}
         {email && <EmailResult pageId={page.id} email={email} sendsLeft={page.emailSendsLeft} hasPin={email.includesPin ?? Boolean(pin)} pinPrivate={page.visibility === "private"} />}
@@ -154,13 +160,16 @@ function Created({ template, page, pin, credits, edited, limits, files, email, o
           <section className="mt-6 rounded-2xl border border-rose-100 bg-[#fffaf6] p-4 text-left text-slate-900" aria-label="Add photos and videos">
             <h2 className="flex items-center gap-2 text-base font-bold text-[#3a1530]"><ImagePlus className="h-5 w-5 text-rose-500" aria-hidden /> {files?.length ? "Uploading your photos and videos" : "Add your photos and videos"}</h2>
             <p className="mb-3 mt-0.5 text-xs text-[#8a6a80]">{files?.length ? "Stay on this screen until they finish. You can add more any time by editing the page." : "They show up in the gallery on the page. This step is optional, and you can add more later by editing the page."}</p>
-            <MediaManager pageId={page.id} media={media} limits={limits} onChange={setMedia} initialFiles={files} onBusy={setBusy} />
+            <RoomMeter limits={limits} hide={["letter", "days"]} onMore={onMore}
+              usage={{ photos: media.filter((m) => m.kind === "photo").length, videos: media.filter((m) => m.kind === "video").length, audioSec: media.find((m) => m.kind === "audio")?.durationSec ?? null, audioBytes: media.find((m) => m.kind === "audio")?.size || 0, chars: 0, bytes: media.reduce((n, m) => n + (m.size || 0), 0) }} />
+            <div className="mt-4"><MediaManager pageId={page.id} media={media} limits={limits} onChange={setMedia} initialFiles={files} onBusy={setBusy} onMore={onMore} /></div>
           </section>
         )}
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button as={Link} to="/memories/app/pages" size="lg" aria-disabled={busy} onClick={(e) => { if (busy) e.preventDefault(); }} className={busy ? "pointer-events-none opacity-60" : ""}>{busy ? "Uploading…" : !edited && media.length === 0 ? "Skip and go to my pages" : "Go to my pages"}</Button>
           {!edited && <Button variant="outline" size="lg" onClick={onAnother} disabled={busy}>{credits > 0 ? "Create another" : "Back to templates"}</Button>}
+          {!edited && onMore && <Button variant="soft" size="lg" onClick={onMore} disabled={busy}><PackagePlus className="h-4 w-4" aria-hidden /> Get more room</Button>}
         </div>
         <p className="mt-4 text-xs text-[#8a6a80]">{template.name}</p>
       </div>
@@ -170,9 +179,9 @@ function Created({ template, page, pin, credits, edited, limits, files, email, o
 
 /**
  * THE PAGE BUILDER. One form per template (the fields come from each template's editor config) with the real page
- * updating live in a phone beside it. Creating spends 1 credit. The same screen edits a page you already made.
+ * updating live in a phone beside it. Creating needs a paid page that covers the look. The same screen edits a page you already made.
  */
-export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, reload }) {
+export default function PageBuilder({ mode, cfg, onPageCreated, reload }) {
   const navigate = useNavigate();
   const params = useParams();
   const [search] = useSearchParams();
@@ -180,7 +189,6 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const xl = useMedia("(min-width: 1280px)");
   const scale = xl ? 1.12 : 0.95;
   const edit = mode === "edit";
-  const limitsOf = cfg.limits || { photos: 10, videos: 1, photoMb: 5, videoMb: 50, audioMb: 10, audioSec: 120 };
 
   const [templateId, setTemplateId] = useState(edit ? null : params.template);
   const [data, setData] = useState(null);
@@ -199,7 +207,11 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const [staged, setStaged] = useState([]); // photos and videos chosen before the page exists
   const [voice, setVoice] = useState(null); // { file, dur } voice message chosen before the page exists
   const [done, setDone] = useState(null);
+  const [shop, setShop] = useState(false); // the "get more room" sheet
+  const [upgradeTo, setUpgradeTo] = useState(null); // a look id: the "pay the difference" sheet
   const [sheet, setSheet] = useState(false);
+  // the preview phone is sized to the visible screen, so the whole phone and the close button fit without scrolling
+  const sheetScale = Math.max(0.55, Math.min(0.9, ((typeof window !== "undefined" ? window.innerHeight : 800) - 190) / 580));
   const errRef = useRef(null);
   const isPrivate = edit ? info?.visibility === "private" : visibility === "private";
   // The "send to their email" box on the create form. On the edit page it lives in the "Link and access" card at the top (SendEmailBox).
@@ -209,6 +221,7 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const meta = META[templateId];
   const builder = BUILDERS[templateId];
   const first = String(user?.name || "").split(" ")[0];
+  const occ = occasionOf(cfg, template?.theme);
 
   // load: a fresh form (with the saved draft and the look chosen on the templates page) or the page being edited
   useEffect(() => {
@@ -216,16 +229,17 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
       getPage(params.id).then((p) => {
         const t = TEMPLATES.find((x) => x.theme === p.theme);
         if (!t) return setLoadError("This page's template isn't available.");
-        setTemplateId(t.id); setData(toForm(p)); setMedia(p.media || []); setInfo({ url: p.url, visibility: p.visibility, pin: p.pin, status: p.status, expiresAt: p.expiresAt, daysLeft: p.daysLeft, shareEmail: p.shareEmail, emailStatus: p.emailStatus }); setThemeId(p.style || META[t.id].themes[0].id); setTitle(p.title);
+        setTemplateId(t.id); setData(toForm(p)); setMedia(p.media || []); setInfo({ url: p.url, visibility: p.visibility, pin: p.pin, status: p.status, expiresAt: p.expiresAt, daysLeft: p.daysLeft, shareEmail: p.shareEmail, emailStatus: p.emailStatus, limits: p.limits, extra: p.extra, paidPrice: p.paidPrice }); setThemeId(p.style || META[t.id].themes[0].id); setTitle(p.title);
       }).catch((e) => setLoadError(errMsg(e)));
       return;
     }
     if (!BUILDERS[params.template]) return;
-    const m = META[params.template];
+    const o = occasionOf(cfg, params.template);
+    const on = (id) => (o ? o.themes.some((x) => x.id === id && Boolean(passFor(cfg.passes, x.price))) : true); // switched on by the admin AND covered by a page the user holds
     const draft = readDraft(params.template);
     const ask = search.get("theme");
     setData(draft?.data ? { ...emptyData(params.template, first), ...draft.data } : { ...emptyData(params.template, first) });
-    setThemeId(m.themes.some((x) => x.id === ask) ? ask : draft?.themeId || m.themes[0].id);
+    setThemeId(on(ask) ? ask : on(draft?.themeId) ? draft.themeId : o?.themes.find((x) => on(x.id))?.id || firstLook(o) || META[params.template].themes[0].id);
     setTitle(draft?.title || "");
     if (params.template === "thanks" && search.get("audience")) setData((d) => ({ ...d, audience: search.get("audience") }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -258,9 +272,58 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   const autoTitle = useMemo(() => (data?.recipientName?.trim() && TITLE[templateId] ? TITLE[templateId](data.recipientName.trim()) : ""), [data?.recipientName, templateId]);
 
   if (!edit && !BUILDERS[params.template]) return <Navigate to="/memories/app" replace />;
-  if (!edit && cfg.credits < 1 && !done) return <Navigate to="/memories/app/pay" replace />;
+  // building a page needs a paid page that covers this look: otherwise this is the checkout's job
+  const price = occ ? lookPrice(occ, themeId) : 0;
+  const pass = !edit && occ ? passFor(cfg.passes, price) : null;
+  if (!edit && !done && !occ) return <Navigate to="/memories/app" replace />;
+  if (!edit && !done && themeId && !pass) return <Navigate to={`/memories/app/pay?template=${templateId}${themeId ? `&theme=${themeId}` : ""}`} replace />;
   if (loadError) return <p role="alert" className="py-20 text-center text-rose-600">{loadError} <Link to="/memories/app/pages" className="font-semibold underline">Back to my pages</Link></p>;
   if (!data || !template) return <Loading label="Opening the builder…" />;
+
+  const limitsOf = edit ? limitsWithExtra(info?.limits, null) : limitsWithExtra(occ?.limits, pass?.extra);
+  /* which looks this page can use: the ones the admin switched on, at the same price as the page was bought for or less */
+  const themeInfo = (() => {
+    const out = {};
+    if (edit) {
+      const cap = info?.paidPrice; // null = a code / admin page: any look
+      const enabled = occ ? new Map(occ.themes.map((t) => [t.id, t.price])) : null;
+      for (const th of META[templateId].themes) {
+        const p = enabled ? enabled.get(th.id) : 0;
+        const mine = th.id === themeId;
+        if (p == null && !mine) continue; // switched off (a page keeps the look it already has)
+        const price = p ?? 0;
+        const locked = cap != null && Math.round(price * 100) > Math.round(cap * 100);
+        out[th.id] = { price, locked, diff: locked ? Math.round((price - cap) * 100) / 100 : 0, note: locked ? `Pay ${rupees(Math.round((price - cap) * 100) / 100)} more to use it. You paid ${rupees(cap)} for this page.` : "" };
+      }
+      return out;
+    }
+    for (const t of occ?.themes || []) {
+      const locked = !passFor(cfg.passes, t.price);
+      const up = locked ? upgradeFrom(cfg.passes, t.price) : null; // a cheaper page already paid for: pay only the difference
+      out[t.id] = { price: t.price, locked, diff: up ? up.diff : 0, note: up ? `Pay ${rupees(up.diff)} more to use it. You already paid ${rupees(up.from)}.` : "Costs more than the page you paid for." };
+    }
+    return out;
+  })();
+  const messageMax = limitsOf.messageChars;
+  // a dearer look: on a new page this goes to checkout (only the difference is charged); on a saved page it opens the upgrade sheet
+  const onUpgrade = (id) => (edit ? setUpgradeTo(id) : navigate(`/memories/app/pay?template=${templateId}&theme=${id}`));
+  /* how much of the room is used right now, counted live from the form (a page being made) or from the saved page (an edit) */
+  const items = edit ? media : staged;
+  const sizeOf = (x) => (edit ? x.size : x.file?.size) || 0;
+  const savedAudio = edit ? media.find((m) => m.kind === "audio") : null;
+  const usage = {
+    photos: items.filter((x) => x.kind === "photo").length,
+    videos: items.filter((x) => x.kind === "video").length,
+    audioSec: edit ? savedAudio?.durationSec ?? null : voice?.dur ?? null,
+    audioBytes: edit ? savedAudio?.size || 0 : voice?.file?.size || 0,
+    chars: (data?.message || "").length,
+    bytes: items.reduce((n, x) => n + sizeOf(x), 0) + (edit ? savedAudio?.size || 0 : voice?.file?.size || 0),
+  };
+  const dayTotal = (cfg.pageLifetimeDays || 30) + (edit ? info?.extra?.days || 0 : pass?.extra?.days || 0);
+  const days = edit && info?.daysLeft != null ? { total: Math.max(dayTotal, info.daysLeft), left: info.daysLeft } : { total: dayTotal, left: null };
+  // extra room can be bought while building too: for a page that exists it is added to the page, for a paid page not built yet it is added to that paid page
+  const openShop = cfg.addons?.length && (edit ? info?.status !== "blocked" : Boolean(pass && occ)) ? () => setShop(true) : undefined;
+  const lifeDays = (cfg.pageLifetimeDays || 30) + (pass?.extra?.days || 0);
 
   const fail = (m) => { setError(m); setTimeout(() => errRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); return false; };
 
@@ -285,13 +348,13 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
         const page = await updatePage(params.id, body);
         setDone({ page, edited: true });
       } else {
-        const occasion = cfg.occasions?.find((o) => o.theme === template.theme);
+        const occasion = occ;
         if (!occasion) return fail("This template isn't available right now. Please try another.");
         const r = await createPage({ ...body, occasionId: occasion.id, visibility, ...(visibility === "private" && pin ? { pin } : {}), ...(shareEmail.trim() ? { shareEmail: shareEmail.trim().toLowerCase(), includePin } : {}) });
         try { localStorage.removeItem(draftKey(templateId)); } catch { /* ignore */ }
         const left = Math.max(0, cfg.credits - 1);
-        setCredits(left); onPageCreated?.();
-        setDone({ page: r.page, pin: r.pin, credits: left, files: [...staged.map((x) => ({ file: x.file, caption: (x.caption || "").trim() })), ...(voice ? [{ file: voice.file, caption: "", durationSec: voice.dur }] : [])], email: r.email });
+        onPageCreated?.(); reload?.();
+        setDone({ page: r.page, pin: r.pin, credits: left, limits: r.page.limits, files: [...staged.map((x) => ({ file: x.file, caption: (x.caption || "").trim() })), ...(voice ? [{ file: voice.file, caption: "", durationSec: voice.dur }] : [])], email: r.email });
       }
     } catch (err) {
       fail(errMsg(err));
@@ -301,8 +364,14 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
   };
 
   if (done) {
-    return <Created template={template} page={done.page} pin={done.pin} credits={done.credits} edited={done.edited} files={done.files} email={done.email} limits={cfg.limits || { photos: 10, videos: 1, photoMb: 5, videoMb: 50 }}
-      onAnother={() => { reload(); navigate(done.credits > 0 ? "/memories/app" : "/memories/app/pay"); }} />;
+    return (
+      <>
+        <Created template={template} page={done.page} pin={done.pin} credits={done.credits} edited={done.edited} files={done.files} email={done.email} limits={done.limits || limitsOf}
+          onMore={!done.edited && cfg.addons?.length ? () => setShop(true) : undefined}
+          onAnother={() => { reload(); navigate("/memories/app"); }} />
+        {shop && <AddonShop cfg={cfg} pageId={done.page.id} onClose={() => setShop(false)} onApplied={(fresh) => setDone((d) => ({ ...d, limits: fresh.limits, page: { ...d.page, expiresAt: fresh.expiresAt, daysLeft: fresh.daysLeft } }))} />}
+      </>
+    );
   }
 
   const startOver = () => {
@@ -322,12 +391,25 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
             <h1 className="text-2xl font-bold tracking-tight text-[#3a1530] sm:text-3xl lg:text-4xl">{edit ? "Edit your page" : "Build your page"}</h1>
             <p className="mt-1 max-w-xl text-sm text-[#6b3a5a] sm:text-base">{builder.blurb} <span className="hidden md:inline">The page beside the form updates as you type.</span></p>
           </div>
-          {!edit && <div className="flex flex-col items-start gap-1.5 sm:items-end"><span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3.5 py-1.5 text-sm font-bold text-emerald-700 shadow-sm ring-1 ring-emerald-200"><Ticket className="h-4 w-4" aria-hidden /> Uses 1 of your {cfg.credits} credit{cfg.credits === 1 ? "" : "s"}</span><span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#6b3a5a]">⏳ Online for {cfg.pageLifetimeDays || 30} days after you create it</span></div>}
+          {!edit && <div className="flex flex-col items-start gap-1.5 sm:items-end"><span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3.5 py-1.5 text-sm font-bold text-emerald-700 shadow-sm ring-1 ring-emerald-200"><Ticket className="h-4 w-4" aria-hidden /> {price > 0 ? `${priceLabel(price)} look, paid` : "Free look"}</span><span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#6b3a5a]">⏳ Online for {lifeDays} days after you create it</span></div>}
         </div>
+        <nav className="mt-5 flex flex-wrap gap-2" aria-label="Jump to a part of the form">
+          {[["pb-top", "Look and words"], ["pb-media", "Photos and videos"], ["pb-voice", "Voice"], ["pb-share", edit ? "Page name" : "Sharing"]].map(([id, t], i) => (
+            <a key={id} href={`#${id}`} className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#6b3a5a] ring-1 ring-white transition duration-300 hover:bg-white"><span className="grid h-5 w-5 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white">{i + 1}</span> {t}</a>
+          ))}
+        </nav>
       </div>
 
       <form onSubmit={submit} noValidate className="mt-6 grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_300px] md:gap-8 lg:grid-cols-[minmax(0,1fr)_330px] xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-10">
-        <div className="min-w-0 space-y-5">
+        <div id="pb-top" className="min-w-0 scroll-mt-24 space-y-5">
+          <RoomMeter limits={limitsOf} usage={usage} days={days} onMore={openShop} note={edit || openShop ? undefined : "Need more? After you create the page, tap Get more room."} />
+          {openShop && (
+            <button type="button" onClick={openShop} className="ma-lift flex w-full flex-wrap items-center gap-3 rounded-3xl bg-amber-50 p-4 text-left ring-1 ring-inset ring-amber-200">
+              <span className="ma-icon grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-amber-600"><PackagePlus className="h-6 w-6" aria-hidden /></span>
+              <span className="min-w-0 flex-1 basis-40"><span className="body-1 block text-[#2a1023]">Need more room?</span><span className="body-6 block text-amber-900">More photos, longer videos, a longer letter or more days online. {edit ? "Added to this page right away." : "Buy it now and it is ready when you create the page."}</span></span>
+              <span className="ml-btn ml-btn-sm button-sm w-full shrink-0 sm:w-auto">Get more room</span>
+            </button>
+          )}
           {edit && info && (
             <div className="rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[28px]">
               <h3 className="mb-3 text-base font-bold text-slate-900">Link and access</h3>
@@ -348,29 +430,31 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
             </div>
           )}
 
-          <EditorFields cards data={data} onData={(d) => { setData(d); setError(""); }} themeId={themeId} onTheme={setThemeId} config={{ ...builder.editor, lockNames: edit, nameWarning: !edit }} />
+          <EditorFields cards data={data} onData={(d) => { setData(d); setError(""); }} themeId={themeId} onTheme={setThemeId} config={{ ...builder.editor, lockNames: edit, nameWarning: !edit, themeInfo, messageMax, onUpgrade }} />
 
-          {!edit && (
-            <div className="rounded-[24px] border border-rose-100 bg-white p-4 text-slate-900 shadow-sm sm:p-6 lg:rounded-[28px]">
-              <h3 className="mb-1 text-base font-bold">Photos and videos</h3>
-              <StagedMedia staged={staged} onChange={setStaged} limits={limitsOf} />
+          <SectionCard id="pb-media" step={2} Icon={Images} title="Photos and videos" hint={edit ? "Add, caption, reorder and remove. Changes save as you go." : "Optional. They upload on their own the moment you create the page."}
+            aside={openShop ? <button type="button" onClick={openShop} className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 ring-1 ring-rose-100 transition duration-300 hover:bg-rose-100"><PackagePlus className="h-3.5 w-3.5" aria-hidden /> Get more room</button> : null}>
+            <div className="mb-4 grid gap-3 rounded-2xl bg-[#fffaf6] p-3.5 ring-1 ring-rose-100 sm:grid-cols-2">
+              <UsageBar Icon={Images} label="Photos" used={usage.photos} max={limitsOf.photos} text={`${usage.photos} of ${limitsOf.photos}`} />
+              <UsageBar Icon={Film} label="Videos" used={usage.videos} max={limitsOf.videos} text={`${usage.videos} of ${limitsOf.videos}`} />
             </div>
-          )}
+            {edit
+              ? <MediaManager pageId={params.id} media={media} limits={limitsOf} onChange={setMedia} onMore={cfg.addons?.length ? () => setShop(true) : undefined} />
+              : <StagedMedia staged={staged} onChange={setStaged} limits={limitsOf} />}
+          </SectionCard>
 
-          {edit && (
-            <div className="rounded-[24px] border border-rose-100 bg-white p-4 text-slate-900 shadow-sm sm:p-6 lg:rounded-[28px]">
-              <h3 className="mb-1 text-base font-bold">Photos and videos</h3>
-              <MediaManager pageId={params.id} media={media} limits={limitsOf} onChange={setMedia} />
-            </div>
-          )}
-
-          <div className="rounded-[24px] border border-rose-100 bg-white p-4 text-slate-900 shadow-sm sm:p-6 lg:rounded-[28px]">
-            <h3 className="mb-1 flex items-center gap-2 text-base font-bold"><Mic className="h-4 w-4 text-rose-500" aria-hidden /> Voice message <span className="text-xs font-medium text-[#c4a8b8]">(optional)</span></h3>
-            <p className="mb-3 text-xs text-slate-500">Say it in your own voice. It appears on the page like a little gift to play.</p>
+          <SectionCard id="pb-voice" step={3} Icon={Mic} title="Voice message" hint="Say it in your own voice. It appears on the page like a little gift to play."
+            aside={<span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-[#a07890]">Optional</span>}>
+            {(usage.audioSec > 0 || usage.audioBytes > 0) && (
+              <div className="mb-4 grid gap-3 rounded-2xl bg-[#fffaf6] p-3.5 ring-1 ring-rose-100 sm:grid-cols-2">
+                <UsageBar Icon={Mic} label="Length" used={usage.audioSec || 0} max={limitsOf.audioSec} text={usage.audioSec ? `${mmss(usage.audioSec)} of ${mmss(limitsOf.audioSec)}` : "Added"} />
+                <UsageBar label="File size" used={usage.audioBytes / 1048576} max={limitsOf.audioMb} text={`${(usage.audioBytes / 1048576).toFixed(1)} of ${limitsOf.audioMb} MB`} />
+              </div>
+            )}
             <VoiceBox pageId={edit ? params.id : null} media={media} onMedia={setMedia} staged={voice} onStaged={setVoice} limits={limitsOf} />
-          </div>
+          </SectionCard>
 
-          <div className="space-y-5 rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[28px]">
+          <div id="pb-share" className="scroll-mt-24 space-y-5 rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[28px]">
             <div>
               <label className={label} htmlFor="pb-title">Page name <span className="font-medium normal-case tracking-normal text-[#c4a8b8]">(only you see this)</span></label>
               <input id="pb-title" className={field} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={autoTitle || "Happy Birthday, Emma"} />
@@ -412,10 +496,14 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
 
           {error && <p ref={errRef} role="alert" className="rounded-xl bg-rose-50 p-3.5 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>}
 
-          <div className="sticky bottom-3 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-rose-100 bg-white/95 p-3 shadow-xl shadow-rose-100/70 backdrop-blur lg:p-4">
-            <Button type="submit" size="lg" loading={busy} className="flex-1 sm:flex-none">{edit ? <><Save className="h-4 w-4" aria-hidden /> Save changes</> : <><Check className="h-4 w-4" aria-hidden /> Create page (1 credit)</>}</Button>
-            <Button type="button" variant="outline" size="lg" className="md:hidden" onClick={() => setSheet(true)}><Eye className="h-4 w-4" aria-hidden /> Preview</Button>
-            {!edit && <button type="button" onClick={startOver} className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-[#8a6a80] hover:bg-rose-50"><RotateCcw className="h-4 w-4" aria-hidden /> Start over</button>}
+          {!edit && <p className="text-center md:hidden"><button type="button" onClick={startOver} className="ma-mini caption-3 !rounded-full"><RotateCcw className="h-3.5 w-3.5" aria-hidden /> Start over with an empty form</button></p>}
+          {/* phones: two equal buttons side by side that stay at the bottom. Larger screens: one row. */}
+          <div className="sticky bottom-3 z-20">
+            <div className="ma-buybar ma-two grid grid-cols-2 gap-2 rounded-full p-2 md:flex md:items-center md:rounded-3xl md:p-3">
+              <span className="contents md:hidden"><Btn type="button" variant="ghost" onClick={() => setSheet(true)}><Eye className="h-4 w-4 shrink-0" aria-hidden /> Preview</Btn></span>
+              <Btn type="submit" loading={busy}>{edit ? <><Save className="h-4 w-4 shrink-0" aria-hidden /> Save changes</> : <><Check className="h-4 w-4 shrink-0" aria-hidden /> Create page</>}</Btn>
+              {!edit && <span className="ml-auto hidden md:block"><button type="button" onClick={startOver} className="ma-mini caption-3 !rounded-full"><RotateCcw className="h-3.5 w-3.5" aria-hidden /> Start over</button></span>}
+            </div>
           </div>
         </div>
 
@@ -428,13 +516,19 @@ export default function PageBuilder({ mode, cfg, setCredits, onPageCreated, relo
       </form>
 
       {sheet && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#3a1530]/50 backdrop-blur-sm md:hidden" onMouseDown={(e) => e.target === e.currentTarget && setSheet(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Preview" className="mem-pop-in relative w-full max-w-md rounded-t-[28px] bg-white p-4 pb-6">
-            <button type="button" onClick={() => setSheet(false)} aria-label="Close preview" className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-[#6b3a5a]"><X className="h-5 w-5" /></button>
-            <div className={cx("mx-auto w-fit rounded-[40px] bg-gradient-to-br p-4", template.tint)}><Preview template={template} data={previewData} themeId={themeId} scale={0.9} /></div>
-          </div>
-        </div>
+        <Sheet size="sm" title="Preview" subtitle="This is what they will open. Scroll it and tap things." onClose={() => setSheet(false)}>
+          <div className={cx("mx-auto w-fit rounded-3xl bg-gradient-to-br p-4", template.tint)}><Preview template={template} data={previewData} themeId={themeId} scale={sheetScale} /></div>
+        </Sheet>
       )}
+      {upgradeTo && edit && (
+        <UpgradeSheet cfg={cfg} pageId={params.id} themeId={upgradeTo} lookName={META[templateId].themes.find((x) => x.id === upgradeTo)?.name || upgradeTo} onClose={() => setUpgradeTo(null)}
+          onDone={(fresh, unlocked = true) => { setInfo((i) => ({ ...i, paidPrice: fresh.paidPrice, limits: fresh.limits, extra: fresh.extra, expiresAt: fresh.expiresAt, daysLeft: fresh.daysLeft })); if (unlocked) setThemeId(upgradeTo); }} />
+      )}
+      {shop && !edit && pass && occ && (
+        <AddonShop cfg={cfg} reload={reload} unsaved={staged.length > 0 || Boolean(voice)} onClose={() => setShop(false)}
+          pending={{ occasionId: occ.id, theme: themeId, limits: limitsOf, owned: pass.extra, days: lifeDays }} />
+      )}
+      {shop && edit && <AddonShop cfg={cfg} pageId={params.id} onClose={() => setShop(false)} onApplied={(fresh) => setInfo((i) => ({ ...i, limits: fresh.limits, extra: fresh.extra, expiresAt: fresh.expiresAt, daysLeft: fresh.daysLeft }))} />}
     </div>
   );
 }

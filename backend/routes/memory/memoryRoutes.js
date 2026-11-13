@@ -29,6 +29,8 @@ const answerLimit = budget({ name: "memory-answer", limit: () => envInt("MEMORY_
 const replyLimit = budget({ name: "memory-reply", limit: () => envInt("MEMORY_REPLY_LIMIT", 20), windowSec: HOUR, key: (req) => `${byIp(req)}:${req.params.slug}`, message: "Too many replies." });
 const emailResendLimit = budget({ name: "memory-email-resend", limit: () => envInt("MEMORY_EMAIL_RESEND_LIMIT", 20), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many emails." });
 const codeLimit = budget({ name: "memory-code", limit: () => envInt("MEMORY_CODE_LIMIT", 10), windowSec: 10 * MINUTE, key: (req) => [byIp(req), req.user?.id], message: "Too many code attempts.", failClosed: true });
+// the price shown while a user moves the add-on steppers: cheap to answer, so a generous per-user allowance
+const quoteLimit = budget({ name: "memory-quote", limit: () => envInt("MEMORY_QUOTE_LIMIT", 240), windowSec: 10 * MINUTE, key: (req) => req.user?.id, message: "Too many price checks. Please wait a moment." });
 const uploadLimit = budget({ name: "memory-upload", limit: () => envInt("MEMORY_UPLOAD_LIMIT", 100), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many uploads." });
 
 /* =====================================================
@@ -62,6 +64,7 @@ userRouter.get("/config", U.getConfig);
 userRouter.post("/codes/redeem", codeLimit, U.redeemCode);
 userRouter.post("/gumroad/redeem-order", codeLimit, U.redeemGumroadOrder);
 userRouter.post("/credits/free", codeLimit, U.claimFreeCredit);
+userRouter.post("/payments/quote", quoteLimit, P.quote);
 userRouter.post("/payments/create", PB.payCreateHourly, PB.payCreateDaily, P.createPayment);
 userRouter.post("/payments/verify", PB.payVerifyHourly, P.verifyPayment);
 userRouter.get("/payments/mine", P.myPayments);
@@ -99,6 +102,8 @@ adminRouter.get("/stats", A.stats);
 adminRouter.get("/pages", A.listPages);
 adminRouter.get("/pages/:id", A.getPage);
 adminRouter.get("/pages/:id/activity", A.getPageActivity);
+adminRouter.get("/pages/:id/room", A.getPageRoom);
+adminRouter.post("/pages/:id/room", A.setPageRoom);
 adminRouter.post("/pages/:id/pin", A.setPin);
 adminRouter.post("/pages/:id/expiry", A.setExpiry);
 adminRouter.post("/pages/:id/visibility", A.setVisibility);
@@ -138,6 +143,10 @@ adminRouter.post("/mail-blocks", A.addMailBlock);
 adminRouter.delete("/mail-blocks/:id", A.removeMailBlock);
 adminRouter.get("/orders", A.listOrders);
 adminRouter.delete("/orders/:id", A.deleteOrder);
+
+adminRouter.get("/addons", A.listAddons);
+adminRouter.patch("/addons/:key", A.updateAddon);
+adminRouter.post("/addons/:key/reset", A.resetAddon);
 
 adminRouter.get("/occasions", A.listOccasions);
 adminRouter.post("/occasions", A.createOccasion);

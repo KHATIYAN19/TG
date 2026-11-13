@@ -168,7 +168,8 @@ export const verifyPageToken = (token, page) => {
    MEDIA
 ===================================================== */
 
-const MEDIA_URL_TTL = () => Number(process.env.MEMORY_MEDIA_URL_TTL_SECONDS) || 3600;
+/* as long as a PIN unlock lasts (12 hours), so a page left open in a tab keeps showing its photos and videos */
+const MEDIA_URL_TTL = () => Number(process.env.MEMORY_MEDIA_URL_TTL_SECONDS) || 12 * 3600;
 
 const mediaOut = async (m) => {
   let url = null;
@@ -225,7 +226,7 @@ export const cleanEventData = (d) => {
 export const cleanVisitor = (v) => String(v || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
 
 export const answerOut = (page) =>
-  page.answer?.value ? { value: page.answer.value, final: Boolean(page.answer.final), at: page.answer.at, firstAt: page.answer.firstAt || page.answer.at, history: (page.answer.history || []).map((h) => ({ value: h.value, at: h.at })) } : null;
+  page.answer?.value ? { value: page.answer.value, final: Boolean(page.answer.final), at: page.answer.at, firstAt: page.answer.firstAt || page.answer.history?.[0]?.at || page.answer.at, history: (page.answer.history || []).map((h) => ({ value: h.value, at: h.at })) } : null;
 
 export const repliesOut = (page) => (page.replies || []).map((r) => ({ text: r.text, at: r.at }));
 
@@ -255,7 +256,7 @@ export const buildActivity = (page, events) => {
   const theme = page.occasion?.theme || null;
   return {
     page: { id: String(page._id), url: shareUrl(page.slug), expiresAt: page.expiresAt || null, daysLeft: daysLeft(page), title: page.title, theme, recipientName: page.recipientName, senderName: page.senderName || "", status: page.status, visibility: page.visibility, createdAt: page.createdAt, viewCount: page.viewCount || 0 },
-    summary: { opens: page.activity?.opens || 0, uniqueVisitors: visitors.size, firstOpenedAt: page.activity?.firstOpenedAt || null, lastOpenedAt: page.activity?.lastOpenedAt || null, totalSeconds: Math.round(seconds), devices },
+    summary: { opens: page.activity?.opens || 0, uniqueVisitors: visitors.size, firstOpenedAt: page.activity?.firstOpenedAt || byType.open?.first || null, lastOpenedAt: page.activity?.lastOpenedAt || null, totalSeconds: Math.round(seconds), devices },
     totals: { gifts: (page.gifts || []).length, promises: (page.promises || []).length, reasons: (page.reasons || []).length, people: (page.people || []).length, photos: (page.media || []).filter((m) => m.kind === "photo").length, videos: (page.media || []).filter((m) => m.kind === "video").length },
     answer: answerOut(page),
     replies: repliesOut(page),

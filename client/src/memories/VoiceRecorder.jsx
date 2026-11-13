@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2, Mic, Pause, Play, Square, Trash2, UploadCloud } from "lucide-react";
 
-import { AUDIO_ACCEPT, AUDIO_MAX_SEC, AUDIO_TYPES, baseType, mbOf } from "./mediaRules";
+import { AUDIO_ACCEPT, AUDIO_TYPES, baseType, mbOf } from "./mediaRules";
+import { secLabel } from "./pricing";
 import { cx } from "./ui";
 
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -50,6 +51,7 @@ function Preview({ src, durationSec }) {
  */
 export default function VoiceRecorder({ src, durationSec, sizeBytes, limits, onFile, onRemove, busy, progress, error: outerError }) {
   const maxMb = limits?.audioMb ?? 10;
+  const AUDIO_MAX_SEC = limits?.audioSec ?? 120; // the page's limit (the admin sets it; add-ons raise it)
   const [state, setState] = useState("idle"); // idle | asking | recording | processing
   const [secs, setSecs] = useState(0);
   const [error, setError] = useState("");
@@ -75,7 +77,7 @@ export default function VoiceRecorder({ src, durationSec, sizeBytes, limits, onF
     if (!AUDIO_TYPES.includes(baseType(file.type))) return setError("That isn't an audio file. Use MP3, M4A, WAV, WebM or OGG.");
     if (file.size > maxMb * 1048576) return setError(`That file is ${mbOf(file.size)} MB. The limit is ${maxMb} MB.`);
     const d = await readDuration(file);
-    if (d && d > AUDIO_MAX_SEC + 1) return setError(`That's ${clock(d)} long. A voice message can be up to 2 minutes.`);
+    if (d && d > AUDIO_MAX_SEC + 1) return setError(`That's ${clock(d)} long. A voice message can be up to ${secLabel(AUDIO_MAX_SEC)}.`);
     onFile(file.type === baseType(file.type) ? file : new File([file], file.name, { type: baseType(file.type) }), d);
   };
 
@@ -187,7 +189,7 @@ export default function VoiceRecorder({ src, durationSec, sizeBytes, limits, onF
       )}
 
       {shownError && <p role="alert" className="mt-2 flex items-start gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-relaxed text-rose-700 ring-1 ring-rose-200"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> {shownError}</p>}
-      <p className={cx("mt-2 text-xs text-slate-500", state === "recording" && "hidden")}>Up to 2 minutes and {maxMb} MB. They&apos;ll see it as a beautiful voice message on the page.</p>
+      <p className={cx("mt-2 text-xs text-slate-500", state === "recording" && "hidden")}>Up to {secLabel(AUDIO_MAX_SEC)} and {maxMb} MB. They&apos;ll see it as a beautiful voice message on the page.</p>
     </div>
   );
 }

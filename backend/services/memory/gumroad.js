@@ -7,7 +7,7 @@ export const orderLookupEnabled = () => Boolean(process.env.GUMROAD_ACCESS_TOKEN
 
 /**
  * Find a buyer's sale by the order number on their receipt and the email they paid with (needs GUMROAD_ACCESS_TOKEN).
- * Only sales for `productIds` count. Returns { found:false } or { found:true, saleId, productId, email, refunded }.
+ * Only sales for `productIds` count. Returns { found:false } or { found:true, saleId, productId, email, quantity, refunded }.
  */
 export async function findSale({ email, orderRef, productIds }) {
   const token = process.env.GUMROAD_ACCESS_TOKEN;
@@ -19,7 +19,7 @@ export async function findSale({ email, orderRef, productIds }) {
     const same = String(s.id ?? "") === want || String(s.order_id ?? "") === want || String(s.number ?? "") === want;
     if (!mine || !same) return null;
     if (!productIds.includes(String(s.product_id))) { otherProduct = true; return null; }
-    return { found: true, saleId: String(s.id), productId: String(s.product_id), email: String(s.email), refunded: Boolean(s.refunded || s.chargebacked || (s.disputed && !s.dispute_won)) };
+    return { found: true, saleId: String(s.id), productId: String(s.product_id), email: String(s.email), quantity: Math.min(50, Math.max(1, Math.floor(Number(s.quantity) || 1))), refunded: Boolean(s.refunded || s.chargebacked || (s.disputed && !s.dispute_won)) };
   };
   // 1) the receipt's "Order ID" is Gumroad's own sale id: look it up directly
   try {

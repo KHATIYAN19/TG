@@ -1,56 +1,72 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+/* eslint-disable react/prop-types */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import {
-  AnimatePresence,
-  animate,
-  motion,
-  useInView,
-  useMotionValue,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from "framer-motion";
-
-import {
-  ArrowDown,
   ArrowRight,
+  ArrowUpRight,
+  ArrowsClockwise,
   BookOpen,
   Check,
-  CheckCircle2,
-  ChevronDown,
-  Code2,
+  CheckCircle,
+  Code,
   CreditCard,
-  Download,
+  DeviceMobile,
+  DownloadSimple,
+  FileText,
   GraduationCap,
-  Layers3,
-  LockKeyhole,
+  HardDrives,
+  Lightning,
+  Lock,
+  LockKey,
   Package,
-  RefreshCw,
+  Plus,
   Rocket,
-  Server,
   ShieldCheck,
-  Smartphone,
-  Sparkles,
+  Stack,
   Target,
   Timer,
   Trophy,
-  WalletCards,
+  Wallet,
   XCircle,
-  Zap,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 
 import { trackViewContent } from "../lib/metaPixel.js";
 import BASE_URL from "../utils/Url";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
+import { gatewayLabel, preferredGateway } from "../payment/gatewayConfig";
+import {
+  AnimatePresence,
+  BookOfferCard,
+  Breadcrumb,
+  BuyBar,
+  EASE,
+  FLOAT_EASE,
+  FONT_HREF,
+  FaqList,
+  FinalCta,
+  FloatChip,
+  FloatNav,
+  Marquee,
+  PillTabs,
+  PriceSkeleton,
+  Reveal,
+  ScrollProgress,
+  Section,
+  SectionHeader,
+  SkipLink,
+  StatsStrip,
+  TaglineReveal,
+  Tilt,
+  cx,
+  motion,
+  twoDigits,
+  useGoToSection,
+  useInViewport,
+  useNavOffset,
+  useReducedMotion,
+  useSiteTheme,
+} from "./systemDesign/ui.jsx";
 
 // ======================================================
 // CONFIGURATION
@@ -67,23 +83,6 @@ const ROUTES = {
 
 const BOOKS_API =
   `${String(BASE_URL || "").replace(/\/+$/, "")}/book`;
-
-const RAW_GATEWAY = String(
-  import.meta.env.VITE_PAYMENT_GATEWAY || "payu"
-).toLowerCase().trim();
-
-const GATEWAY = ["payu", "cashfree", "razorpay"].includes(
-  RAW_GATEWAY
-)
-  ? RAW_GATEWAY
-  : "payu";
-
-const PROVIDER_NAME =
-  GATEWAY === "cashfree"
-    ? "Cashfree"
-    : GATEWAY === "razorpay"
-      ? "Razorpay"
-      : "PayU";
 
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 
@@ -545,22 +544,6 @@ const FAQS = [
   },
 ];
 
-// ======================================================
-// UTILITIES
-// ======================================================
-
-const readTheme = () => {
-  if (typeof window === "undefined") return "light";
-
-  try {
-    return localStorage.getItem("theme") === "dark"
-      ? "dark"
-      : "light";
-  } catch {
-    return "light";
-  }
-};
-
 const money = (value, currency = "INR") => {
   if (value == null || value === "") return "—";
 
@@ -571,6 +554,7 @@ const money = (value, currency = "INR") => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency,
+      minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
       maximumFractionDigits: 2,
     }).format(n);
   } catch {
@@ -657,32 +641,6 @@ const discount = (book) => {
     : 0;
 };
 
-const scrollToId = (id) => {
-  if (typeof document === "undefined") return;
-
-  document.getElementById(id)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-};
-
-// ======================================================
-// EXTRA CONTENT (SEO + engagement)
-// ======================================================
-
-const EASE = [0.22, 1, 0.36, 1];
-
-const NAV_LINKS = [
-  ["#included-books", "Included books"],
-  ["#why-combo", "Why combo"],
-  ["#round-picker", "HLD or LLD?"],
-  ["#curriculum", "Curriculum"],
-  ["#practice", "Case studies"],
-  ["#study-plan", "Study plan"],
-  ["#pricing", "Pricing"],
-  ["#faq", "FAQ"],
-];
-
 const MARQUEE_TERMS = [
   "Scalability",
   "Caching",
@@ -726,7 +684,7 @@ const BOOK_FACTS = {
 
 const WHY_COMBO = [
   {
-    icon: Layers3,
+    icon: Stack,
     title: "Architecture + implementation",
     text: "Interviewers ask you to draw the system, then drop into one component. The combo trains both halves of that conversation.",
   },
@@ -736,7 +694,7 @@ const WHY_COMBO = [
     text: "System design, machine-coding and backend deep-dive rounds map onto one book or the other — you are prepared for all three.",
   },
   {
-    icon: Zap,
+    icon: Lightning,
     title: "Shared case studies",
     text: "BookMyShow, Uber, rate limiters and payments appear in both books, once as architecture and once as Java classes.",
   },
@@ -847,303 +805,154 @@ const EXTRA_FAQS = [
   },
 ];
 
-// ======================================================
-// SMALL HELPERS
-// ======================================================
+/* ------------------------------------------------------------------ */
+/*  Page copy                                                          */
+/* ------------------------------------------------------------------ */
 
-const cx = (...classes) => classes.filter(Boolean).join(" ");
+// Same source the checkout modal uses (VITE_BOOKS_PAYMENT_GATEWAY, then
+// VITE_PAYMENT_GATEWAY).
+const PROVIDER_NAME = gatewayLabel(preferredGateway("books"));
 
-const ctaBase =
-  "tc-shimmer group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 px-6 py-3 text-sm font-extrabold text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:shadow-orange-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-50";
+const NAV_LINKS = [
+  { href: "#included-books", label: "Included books" },
+  { href: "#why-combo", label: "Why combo" },
+  { href: "#round-picker", label: "HLD or LLD" },
+  { href: "#curriculum", label: "Curriculum" },
+  { href: "#practice", label: "Case studies" },
+  { href: "#study-plan", label: "Study plan" },
+  { href: "#pricing", label: "Pricing" },
+  { href: "#faq", label: "FAQ" },
+];
 
-// ======================================================
-// ANIMATION COMPONENTS
-// ======================================================
+const TAGLINE =
+  "Interviewers ask you to draw the system, then drop into one component. The combo trains both halves of that conversation.";
 
-function Reveal({ children, delay = 0, y = 26, className, as = "div", ...rest }) {
-  const reduce = useReducedMotion();
+const DESIGN_LEVELS = [
+  {
+    title: "High Level Design",
+    icon: HardDrives,
+    intro: "Understand how the system behaves as a whole.",
+    points: [
+      "What services should exist?",
+      "How will they communicate?",
+      "Where will data be stored?",
+      "How will traffic be distributed?",
+      "What happens during failures?",
+    ],
+  },
+  {
+    title: "Low Level Design",
+    icon: Code,
+    intro: "Understand how individual components should be implemented.",
+    points: [
+      "What classes and interfaces are needed?",
+      "Which object owns each responsibility?",
+      "Which design pattern fits?",
+      "How can the design be extended?",
+      "How is shared state protected?",
+    ],
+  },
+];
 
-  if (reduce) {
-    const Plain = as;
-    return (
-      <Plain className={className} {...rest}>
-        {children}
-      </Plain>
-    );
-  }
+const METHOD_STEPS = [
+  ["01", "Understand requirements", "Clarify features, constraints, scale and expected behaviour."],
+  ["02", "Identify core components", "For HLD, map services and data flow. For LLD, identify entities and responsibilities."],
+  ["03", "Design the foundation", "Define APIs, storage, classes, interfaces and key relationships."],
+  ["04", "Discuss scalability and extensibility", "Explain the tradeoffs in architecture and object composition."],
+  ["05", "Handle critical edge cases", "Consider failures, concurrency, retries, duplicate requests and changing requirements."],
+  ["06", "Explain your decisions", "Clearly describe assumptions and alternative approaches."],
+];
 
-  const Tag = motion[as] || motion.div;
+const STAGES = [
+  ["Stage 01", "Foundations", "Revise requirements, APIs, object oriented programming and basic class relationships."],
+  ["Stage 02", "Core design", "Study databases, caching, scaling, SOLID and design patterns."],
+  ["Stage 03", "Correctness", "Explore concurrency, locking, failures, retries and consistent state."],
+  ["Stage 04", "Mock interviews", "Practice full system design and Java LLD problems under time limits."],
+];
 
-  return (
-    <Tag
-      className={className}
-      initial={{ opacity: 0, y, scale: 0.98 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.6, ease: EASE, delay }}
-      {...rest}
-    >
-      {children}
-    </Tag>
-  );
-}
+const READERS = [
+  { icon: HardDrives, title: "Backend engineers", detail: "Strengthen architecture decisions, scalability fundamentals and API and service design." },
+  { icon: GraduationCap, title: "SDE candidates", detail: "Prepare systematically for architecture and object oriented design interview questions." },
+  { icon: Code, title: "Java developers", detail: "Improve class modeling, interfaces, design patterns and concurrency reasoning." },
+];
 
-function CountUp({ to, suffix = "", duration = 1.4 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  const reduce = useReducedMotion();
-  const [value, setValue] = useState(reduce ? to : 0);
+const PAY_OPTIONS = [
+  { icon: DeviceMobile, title: "UPI", text: "When enabled" },
+  { icon: CreditCard, title: "Debit card", text: "When enabled" },
+  { icon: Wallet, title: "Credit card", text: "When enabled" },
+  { icon: LockKey, title: "Secure checkout", text: PROVIDER_NAME },
+];
 
-  useEffect(() => {
-    if (!inView) return undefined;
+const AFTER_PAYMENT = [
+  { icon: ShieldCheck, title: "Purchase verification", text: "The payment is verified through the configured gateway." },
+  { icon: BookOpen, title: "Access your books", text: "Both HLD and LLD appear on the purchase success page." },
+  { icon: DownloadSimple, title: "Save both PDFs", text: "Download the files one by one or use the combined download option." },
+];
 
-    if (reduce) {
-      setValue(to);
-      return undefined;
-    }
+const INCLUDES_MATRIX = [
+  ["High Level Design", true, false, true],
+  ["Low Level Design", false, true, true],
+  ["Java LLD content", false, true, true],
+  ["System architecture", true, false, true],
+  ["Two ebooks", false, false, true],
+];
 
-    const controls = animate(0, to, {
-      duration,
-      ease: "easeOut",
-      onUpdate: (latest) => setValue(Math.round(latest)),
-    });
+/* ------------------------------------------------------------------ */
+/*  Components                                                         */
+/* ------------------------------------------------------------------ */
 
-    return () => controls.stop();
-  }, [inView, reduce, to, duration]);
-
-  return (
-    <span ref={ref}>
-      {value}
-      {suffix}
+function YesNo({ yes }) {
+  return yes ? (
+    <CheckCircle className="tok" size={20} weight="fill" aria-label="Included" />
+  ) : (
+    <span className="t3" aria-label="Not included">
+      –
     </span>
   );
 }
 
-function ScrollProgress() {
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.3 });
-
-  return (
-    <motion.div
-      aria-hidden="true"
-      className="fixed inset-x-0 top-0 z-[120] h-[3px] origin-left bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600"
-      style={{ scaleX }}
-    />
-  );
-}
-
-// Scroll-linked scale in / scale out.
-function ScrollScale({ children, className, from = 0.94 }) {
-  const ref = useRef(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const scale = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [from, 1, 1, from + 0.03]);
-  const opacity = useTransform(scrollYProgress, [0, 0.18, 0.82, 1], [0.35, 1, 1, 0.6]);
-
-  if (reduce) return <div className={className}>{children}</div>;
-
-  return (
-    <motion.div ref={ref} className={className} style={{ scale, opacity }}>
-      {children}
-    </motion.div>
-  );
-}
-
-function Tilt({ children, className }) {
-  const reduce = useReducedMotion();
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-10, 10]), { stiffness: 150, damping: 18 });
-  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [8, -8]), { stiffness: 150, damping: 18 });
-
-  if (reduce) return <div className={className}>{children}</div>;
-
-  return (
-    <div
-      className={className}
-      style={{ perspective: 1100 }}
-      onMouseMove={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        mx.set((event.clientX - rect.left) / rect.width - 0.5);
-        my.set((event.clientY - rect.top) / rect.height - 0.5);
-      }}
-      onMouseLeave={() => {
-        mx.set(0);
-        my.set(0);
-      }}
-    >
-      <motion.div style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}>{children}</motion.div>
-    </div>
-  );
-}
-
-// ======================================================
-// DESIGN COMPONENTS
-// ======================================================
-
-function Skeleton({ className = "", dark }) {
-  return <div className={`animate-pulse rounded-lg ${dark ? "bg-slate-800" : "bg-slate-200"} ${className}`} />;
-}
-
-function SectionHead({ eyebrow, title, description, dark, id, center = false }) {
-  return (
-    <Reveal className={cx("max-w-3xl", center && "mx-auto text-center")}>
-      <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--tt-orange)]">
-        <Sparkles size={13} />
-        {eyebrow}
-      </p>
-
-      <h2
-        id={id}
-        className={`mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-[35px] ${
-          dark ? "text-white" : "text-slate-950"
-        }`}
-      >
-        {title}
-      </h2>
-
-      {description && (
-        <p className={`mt-4 text-sm leading-7 sm:text-base ${dark ? "text-slate-400" : "text-slate-600"}`}>
-          {description}
-        </p>
-      )}
-    </Reveal>
-  );
-}
-
-// Two overlapping books: covers come from the books API when available.
+// Two overlapping covers that float and tilt. Covers come from the books API.
 function TwoBooks({ hld, lld }) {
   const reduce = useReducedMotion();
 
   const covers = [
-    {
-      key: "lld",
-      src: lld?.coverPageUrl,
-      label: "LLD (Java)",
-      fallback: "from-slate-800 via-orange-900 to-orange-600",
-      pos: "left-[34%] top-[6%] z-10 rotate-[7deg]",
-      motionProps: { y: [0, -9, 0] },
-      delay: 0.6,
-    },
-    {
-      key: "hld",
-      src: hld?.coverPageUrl,
-      label: "HLD",
-      fallback: "from-neutral-900 via-neutral-800 to-orange-700",
-      pos: "left-0 top-[14%] z-20 -rotate-[6deg]",
-      motionProps: { y: [0, 10, 0] },
-      delay: 0,
-    },
+    { key: "lld", src: lld?.coverPageUrl, label: "LLD (Java)", pos: "right-4 top-0 z-10 rotate-6", y: [0, -8, 0], delay: 0.6 },
+    { key: "hld", src: hld?.coverPageUrl, label: "HLD", pos: "left-4 top-6 z-20 -rotate-6", y: [0, 8, 0], delay: 0 },
   ];
 
   return (
-    <Tilt className="relative mx-auto h-[330px] w-full max-w-[340px] sm:h-[380px]">
-      <div className="absolute inset-6 rounded-full bg-orange-500/25 blur-3xl" aria-hidden="true" />
-
-      {covers.map((cover) => (
-        <motion.div
-          key={cover.key}
-          className={`absolute aspect-[0.72] w-[58%] overflow-hidden rounded-r-xl rounded-l-sm border border-white/20 shadow-[16px_22px_45px_rgba(0,0,0,0.32)] ${cover.pos}`}
-          animate={reduce ? undefined : cover.motionProps}
-          transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: cover.delay }}
-          whileHover={reduce ? undefined : { scale: 1.06, zIndex: 40 }}
-        >
-          {cover.src ? (
-            <img src={cover.src} alt={`${cover.label} ebook cover`} className="h-full w-full bg-white object-contain" loading="eager" />
-          ) : (
-            <div className={`flex h-full flex-col justify-between bg-gradient-to-br p-4 text-white ${cover.fallback}`}>
-              <span className="text-[9px] font-black tracking-[0.2em]">TARGET TREK</span>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-orange-200">Mastering System Design</p>
-                <p className="mt-1 text-2xl font-black leading-tight">{cover.label}</p>
+    <Tilt className="relative mx-auto h-64 w-full max-w-xs" float={false}>
+      <div className="relative h-64">
+        {covers.map((cover) => (
+          <motion.div
+            key={cover.key}
+            className={cx(
+              "absolute aspect-[0.72] w-36 overflow-hidden rounded-xl bg-[#181818] shadow-[0_24px_48px_rgba(0,0,0,0.3)] sm:w-40",
+              cover.pos
+            )}
+            animate={reduce ? undefined : { y: cover.y }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: FLOAT_EASE, delay: cover.delay }}
+          >
+            {cover.src ? (
+              <img src={cover.src} alt={`${cover.label} ebook cover`} className="h-full w-full bg-white object-contain" loading="eager" decoding="async" />
+            ) : (
+              <div className="flex h-full flex-col justify-between p-4 text-white">
+                <span className="caption-3 uppercase tracking-wider text-[#fb923c]">Target Trek</span>
+                <div>
+                  <p className="caption-4 text-[#b4b4b4]">Mastering System Design</p>
+                  <p className="heading-6 mt-1">{cover.label}</p>
+                </div>
               </div>
-            </div>
-          )}
-        </motion.div>
-      ))}
-
-      <motion.span
-        initial={reduce ? false : { scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ delay: 1, type: "spring", stiffness: 200, damping: 12 }}
-        className="absolute bottom-3 right-2 z-30 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 px-4 py-2 text-xs font-black text-white shadow-lg shadow-orange-500/40"
-      >
-        2 books · 1 checkout
-      </motion.span>
+            )}
+          </motion.div>
+        ))}
+      </div>
     </Tilt>
   );
 }
 
-function BookCard({ product, title, subtitle, facts, route, dark, index, loading }) {
-  const card = dark ? "bg-[#1D1A17] border-slate-800" : "bg-white border-slate-200";
-  const isAvailable = purchasable(product);
-
-  return (
-    <motion.article
-      whileHover={{ y: -6 }}
-      transition={{ type: "spring", stiffness: 260, damping: 20 }}
-      className={`group relative h-full overflow-hidden rounded-[24px] border p-5 transition-shadow duration-300 hover:border-[var(--tt-orange-border)] hover:shadow-[0_22px_55px_-24px_rgba(234,88,12,.45)] sm:p-6 ${card}`}
-    >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-orange-600 via-amber-400 to-orange-600" />
-
-      <div className="flex items-start gap-5">
-        <div className="flex aspect-[3/4] w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1.5 shadow-lg transition duration-500 group-hover:-rotate-3 group-hover:scale-105 sm:w-[115px]">
-          {product?.coverPageUrl ? (
-            <img src={product.coverPageUrl} alt={`${title} cover`} loading="lazy" className="h-full w-full object-contain" />
-          ) : (
-            <BookOpen size={32} className="text-slate-400" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--tt-orange)]">Book {index}</p>
-
-          <h3 className={`mt-2 text-base font-extrabold leading-6 sm:text-lg ${dark ? "text-white" : "text-slate-950"}`}>{title}</h3>
-
-          <p className={`mt-2 text-xs leading-6 sm:text-sm ${dark ? "text-slate-400" : "text-slate-600"}`}>{subtitle}</p>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {loading ? (
-              <Skeleton dark={dark} className="h-6 w-20" />
-            ) : (
-              <>
-                <strong className={`text-lg ${dark ? "text-white" : "text-slate-950"}`}>
-                  {isAvailable ? money(product.price, product.currency) : "Unavailable"}
-                </strong>
-
-                {product && Number(product.mrp) > Number(product.price) && (
-                  <span className="text-xs text-slate-400 line-through">{money(product.mrp, product.currency)}</span>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-        {facts.map((fact) => (
-          <li key={fact} className={`flex items-center gap-2 text-xs font-semibold ${dark ? "text-slate-300" : "text-slate-700"}`}>
-            <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
-            {fact}
-          </li>
-        ))}
-      </ul>
-
-      <Link
-        to={route}
-        className={`mt-5 inline-flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-bold transition ${
-          dark ? "border-slate-700 text-slate-100 hover:bg-slate-800" : "border-slate-200 text-slate-800 hover:bg-slate-50"
-        }`}
-      >
-        View individual book
-        <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-      </Link>
-    </motion.article>
-  );
-}
-
-// Accordion: module topics stay in the DOM (crawlable) and animate open.
-function ModuleList({ modules, dark, prefix }) {
+// Accordion: module topics stay in the DOM (crawlable).
+function ModuleList({ modules, prefix }) {
   const [open, setOpen] = useState(0);
 
   return (
@@ -1153,55 +962,39 @@ function ModuleList({ modules, dark, prefix }) {
         const panelId = `${prefix}-panel-${index}`;
 
         return (
-          <Reveal
-            key={`${prefix}-${index}`}
-            y={16}
-            delay={Math.min(index, 5) * 0.04}
-            className={`overflow-hidden rounded-2xl border transition-colors ${
-              expanded ? "border-[var(--tt-orange-border)]" : dark ? "border-slate-800" : "border-slate-200"
-            } ${dark ? "bg-[#1D1A17]" : "bg-white"}`}
-          >
-            <h3>
-              <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={panelId}
-                onClick={() => setOpen(expanded ? -1 : index)}
-                className="flex w-full items-start justify-between gap-4 p-4 text-left sm:p-5"
-              >
-                <span className="flex gap-4">
-                  <span className="pt-0.5 text-xs font-extrabold text-[var(--tt-orange)]">{String(index + 1).padStart(2, "0")}</span>
-
-                  <span>
-                    <span className={`block text-sm font-bold sm:text-base ${dark ? "text-white" : "text-slate-950"}`}>{module.title}</span>
-                    <span className={`mt-2 block text-xs font-normal leading-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>{module.description}</span>
-                    <span className="mt-2 block text-[11px] font-semibold text-[var(--tt-orange)]">{module.topics.length} topics</span>
+          <Reveal key={`${prefix}-${index}`} y={16} delay={Math.min(index, 5) * 0.04}>
+            <article className={cx("card rounded-2xl", expanded && "featured")}>
+              <h3>
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  onClick={() => setOpen(expanded ? -1 : index)}
+                  className="focusable flex w-full items-start justify-between gap-4 rounded-2xl p-4 text-left sm:p-6"
+                >
+                  <span className="flex gap-4">
+                    <span className="num body-4 mono">{twoDigits(index + 1)}</span>
+                    <span>
+                      <span className="title-3 t1 block">{module.title}</span>
+                      <span className="body-6 t2 mt-1 block">{module.description}</span>
+                      <span className="caption-3 ta mt-2 block">{module.topics.length} topics</span>
+                    </span>
                   </span>
-                </span>
+                  <Plus size={20} weight="bold" className={cx("spin ta shrink-0", expanded && "rotate-45")} />
+                </button>
+              </h3>
 
-                <ChevronDown
-                  size={18}
-                  className={`shrink-0 transition-transform duration-300 ${expanded ? "rotate-180 text-[var(--tt-orange)]" : "text-slate-400"}`}
-                />
-              </button>
-            </h3>
-
-            <div
-              id={panelId}
-              role="region"
-              className={`grid transition-[grid-template-rows] duration-300 ease-out ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-            >
-              <div className="overflow-hidden">
-                <ul className={`grid gap-3 border-t px-5 py-5 sm:grid-cols-2 ${dark ? "border-slate-800" : "border-slate-100"}`}>
+              <div id={panelId} role="region" hidden={!expanded} className="fade-up">
+                <ul className="grid gap-3 px-4 pb-4 sm:grid-cols-2 sm:px-6 sm:pb-6">
                   {module.topics.map((topic) => (
-                    <li key={topic} className="flex items-start gap-2.5">
-                      <Check size={15} className="mt-1 shrink-0 text-[var(--tt-orange)]" />
-                      <span className={`text-xs leading-6 sm:text-sm ${dark ? "text-slate-300" : "text-slate-700"}`}>{topic}</span>
+                    <li key={topic} className="flex items-start gap-2">
+                      <Check className="ta mt-0.5 shrink-0" size={16} weight="bold" />
+                      <span className="body-6 t1">{topic}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </div>
+            </article>
           </Reveal>
         );
       })}
@@ -1210,7 +1003,7 @@ function ModuleList({ modules, dark, prefix }) {
 }
 
 // "Is it HLD or LLD?" mini game
-function ClassifyGame({ dark, ui }) {
+function ClassifyGame() {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState(null);
@@ -1243,195 +1036,160 @@ function ClassifyGame({ dark, ui }) {
   };
 
   return (
-    <div className={`mx-auto mt-10 max-w-3xl rounded-3xl border p-5 shadow-sm sm:p-8 ${ui.card}`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--tt-orange)]">
-          <Sparkles size={15} /> Is it HLD or LLD?
-        </span>
-        <span className={`text-xs font-bold ${ui.muted}`}>
-          {done ? "Finished" : `Question ${index + 1} of ${CLASSIFY_QUIZ.length}`} · Score {score}
-        </span>
-      </div>
+    <Reveal className="mx-auto mt-10 max-w-3xl">
+      <div className="card rounded-3xl p-6 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="eyebrow caption-3">Quick game · Is it HLD or LLD?</span>
+          <span className="caption-1 mono t3">
+            {done ? "Finished" : `Question ${index + 1} of ${CLASSIFY_QUIZ.length}`} · Score {score}
+          </span>
+        </div>
 
-      <div className="mt-4 flex gap-1.5" aria-hidden="true">
-        {CLASSIFY_QUIZ.map((q, i) => (
-          <span
-            key={q.prompt}
-            className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
-              i < index || done ? "bg-orange-500" : i === index ? "bg-orange-300" : dark ? "bg-white/10" : "bg-slate-200"
-            }`}
-          />
-        ))}
-      </div>
+        <div className="mt-4 flex gap-1" aria-hidden="true">
+          {CLASSIFY_QUIZ.map((q, i) => (
+            <span key={q.prompt} className="seg h-1 flex-1 rounded-full" data-on={i <= index || done ? "true" : "false"} />
+          ))}
+        </div>
 
-      <AnimatePresence mode="wait" initial={false}>
-        {done ? (
-          <motion.div
-            key="done"
-            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            className="py-8 text-center"
-          >
-            <Trophy className="mx-auto text-[var(--tt-orange)]" size={42} />
-            <h3 className={`mt-4 text-2xl font-black ${ui.heading}`}>You scored {score} / {CLASSIFY_QUIZ.length}</h3>
-            <p className={`mx-auto mt-2 max-w-md text-sm leading-7 ${ui.muted}`}>
-              Real interviews mix both skills. The combo trains the architecture and the class-level design in one plan.
-            </p>
-            <button
-              type="button"
-              onClick={restart}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[var(--tt-orange-border)] px-5 py-2.5 text-xs font-extrabold text-[var(--tt-orange)] transition hover:bg-[var(--tt-orange-soft)]"
+        <AnimatePresence mode="wait" initial={false}>
+          {done ? (
+            <motion.div
+              key="done"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: EASE }}
+              className="py-8 text-center"
             >
-              <RefreshCw size={15} /> Play again
-            </button>
-          </motion.div>
-        ) : (
-          <motion.div
-            key={index}
-            initial={reduce ? false : { opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduce ? undefined : { opacity: 0, x: -24 }}
-            transition={{ duration: 0.3, ease: EASE }}
-          >
-            <p className={`mt-6 text-lg font-extrabold leading-snug sm:text-xl ${ui.heading}`}>{item.prompt}</p>
+              <span className="tile h-12 w-12 rounded-xl">
+                <Trophy size={24} weight="duotone" />
+              </span>
+              <h3 className="heading-5 t1 mt-4">
+                You scored <span className="mono">{score} / {CLASSIFY_QUIZ.length}</span>
+              </h3>
+              <p className="body-6 t2 mx-auto mt-2 max-w-md">
+                Real interviews mix both skills. The combo trains the architecture and the class level design in one plan.
+              </p>
+              <button type="button" onClick={restart} className="btn btn-secondary button-sm mt-6">
+                <ArrowsClockwise size={16} weight="bold" />
+                Play again
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={index}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, x: -24 }}
+              transition={{ duration: 0.4, ease: EASE }}
+            >
+              <p className="heading-6 t1 mt-6">{item.prompt}</p>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {[
-                ["hld", "HLD", "Architecture", Server],
-                ["lld", "LLD", "Class design", Code2],
-              ].map(([id, label, hint, Icon]) => {
-                const isRight = id === item.answer;
-                const isPicked = id === picked;
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {[
+                  ["hld", "HLD", "Architecture", HardDrives],
+                  ["lld", "LLD", "Class design", Code],
+                ].map(([id, label, hint, Icon]) => {
+                  const isRight = id === item.answer;
+                  const isPicked = id === picked;
+                  const state = !answered ? "idle" : isRight ? "right" : isPicked ? "wrong" : "dim";
 
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => choose(id)}
-                    disabled={answered}
-                    className={cx(
-                      "flex items-center gap-3 rounded-xl border px-4 py-4 text-left transition",
-                      !answered && "hover:-translate-y-0.5 hover:border-orange-400",
-                      !answered && (dark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-white"),
-                      answered && isRight && "border-emerald-500 bg-emerald-500/10",
-                      answered && isPicked && !isRight && "border-red-400 bg-red-500/10",
-                      answered && !isRight && !isPicked && "opacity-50"
-                    )}
-                  >
-                    <Icon size={22} className="shrink-0 text-[var(--tt-orange)]" />
-                    <span>
-                      <span className={`block text-base font-black ${ui.heading}`}>{label}</span>
-                      <span className={`block text-xs ${ui.muted}`}>{hint}</span>
-                    </span>
-                    {answered && isRight && <CheckCircle2 size={20} className="ml-auto text-emerald-600" />}
-                    {answered && isPicked && !isRight && <XCircle size={20} className="ml-auto text-red-500" />}
-                  </button>
-                );
-              })}
-            </div>
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => choose(id)}
+                      disabled={answered}
+                      data-state={state}
+                      className="choice focusable flex items-center gap-3 rounded-xl p-4 text-left"
+                    >
+                      <span className="tile h-10 w-10 rounded-lg">
+                        <Icon size={20} weight="duotone" />
+                      </span>
+                      <span>
+                        <span className="body-1 t1 block">{label}</span>
+                        <span className="caption-2 t2 block">{hint}</span>
+                      </span>
+                      {state === "right" && <CheckCircle className="tok ml-auto" size={20} weight="fill" />}
+                      {state === "wrong" && <XCircle className="tbad ml-auto" size={20} weight="fill" />}
+                    </button>
+                  );
+                })}
+              </div>
 
-            <AnimatePresence>
               {answered && (
-                <motion.div
-                  initial={reduce ? false : { opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-5 rounded-xl border-l-[3px] border-[var(--tt-orange)] bg-[var(--tt-orange-soft)] p-4">
-                    <p className="text-[11px] font-black uppercase tracking-wider text-[var(--tt-orange)]">
-                      {picked === item.answer ? "Correct" : "Not quite"}
-                    </p>
-                    <p className={`mt-2 text-sm leading-7 ${ui.body}`}>{item.explain}</p>
+                <div className="fade-up">
+                  <div className="note mt-6 rounded-xl p-4">
+                    <p className="caption-3 uppercase tracking-wider">{picked === item.answer ? "Correct" : "Not quite"}</p>
+                    <p className="body-6 t1 mt-2">{item.explain}</p>
                   </div>
-                  <button type="button" onClick={next} className={`${ctaBase} mt-5 min-h-[46px] text-xs`}>
+                  <button type="button" onClick={next} className="btn btn-primary button-md mt-4">
                     {index + 1 >= CLASSIFY_QUIZ.length ? "See my score" : "Next question"}
-                    <ArrowRight size={16} />
+                    <ArrowRight className="arrow" size={18} weight="bold" />
                   </button>
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </Reveal>
   );
 }
 
-// Study-plan builder
-function PlanBuilder({ dark, ui }) {
+// Study plan builder
+function PlanBuilder() {
   const reduce = useReducedMotion();
   const [planId, setPlanId] = useState("14");
   const plan = STUDY_PLANS.find((item) => item.id === planId) || STUDY_PLANS[1];
 
   return (
     <div className="mt-8">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Choose how much time you have">
-        {STUDY_PLANS.map((item) => {
-          const selected = item.id === planId;
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setPlanId(item.id)}
-              className={cx(
-                "rounded-full border px-5 py-2.5 text-sm font-extrabold transition",
-                selected
-                  ? "border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/25"
-                  : dark
-                    ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-orange-400"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-orange-300"
-              )}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
+      <Reveal>
+        <PillTabs
+          label="Choose how much time you have"
+          value={planId}
+          onChange={setPlanId}
+          items={STUDY_PLANS.map((item) => ({ id: item.id, label: item.label }))}
+        />
+      </Reveal>
 
       <AnimatePresence mode="wait" initial={false}>
-        <motion.ol
+        <motion.div
           key={plan.id}
-          initial={reduce ? false : { opacity: 0, y: 14 }}
+          role="tabpanel"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={reduce ? undefined : { opacity: 0, y: -10 }}
-          transition={{ duration: 0.3, ease: EASE }}
-          className="relative mt-6 space-y-4"
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="card mt-6 rounded-3xl p-6 sm:p-8"
         >
-          <span aria-hidden="true" className="absolute bottom-4 left-[19px] top-4 w-px bg-gradient-to-b from-orange-500 via-orange-400/60 to-transparent" />
-          <li className="relative pl-14">
-            <span className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-600 to-amber-500 text-white shadow-lg shadow-orange-500/30">
-              <Rocket size={18} />
-            </span>
-            <p className="pt-2 text-xs font-extrabold uppercase tracking-widest text-[var(--tt-orange)]">{plan.tag}</p>
-          </li>
-          {plan.steps.map(([when, what], stepIndex) => (
-            <motion.li
-              key={when}
-              initial={reduce ? false : { opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.08 + stepIndex * 0.08, duration: 0.4 }}
-              className="relative pl-14"
-            >
-              <span className={`absolute left-[11px] top-5 h-[18px] w-[18px] rounded-full border-4 border-[var(--tt-orange)] ${dark ? "bg-[#100F0D]" : "bg-white"}`} />
-              <div className={`rounded-xl border p-4 transition hover:border-[var(--tt-orange-border)] ${ui.card}`}>
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--tt-orange)]">{when}</p>
-                <p className={`mt-1 text-sm leading-6 ${ui.body}`}>{what}</p>
-              </div>
-            </motion.li>
-          ))}
-        </motion.ol>
+          <p className="eyebrow caption-3 flex items-center gap-2">
+            <Rocket size={16} weight="bold" />
+            {plan.tag}
+          </p>
+          <ol className="mt-6 space-y-3">
+            {plan.steps.map(([when, what], stepIndex) => (
+              <motion.li
+                key={when}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.08 + stepIndex * 0.08, duration: 0.5, ease: EASE }}
+                className="bg-s2 row-hover flex flex-col gap-2 rounded-xl p-4 sm:flex-row sm:items-start sm:gap-6"
+              >
+                <span className="caption-3 mono ta shrink-0 uppercase tracking-wider sm:w-28 sm:pt-0.5">{when}</span>
+                <span className="body-6 t1">{what}</span>
+              </motion.li>
+            ))}
+          </ol>
+        </motion.div>
       </AnimatePresence>
     </div>
   );
 }
 
-// Filterable case-study explorer
-function ProblemExplorer({ dark, ui }) {
+// Filterable case study explorer
+function ProblemExplorer() {
   const reduce = useReducedMotion();
   const [filter, setFilter] = useState("All");
   const filters = ["All", "HLD", "LLD", "HLD + LLD"];
@@ -1439,61 +1197,42 @@ function ProblemExplorer({ dark, ui }) {
 
   return (
     <>
-      <div className="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filter case studies">
-        {filters.map((name) => {
-          const count = name === "All" ? PROBLEMS.length : PROBLEMS.filter((problem) => problem.category === name).length;
-          const selected = filter === name;
-
-          return (
-            <button
-              key={name}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setFilter(name)}
-              className={cx(
-                "rounded-full border px-4 py-2 text-xs font-extrabold transition sm:text-sm",
-                selected
-                  ? "border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/25"
-                  : dark
-                    ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-orange-400"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-orange-300"
-              )}
-            >
-              {name} <span className="opacity-70">({count})</span>
-            </button>
-          );
-        })}
-      </div>
+      <Reveal className="mt-8">
+        <PillTabs
+          role="group"
+          label="Filter case studies"
+          value={filter}
+          onChange={setFilter}
+          items={filters.map((name) => ({
+            id: name,
+            label: name,
+            count: name === "All" ? PROBLEMS.length : PROBLEMS.filter((problem) => problem.category === name).length,
+          }))}
+        />
+      </Reveal>
 
       <motion.div layout={!reduce} className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {visible.map((problem) => (
-            <motion.article
+            <motion.div
               key={problem.title}
               layout={!reduce}
-              initial={reduce ? false : { opacity: 0, scale: 0.94 }}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={reduce ? undefined : { opacity: 0, scale: 0.94 }}
-              whileHover={reduce ? undefined : { y: -5 }}
-              transition={{ duration: 0.3, ease: EASE }}
-              className={`group h-full rounded-2xl border p-5 transition-shadow duration-300 hover:border-[var(--tt-orange-border)] hover:shadow-xl ${ui.card}`}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.5, ease: EASE }}
             >
-              <span
-                className={cx(
-                  "inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider",
-                  problem.category === "HLD"
-                    ? "bg-sky-500/10 text-sky-600"
-                    : problem.category === "LLD"
-                      ? "bg-violet-500/10 text-violet-600"
-                      : "bg-[var(--tt-orange-soft)] text-[var(--tt-orange)]"
-                )}
-              >
-                {problem.category}
-              </span>
-
-              <h3 className={`mt-3 text-base font-bold ${ui.heading}`}>{problem.title}</h3>
-              <p className={`mt-2 text-sm leading-7 ${ui.muted}`}>{problem.focus}</p>
-            </motion.article>
+              <article className="card lift h-full rounded-2xl p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <span className={cx("chip caption-3", problem.category === "HLD + LLD" && "chip-accent")}>
+                    {problem.category}
+                  </span>
+                  <ArrowUpRight className="peek" size={18} weight="bold" aria-hidden="true" />
+                </div>
+                <h3 className="title-2 t1 mt-4">{problem.title}</h3>
+                <p className="body-6 t2 mt-2">{problem.focus}</p>
+              </article>
+            </motion.div>
           ))}
         </AnimatePresence>
       </motion.div>
@@ -1502,163 +1241,67 @@ function ProblemExplorer({ dark, ui }) {
 }
 
 // Animated price comparison: separate vs combo
-function SavingsBars({ hld, lld, combo, currency, savings, dark, ui }) {
+function SavingsBars({ hld, lld, combo, currency, savings }) {
   const reduce = useReducedMotion();
-  const sepTotal =
-    purchasable(hld) && purchasable(lld) ? Number(hld.price) + Number(lld.price) : null;
+  const sepTotal = purchasable(hld) && purchasable(lld) ? Number(hld.price) + Number(lld.price) : null;
   const comboPrice = purchasable(combo) ? Number(combo.price) : null;
 
   if (sepTotal === null || comboPrice === null || sepTotal <= 0) return null;
 
   const rows = [
-    { label: "HLD + LLD bought separately", value: sepTotal, tone: "bg-slate-400" },
-    { label: "HLD + LLD combo", value: comboPrice, tone: "bg-gradient-to-r from-orange-600 to-amber-500" },
+    { label: "HLD and LLD bought separately", value: sepTotal, accent: false },
+    { label: "HLD + LLD combo", value: comboPrice, accent: true },
   ];
-
   const max = Math.max(...rows.map((row) => row.value));
 
   return (
-    <Reveal className={`mt-8 rounded-2xl border p-5 sm:p-7 ${ui.card}`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className={`text-lg font-extrabold ${ui.heading}`}>See what you save</h3>
-        {savings > 0 && (
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-extrabold text-emerald-600">
-            You save {money(savings, currency)}
-          </span>
-        )}
-      </div>
+    <Reveal className="mt-8">
+      <div className="card rounded-3xl p-6 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="heading-6 t1">See what you save</h3>
+          {savings > 0 && <span className="chip chip-accent caption-3 mono">You save {money(savings, currency)}</span>}
+        </div>
 
-      <div className="mt-5 space-y-4">
-        {rows.map((row, index) => (
-          <div key={row.label}>
-            <div className="flex items-center justify-between text-xs font-bold sm:text-sm">
-              <span className={ui.body}>{row.label}</span>
-              <span className={ui.heading}>{money(row.value, currency)}</span>
+        <div className="mt-6 space-y-4">
+          {rows.map((row, index) => (
+            <div key={row.label}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="body-5 t2">{row.label}</span>
+                <span className="body-4 mono t1">{money(row.value, currency)}</span>
+              </div>
+              <div className="bar-track mt-2 h-3 overflow-hidden rounded-full">
+                <div className="h-full" style={{ width: `${(row.value / max) * 100}%` }}>
+                  <motion.div
+                    initial={reduce ? false : { scaleX: 0 }}
+                    whileInView={{ scaleX: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.9, delay: 0.1 + index * 0.15, ease: EASE }}
+                    className={cx("bar-fill h-full rounded-full", row.accent && "accent")}
+                  />
+                </div>
+              </div>
             </div>
-            <div className={`mt-2 h-3 overflow-hidden rounded-full ${dark ? "bg-white/10" : "bg-slate-100"}`}>
-              <motion.div
-                initial={reduce ? false : { width: 0 }}
-                whileInView={{ width: `${(row.value / max) * 100}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.9, delay: 0.1 + index * 0.15, ease: EASE }}
-                style={reduce ? { width: `${(row.value / max) * 100}%` } : undefined}
-                className={`h-full rounded-full ${row.tone}`}
-              />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </Reveal>
   );
 }
-
-
-// ======================================================
-// MAIN PAGE
-// ======================================================
-
 export default function SystemDesignCombo() {
-  const reduce = useReducedMotion();
-
-  const [theme, setTheme] = useState(readTheme);
+  const theme = useSiteTheme();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutProduct, setCheckoutProduct] = useState(null);
-  const [faqOpen, setFaqOpen] = useState(0);
   const [activeCurriculum, setActiveCurriculum] = useState("hld");
 
   const trackedComboRef = useRef(null);
 
-  // Sticky buy card: on md+ it appears once the hero scrolls out of view.
+  // Sticky buy bar: on tablet and up it appears once the hero scrolls away.
   const heroRef = useRef(null);
-  const [heroVisible, setHeroVisible] = useState(true);
-
-  useEffect(() => {
-    const el = heroRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return undefined;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setHeroVisible(entry.isIntersecting),
-      { threshold: 0 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const dark = theme === "dark";
-
-  // Scoped component-only colors; no Tailwind config changes required.
-  const colors = useMemo(() => ({
-    orange: dark ? "#FB923C" : "#EA580C",
-    orangeStrong: "#F97316",
-    orangeHover: dark ? "#EA580C" : "#C2410C",
-    orangeSoft: dark ? "#341C10" : "#FFF2E5",
-    orangeBorder: dark ? "#78350F" : "#FED7AA",
-    page: dark ? "#100F0D" : "#FFFCF8",
-    card: dark ? "#1D1A17" : "#FFFFFF",
-    bar: dark ? "rgba(35,27,21,.97)" : "rgba(255,255,255,.97)",
-    text: dark ? "#F8FAFC" : "#0F172A",
-    muted: dark ? "#94A3B8" : "#475569",
-  }), [dark]);
-
-  const localColors = {
-    "--tt-orange": colors.orange,
-    "--tt-orange-strong": colors.orangeStrong,
-    "--tt-orange-hover": colors.orangeHover,
-    "--tt-orange-soft": colors.orangeSoft,
-    "--tt-orange-border": colors.orangeBorder,
-    "--tt-bg": colors.page,
-    "--tt-card": colors.card,
-    "--tt-bar": colors.bar,
-    "--tt-text": colors.text,
-    "--tt-muted": colors.muted,
-  };
-
-  // ====================================================
-  // THEME SYNC
-  // ====================================================
-
-  useEffect(() => {
-    const sync = (event) => {
-      const specified = event?.detail?.theme;
-
-      if (specified === "light" || specified === "dark") {
-        setTheme(specified);
-      } else {
-        setTheme(readTheme());
-      }
-    };
-
-    const storage = (event) => {
-      if (event.key === "theme") sync();
-    };
-
-    const observer = new MutationObserver(() => {
-      setTheme(readTheme());
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-
-    window.addEventListener("targettrek-theme-change", sync);
-    window.addEventListener("storage", storage);
-    window.addEventListener("focus", sync);
-
-    sync();
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("targettrek-theme-change", sync);
-      window.removeEventListener("storage", storage);
-      window.removeEventListener("focus", sync);
-    };
-  }, []);
+  const heroVisible = useInViewport(heroRef);
 
   // ====================================================
   // FETCH PRODUCTS
@@ -1802,29 +1445,8 @@ export default function SystemDesignCombo() {
   };
 
   // ====================================================
-  // THEME CLASSES
-  // ====================================================
-
-  const ui = useMemo(
-    () => ({
-      page: dark ? "bg-[#100F0D] text-slate-100" : "bg-[#FFFCF8] text-slate-900",
-      card: dark ? "border-slate-800 bg-[#1D1A17]" : "border-slate-200 bg-white",
-      muted: dark ? "text-slate-400" : "text-slate-600",
-      heading: dark ? "text-white" : "text-slate-950",
-      body: dark ? "text-slate-300" : "text-slate-700",
-      border: dark ? "border-slate-800" : "border-slate-200",
-      soft: dark ? "bg-[#241D17]" : "bg-[#FFF1E3]",
-      alt: dark ? "border-slate-800 bg-[#15120F]" : "border-orange-100 bg-[#FFF7ED]/70",
-    }),
-    [dark]
-  );
-
-  const container = "mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8";
-
-  // ====================================================
   // SEO
   // ====================================================
-
   const canonical = `${SITE_URL}${ROUTES.combo}`;
   const allFaqs = useMemo(() => [...FAQS, ...EXTRA_FAQS], []);
   const comboName = combo?.title || "Mastering System Design — HLD + LLD Combo";
@@ -1931,9 +1553,19 @@ export default function SystemDesignCombo() {
     };
   }, [allFaqs, canBuy, canonical, combo?._id, combo?.price, comboCover, comboName, currency, hld?.title, lld?.title]);
 
-  // ====================================================
-  // PAGE RENDER
-  // ====================================================
+  /* ---------------------------------------------------------------- */
+  /*  Presentation                                                     */
+  /* ---------------------------------------------------------------- */
+
+  const reduce = useReducedMotion();
+  const goTo = useGoToSection();
+  const rootRef = useRef(null);
+  useNavOffset(rootRef);
+
+  const priceNode = loading ? <PriceSkeleton /> : priceText;
+  const hasMrp = canBuy && Number(combo.mrp) > Number(combo.price);
+  const mrpNode = hasMrp ? money(combo.mrp, currency) : null;
+  const bookStatus = (book) => (loading ? "loading" : purchasable(book) ? "ready" : "error");
 
   return (
     <>
@@ -1946,10 +1578,13 @@ export default function SystemDesignCombo() {
           name="robots"
           content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
         />
-        <meta name="theme-color" content={dark ? "#100F0D" : "#FFF7ED"} />
+        <meta name="theme-color" content={theme === "dark" ? "#000000" : "#ffffff"} />
         <link rel="canonical" href={canonical} />
         <link rel="alternate" hrefLang="en-IN" href={canonical} />
         <link rel="alternate" hrefLang="x-default" href={canonical} />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href={FONT_HREF} rel="stylesheet" />
         {comboCover && <link rel="preload" as="image" href={comboCover} />}
 
         <meta property="og:type" content="product" />
@@ -1970,1014 +1605,565 @@ export default function SystemDesignCombo() {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      <style>{`
-        @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+      <div ref={rootRef} className="hld min-h-screen overflow-x-hidden pb-28" data-theme={theme}>
+        <SkipLink />
+        <ScrollProgress />
+        <FloatNav
+          links={NAV_LINKS}
+          show={!heroVisible && !checkoutOpen}
+          onBuy={buyCombo}
+          canBuy={canBuy}
+          buyLabel="Get the combo"
+        />
+        <Breadcrumb current="HLD + LLD Combo" />
 
-        .tc-gradient-text { background-size: 200% auto; animation: tc-gradient 6s linear infinite; }
-        @keyframes tc-gradient { to { background-position: 200% center; } }
-
-        .tc-orb { animation: tc-float 12s ease-in-out infinite; }
-        .tc-orb-2 { animation-duration: 16s; animation-delay: -4s; }
-        @keyframes tc-float {
-          0%, 100% { transform: translate3d(0,0,0) scale(1); }
-          50% { transform: translate3d(24px,-30px,0) scale(1.08); }
-        }
-
-        .tc-shimmer::after {
-          content: ""; position: absolute; inset: 0; transform: translateX(-120%);
-          background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
-          animation: tc-sheen 3.4s ease-in-out infinite; pointer-events: none;
-        }
-        @keyframes tc-sheen { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-
-        .tc-pulse { animation: tc-pulse 2.4s ease-out infinite; }
-        @media (min-width: 768px) { .md-tc-no-pulse { animation: none; } }
-        @keyframes tc-pulse {
-          0% { box-shadow: 0 0 0 0 rgba(249,115,22,.45); }
-          70%, 100% { box-shadow: 0 0 0 14px rgba(249,115,22,0); }
-        }
-
-        .tc-marquee { display: flex; width: max-content; animation: tc-marquee 40s linear infinite; }
-        .tc-marquee-wrap:hover .tc-marquee { animation-play-state: paused; }
-        @keyframes tc-marquee { to { transform: translateX(-50%); } }
-
-        @media (prefers-reduced-motion: reduce) {
-          .tc-gradient-text, .tc-orb, .tc-shimmer::after, .tc-pulse, .tc-marquee { animation: none !important; }
-          .tc-marquee { flex-wrap: wrap; width: auto; }
-        }
-      `}</style>
-
-      <ScrollProgress />
-
-      <main
-        style={localColors}
-        className={`min-h-screen mt-16 pb-32 transition-colors duration-300 ${ui.page}`}
-      >
-        {/* ON-PAGE NAVIGATION */}
-        <nav
-          aria-label="On this page"
-          className={cx(
-            "sticky top-16 z-40 border-b backdrop-blur-xl",
-            dark ? "border-white/10 bg-[#100F0D]/85" : "border-orange-100 bg-white/85"
-          )}
-        >
-          <ul className="mx-auto flex max-w-[1180px] gap-1 overflow-x-auto px-4 py-2 text-xs font-bold sm:px-6 lg:px-8">
-            {NAV_LINKS.map(([href, label]) => (
-              <li key={href} className="shrink-0">
-                <a
-                  href={href}
-                  className={cx(
-                    "inline-block rounded-full px-3 py-1.5 transition hover:bg-orange-500/10 hover:text-[var(--tt-orange)]",
-                    dark ? "text-slate-300" : "text-slate-600"
-                  )}
-                >
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {loadError && (
-          <div className={`${container} pt-6`}>
-            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-              <span>
-                <strong>Unable to load book details.</strong> {loadError}
-              </span>
-              <button
-                type="button"
-                onClick={() => fetchProducts()}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white"
-              >
-                <RefreshCw size={14} />
-                Try Again
-              </button>
+        <main id="page-main">
+          {loadError && (
+            <div className="bg-base">
+              <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+                <div role="alert" className="alert flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+                  <span className="body-6">
+                    <strong className="font-semibold">Book details could not be loaded. </strong>
+                    {loadError}
+                  </span>
+                  <button type="button" onClick={() => fetchProducts()} className="btn btn-secondary button-sm">
+                    <ArrowsClockwise size={16} weight="bold" />
+                    Try again
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* =================================================
-            HERO
-        ================================================= */}
-        <section
-          ref={heroRef}
-          aria-labelledby="combo-hero-title"
-          className={`${container} relative isolate pb-6 pt-7 sm:pt-12`}
-        >
-          <div aria-hidden="true" className="pointer-events-none absolute -z-10 inset-0 overflow-hidden">
-            <div className="tc-orb absolute right-0 top-0 h-[410px] w-[68%] rounded-full bg-orange-400/15 blur-[90px]" />
-            <div className="tc-orb tc-orb-2 absolute -left-20 bottom-0 h-[300px] w-[40%] rounded-full bg-amber-400/10 blur-[90px]" />
-          </div>
+          {/* ------------------------------ HERO ------------------------------ */}
+          <section ref={heroRef} aria-labelledby="combo-hero-title" className="bg-base relative">
+            <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center lg:px-8 lg:pb-24 lg:pt-12">
+              <div className="min-w-0">
+                <Reveal y={16}>
+                  <span className="chip chip-accent caption-3">
+                    <Package size={14} weight="bold" />
+                    The complete system design collection
+                  </span>
+                </Reveal>
 
-          <nav aria-label="Breadcrumb" className={`mb-6 text-xs ${ui.muted}`}>
-            <ol className="flex flex-wrap items-center gap-2">
-              <li><a className="font-semibold hover:text-[var(--tt-orange)]" href="/">Home</a></li>
-              <li aria-hidden="true">/</li>
-              <li><a className="font-semibold hover:text-[var(--tt-orange)]" href="/books">Books</a></li>
-              <li aria-hidden="true">/</li>
-              <li aria-current="page" className={`font-bold ${ui.heading}`}>HLD + LLD Combo</li>
-            </ol>
-          </nav>
+                <Reveal as="h1" delay={0.06} id="combo-hero-title" className="hero-title heading-1 mt-4 max-w-[680px] pb-1">
+                  <span className="block">System design</span>
+                  <span className="block">HLD + LLD combo.</span>
+                  <span className="block">35 case studies.</span>
+                </Reveal>
 
-          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-14">
-            <div>
-              <Reveal
-                y={14}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--tt-orange-border)] bg-[var(--tt-orange-soft)] px-3 py-1.5 text-xs font-bold text-[var(--tt-orange)]"
-              >
-                <BookOpen size={14} />
-                THE COMPLETE SYSTEM DESIGN COLLECTION
-              </Reveal>
+                <Reveal as="p" delay={0.12} className="body-3 t2 mt-6 max-w-[680px] sm:text-lg sm:leading-7">
+                  From large scale architecture to production minded Java class design. Learn how
+                  systems are structured, how their components work together, and how to discuss
+                  engineering tradeoffs in system design interviews.
+                </Reveal>
 
-              <Reveal
-                as="h1"
-                delay={0.06}
-                id="combo-hero-title"
-                className={`mt-6 max-w-3xl text-[36px] font-black leading-[1.08] tracking-[-0.05em] sm:text-[54px] lg:text-[62px] ${ui.heading}`}
-              >
-                System Design
-                <span className="block">HLD + LLD Combo</span>
-                <span className="tc-gradient-text block bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent">
-                  2 ebooks. 35 case studies.
-                </span>
-              </Reveal>
+                <Reveal delay={0.18} className="mt-8 flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={buyCombo} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+                    Get the combo {priceNode !== "Unavailable" && priceNode}
+                    <ArrowRight className="arrow" size={20} weight="bold" />
+                  </button>
+                  <a href="#curriculum" onClick={(event) => goTo(event, "#curriculum")} className="btn btn-ghost btn-lg button-md">
+                    <BookOpen size={20} weight="bold" />
+                    Explore the curriculum
+                  </a>
+                </Reveal>
 
-              <Reveal as="p" delay={0.12} className={`mt-6 max-w-2xl text-base leading-8 sm:text-lg ${ui.muted}`}>
-                From large-scale architecture to production-minded Java class design. Learn how systems
-                are structured, how their components work together, and how to discuss engineering
-                trade-offs in system design interviews.
-              </Reveal>
-
-              <Reveal delay={0.18} className="mt-6 flex flex-wrap gap-2">
-                {[
-                  "High-Level Design",
-                  "Low-Level Design",
-                  "Java",
-                  "Design Patterns",
-                  "Distributed Systems",
-                  "System Design Interviews",
-                ].map((tag, index) => (
-                  <motion.span
-                    key={tag}
-                    whileHover={reduce ? undefined : { y: -3, scale: 1.05 }}
-                    transition={{ delay: index * 0.02 }}
-                    className={`cursor-default rounded-md border px-3 py-1.5 text-xs font-medium ${ui.border} ${ui.body}`}
-                  >
-                    {tag}
-                  </motion.span>
-                ))}
-              </Reveal>
-
-              <Reveal delay={0.24} className="mt-8 hidden flex-wrap gap-3 lg:flex">
-                <button type="button" onClick={buyCombo} disabled={!canBuy} className={ctaBase}>
-                  <CreditCard size={18} />
-                  Buy Complete Combo
-                  <ArrowRight size={17} className="transition group-hover:translate-x-1" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => scrollToId("curriculum")}
-                  className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition hover:-translate-y-0.5 hover:border-orange-400 ${ui.border} ${ui.body}`}
-                >
-                  Explore Curriculum
-                  <ArrowDown size={17} />
-                </button>
-              </Reveal>
-
-              <div className={`mt-9 grid grid-cols-3 gap-4 border-t pt-6 ${ui.border}`}>
-                {[
-                  [2, "", "Digital ebooks"],
-                  [totalModules, "+", "Learning modules"],
-                  [totalTopics, "+", "Topic entries"],
-                ].map(([value, suffix, label], index) => (
-                  <Reveal key={label} delay={0.28 + index * 0.08} y={14}>
-                    <strong className={`text-2xl font-extrabold sm:text-3xl ${ui.heading}`}>
-                      <CountUp to={value} suffix={suffix} />
-                    </strong>
-                    <p className={`mt-1 text-xs ${ui.muted}`}>{label}</p>
-                  </Reveal>
-                ))}
+                <Reveal delay={0.24} className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+                  {[
+                    [FileText, "Two separate PDF downloads"],
+                    [Lock, `Secure checkout via ${PROVIDER_NAME}`],
+                    [DownloadSimple, "Access after payment verification"],
+                  ].map(([Icon, text]) => (
+                    <span key={text} className="caption-1 t2 inline-flex items-center gap-2">
+                      <Icon className="ta" size={16} weight="bold" />
+                      {text}
+                    </span>
+                  ))}
+                </Reveal>
               </div>
 
-              <p className={`mt-2 text-[11px] ${ui.muted}`}>
-                Curriculum counts refer to the learning outline displayed on this page.
-              </p>
-            </div>
+              {/* Books + price */}
+              <Reveal delay={0.15} className="mx-auto w-full max-w-sm lg:max-w-none">
+                <div className="bg-s2 bd relative rounded-3xl p-6 sm:p-8">
+                  <FloatChip className="right-3 top-4 sm:right-4" delay={0.8}>
+                    <p className="heading-6 mono ta">2 books</p>
+                    <p className="caption-4 t2">one checkout</p>
+                  </FloatChip>
 
-            {/* Purchase panel */}
-            <Reveal delay={0.12} y={34}>
-              <aside
-                className={`relative overflow-hidden rounded-[28px] border border-[var(--tt-orange-border)]/70 p-6 shadow-[0_22px_65px_-35px_rgba(234,88,12,.35)] lg:sticky lg:top-32 ${ui.card}`}
-              >
-                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-600 via-amber-400 to-orange-600" />
+                  <TwoBooks hld={hld} lld={lld} />
 
-                <TwoBooks hld={hld} lld={lld} />
-
-                <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--tt-orange)]">
-                  Complete 2-book package
-                </p>
-
-                <h2 className={`mt-2 text-xl font-extrabold ${ui.heading}`}>HLD + LLD (Java)</h2>
-
-                <p className={`mt-2 text-sm leading-6 ${ui.muted}`}>Two independent PDF ebooks with one checkout.</p>
-
-                <div className={`my-5 border-y py-5 ${ui.border}`}>
-                  {loading ? (
-                    <Skeleton dark={dark} className="h-10 w-40" />
-                  ) : (
-                    <div className="flex flex-wrap items-end gap-2">
-                      <strong className={`text-4xl font-extrabold ${ui.heading}`}>{priceText}</strong>
-
-                      {canBuy && Number(combo.mrp) > Number(combo.price) && (
-                        <span className={`pb-1 text-sm line-through ${ui.muted}`}>{money(combo.mrp, currency)}</span>
+                  <div className="card mt-6 rounded-2xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="eyebrow caption-3">HLD + LLD (Java) · 2 PDFs</p>
+                        <div className="mt-2 flex flex-wrap items-baseline gap-2">
+                          <span className="heading-4 mono t1">{priceNode}</span>
+                          {mrpNode && <span className="body-5 mono t3 strike">{mrpNode}</span>}
+                        </div>
+                      </div>
+                      {combinedDiscount > 0 && (
+                        <span className="chip chip-accent caption-3 mono">{combinedDiscount}% off</span>
                       )}
                     </div>
-                  )}
-
-                  {combinedDiscount > 0 && (
-                    <span className="mt-3 inline-flex rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600">
-                      {combinedDiscount}% off MRP
-                    </span>
-                  )}
-
-                  {savings !== null && savings > 0 && (
-                    <p className="mt-3 text-xs font-semibold text-emerald-600">
-                      Save {money(savings, currency)} vs buying both separately.
-                    </p>
-                  )}
-                </div>
-
-                <button type="button" onClick={buyCombo} disabled={!canBuy} className={`${ctaBase} w-full`}>
-                  <CreditCard size={18} />
-                  Buy Combo Now
-                  <ArrowRight size={17} className="transition group-hover:translate-x-1" />
-                </button>
-
-                <p className={`mt-3 text-center text-[11px] ${ui.muted}`}>Checkout powered by {PROVIDER_NAME}</p>
-
-                <ul className={`mt-5 space-y-3 border-t pt-5 ${ui.border}`}>
-                  {[
-                    "High-Level Design PDF",
-                    "Low-Level Design (Java) PDF",
-                    "Separate book downloads",
-                    "Digital access after verification",
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-2.5">
-                      <CheckCircle2 size={17} className="shrink-0 text-emerald-600" />
-                      <span className={`text-xs ${ui.body}`}>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className={`mt-5 rounded-lg p-3 ${ui.soft}`}>
-                  <div className="flex items-center gap-2">
-                    <LockKeyhole size={15} className="text-[var(--tt-orange)]" />
-                    <span className={`text-xs font-bold ${ui.heading}`}>Secure checkout</span>
+                    {savings !== null && savings > 0 && (
+                      <p className="caption-3 tok mt-2">
+                        Save {money(savings, currency)} compared with buying both separately
+                      </p>
+                    )}
+                    <ul className="mt-4 space-y-2">
+                      {["High Level Design PDF", "Low Level Design (Java) PDF", "Digital access after verification"].map((item) => (
+                        <li key={item} className="caption-1 t2 flex items-center gap-2">
+                          <Check className="ta shrink-0" size={14} weight="bold" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-
-                  <p className={`mt-2 text-[11px] leading-5 ${ui.muted}`}>
-                    Payment methods such as UPI and debit/credit cards appear when enabled for your merchant account.
-                  </p>
                 </div>
-              </aside>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* TECH MARQUEE */}
-        <div
-          className={cx("tc-marquee-wrap mt-10 overflow-hidden border-y py-4", dark ? "border-white/10 bg-[#13100E]" : "border-orange-100 bg-white")}
-          aria-label="Topics covered in both books"
-        >
-          <div className="tc-marquee">
-            {[...MARQUEE_TERMS, ...MARQUEE_TERMS].map((term, index) => (
-              <span
-                key={`${term}-${index}`}
-                aria-hidden={index >= MARQUEE_TERMS.length ? "true" : undefined}
-                className={cx(
-                  "mx-2 inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em]",
-                  dark ? "border-white/10 bg-white/[0.04] text-slate-300" : "border-orange-100 bg-orange-50/70 text-orange-700"
-                )}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--tt-orange)]" />
-                {term}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* AT A GLANCE */}
-        <section aria-label="Combo at a glance" className={container}>
-          <ScrollScale className="mt-10">
-            <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border md:grid-cols-4 ${ui.card}`}>
-              {GLANCE_STATS.map((item, index) => (
-                <motion.div
-                  key={item.label}
-                  whileHover={reduce ? undefined : { scale: 1.04 }}
-                  className={cx(
-                    "px-4 py-7 text-center",
-                    index % 2 === 0 && "border-r",
-                    index < 2 && "border-b md:border-b-0",
-                    index === 1 && "md:border-r",
-                    index === 2 && "md:border-r",
-                    ui.border
-                  )}
-                >
-                  <div className="text-3xl font-extrabold text-[var(--tt-orange)] sm:text-4xl">
-                    <CountUp to={item.value} />
-                  </div>
-                  <div className={`mt-1 text-xs font-bold uppercase tracking-[0.12em] sm:text-sm ${ui.muted}`}>{item.label}</div>
-                </motion.div>
-              ))}
+              </Reveal>
             </div>
-          </ScrollScale>
-        </section>
+          </section>
 
-        {/* =================================================
-            BOTH INDIVIDUAL BOOKS
-        ================================================= */}
-        <section id="included-books" aria-labelledby="included-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead
-            id="included-title"
-            eyebrow="Inside your combo"
-            title="Two complete books. One purchase."
-            description="The combo brings together system architecture and Java-based object design. You can also explore either book separately."
-            dark={dark}
-          />
+          {/* ---------------------- THE TWO BOOKS (HLD, LLD) -------------------- */}
+          <Section id="included-books" alt labelledBy="included-title">
+            <SectionHeader
+              id="included-title"
+              eyebrow="Inside your combo"
+              title="Two complete books. One purchase."
+              description="The combo brings together system architecture and Java object design. You can also open either book on its own page."
+            />
 
-          <div className="mt-7 grid gap-5 md:grid-cols-2">
-            <Reveal delay={0.05}>
-              <BookCard
-                index="01"
-                product={hld}
-                loading={loading}
-                title="Mastering System Design — HLD"
-                subtitle="Requirements, APIs, distributed systems, databases, caching, queues, scalability and reliability."
-                facts={BOOK_FACTS.hld}
-                route={ROUTES.hld}
-                dark={dark}
-              />
-            </Reveal>
+            <div className="mt-10 grid gap-6 lg:grid-cols-2">
+              <Reveal>
+                <BookOfferCard
+                  eyebrow="Book 01 · High level design"
+                  title={hld?.title && hld.title !== "Untitled" ? hld.title : "Mastering System Design: HLD"}
+                  subtitle="Architecture and scale"
+                  description="Requirements, APIs, distributed systems, databases, caching, queues, scalability and reliability."
+                  cover={hld?.coverPageUrl}
+                  features={BOOK_FACTS.hld}
+                  status={bookStatus(hld)}
+                  price={hld?.price}
+                  mrp={hld?.mrp}
+                  currency={hld?.currency}
+                  href={ROUTES.hld}
+                  viewLabel="View the HLD book"
+                />
+              </Reveal>
+              <Reveal delay={0.1}>
+                <BookOfferCard
+                  eyebrow="Book 02 · Low level design"
+                  title={lld?.title && lld.title !== "Untitled" ? lld.title : "Mastering System Design: LLD (Java)"}
+                  subtitle="Java first class design"
+                  description="Java fundamentals, OOP, SOLID, 23 GoF patterns, UML, Spring Boot architecture, concurrency, testing and 16 LLD case studies."
+                  cover={lld?.coverPageUrl}
+                  features={BOOK_FACTS.lld}
+                  status={bookStatus(lld)}
+                  price={lld?.price}
+                  mrp={lld?.mrp}
+                  currency={lld?.currency}
+                  href={ROUTES.lld}
+                  viewLabel="View the LLD book"
+                />
+              </Reveal>
+            </div>
+          </Section>
 
-            <Reveal delay={0.12}>
-              <BookCard
-                index="02"
-                product={lld}
-                loading={loading}
-                title="Mastering System Design — LLD (Java)"
-                subtitle="Java fundamentals, OOP, SOLID, 23 GoF patterns, UML, Spring Boot architecture, concurrency, testing and 16 LLD case studies."
-                facts={BOOK_FACTS.lld}
-                route={ROUTES.lld}
-                dark={dark}
-              />
-            </Reveal>
+          {/* ------------------------------ PROOF ------------------------------ */}
+          <StatsStrip label="Combo at a glance" items={GLANCE_STATS.map((item) => [item.value, "", item.label])} />
+          <div className="bg-base pb-16">
+            <Marquee terms={MARQUEE_TERMS} label="Topics covered in both books" />
           </div>
-        </section>
 
-        {/* =================================================
-            WHY THE COMBO
-        ================================================= */}
-        <section id="why-combo" aria-labelledby="why-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead
-            id="why-title"
-            eyebrow="Why choose the combo"
-            title="Interviewers test both halves. Prepare for both."
-            description="A strong candidate can zoom out to the whole architecture and zoom in to a clean class design. The combo is built around that skill."
-            dark={dark}
-          />
+          <TaglineReveal text={TAGLINE} />
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {WHY_COMBO.map((item, index) => {
-              const Icon = item.icon;
+          {/* ---------------------------- WHY THE COMBO ------------------------ */}
+          <Section id="why-combo" alt labelledBy="why-title">
+            <SectionHeader
+              id="why-title"
+              eyebrow="Why choose the combo"
+              title="Interviewers test both halves. Prepare for both."
+              description="A strong candidate can zoom out to the whole architecture and zoom in to a clean class design. The combo is built around that skill."
+            />
 
-              return (
-                <Reveal
-                  key={item.title}
-                  delay={(index % 3) * 0.07}
-                  className={`group h-full rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-[var(--tt-orange-border)] hover:shadow-xl ${ui.card}`}
-                >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--tt-orange-soft)] transition duration-300 group-hover:-rotate-6 group-hover:scale-110">
-                    <Icon size={23} className="text-[var(--tt-orange)]" />
-                  </span>
-                  <h3 className={`mt-5 text-base font-bold ${ui.heading}`}>{item.title}</h3>
-                  <p className={`mt-2 text-sm leading-7 ${ui.muted}`}>{item.text}</p>
-                </Reveal>
-              );
-            })}
-          </div>
-        </section>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {WHY_COMBO.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal key={item.title} delay={(index % 3) * 0.07}>
+                    <article className="card lift h-full rounded-3xl p-6">
+                      <span className="tile h-12 w-12 rounded-xl">
+                        <Icon size={24} weight="duotone" />
+                      </span>
+                      <h3 className="heading-6 t1 mt-6">{item.title}</h3>
+                      <p className="body-6 t2 mt-2">{item.text}</p>
+                    </article>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </Section>
 
-        {/* =================================================
-            HLD VS LLD + ROUND PICKER
-        ================================================= */}
-        <section id="round-picker" aria-labelledby="round-title" className={`mt-20 scroll-mt-32 border-y py-16 ${ui.alt}`}>
-          <div className={container}>
-            <SectionHead
+          {/* ------------------------ HLD VS LLD + ROUNDS ---------------------- */}
+          <Section id="round-picker" labelledBy="round-title">
+            <SectionHeader
               id="round-title"
               eyebrow="The complete picture"
               title="Architecture decisions and implementation decisions"
               description="A strong system design answer connects the components of a system with the internal design of those components."
-              dark={dark}
             />
 
-            <div className="mt-8 grid gap-5 lg:grid-cols-2">
-              {[
-                {
-                  title: "High-Level Design",
-                  icon: Server,
-                  intro: "Understand how the system behaves as a whole.",
-                  points: [
-                    "What services should exist?",
-                    "How will they communicate?",
-                    "Where will data be stored?",
-                    "How will traffic be distributed?",
-                    "What happens during failures?",
-                  ],
-                },
-                {
-                  title: "Low-Level Design",
-                  icon: Code2,
-                  intro: "Understand how individual components should be implemented.",
-                  points: [
-                    "What classes and interfaces are needed?",
-                    "Which object owns each responsibility?",
-                    "Which design pattern fits?",
-                    "How can the design be extended?",
-                    "How is shared state protected?",
-                  ],
-                },
-              ].map((item, cardIndex) => {
+            <div className="mt-10 grid gap-4 lg:grid-cols-2">
+              {DESIGN_LEVELS.map((item, cardIndex) => {
                 const Icon = item.icon;
-
                 return (
-                  <Reveal key={item.title} delay={cardIndex * 0.1} className="h-full">
-                    <div className={`group h-full rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${ui.card}`}>
-                      <Icon size={27} className="text-[var(--tt-orange)] transition group-hover:scale-125" />
-
-                      <h3 className={`mt-4 text-xl font-bold ${ui.heading}`}>{item.title}</h3>
-
-                      <p className={`mt-2 text-sm leading-7 ${ui.muted}`}>{item.intro}</p>
-
-                      <ul className="mt-5 space-y-3">
+                  <Reveal key={item.title} delay={cardIndex * 0.1}>
+                    <article className="card lift h-full rounded-3xl p-6 sm:p-8">
+                      <span className="tile h-12 w-12 rounded-xl">
+                        <Icon size={24} weight="duotone" />
+                      </span>
+                      <h3 className="heading-5 t1 mt-6">{item.title}</h3>
+                      <p className="body-6 t2 mt-2">{item.intro}</p>
+                      <ul className="mt-6 space-y-3">
                         {item.points.map((point) => (
                           <li key={point} className="flex items-start gap-3">
-                            <Check size={17} className="mt-0.5 shrink-0 text-[var(--tt-orange)]" />
-                            <span className={`text-sm leading-6 ${ui.body}`}>{point}</span>
+                            <Check className="ta mt-0.5 shrink-0" size={16} weight="bold" />
+                            <span className="body-6 t1">{point}</span>
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </article>
                   </Reveal>
                 );
               })}
             </div>
 
-            {/* Round matrix */}
-            <Reveal className={`mt-8 overflow-hidden rounded-2xl border ${ui.card}`}>
-              <div className={`grid grid-cols-[1.6fr_1fr_1fr] text-xs font-extrabold uppercase tracking-wider ${ui.soft} ${ui.heading}`}>
-                <div className="p-4">Interview round</div>
-                <div className="p-4 text-center">HLD book</div>
-                <div className="p-4 text-center">LLD book</div>
-              </div>
-              {ROUND_MATRIX.map((row) => (
-                <div key={row.round} className={`grid grid-cols-[1.6fr_1fr_1fr] border-t transition hover:bg-[var(--tt-orange-soft)] ${ui.border}`}>
-                  <div className={`p-4 text-sm font-semibold ${ui.body}`}>{row.round}</div>
-                  {[row.hld, row.lld].map((yes, index) => (
-                    <div key={index} className="flex items-center justify-center p-4">
-                      {yes ? <CheckCircle2 size={19} className="text-emerald-600" /> : <span className={ui.muted}>—</span>}
-                    </div>
-                  ))}
+            <Reveal className="mt-6">
+              <div className="rule bd grid gap-px overflow-hidden rounded-3xl">
+                <div className="bg-s2 grid grid-cols-[3fr_1fr_1fr] gap-3 px-4 py-3">
+                  <span className="caption-3 t3 uppercase tracking-wider">Interview round</span>
+                  <span className="caption-3 t3 text-center uppercase tracking-wider">HLD</span>
+                  <span className="caption-3 t3 text-center uppercase tracking-wider">LLD</span>
                 </div>
-              ))}
+                {ROUND_MATRIX.map((row) => (
+                  <div key={row.round} className="bg-s1 row-hover grid grid-cols-[3fr_1fr_1fr] items-center gap-3 px-4 py-4">
+                    <span className="body-5 t1">{row.round}</span>
+                    <span className="flex justify-center"><YesNo yes={row.hld} /></span>
+                    <span className="flex justify-center"><YesNo yes={row.lld} /></span>
+                  </div>
+                ))}
+              </div>
             </Reveal>
 
-            <ClassifyGame dark={dark} ui={ui} />
-          </div>
-        </section>
+            <ClassifyGame />
+          </Section>
 
-        {/* =================================================
-            CURRICULUM
-        ================================================= */}
-        <section id="curriculum" aria-labelledby="curriculum-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead
-            id="curriculum-title"
-            eyebrow="Detailed curriculum"
-            title="Explore the subjects in depth"
-            description="Move through foundations, architecture, Java object design, concurrency, practical scenarios and interview problem-solving techniques."
-            dark={dark}
-          />
+          {/* ----------------------------- CURRICULUM -------------------------- */}
+          <Section id="curriculum" alt labelledBy="curriculum-title">
+            <SectionHeader
+              id="curriculum-title"
+              eyebrow="Detailed curriculum"
+              title="Explore the subjects in depth"
+              description="Move through foundations, architecture, Java object design, concurrency, practical scenarios and interview problem solving techniques."
+            />
 
-          <div className="mt-8 flex gap-2" role="tablist" aria-label="Choose a book curriculum">
-            {[
-              { id: "hld", label: "HLD — Architecture" },
-              { id: "lld", label: "LLD — Java" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={activeCurriculum === tab.id}
-                onClick={() => setActiveCurriculum(tab.id)}
-                className={cx(
-                  "rounded-lg px-5 py-3 text-sm font-bold transition",
-                  activeCurriculum === tab.id
-                    ? "bg-[var(--tt-orange-strong)] text-white shadow-lg shadow-orange-500/25"
-                    : dark
-                      ? "border border-slate-700 bg-slate-900 text-slate-300 hover:border-orange-400"
-                      : "border border-slate-200 bg-white text-slate-700 hover:border-orange-300"
+            <Reveal className="mt-8">
+              <PillTabs
+                label="Choose a book curriculum"
+                value={activeCurriculum}
+                onChange={setActiveCurriculum}
+                items={[
+                  { id: "hld", label: "HLD · Architecture", count: HLD_MODULES.length },
+                  { id: "lld", label: "LLD · Java", count: LLD_MODULES.length },
+                ]}
+              />
+            </Reveal>
+
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeCurriculum}
+                role="tabpanel"
+                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                transition={{ duration: 0.4, ease: EASE }}
+                className="mt-6"
+              >
+                {activeCurriculum === "hld" ? (
+                  <ModuleList key="hld" modules={HLD_MODULES} prefix="hld" />
+                ) : (
+                  <ModuleList key="lld" modules={LLD_MODULES} prefix="lld" />
                 )}
-              >
-                {tab.label}
+              </motion.div>
+            </AnimatePresence>
+
+            <p className="caption-2 t3 mt-4">
+              This outline lists {totalModules} modules and {totalTopics} topic entries. It is a topic level
+              study guide for the collection, not a page by page table of contents from the PDFs.
+            </p>
+          </Section>
+
+          {/* ---------------------------- CASE STUDIES ------------------------- */}
+          <Section id="practice" labelledBy="practice-title">
+            <SectionHeader
+              id="practice-title"
+              eyebrow="Applied design"
+              title="Real world systems to study"
+              description="Use familiar products and engineering problems to practice system architecture, class modeling, concurrency and failure handling."
+            />
+            <ProblemExplorer />
+            <Reveal className="mt-10 flex flex-col items-center gap-3 text-center">
+              <p className="body-2 t1">35 worked designs across the two books.</p>
+              <button type="button" onClick={buyCombo} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+                Get the combo {priceNode !== "Unavailable" && priceNode}
+                <ArrowRight className="arrow" size={18} weight="bold" />
               </button>
-            ))}
-          </div>
+            </Reveal>
+          </Section>
 
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={activeCurriculum}
-              initial={reduce ? false : { opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduce ? undefined : { opacity: 0, y: -10 }}
-              transition={{ duration: 0.28 }}
-              className="mt-6"
-            >
-              {activeCurriculum === "hld" ? (
-                <ModuleList key="hld" modules={HLD_MODULES} dark={dark} prefix="hld" />
-              ) : (
-                <ModuleList key="lld" modules={LLD_MODULES} dark={dark} prefix="lld" />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          {/* ------------------------------ METHOD ----------------------------- */}
+          <Section id="method" alt labelledBy="method-title">
+            <SectionHeader
+              id="method-title"
+              eyebrow="Interview preparation"
+              title="A repeatable approach to design rounds"
+              description="Practice explaining why a design works, not just drawing boxes or naming design patterns."
+            />
 
-          <p className={`mt-4 text-xs leading-6 ${ui.muted}`}>
-            This is a topic-level study guide for the collection, not a page-by-page table of contents from the PDFs.
-          </p>
-        </section>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {METHOD_STEPS.map(([number, title, description], index) => (
+                <Reveal key={number} delay={(index % 3) * 0.07}>
+                  <article className="card lift h-full rounded-3xl p-6">
+                    <span className="num heading-4 mono">{number}</span>
+                    <h3 className="heading-6 t1 mt-4">{title}</h3>
+                    <p className="body-6 t2 mt-2">{description}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </Section>
 
-        {/* =================================================
-            REAL-WORLD PROBLEMS
-        ================================================= */}
-        <section id="practice" aria-labelledby="practice-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead
-            id="practice-title"
-            eyebrow="Applied design"
-            title="Real-world systems to study"
-            description="Use familiar products and engineering problems to practice system architecture, class modeling, concurrency and failure handling."
-            dark={dark}
-          />
-          <ProblemExplorer dark={dark} ui={ui} />
-        </section>
-
-        {/* =================================================
-            INTERVIEW METHOD
-        ================================================= */}
-        <section aria-labelledby="method-title" className={`${container} mt-20`}>
-          <SectionHead
-            id="method-title"
-            eyebrow="Interview preparation"
-            title="A repeatable approach to design rounds"
-            description="Practice explaining why a design works, not just drawing boxes or naming design patterns."
-            dark={dark}
-          />
-
-          <ol className={`relative mt-8 overflow-hidden rounded-2xl border ${ui.card}`}>
-            {[
-              ["01", "Understand requirements", "Clarify features, constraints, scale and expected behavior."],
-              ["02", "Identify core components", "For HLD, map services and data flow. For LLD, identify entities and responsibilities."],
-              ["03", "Design the foundation", "Define APIs, storage, classes, interfaces and key relationships."],
-              ["04", "Discuss scalability and extensibility", "Explain the trade-offs in architecture and object composition."],
-              ["05", "Handle critical edge cases", "Consider failures, concurrency, retries, duplicate requests and changing requirements."],
-              ["06", "Explain your decisions", "Clearly describe assumptions and alternative approaches."],
-            ].map(([number, title, description], index) => (
-              <motion.li
-                key={number}
-                initial={reduce ? false : { opacity: 0, x: -24 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.5, delay: index * 0.05 }}
-                className={cx("group flex gap-5 p-5 transition hover:bg-[var(--tt-orange-soft)] sm:p-6", index && `border-t ${ui.border}`)}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tt-orange-soft)] text-sm font-extrabold text-[var(--tt-orange)] transition group-hover:scale-110 group-hover:bg-[var(--tt-orange-strong)] group-hover:text-white">
-                  {number}
-                </span>
-
-                <div>
-                  <h3 className={`text-sm font-bold sm:text-base ${ui.heading}`}>{title}</h3>
-                  <p className={`mt-1.5 text-sm leading-6 ${ui.muted}`}>{description}</p>
-                </div>
-              </motion.li>
-            ))}
-          </ol>
-        </section>
-
-        {/* =================================================
-            STUDY PLAN
-        ================================================= */}
-        <section id="study-plan" aria-labelledby="plan-title" className={`mt-20 scroll-mt-32 border-y py-16 ${ui.alt}`}>
-          <div className={container}>
-            <SectionHead
+          {/* ----------------------------- STUDY PLAN -------------------------- */}
+          <Section id="study-plan" labelledBy="plan-title">
+            <SectionHeader
               id="plan-title"
               eyebrow="How to prepare"
               title="Pick your timeline. Get a study plan."
-              description="Choose how many weeks you have before the interview — the plan below shows how to split time between the two books."
-              dark={dark}
+              description="Choose how much time you have before the interview. The plan shows how to split it between the two books."
             />
-            <PlanBuilder dark={dark} ui={ui} />
+            <PlanBuilder />
 
-            <div className="mt-12 grid gap-4 md:grid-cols-4">
-              {[
-                { stage: "Stage 01", title: "Foundations", text: "Revise requirements, APIs, object-oriented programming and basic class relationships." },
-                { stage: "Stage 02", title: "Core design", text: "Study databases, caching, scaling, SOLID and design patterns." },
-                { stage: "Stage 03", title: "Correctness", text: "Explore concurrency, locking, failures, retries and consistent state." },
-                { stage: "Stage 04", title: "Mock interviews", text: "Practice end-to-end system design and Java LLD problems under time constraints." },
-              ].map((item, index) => (
-                <Reveal
-                  key={item.stage}
-                  delay={index * 0.07}
-                  className={`h-full rounded-2xl border p-5 transition hover:-translate-y-1 hover:shadow-lg ${ui.card}`}
-                >
-                  <span className="text-xs font-bold text-[var(--tt-orange)]">{item.stage}</span>
-                  <h3 className={`mt-3 text-base font-bold ${ui.heading}`}>{item.title}</h3>
-                  <p className={`mt-3 text-sm leading-7 ${ui.muted}`}>{item.text}</p>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {STAGES.map(([stage, title, text], index) => (
+                <Reveal key={stage} delay={index * 0.07} y={24}>
+                  <article className="card lift h-full rounded-2xl p-4 sm:p-6">
+                    <span className="num caption-3 mono">{stage}</span>
+                    <h3 className="title-2 t1 mt-3">{title}</h3>
+                    <p className="body-6 t2 mt-1">{text}</p>
+                  </article>
                 </Reveal>
               ))}
             </div>
-          </div>
-        </section>
+          </Section>
 
-        {/* =================================================
-            WHO THIS IS FOR
-        ================================================= */}
-        <section aria-labelledby="who-title" className={`${container} mt-20`}>
-          <SectionHead
-            id="who-title"
-            eyebrow="Intended readers"
-            title="Built for developers who want stronger design fundamentals"
-            dark={dark}
-          />
+          {/* ------------------------------ READERS ---------------------------- */}
+          <Section id="readers" alt labelledBy="who-title">
+            <SectionHeader
+              id="who-title"
+              eyebrow="Intended readers"
+              title="Built for developers who want stronger design fundamentals"
+            />
 
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {[
-              { icon: Server, title: "Backend engineers", detail: "Strengthen architecture decisions, scalability fundamentals and API/service design." },
-              { icon: GraduationCap, title: "SDE candidates", detail: "Prepare systematically for architecture and object-oriented design interview questions." },
-              { icon: Code2, title: "Java developers", detail: "Improve class modeling, interfaces, design patterns and concurrency reasoning." },
-            ].map((item, index) => {
-              const Icon = item.icon;
-
-              return (
-                <Reveal
-                  key={item.title}
-                  delay={index * 0.08}
-                  className={`group h-full rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${ui.card}`}
-                >
-                  <Icon size={24} className="text-[var(--tt-orange)] transition duration-300 group-hover:rotate-6 group-hover:scale-125" />
-                  <h3 className={`mt-4 text-base font-bold ${ui.heading}`}>{item.title}</h3>
-                  <p className={`mt-3 text-sm leading-7 ${ui.muted}`}>{item.detail}</p>
-                </Reveal>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* =================================================
-            PAYMENT SECTION
-        ================================================= */}
-        <section id="payments" aria-labelledby="payments-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead
-            id="payments-title"
-            eyebrow="Checkout and delivery"
-            title="A straightforward digital purchase"
-            description={`Your checkout is powered by ${PROVIDER_NAME}. Available payment methods depend on those enabled for your merchant account.`}
-            dark={dark}
-          />
-
-          <Reveal className={`mt-8 grid gap-8 rounded-2xl border p-6 md:grid-cols-2 md:p-8 ${ui.card}`}>
-            <div>
-              <h3 className={`text-lg font-bold ${ui.heading}`}>Payment options</h3>
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {[
-                  { icon: Smartphone, title: "UPI", text: "When enabled" },
-                  { icon: CreditCard, title: "Debit card", text: "When enabled" },
-                  { icon: WalletCards, title: "Credit card", text: "When enabled" },
-                  { icon: LockKeyhole, title: "Secure checkout", text: PROVIDER_NAME },
-                ].map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <motion.div
-                      key={item.title}
-                      whileHover={reduce ? undefined : { y: -4, scale: 1.03 }}
-                      className={`rounded-xl border p-4 ${ui.border} ${ui.soft}`}
-                    >
-                      <Icon size={21} className="text-[var(--tt-orange)]" />
-                      <p className={`mt-3 text-sm font-bold ${ui.heading}`}>{item.title}</p>
-                      <p className={`mt-1 text-xs ${ui.muted}`}>{item.text}</p>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <p className={`mt-4 text-xs leading-6 ${ui.muted}`}>
-                Payment availability is determined at checkout; this page doesn&apos;t independently verify which methods are active for your account.
-              </p>
-            </div>
-
-            <div>
-              <h3 className={`text-lg font-bold ${ui.heading}`}>After successful payment</h3>
-
-              <ol className="mt-5 space-y-6">
-                {[
-                  { icon: ShieldCheck, title: "Purchase verification", text: "The payment is verified through the configured gateway." },
-                  { icon: BookOpen, title: "Access your books", text: "Both HLD and LLD appear in the purchase success page." },
-                  { icon: Download, title: "Save both PDFs", text: "Download the files individually or use the combined download option." },
-                ].map((item, index) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <motion.li
-                      key={item.title}
-                      initial={reduce ? false : { opacity: 0, x: 16 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: index * 0.1, duration: 0.45 }}
-                      className="flex items-start gap-4"
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tt-orange-soft)]">
-                        <Icon size={17} className="text-[var(--tt-orange)]" />
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {READERS.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal key={item.title} delay={index * 0.08}>
+                    <article className="card lift h-full rounded-3xl p-6">
+                      <span className="tile h-12 w-12 rounded-xl">
+                        <Icon size={24} weight="duotone" />
                       </span>
-
-                      <div>
-                        <h4 className={`text-sm font-bold ${ui.heading}`}>{item.title}</h4>
-                        <p className={`mt-1.5 text-sm leading-6 ${ui.muted}`}>{item.text}</p>
-                      </div>
-                    </motion.li>
-                  );
-                })}
-              </ol>
+                      <h3 className="heading-6 t1 mt-6">{item.title}</h3>
+                      <p className="body-6 t2 mt-2">{item.detail}</p>
+                    </article>
+                  </Reveal>
+                );
+              })}
             </div>
-          </Reveal>
-        </section>
+          </Section>
 
-        {/* =================================================
-            PRICE COMPARISON
-        ================================================= */}
-        <section id="pricing" aria-labelledby="pricing-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead
-            id="pricing-title"
-            eyebrow="Pricing"
-            title="One book or the complete combo"
-            description="You can purchase the individual editions or choose the combo to receive both."
-            dark={dark}
-          />
+          {/* ------------------------------ PAYMENTS --------------------------- */}
+          <Section id="payments" labelledBy="payments-title">
+            <SectionHeader
+              id="payments-title"
+              eyebrow="Checkout and delivery"
+              title="A straightforward digital purchase"
+              description={`Your checkout is powered by ${PROVIDER_NAME}. The payment methods you see depend on those enabled for the merchant account.`}
+            />
 
-          <SavingsBars hld={hld} lld={lld} combo={combo} currency={currency} savings={savings || 0} dark={dark} ui={ui} />
-
-          <Reveal className={`mt-8 overflow-hidden rounded-2xl border ${ui.border}`}>
-            <div className="grid grid-cols-[1.25fr_1fr_1fr_1fr]">
-              {["", "HLD", "LLD", "Combo"].map((label, index) => (
-                <div
-                  key={index}
-                  className={`p-3 text-center text-xs font-bold sm:p-5 sm:text-sm ${
-                    index === 3 ? "bg-[var(--tt-orange-strong)] text-white" : `${ui.soft} ${ui.heading}`
-                  }`}
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            {[
-              ["High-Level Design", true, false, true],
-              ["Low-Level Design", false, true, true],
-              ["Java LLD content", false, true, true],
-              ["System architecture", true, false, true],
-              ["Two eBooks", false, false, true],
-            ].map((row) => (
-              <div key={row[0]} className={`grid grid-cols-[1.25fr_1fr_1fr_1fr] border-t transition hover:bg-[var(--tt-orange-soft)] ${ui.border}`}>
-                <div className={`flex items-center p-3 text-[11px] sm:p-5 sm:text-sm ${ui.body}`}>{row[0]}</div>
-
-                {row.slice(1).map((yes, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-center p-3 sm:p-5 ${index === 2 ? (dark ? "bg-orange-950/30" : "bg-orange-50") : ""}`}
-                  >
-                    {yes ? <CheckCircle2 size={18} className="text-emerald-600" /> : <span className={ui.muted}>—</span>}
+            <div className="mt-10 grid gap-4 lg:grid-cols-2">
+              <Reveal>
+                <div className="card h-full rounded-3xl p-6 sm:p-8">
+                  <h3 className="heading-6 t1">Payment options</h3>
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    {PAY_OPTIONS.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.title} className="bg-s2 row-hover rounded-xl p-4">
+                          <Icon className="ta" size={24} weight="duotone" />
+                          <p className="body-4 t1 mt-3">{item.title}</p>
+                          <p className="caption-2 t2 mt-1">{item.text}</p>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            ))}
-
-            <div className={`grid grid-cols-[1.25fr_1fr_1fr_1fr] border-t ${ui.border}`}>
-              <div className={`p-3 text-xs font-bold sm:p-5 ${ui.heading}`}>Price</div>
-
-              {[hld, lld, combo].map((product, index) => (
-                <div
-                  key={index}
-                  className={`p-2 text-center text-xs font-bold sm:p-5 sm:text-base ${ui.heading} ${index === 2 ? (dark ? "bg-orange-950/30" : "bg-orange-50") : ""}`}
-                >
-                  {loading ? "…" : purchasable(product) ? money(product.price, product.currency) : "—"}
-                </div>
-              ))}
-            </div>
-          </Reveal>
-
-          {/* Detailed comparison */}
-          <Reveal className={`mt-6 overflow-x-auto rounded-2xl border ${ui.border}`}>
-            <table className="w-full min-w-[620px] text-left text-sm">
-              <thead className={`${ui.soft} ${ui.heading}`}>
-                <tr>
-                  {["", "HLD", "LLD (Java)", "Combo"].map((label, index) => (
-                    <th key={index} scope="col" className="p-4 text-xs font-extrabold uppercase tracking-wider">{label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE_ROWS.map((row) => (
-                  <tr key={row[0]} className={`border-t transition hover:bg-[var(--tt-orange-soft)] ${ui.border}`}>
-                    <th scope="row" className={`p-4 text-xs font-extrabold ${ui.heading}`}>{row[0]}</th>
-                    {row.slice(1).map((cell, index) => (
-                      <td key={index} className={`p-4 text-xs leading-6 sm:text-sm ${index === 2 ? "font-bold text-[var(--tt-orange)]" : ui.body}`}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Reveal>
-        </section>
-
-        {/* =================================================
-            FAQ
-        ================================================= */}
-        <section id="faq" aria-labelledby="faq-title" className={`${container} mt-20 scroll-mt-32`}>
-          <SectionHead id="faq-title" eyebrow="Questions" title="Frequently asked questions" dark={dark} />
-
-          <div className={`mt-7 divide-y border-y ${ui.border} ${dark ? "divide-slate-800" : "divide-slate-200"}`}>
-            {allFaqs.map((item, index) => {
-              const open = faqOpen === index;
-
-              return (
-                <div key={item.q}>
-                  <h3>
-                    <button
-                      type="button"
-                      id={`combo-faq-q-${index}`}
-                      aria-expanded={open}
-                      aria-controls={`combo-faq-a-${index}`}
-                      onClick={() => setFaqOpen(open ? -1 : index)}
-                      className="flex w-full items-center justify-between gap-5 py-5 text-left"
-                    >
-                      <span className={`text-sm font-semibold sm:text-base ${ui.heading}`}>{item.q}</span>
-                      <ChevronDown
-                        size={19}
-                        className={`shrink-0 transition-transform duration-300 ${open ? "rotate-180 text-[var(--tt-orange)]" : "text-slate-400"}`}
-                      />
-                    </button>
-                  </h3>
-
-                  <div
-                    id={`combo-faq-a-${index}`}
-                    role="region"
-                    aria-labelledby={`combo-faq-q-${index}`}
-                    className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                  >
-                    <div className="overflow-hidden">
-                      <p className={`max-w-3xl pb-5 text-sm leading-7 ${ui.muted}`}>{item.a}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* =================================================
-            FINAL CTA
-        ================================================= */}
-        <section aria-labelledby="combo-final" className={`${container} mt-20`}>
-          <ScrollScale from={0.9}>
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-800 via-orange-600 to-amber-500 p-7 text-white sm:p-10">
-              <div className="tc-orb absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/20" aria-hidden="true" />
-              <div className="tc-orb tc-orb-2 absolute -bottom-24 left-10 h-64 w-64 rounded-full border border-white/10" aria-hidden="true" />
-
-              <div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
-                <div>
-                  <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-100">
-                    <Rocket size={14} />
-                    Complete digital collection
+                  <p className="caption-2 t3 mt-4">
+                    Payment availability is decided at checkout. This page does not verify which methods are active.
                   </p>
-
-                  <h2 id="combo-final" className="mt-3 text-2xl font-extrabold sm:text-3xl">Get HLD and LLD together</h2>
-
-                  <p className="mt-3 text-sm text-orange-50">Two ebooks, one checkout, separate PDF downloads.</p>
                 </div>
+              </Reveal>
 
-                <div className="sm:text-right">
-                  <strong className="block text-3xl font-extrabold">{priceText}</strong>
+              <Reveal delay={0.1}>
+                <div className="card h-full rounded-3xl p-6 sm:p-8">
+                  <h3 className="heading-6 t1">After successful payment</h3>
+                  <ol className="mt-6 space-y-6">
+                    {AFTER_PAYMENT.map((item, index) => {
+                      const Icon = item.icon;
+                      return (
+                        <Reveal as="li" key={item.title} y={16} delay={index * 0.1} className="flex items-start gap-4">
+                          <span className="tile h-10 w-10 rounded-lg">
+                            <Icon size={20} weight="duotone" />
+                          </span>
+                          <div>
+                            <h4 className="body-1 t1">{item.title}</h4>
+                            <p className="body-6 t2 mt-1">{item.text}</p>
+                          </div>
+                        </Reveal>
+                      );
+                    })}
+                  </ol>
+                </div>
+              </Reveal>
+            </div>
+          </Section>
 
-                  <button
-                    type="button"
-                    onClick={buyCombo}
-                    disabled={!canBuy}
-                    className="tc-shimmer relative mt-4 inline-flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-orange-700 shadow-xl transition hover:-translate-y-0.5 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                  >
-                    <CreditCard size={17} />
-                    Buy Combo Now
-                    <ArrowRight size={17} />
-                  </button>
+          {/* ------------------------------ PRICING ---------------------------- */}
+          <Section id="pricing" alt labelledBy="pricing-title">
+            <SectionHeader
+              id="pricing-title"
+              eyebrow="Pricing"
+              title="One book or the complete combo"
+              description="Buy an individual edition, or choose the combo and receive both."
+            />
+
+            <SavingsBars hld={hld} lld={lld} combo={combo} currency={currency} savings={savings || 0} />
+
+            <Reveal className="mt-6">
+              <div className="rule bd grid gap-px overflow-hidden rounded-3xl">
+                <div className="bg-s2 grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 px-3 py-3 sm:px-6">
+                  <span />
+                  <span className="caption-3 t3 text-center uppercase tracking-wider">HLD</span>
+                  <span className="caption-3 t3 text-center uppercase tracking-wider">LLD</span>
+                  <span className="caption-3 ta text-center uppercase tracking-wider">Combo</span>
+                </div>
+                {INCLUDES_MATRIX.map((row) => (
+                  <div key={row[0]} className="bg-s1 row-hover grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2 px-3 py-4 sm:px-6">
+                    <span className="body-5 t1">{row[0]}</span>
+                    {row.slice(1).map((yes, index) => (
+                      <span key={index} className="flex justify-center"><YesNo yes={yes} /></span>
+                    ))}
+                  </div>
+                ))}
+                <div className="bg-s1 grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2 px-3 py-4 sm:px-6">
+                  <span className="body-4 t1">Price</span>
+                  {[hld, lld, combo].map((book, index) => (
+                    <span key={index} className={cx("body-4 mono text-center", index === 2 ? "ta" : "t1")}>
+                      {loading ? <PriceSkeleton className="h-4 w-10" /> : purchasable(book) ? money(book.price, book.currency) : "–"}
+                    </span>
+                  ))}
                 </div>
               </div>
-            </div>
-          </ScrollScale>
-        </section>
+            </Reveal>
 
-        {/* SUPPORT */}
-        <div className={`${container} mt-9 text-center`}>
-          <p className={`text-xs ${ui.muted}`}>
+            <Reveal className="mt-6">
+              <div className="card no-scrollbar overflow-x-auto rounded-3xl">
+                <table className="w-full min-w-[640px] text-left">
+                  <thead>
+                    <tr className="bg-s2">
+                      {["", "HLD", "LLD (Java)", "Combo"].map((label, index) => (
+                        <th key={index} scope="col" className="caption-3 t3 p-4 uppercase tracking-wider">
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {COMPARE_ROWS.map((row) => (
+                      <tr key={row[0]} className="row-hover">
+                        <th scope="row" className="body-4 t1 p-4">{row[0]}</th>
+                        {row.slice(1).map((cell, index) => (
+                          <td key={index} className={cx("body-6 p-4", index === 2 ? "ta font-semibold" : "t2")}>
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Reveal>
+          </Section>
+
+          {/* -------------------------------- FAQ ------------------------------ */}
+          <Section id="faq" narrow labelledBy="faq-title">
+            <SectionHeader id="faq-title" eyebrow="Questions" title="Frequently asked questions" align="center" />
+            <FaqList items={allFaqs} idPrefix="combo-faq" defaultOpen={0} />
+          </Section>
+
+          <FinalCta
+            titleId="combo-final"
+            eyebrow="Complete digital collection"
+            title="Get HLD and LLD together."
+            copy="Two ebooks, one checkout, separate PDF downloads."
+            price={priceNode}
+            mrp={mrpNode}
+            onBuy={buyCombo}
+            canBuy={canBuy}
+            buyLabel="Get the combo"
+            secondary={{ label: "See what is inside", onClick: (event) => goTo(event, "#included-books") }}
+            note="Digital products are not refundable after purchase."
+          />
+        </main>
+
+        <footer className="bg-base caption-2 t3 px-4 pb-8 text-center">
+          <p>
             Need help with a purchase?{" "}
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-bold text-[var(--tt-orange)] hover:underline">
-              Contact Target Trek Support
+            <a className="link focusable font-semibold" href={`mailto:${SUPPORT_EMAIL}`}>
+              Contact Target Trek support
             </a>
           </p>
-          <p className={`mt-3 space-x-3 text-xs ${ui.muted}`}>
-            <Link className="font-semibold hover:text-[var(--tt-orange)]" to={ROUTES.hld}>System Design HLD</Link>
-            <Link className="font-semibold hover:text-[var(--tt-orange)]" to={ROUTES.lld}>System Design LLD (Java)</Link>
-            <a className="font-semibold hover:text-[var(--tt-orange)]" href="/books">All books</a>
+          <p className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <Link className="link focusable font-medium" to={ROUTES.hld}>System Design HLD</Link>
+            <Link className="link focusable font-medium" to={ROUTES.lld}>System Design LLD (Java)</Link>
+            <a className="link focusable font-medium" href="/books">All books</a>
           </p>
-        </div>
-      </main>
+        </footer>
 
-      {/* RESPONSIVE STICKY BUY CARD
-          mobile: docked strip · tablet: centered card · desktop: wider card
-          (appears after the hero on md+) */}
-      <div
-        style={localColors}
-        className={cx(
-          "pointer-events-none fixed inset-x-0 bottom-0 z-[100] flex justify-center px-2.5 pb-[max(10px,env(safe-area-inset-bottom))] transition-all duration-300 sm:px-4 md:pb-5",
-          (checkoutOpen || (heroVisible && !loading)) && "md:translate-y-10 md:opacity-0",
-          checkoutOpen && "max-md:translate-y-24 max-md:opacity-0"
-        )}
-      >
-        <div
-          className={cx(
-            "pointer-events-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 rounded-[20px] border p-2.5 shadow-[0_-10px_45px_rgba(15,23,42,.18)] backdrop-blur-xl",
-            "sm:max-w-xl sm:gap-4 sm:rounded-[22px] sm:p-3",
-            "md:max-w-2xl md:rounded-2xl md:py-3 md:pl-5 md:pr-3",
-            "lg:max-w-3xl lg:gap-6 xl:max-w-4xl 2xl:max-w-5xl"
-          )}
-          style={{ background: colors.bar, borderColor: colors.orangeBorder }}
-        >
-          <div className="min-w-0 pl-1">
-            <p className="hidden truncate text-sm font-extrabold leading-tight sm:block lg:text-base" style={{ color: colors.text }}>
-              HLD + LLD Complete Combo — 2 ebooks
-            </p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 sm:mt-1">
-              <span className="text-lg font-extrabold leading-none sm:text-base lg:text-lg" style={{ color: colors.orange }}>
-                {loading ? "…" : combo && Number.isFinite(Number(combo.price)) ? money(combo.price, currency) : "Price unavailable"}
-              </span>
-              {combo && Number(combo.mrp) > Number(combo.price) && (
-                <span className="text-xs font-bold line-through" style={{ color: colors.muted }}>
-                  {money(combo.mrp, currency)}
-                </span>
-              )}
-              {combinedDiscount > 0 && (
-                <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: colors.orangeSoft, color: colors.orange }}>
-                  {combinedDiscount}% off
-                </span>
-              )}
-            </div>
-            <p className="mt-1 truncate text-[11px] font-bold sm:hidden" style={{ color: colors.muted }}>
-              HLD + LLD Complete Combo
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => scrollToId("included-books")}
-              className="hidden min-h-[46px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition hover:-translate-y-0.5 lg:inline-flex"
-              style={{ borderColor: colors.orangeBorder, color: colors.orange }}
-            >
-              <BookOpen size={16} />
-              What&apos;s inside
-            </button>
-
-            <button
-              type="button"
-              disabled={!canBuy || Boolean(loadError)}
-              onClick={buyCombo}
-              className={`${ctaBase} tc-pulse md-tc-no-pulse min-h-[50px] px-4 text-[13px] sm:px-6 sm:text-sm`}
-            >
-              Buy Now
-              <ArrowRight size={16} className="transition group-hover:translate-x-1" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
+        <BuyBar
+          title="HLD + LLD Complete Combo"
+          price={priceNode}
+          mrp={mrpNode}
+          discount={combinedDiscount}
+          onBuy={buyCombo}
+          canBuy={canBuy && !loadError}
+          buyLabel="Get the combo"
+          hidden={checkoutOpen}
+          heroVisible={heroVisible && !loading}
+          secondary={{ label: "What is inside", onClick: (event) => goTo(event, "#included-books") }}
+        />
       </div>
 
-      {/* EXISTING PAYMENT MODAL
-          Supports PayU/Cashfree/Razorpay based on VITE_PAYMENT_GATEWAY. */}
       <PayUCheckoutModal isOpen={checkoutOpen} onClose={closeCheckout} product={checkoutProduct} />
     </>
   );

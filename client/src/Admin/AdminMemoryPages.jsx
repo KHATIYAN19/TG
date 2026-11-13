@@ -8,13 +8,10 @@ import {
   Activity,
   Ban,
   CalendarClock,
-  CircleDollarSign,
-  CreditCard,
   Eye,
   EyeOff,
-  HardDrive,
+  Gauge,
   Radio,
-  ShoppingBag,
   Copy,
   ExternalLink,
   Gift,
@@ -25,6 +22,7 @@ import {
   Link2,
   Loader2,
   Lock,
+  PackagePlus,
   Plus,
   Receipt,
   RefreshCw,
@@ -38,11 +36,17 @@ import {
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
-import { ActionMenu, Btn, Chip, Field, Kpi, Modal, Pager, Person, STATUS, Table, bytes, errText, inputCls, inr, when } from "./AdminMemoryUi";
+import { ActionMenu, Btn, Chip, Field, Modal, Pager, Person, STATUS, Table, errText, inputCls, when } from "./AdminMemoryUi";
 
 // the two long lists are only downloaded when their tab is opened
 const UsersTab = lazy(() => import("./AdminMemoryUsers.jsx"));
 const Logins = lazy(() => import("./AdminMemoryLogins.jsx"));
+const Catalog = lazy(() => import("./AdminMemoryCatalog.jsx").then((m) => ({ default: m.Templates })));
+const Addons = lazy(() => import("./AdminMemoryCatalog.jsx").then((m) => ({ default: m.Addons })));
+const Overview = lazy(() => import("./AdminMemoryOverview.jsx"));
+const Orders = lazy(() => import("./AdminMemoryOrders.jsx"));
+const Settings = lazy(() => import("./AdminMemorySettings.jsx"));
+const Inspector = lazy(() => import("./AdminMemoryInspector.jsx"));
 const TabLoading = () => <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16 text-slate-400"><Loader2 className="animate-spin" /></div>;
 
 /* =====================================================
@@ -53,8 +57,9 @@ const TabLoading = () => <div className="grid place-items-center rounded-2xl bor
      Logins       sign-in history
      Codes        free-access codes
      Orders       payments
-     Occasions    what users can pick
-     Settings     price + upload limits
+     Templates    what users can pick: visibility, price per template and per look, limits
+     Add-ons      extras users can buy (more photos, longer videos, ...)
+     Settings     default price + default limits
 ===================================================== */
 
 const API = `${String(BASE_URL || "").replace(/\/+$/, "")}/api/admin/memories`;
@@ -67,7 +72,8 @@ const TABS = [
   ["codes", "Codes", Ticket],
   ["gumroad", "Gumroad", Globe],
   ["orders", "Orders", Receipt],
-  ["occasions", "Occasions", Gift],
+  ["occasions", "Templates & pricing", Gift],
+  ["addons", "Add-ons", PackagePlus],
   ["settings", "Settings", SettingsIcon],
 ];
 
@@ -101,7 +107,10 @@ export default function AdminMemoryPages() {
   }, []);
 
   const close = useCallback(() => setDialog(null), []);
-  const ctx = { http, run, setDialog, close };
+  // the page inspector (preview, activity, room) can be opened from any tab
+  const [inspect, setInspect] = useState(null); // { id, tab }
+  const openPage = useCallback((id, tab = "preview") => setInspect({ id, tab }), []);
+  const ctx = { http, run, setDialog, close, goTo: setTab, openPage, search: searchParams.get("q") || "" };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/70 via-slate-50 to-slate-50">
@@ -131,18 +140,22 @@ export default function AdminMemoryPages() {
           </div>
         </div>
 
-        {tab === "overview" && <Overview {...ctx} />}
         {tab === "pages" && <Pages {...ctx} />}
         <Suspense fallback={<TabLoading />}>
+          {tab === "overview" && <Overview {...ctx} />}
+          {tab === "orders" && <Orders {...ctx} />}
+          {tab === "settings" && <Settings {...ctx} />}
           {tab === "users" && <UsersTab {...ctx} />}
           {tab === "logins" && <Logins {...ctx} />}
         </Suspense>
         {tab === "codes" && <Codes {...ctx} />}
         {tab === "gumroad" && <Gumroad {...ctx} />}
-        {tab === "orders" && <Orders {...ctx} />}
-        {tab === "occasions" && <Occasions {...ctx} />}
-        {tab === "settings" && <><Settings {...ctx} /><MailBlocks {...ctx} /></>}
+        <Suspense fallback={<TabLoading />}>
+          {tab === "occasions" && <Catalog {...ctx} />}
+          {tab === "addons" && <Addons {...ctx} />}
+        </Suspense>
       </div>
+      {inspect && <Suspense fallback={null}><Inspector http={http} run={run} pageId={inspect.id} tab={inspect.tab} onClose={() => setInspect(null)} /></Suspense>}
       {dialog && <Dialogs dialog={dialog} close={close} />}
     </div>
   );
@@ -212,52 +225,7 @@ function Dialogs({ dialog, close }) {
     );
   }
   if (dialog.kind === "media") return <MediaDialog dialog={dialog} close={close} />;
-  if (dialog.kind === "activity") return <ActivityDialog dialog={dialog} close={close} />;
   return null;
-}
-
-const TYPE_LABEL = {
-  open: "Opened the page", gate_open: "Opened the surprise", letter_open: "Opened the letter", media_view: "Looked at photos/videos", balloon_pop: "Popped balloons",
-  candles_blown: "Blew out the candles", cake_cut: "Cut the cake", gift_open: "Opened a gift", chocolate_bite: "Ate chocolate", comfort: "Comforted the mascot",
-  heart_mended: "Mended the heart", promise_flip: "Opened a promise", gesture: "Sent a gesture", box_open: "Opened the ring box", time_spent: "Time on page",
-};
-const label = (t) => TYPE_LABEL[t] || t.replace(/_/g, " ");
-const ANSWER = { yes: "Said YES", no: "Said no", later: "Needs more time" };
-
-function ActivityDialog({ dialog, close }) {
-  const { http, run, pageId } = dialog;
-  const [d, setD] = useState(null);
-  useEffect(() => { run(() => http.get(`/pages/${pageId}/activity`)).then((x) => x && setD(x)); }, [http, run, pageId]);
-  const sm = d?.summary;
-  const dur = (n) => (n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`);
-  return (
-    <Modal title={`Activity: ${d?.page?.title || ""}`} onClose={close} wide footer={<Btn tone="primary" onClick={close}>Close</Btn>}>
-      {!d ? <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto animate-spin" /></div> : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[["Opens", sm.opens], ["Visitors", sm.uniqueVisitors], ["Time on page", sm.totalSeconds ? dur(sm.totalSeconds) : "–"], ["Messages", d.replies.length]].map(([l, v]) => (
-              <div key={l} className="rounded-xl bg-slate-50 py-2 text-center"><div className="text-lg font-extrabold text-slate-800">{v}</div><div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{l}</div></div>
-            ))}
-          </div>
-          <p className="text-xs text-slate-500">
-            {sm.firstOpenedAt ? `First opened ${when(sm.firstOpenedAt)} · last opened ${when(sm.lastOpenedAt)}` : "Not opened yet."}
-            {Object.keys(sm.devices || {}).length > 0 && ` · ${Object.entries(sm.devices).map(([k, v]) => `${k} ${v}`).join(", ")}`}
-          </p>
-          {d.answer?.value && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">Answer: {ANSWER[d.answer.value] || d.answer.value}{d.answer.final ? " (final)" : ""}</p>}
-          {d.replies.length > 0 && (
-            <div><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Replies</h4>
-              <ul className="space-y-1.5">{d.replies.map((r, i) => <li key={r.id || i} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">{r.text || r.message}<span className="ml-2 text-[11px] text-slate-400">{when(r.at || r.createdAt)}</span></li>)}</ul></div>
-          )}
-          <div><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">What they did</h4>
-            {Object.keys(d.byType).length === 0 ? <p className="text-sm text-slate-400">Nothing yet.</p> : (
-              <ul className="grid gap-1.5 sm:grid-cols-2">{Object.entries(d.byType).map(([t, v]) => <li key={t} className="flex justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm"><span className="text-slate-700">{label(t)}</span><b className="text-slate-900">{v.total || v.count}×</b></li>)}</ul>
-            )}</div>
-          <div><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Latest events</h4>
-            <ul className="max-h-48 divide-y divide-slate-100 overflow-auto rounded-xl border border-slate-100">{d.timeline.slice(0, 40).map((e, i) => <li key={i} className="flex justify-between gap-2 px-3 py-1.5 text-xs"><span className="text-slate-700">{label(e.type)}</span><span className="shrink-0 text-slate-400">{when(e.at)}</span></li>)}</ul></div>
-        </div>
-      )}
-    </Modal>
-  );
 }
 
 function PinRow({ pin }) {
@@ -310,30 +278,10 @@ function MediaDialog({ dialog, close }) {
   );
 }
 
-/* ---------------------------------------------------- overview */
-
-function Overview({ http, run }) {
-  const [s, setS] = useState(null);
-  useEffect(() => { run(() => http.get("/stats")).then((d) => d && setS(d)); }, [http, run]);
-  if (!s) return <Loader2 className="animate-spin text-slate-400" />;
-  return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <Kpi icon={Heart} tone="rose" label="Pages created" value={s.pages} />
-      <Kpi icon={Radio} tone="emerald" label="Live pages" value={s.activePages} />
-      <Kpi icon={Eye} tone="sky" label="Total page views" value={s.totalViews} />
-      <Kpi icon={Gift} tone="amber" label="Unused credits" value={s.unusedCredits} />
-      <Kpi icon={ShoppingBag} tone="indigo" label="Paid orders" value={s.paidOrders} />
-      <Kpi icon={CircleDollarSign} tone="emerald" label="Revenue" value={inr(s.revenue)} />
-      <Kpi icon={Ticket} tone="rose" label="Codes redeemed" value={s.codesRedeemed} />
-      <Kpi icon={HardDrive} tone="sky" label="Media storage" value={bytes(s.storageBytes)} />
-    </div>
-  );
-}
-
 /* ---------------------------------------------------- pages */
 
-function Pages({ http, run, setDialog }) {
-  const [f, setF] = useState({ q: "", status: "", visibility: "", expiresWithin: "", expiresFrom: "", expiresTo: "", sort: "", page: 1 });
+function Pages({ http, run, setDialog, openPage, search }) {
+  const [f, setF] = useState({ q: search || "", status: "", visibility: "", expiresWithin: "", expiresFrom: "", expiresTo: "", sort: "", page: 1 });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -381,7 +329,9 @@ function Pages({ http, run, setDialog }) {
   const menuFor = (p) => [
     { label: "Open the page", icon: <ExternalLink size={14} />, onClick: () => window.open(p.url, "_blank", "noopener,noreferrer") },
     { label: "Copy link", icon: <Copy size={14} />, onClick: () => { navigator.clipboard?.writeText(p.url); toast.success("Link copied"); } },
-    { label: "Activity", icon: <Activity size={14} />, divider: true, onClick: () => setDialog({ kind: "activity", http, run, pageId: p.id }) },
+    { label: "Preview page", icon: <Eye size={14} />, divider: true, onClick: () => openPage(p.id, "preview") },
+    { label: "Activity", icon: <Activity size={14} />, onClick: () => openPage(p.id, "activity") },
+    { label: "Give more room", icon: <Gauge size={14} />, onClick: () => openPage(p.id, "room") },
     { label: "Photos and videos", icon: <ImageIcon size={14} />, onClick: () => setDialog({ kind: "media", http, run, pageId: p.id, confirm, onChange: load }) },
     { label: "Give more time", icon: <CalendarClock size={14} />, onClick: () => extend(p) },
     { label: "Set a PIN", icon: <KeyRound size={14} />, onClick: () => setPin(p) },
@@ -419,6 +369,11 @@ function Pages({ http, run, setDialog }) {
           ))}
         </div>
 
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <Btn onClick={() => openPage(p.id, "preview")} title="See the page as its owner sees it. Nothing is counted."><Eye size={12} /> Preview</Btn>
+          <Btn onClick={() => openPage(p.id, "activity")}><Activity size={12} /> Activity</Btn>
+          <Btn onClick={() => openPage(p.id, "room")} title="Raise this page's photo, video and voice limits"><Gauge size={12} /> Room</Btn>
+        </div>
         <div className="mt-3"><Person name={p.owner?.name} email={p.owner?.email} phone={p.owner?.phone} /></div>
         {p.visibility === "private" && <PinRow pin={p.pin} />}
 
@@ -608,179 +563,6 @@ function Gumroad({ http, run, setDialog }) {
           { h: "Sale id", v: (r) => <span className="font-mono text-xs">{r.saleId}</span> },
         ]} />
       </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------- orders */
-
-function Orders({ http, run, setDialog }) {
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState(null);
-  const load = useCallback(async () => { const d = await run(() => http.get("/orders", { params: { page, limit: 25 } })); if (d) setData(d); }, [http, run, page]);
-  useEffect(() => { load(); }, [load]);
-  return (
-    <div>
-      <Table rows={data?.items || []} cols={[
-        { h: "When", v: (o) => <span className="whitespace-nowrap text-xs">{when(o.createdAt)}</span> },
-        { h: "User", v: (o) => (o.user ? <Person name={o.user.name} email={o.user.email} phone={o.user.phone} /> : "-") },
-        { h: "Amount", v: (o) => inr(o.amount) },
-        { h: "Status", v: (o) => <Chip className={STATUS[o.status]}>{o.status}</Chip> },
-        { h: "Gateway", v: (o) => <Chip>{o.gateway}</Chip> },
-        { h: "Gateway order", v: (o) => <span className="font-mono text-xs">{o.gatewayOrderId}</span> },
-        { h: "Payment id", v: (o) => <span className="font-mono text-xs">{o.gatewayPaymentId || (o.failureReason ? <span className="text-rose-500">{o.failureReason}</span> : "-")}</span> },
-        { h: "Paid at", v: (o) => <span className="text-xs">{when(o.paidAt)}</span> },
-        { h: "", v: (o) => (
-          <Btn tone="danger" title="Delete this order" onClick={() => setDialog({ kind: "confirm", title: "Delete this order?", text: o.status === "paid" ? `This paid ${o.gateway} order (${inr(o.amount)}, ${o.gatewayOrderId}) will be removed from the records. The user keeps the credit it gave.` : `${o.status} ${o.gateway} order ${o.gatewayOrderId} will be removed.`, label: "Delete order", onSubmit: async () => { if (await run(() => http.delete(`/orders/${o.id}`), "Order deleted")) load(); } })}><Trash2 size={12} /></Btn>) },
-      ]} />
-      <Pager page={data?.page || 1} pages={data?.pages} onPage={setPage} />
-    </div>
-  );
-}
-
-/* ---------------------------------------------------- occasions */
-
-function Occasions({ http, run, setDialog }) {
-  const [rows, setRows] = useState([]);
-  const load = useCallback(async () => { const d = await run(() => http.get("/occasions")); if (d) setRows(d); }, [http, run]);
-  useEffect(() => { load(); }, [load]);
-
-  const edit = (o) => setDialog({
-    kind: "form", title: o ? "Edit occasion" : "New occasion", label: "Save",
-    intro: "The theme picks which page design is shown (for example birthday, proposal, sorry).",
-    fields: [{ name: "name", label: "Name", value: o?.name || "" }, { name: "theme", label: "Theme", value: o?.theme || "", placeholder: "birthday" }],
-    onSubmit: async (v) => {
-      const body = { name: v.name, ...(v.theme ? { theme: v.theme } : {}) };
-      const d = await run(() => (o ? http.patch(`/occasions/${o.id}`, body) : http.post("/occasions", body)), "Saved");
-      if (d) load(); else return false;
-    },
-  });
-
-  return (
-    <div>
-      <div className="mb-3 flex justify-end"><Btn tone="primary" onClick={() => edit(null)}><Plus size={12} /> Add occasion</Btn></div>
-      <Table rows={rows} cols={[
-        { h: "Occasion", v: (o) => <span className="font-semibold">{o.name}</span> },
-        { h: "Theme", v: (o) => <span className="font-mono text-xs">{o.theme}</span> },
-        { h: "Status", v: (o) => <Chip className={o.isActive ? STATUS.active : STATUS.closed}>{o.isActive ? "visible" : "hidden"}</Chip> },
-        { h: "", v: (o) => (
-          <div className="flex gap-1.5">
-            <Btn onClick={() => edit(o)}>Edit</Btn>
-            <Btn onClick={async () => { if (await run(() => http.patch(`/occasions/${o.id}`, { isActive: !o.isActive }))) load(); }}>{o.isActive ? "Hide" : "Show"}</Btn>
-            <Btn tone="danger" onClick={() => setDialog({ kind: "confirm", title: "Delete occasion?", text: `"${o.name}" will be removed. If pages already use it, deletion is refused and you can hide it instead.`, label: "Delete", onSubmit: async () => { if (await run(() => http.delete(`/occasions/${o.id}`), "Occasion deleted")) load(); } })}><Trash2 size={12} /></Btn>
-          </div>) },
-      ]} />
-    </div>
-  );
-}
-
-/* ---------------------------------------------------- settings */
-
-function Settings({ http, run }) {
-  const [s, setS] = useState(null);
-  const [gw, setGw] = useState(null); // { items:[{id,label,configured,enabled}], on:Set, def }
-  const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    run(() => http.get("/settings")).then((d) => d && setS(d));
-    run(() => http.get("/gateways")).then((d) => d && setGw({ items: d.items, on: new Set(d.items.filter((g) => g.enabled).map((g) => g.id)), def: d.defaultGateway }));
-  }, [http, run]);
-  if (!s || !gw) return <Loader2 className="animate-spin text-slate-400" />;
-
-  const toggleGw = (id) => setGw((g) => {
-    const on = new Set(g.on);
-    on.has(id) ? on.delete(id) : on.add(id);
-    return { ...g, on, def: on.has(g.def) ? g.def : [...on][0] || "" };
-  });
-
-  const num = (k) => (e) => setS({ ...s, [k]: e.target.value });
-  const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    const body = {
-      price: Number(s.price), maxPhotos: Number(s.maxPhotos), maxVideos: Number(s.maxVideos),
-      maxPhotoMb: Number(s.maxPhotoMb), maxVideoMb: Number(s.maxVideoMb), maxAudioMb: Number(s.maxAudioMb ?? 10), maxMessageChars: Number(s.maxMessageChars), enabled: Boolean(s.enabled),
-      pageLifetimeDays: Number(s.pageLifetimeDays), emailEnabled: s.emailEnabled !== false, maxEmailsPerUserPerDay: Number(s.maxEmailsPerUserPerDay),
-      enabledGateways: [...gw.on], defaultGateway: gw.on.has(gw.def) ? gw.def : [...gw.on][0] || "",
-    };
-    if (body.price > 0 && body.enabledGateways.length === 0) {
-      toast.error("Switch on at least one payment gateway, or set the price to 0.");
-      setSaving(false);
-      return;
-    }
-    const d = await run(() => http.put("/settings", body), "Settings saved");
-    if (d && d !== true) setS(d);
-    setSaving(false);
-  };
-
-  return (
-    <form onSubmit={save} className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-slate-900">Pricing</h2>
-      <div className="grid gap-x-4 sm:grid-cols-2">
-        <Field label="Price per page (₹)" hint="0 makes pages free. Applies to new payments immediately."><input className={inputCls} type="number" min="0" step="1" value={s.price} onChange={num("price")} /></Field>
-        <Field label="Page creation"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.enabled} onChange={(e) => setS({ ...s, enabled: e.target.checked })} /> Enabled (untick to pause purchases and new pages)</label></Field>
-      </div>
-      <h2 className="mb-3 mt-2 text-sm font-bold text-slate-900">Page lifetime and email</h2>
-      <div className="grid gap-x-4 sm:grid-cols-2">
-        <Field label="Days a page stays online" hint="Counted from the day it's created, then it is deleted. Saved in the database. Applies to NEW pages; existing pages keep their end date (change one in Pages → Time)."><input className={inputCls} type="number" min="1" max="3650" step="1" value={s.pageLifetimeDays} onChange={num("pageLifetimeDays")} /></Field>
-        <Field label="Email a page when it's created"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.emailEnabled !== false} onChange={(e) => setS({ ...s, emailEnabled: e.target.checked })} /> On (untick to hide the option from users)</label></Field>
-        <Field label="Emails per user per day" hint="Stops the email option being used to spam. Counts pages created with an email in the last 24 hours."><input className={inputCls} type="number" min="1" max="200" step="1" value={s.maxEmailsPerUserPerDay} onChange={num("maxEmailsPerUserPerDay")} /></Field>
-      </div>
-      <h2 className="mb-1 mt-2 text-sm font-bold text-slate-900">Payment gateways</h2>
-      <p className="mb-3 text-xs text-slate-500">Users can pay with any gateway you switch on. A gateway can only be switched on once its API keys are set on the server. The default one is pre-selected at checkout.</p>
-      <div className="mb-4 grid gap-2 sm:grid-cols-2">
-        {gw.items.filter((g) => g.id !== "mock" || g.configured).map((g) => (
-          <div key={g.id} className={`flex items-center gap-3 rounded-xl border p-3 transition ${gw.on.has(g.id) ? "border-pink-300 bg-pink-50/50" : "border-slate-200 bg-white"} ${g.configured ? "" : "opacity-60"}`}>
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600"><CreditCard size={17} /></span>
-            <label className="min-w-0 flex-1 cursor-pointer">
-              <span className="block truncate text-sm font-semibold capitalize text-slate-900">{g.id}</span>
-              <span className="block truncate text-[11px] text-slate-500">{g.configured ? g.label : "No API keys on the server"}</span>
-            </label>
-            {gw.on.has(g.id) && (
-              <button type="button" onClick={() => setGw({ ...gw, def: g.id })} className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${gw.def === g.id || (!gw.def && [...gw.on][0] === g.id) ? "bg-pink-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
-                {gw.def === g.id || (!gw.def && [...gw.on][0] === g.id) ? "Default" : "Make default"}
-              </button>
-            )}
-            <input type="checkbox" aria-label={`Enable ${g.id}`} disabled={!g.configured} checked={gw.on.has(g.id)} onChange={() => toggleGw(g.id)} className="h-4 w-4 accent-pink-500" />
-          </div>
-        ))}
-      </div>
-      <h2 className="mb-3 mt-2 text-sm font-bold text-slate-900">Upload limits per page</h2>
-      <div className="grid gap-x-4 sm:grid-cols-2">
-        <Field label="Max photos"><input className={inputCls} type="number" min="0" max="500" value={s.maxPhotos} onChange={num("maxPhotos")} /></Field>
-        <Field label="Max videos"><input className={inputCls} type="number" min="0" max="100" value={s.maxVideos} onChange={num("maxVideos")} /></Field>
-        <Field label="Max size per photo (MB)" hint="Up to 25"><input className={inputCls} type="number" min="0.1" max="25" step="0.1" value={s.maxPhotoMb} onChange={num("maxPhotoMb")} /></Field>
-        <Field label="Max size per video (MB)" hint="Up to 500"><input className={inputCls} type="number" min="0.1" max="500" step="0.1" value={s.maxVideoMb} onChange={num("maxVideoMb")} /></Field>
-        <Field label="Max size of the voice message (MB)" hint="Up to 25. Recording is capped at 2 minutes"><input className={inputCls} type="number" min="0.1" max="25" step="0.1" value={s.maxAudioMb ?? 10} onChange={num("maxAudioMb")} /></Field>
-        <Field label="Max message length (characters)"><input className={inputCls} type="number" min="10" max="10000" value={s.maxMessageChars} onChange={num("maxMessageChars")} /></Field>
-      </div>
-      <Btn type="submit" tone="primary" disabled={saving}>{saving && <Loader2 size={12} className="animate-spin" />} Save settings</Btn>
-    </form>
-  );
-}
-
-/* ---------------------------------------------------- blocked email addresses */
-
-function MailBlocks({ http, run, setDialog }) {
-  const [rows, setRows] = useState([]);
-  const load = useCallback(async () => { const d = await run(() => http.get("/mail-blocks")); if (d) setRows(d); }, [http, run]);
-  useEffect(() => { load(); }, [load]);
-  const add = () => setDialog({
-    kind: "form", title: "Never email this address", label: "Block address",
-    intro: "Someone wrote to support asking not to get these emails? Add their address. Memories will refuse to send them any page.",
-    fields: [{ name: "email", label: "Email address", type: "email" }, { name: "note", label: "Note (optional)", maxLength: 300 }],
-    onSubmit: async (v) => { const d = await run(() => http.post("/mail-blocks", { email: v.email, note: v.note || undefined }), "Address blocked"); if (!d) return false; load(); return undefined; },
-  });
-  return (
-    <div className="mt-6 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-bold text-slate-900">Blocked recipient emails</h2><Btn tone="primary" onClick={add}><Plus size={12} /> Add</Btn></div>
-      <p className="mb-3 text-xs text-slate-500">Addresses that must never be emailed a page. Add one when a recipient asks to stop.</p>
-      {rows.length === 0 ? <p className="text-sm text-slate-400">None yet.</p> : (
-        <ul className="divide-y divide-slate-100">
-          {rows.map((b) => (
-            <li key={b.id} className="flex items-center gap-3 py-2 text-sm"><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-slate-800">{b.email}</span>{b.note && <span className="block truncate text-xs text-slate-500">{b.note}</span>}</span><span className="text-xs text-slate-400">{when(b.createdAt)}</span><Btn tone="danger" onClick={() => setDialog({ kind: "confirm", title: "Allow emails again?", text: `${b.email} will be able to receive pages again.`, label: "Remove", onSubmit: async () => { if (await run(() => http.delete(`/mail-blocks/${b.id}`), "Removed")) load(); } })}><Trash2 size={12} /></Btn></li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

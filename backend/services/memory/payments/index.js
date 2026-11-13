@@ -15,7 +15,7 @@ import mock from "./mock.js";
       createCheckout({ order, user, amountPaise, urls })
           -> { gatewayOrderId, checkout }  // `checkout` tells the front-end what to do:
                                            //   { type:"razorpay"|"cashfree"|"form_post"|"redirect"|"mock", ... }
-      fetchStatus(order)                   // ask the gateway: -> { paid, paymentId, amountPaise }
+      fetchStatus(order)                   // ask the gateway: -> { paid, paymentId, amountPaise } | { paid:false, failed?:true, reason? }
       verifyClient?(order, payload)        // optional: verify a signed browser callback
       parseCallback?(body)                 // optional: redirect gateways -> { gatewayOrderId }
       parseWebhook?({ rawBody, headers })  // optional: -> { valid, ignore?, gatewayOrderId }

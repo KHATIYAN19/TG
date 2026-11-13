@@ -83,12 +83,20 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Theme">
               {config.themes.map((t) => {
                 const on = t.id === themeId;
+                // the builder passes `themeInfo` = the looks the admin has switched on, with their price and whether this page can use them
+                const info = config.themeInfo?.[t.id];
+                if (config.themeInfo && !info) return null; // switched off by the admin
+                const locked = Boolean(info?.locked) && !on;
+                const upgradable = locked && info.diff > 0 && Boolean(config.onUpgrade); // a dearer look: pay only the difference
                 return (
-                  <button key={t.id} type="button" role="radio" aria-checked={on} onClick={() => onTheme(t.id)}
-                    className={`rounded-2xl border p-2.5 text-left transition ${on ? "border-pink-400 bg-pink-50 ring-2 ring-pink-200" : "border-slate-200 hover:border-slate-300"}`}>
-                    <span className="flex -space-x-1.5">{t.swatch.map((c) => <span key={c} className="h-6 w-6 rounded-full border-2 border-white shadow-sm" style={{ background: c }} />)}</span>
+                  <button key={t.id} type="button" role="radio" aria-checked={on} aria-disabled={locked && !upgradable} onClick={() => (upgradable ? config.onUpgrade(t.id) : !locked && onTheme(t.id))} title={locked ? info.note : undefined}
+                    className={`rounded-2xl border p-2.5 text-left transition ${on ? "border-pink-400 bg-pink-50 ring-2 ring-pink-200" : upgradable ? "border-amber-300 bg-amber-50/60 hover:bg-amber-50" : locked ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60" : "border-slate-200 hover:border-slate-300"}`}>
+                    <span className="flex items-start justify-between gap-1">
+                      <span className="flex -space-x-1.5">{t.swatch.map((c) => <span key={c} className="h-6 w-6 rounded-full border-2 border-white shadow-sm" style={{ background: c }} />)}</span>
+                      {info && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${locked ? "bg-amber-100 text-amber-800" : info.price > 0 ? "bg-white text-rose-600 ring-1 ring-rose-100" : "bg-emerald-50 text-emerald-700"}`}>{upgradable ? `Upgrade +\u20B9${info.diff.toLocaleString("en-IN")}` : locked ? "Costs more" : info.price > 0 ? `\u20B9${info.price.toLocaleString("en-IN")}` : "Free"}</span>}
+                    </span>
                     <span className="mt-1.5 block text-sm font-semibold leading-tight">{t.name}</span>
-                    <span className="block text-[11px] leading-snug text-slate-500">{t.blurb}</span>
+                    <span className="block text-[11px] leading-snug text-slate-500">{locked ? info.note : t.blurb}</span>
                   </button>
                 );
               })}
@@ -132,8 +140,8 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
           {/* MESSAGE */}
           <section>
             <h3 className="mb-2 text-sm font-bold">{n()}. {config.messageTitle}</h3>
-            <textarea className={`${field} min-h-[110px] resize-y`} maxLength={1200} value={data.message} onChange={(e) => set({ message: e.target.value })} aria-label="Your message" />
-            <p className="mt-1 text-right text-[11px] text-slate-400">{data.message.length} / 1200</p>
+            <textarea className={`${field} min-h-[110px] resize-y`} maxLength={config.messageMax || 1200} value={data.message} onChange={(e) => set({ message: e.target.value })} aria-label="Your message" />
+            <p className="mt-1 text-right text-[11px] text-slate-400">{data.message.length} / {config.messageMax || 1200}</p>
           </section>
 
           {/* GIFTS */}

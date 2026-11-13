@@ -1,44 +1,65 @@
+/* eslint-disable react/prop-types */
 import API_BASE_URL from "../utils/Url";
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
-import {
-  animate,
-  motion,
-  useInView,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from "framer-motion";
 import { Document, Page, pdfjs } from "react-pdf";
 import lldPreviewPdf from "../assest/master_lld_java_preview.pdf";
-
 import {
   ArrowRight,
   BookOpen,
   Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Clock3,
-  Code2,
-  Layers3,
-  LockKeyhole,
+  Clock,
+  Code,
+  DownloadSimple,
+  FileText,
+  FlowArrow,
+  Lock,
+  LockKey,
   Network,
   ShieldCheck,
-  Sparkles,
-  Workflow,
-  Zap,
-} from "lucide-react";
+  Sparkle,
+  Stack,
+} from "@phosphor-icons/react";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
+import { gatewayLabel, preferredGateway } from "../payment/gatewayConfig";
 import { trackViewContent } from "../lib/metaPixel.js";
+import {
+  AnimatePresence,
+  BookOfferCard,
+  Breadcrumb,
+  BuyBar,
+  EASE,
+  FLOAT_EASE,
+  FONT_HREF,
+  FaqList,
+  FinalCta,
+  FloatChip,
+  FloatNav,
+  PillTabs,
+  PriceSkeleton,
+  Reveal,
+  ScrollProgress,
+  Section,
+  SectionHeader,
+  SkipLink,
+  StatsStrip,
+  TaglineReveal,
+  Tilt,
+  cx,
+  motion,
+  twoDigits,
+  useGoToSection,
+  useInViewport,
+  useNavOffset,
+  useReducedMotion,
+  useSiteTheme,
+} from "./systemDesign/ui.jsx";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url,
 ).toString();
-
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
@@ -51,30 +72,23 @@ const SEO_LONG_DESCRIPTION =
   "Master Low-Level Design with Java, OOP, UML, SOLID, 23 GoF patterns, Spring Boot, APIs, persistence, concurrency, testing, a 60-minute interview framework and 16 coded case studies.";
 const PAGE_PATH = "/book/system-design/lld";
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
-const THEME_KEY = "theme";
-const THEME_EVENT = "targettrek-theme-change";
 const HLD_REDIRECT_URL = "/book/system-design/hld";
 const COMBO_REDIRECT_URL = "/book/system-design/hld-lld/combo";
 
-export const readTheme = () => {
-  if (typeof window === "undefined") return "light";
-  return window.localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
-};
-
 const modules = [
   { number: "01", title: "LLD & interview foundations", detail: "Design trade-offs, requirements, class ownership, interview evaluation and incremental modeling.", icon: BookOpen },
-  { number: "02", title: "Core and modern Java", detail: "Types, memory, interfaces, collections, generics, functional Java, exceptions and validation.", icon: Code2 },
-  { number: "03", title: "Object-oriented programming", detail: "Encapsulation, abstraction, polymorphism, inheritance, composition, identity and dependency injection.", icon: Layers3 },
+  { number: "02", title: "Core and modern Java", detail: "Types, memory, interfaces, collections, generics, functional Java, exceptions and validation.", icon: Code },
+  { number: "03", title: "Object-oriented programming", detail: "Encapsulation, abstraction, polymorphism, inheritance, composition, identity and dependency injection.", icon: Stack },
   { number: "04", title: "UML and engineering diagrams", detail: "Class, sequence, activity, state and architecture diagrams, plus Mermaid and PlantUML.", icon: Network },
   { number: "05", title: "Software design principles", detail: "SOLID, DRY, KISS, YAGNI, GRASP, code smells and safe refactoring.", icon: ShieldCheck },
-  { number: "06", title: "23 GoF design patterns", detail: "Creational, structural and behavioral patterns, selection guidelines and combined applications.", icon: Sparkles },
-  { number: "07", title: "Enterprise architecture patterns", detail: "Layered and clean architecture, domain-driven design, events, messaging and resilience patterns.", icon: Workflow },
-  { number: "08", title: "Java multithreading", detail: "Thread lifecycle, Executor framework, CompletableFuture, Java Memory Model and advanced concurrency.", icon: Clock3 },
-  { number: "09", title: "Synchronization and locking", detail: "Race conditions, intrinsic/explicit locks, atomics, deadlocks and distributed consistency.", icon: LockKeyhole },
-  { number: "10", title: "Data structures for LLD", detail: "Choose efficient collections, build reusable in-memory components and analyze performance.", icon: Code2 },
+  { number: "06", title: "23 GoF design patterns", detail: "Creational, structural and behavioral patterns, selection guidelines and combined applications.", icon: Sparkle },
+  { number: "07", title: "Enterprise architecture patterns", detail: "Layered and clean architecture, domain-driven design, events, messaging and resilience patterns.", icon: FlowArrow },
+  { number: "08", title: "Java multithreading", detail: "Thread lifecycle, Executor framework, CompletableFuture, Java Memory Model and advanced concurrency.", icon: Clock },
+  { number: "09", title: "Synchronization and locking", detail: "Race conditions, intrinsic/explicit locks, atomics, deadlocks and distributed consistency.", icon: LockKey },
+  { number: "10", title: "Data structures for LLD", detail: "Choose efficient collections, build reusable in-memory components and analyze performance.", icon: Code },
   { number: "11", title: "APIs, databases and Spring Boot", detail: "REST contracts, persistence, JPA/Hibernate, clean architecture, security and observability.", icon: Network },
   { number: "12", title: "Testing and production engineering", detail: "Unit, integration and concurrency testing, maintainability, quality and production readiness.", icon: ShieldCheck },
-  { number: "13", title: "60-minute interview framework", detail: "Scope requirements, communicate diagrams, write core code and handle follow-up questions.", icon: Clock3 },
+  { number: "13", title: "60-minute interview framework", detail: "Scope requirements, communicate diagrams, write core code and handle follow-up questions.", icon: Clock },
   { number: "14", title: "16 real-world LLD case studies", detail: "Booking, inventory, parking, notifications, rate limiting, payments and more with Java implementations.", icon: BookOpen },
 ];
 
@@ -96,4300 +110,192 @@ const flowSteps = [
   { n: "06", title: "Validate", text: "Concurrency, edge cases and trade-offs" },
 ];
 
-export const styles = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
-html,
-body,
-#root {
-  min-width: 100%;
-}
-body {
-  margin: 0;
-  overflow-x: hidden;
-  background: #f8fbff;
-}
-html[data-theme="dark"] body {
-  background: #0a1020;
-}
-.lldPage {
-  --bg: #FAF9F6;
-  --surface: #ffffff;
-  --surface-2: #F5F1EB;
-  --text: #292524;
-  --muted: #6B625B;
-  --border: #E7E0D8;
-  --accent: #EA580C;
-  --accent-2: #FB923C;
-  --soft: #FFF0E3;
-  --hero: #FFF9F2;
-  --hero-mid: #FFF1E4;
-  --hero-end: #FFE8D1;
-  --hero-text: #292524;
-  --hero-muted: #67594E;
-  --hero-dot: rgba(234, 88, 12, 0.09);
-  --hero-eyebrow-bg: rgba(255, 255, 255, 0.9);
-  --hero-eyebrow-border: #FED7AA;
-  --hero-eyebrow-text: #C2410C;
-  --hero-outline-bg: rgba(255, 255, 255, 0.82);
-  --hero-outline-border: #E8C7A6;
-  --hero-outline-text: #292524;
-  --chip-bg: rgba(255, 255, 255, 0.92);
-  --chip-border: #E8D2BF;
-  --chip-text: #292524;
-  --chip-shadow: 0 14px 30px rgba(44, 71, 118, 0.14);
-  --code: #1C1917;
-  --shadow: 0 18px 55px rgba(29, 49, 88, 0.09);
-  color-scheme: light;
-  position: relative;
-  width: 100%;
-  max-width: none;
-  min-height: 100vh;
-  margin: 0;
-  overflow-x: clip;
-  overflow-y: visible;
-  background: var(--bg);
-  color: var(--text);
-  isolation: isolate;
-  transition:
-    background 0.25s ease,
-    color 0.25s ease;
-}
-.lldPage[data-theme="dark"] {
-  --bg: #141210;
-  --surface: #211D1A;
-  --surface-2: #29231E;
-  --text: #FAF7F3;
-  --muted: #C0B5AA;
-  --border: #403831;
-  --accent: #FB923C;
-  --accent-2: #FDBA74;
-  --soft: #39271D;
-  --hero: #211811;
-  --hero-mid: #382318;
-  --hero-end: #492B1B;
-  --hero-text: #FFF8F1;
-  --hero-muted: #D5C5B5;
-  --hero-dot: rgba(255, 255, 255, 0.14);
-  --hero-eyebrow-bg: rgba(255, 255, 255, 0.08);
-  --hero-eyebrow-border: rgba(174, 193, 255, 0.28);
-  --hero-eyebrow-text: #FFD2A8;
-  --hero-outline-bg: rgba(255, 255, 255, 0.07);
-  --hero-outline-border: rgba(255, 255, 255, 0.25);
-  --hero-outline-text: #FFF4E8;
-  --chip-bg: rgba(17, 29, 61, 0.86);
-  --chip-border: rgba(255, 255, 255, 0.16);
-  --chip-text: #FFF3E7;
-  --chip-shadow: 0 15px 30px rgba(0, 0, 0, 0.18);
-  --code: #110F0D;
-  --shadow: 0 18px 55px rgba(0, 0, 0, 0.22);
-  color-scheme: dark;
-}
-.lldPage * {
-  box-sizing: border-box;
-}
-.lldPage a {
-  color: inherit;
-  text-decoration: none;
-}
-.lldPage button {
-  font: inherit;
-}
-.lld-shell {
-  width: min(1280px, calc(100% - 48px));
-  margin: 0 auto;
-}
-.lld-nav {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: color-mix(in srgb, var(--bg) 84%, transparent);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-}
-.lld-nav-inner {
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-.lld-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 850;
-  letter-spacing: -0.03em;
-}
-.lld-brand-mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #3a5cf0, #9362f4);
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(68, 85, 235, 0.25);
-}
-.lld-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-.lld-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.lld-cta {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 9px;
-  background: linear-gradient(110deg, #3659ee, #7655e9);
-  color: white !important;
-  border: 0;
-  border-radius: 14px;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 850;
-  box-shadow: 0 12px 26px rgba(71, 84, 229, 0.23);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s,
-    filter 0.2s;
-  cursor: pointer;
-}
-.lld-cta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 32px rgba(71, 84, 229, 0.32);
-  filter: saturate(1.1);
-}
-.lld-cta:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-.lld-cta-outline {
-  background: var(--surface);
-  color: var(--text) !important;
-  border: 1px solid var(--border);
-  box-shadow: none;
-}
-.lld-hero {
-  position: relative;
-  padding: 68px 0 76px;
-  background:
-    radial-gradient(
-      ellipse at 74% 28%,
-      color-mix(in srgb, var(--accent-2) 16%, transparent),
-      transparent 38%
-    ),
-    linear-gradient(130deg, var(--hero), var(--hero-mid) 60%, var(--hero-end));
-  color: var(--hero-text);
-}
-.lld-hero:before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(
-    var(--hero-dot) 1px,
-    transparent 1px
-  );
-  background-size: 25px 25px;
-  mask-image: linear-gradient(90deg, transparent, black);
-}
-.lld-hero-grid {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
-  gap: 48px;
-  align-items: center;
-}
-.lld-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--hero-eyebrow-border);
-  background: var(--hero-eyebrow-bg);
-  color: var(--hero-eyebrow-text);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  font-weight: 850;
-  text-transform: uppercase;
-}
-.lld-hero h1 {
-  font-size: clamp(42px, 6vw, 68px);
-  line-height: 0.99;
-  letter-spacing: -0.055em;
-  margin: 22px 0 18px;
-  max-width: 690px;
-}
-.lld-gradient-text {
-  background: linear-gradient(90deg, #2563eb, #7c3aed, #0284c7);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.lldPage[data-theme="dark"] .lld-gradient-text {
-  background: linear-gradient(90deg, #b1c2ff, #d6b9ff, #98e0ff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.lld-hero-copy {
-  max-width: 590px;
-  color: var(--hero-muted);
-  font-size: 16px;
-  line-height: 1.8;
-}
-.lld-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 28px;
-}
-.lld-hero .lld-cta-outline {
-  color: var(--hero-outline-text) !important;
-  border-color: var(--hero-outline-border);
-  background: var(--hero-outline-bg);
-}
-.lld-hero .lld-cta-outline:hover {
-  background: color-mix(in srgb, var(--hero-outline-bg) 72%, var(--accent) 12%);
-}
-.lld-hero-bullets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin-top: 25px;
-  color: var(--hero-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-.lld-hero-bullets span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.lld-hero-bullets svg {
-  color: #85e2be;
-}
-.lld-book-stage {
-  position: relative;
-  min-height: 510px;
-  display: grid;
-  place-items: center;
-  perspective: 1000px;
-}
-.lld-orbit {
-  position: absolute;
-  width: 360px;
-  height: 360px;
-  border: 1px solid rgba(179, 198, 255, 0.16);
-  border-radius: 50%;
-  animation: lldRotate 28s linear infinite;
-}
-.lld-orbit:before,
-.lld-orbit:after {
-  content: "";
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #98b1ff;
-  box-shadow: 0 0 18px #89a4ff;
-}
-.lld-orbit:before {
-  left: 34px;
-  top: 78px;
-}
-.lld-orbit:after {
-  right: 25px;
-  bottom: 77px;
-  background: #caa8ff;
-}
-.lld-book-mock {
-  position: relative;
-  width: min(310px, 75vw);
-  height: 470px;
-  border-radius: 5px 13px 13px 5px;
-  background: linear-gradient(150deg, #182956, #263f83 58%, #5e4fb2);
-  box-shadow:
-    22px 28px 54px rgba(0, 0, 0, 0.38),
-    inset 7px 0 0 rgba(255, 255, 255, 0.08);
-  transform: rotateY(-9deg) rotateX(2deg);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  animation: lldFloat 5s ease-in-out infinite;
-}
-.lld-book-mock:before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      circle at 72% 22%,
-      rgba(138, 171, 255, 0.32),
-      transparent 34%
-    ),
-    linear-gradient(140deg, transparent 40%, rgba(255, 255, 255, 0.07));
-}
-.lld-book-grid {
-  position: absolute;
-  inset: 24px 22px auto;
-  height: 120px;
-  opacity: 0.82;
-}
-.lld-book-grid svg {
-  width: 100%;
-  height: 100%;
-}
-.lld-book-content {
-  position: absolute;
-  inset: auto 25px 27px;
-}
-.lld-book-kicker {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: #bdd0ff;
-  font-weight: 850;
-}
-.lld-book-title {
-  font-size: 26px;
-  line-height: 1.04;
-  letter-spacing: -0.04em;
-  color: white;
-  font-weight: 900;
-  margin-top: 12px;
-}
-.lld-book-subtitle {
-  font-size: 10px;
-  line-height: 1.55;
-  color: #d6ddf5;
-  margin-top: 12px;
-  max-width: 210px;
-}
-.lld-book-tag {
-  display: inline-block;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 999px;
-  padding: 6px 9px;
-  margin-top: 15px;
-  color: #dce6ff;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-.lld-float-chip {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 11px 13px;
-  border: 1px solid var(--chip-border);
-  border-radius: 15px;
-  background: var(--chip-bg);
-  color: var(--chip-text);
-  box-shadow: var(--chip-shadow);
-  font-size: 11px;
-  font-weight: 800;
-  backdrop-filter: blur(10px);
-  animation: lldFloat 4s ease-in-out infinite;
-}
-.lld-chip-one {
-  top: 32px;
-  left: 0;
-}
-.lld-chip-two {
-  right: -2px;
-  top: 112px;
-  animation-delay: -1.5s;
-}
-.lld-chip-three {
-  bottom: 38px;
-  left: 4px;
-  animation-delay: -2.5s;
-}
-.lld-hero-bottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(195, 207, 255, 0.45),
-    transparent
-  );
-}
-.lld-section {
-  padding: 82px 0;
-}
-.lld-section-tight {
-  padding: 56px 0;
-}
-.lld-section-head {
-  max-width: 720px;
-  margin: 0 auto 38px;
-  text-align: center;
-}
-.lld-kicker {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 900;
-  color: var(--accent);
-}
-.lld-section-head h2,
-.lld-section-title {
-  font-size: clamp(29px, 4vw, 43px);
-  line-height: 1.08;
-  letter-spacing: -0.045em;
-  margin: 12px 0;
-  color: var(--text);
-}
-.lld-section-head p {
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.75;
-  margin: 0;
-}
-.lld-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: -32px;
-  position: relative;
-  z-index: 2;
-}
-.lld-stat {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 18px;
-  padding: 19px;
-  box-shadow: var(--shadow);
-}
-.lld-stat strong {
-  display: block;
-  font-size: 25px;
-  letter-spacing: -0.04em;
-  color: var(--text);
-}
-.lld-stat span {
-  display: block;
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 750;
-  margin-top: 5px;
-}
-.lld-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 21px;
-  box-shadow: var(--shadow);
-  transition:
-    transform 0.22s,
-    border-color 0.22s,
-    box-shadow 0.22s;
-}
-.lld-card:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: 0 22px 55px rgba(30, 51, 97, 0.12);
-}
-.lld-muted {
-  color: var(--muted);
-}
-.lld-module-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-.lld-module {
-  padding: 21px;
-  min-height: 205px;
-}
-.lld-module-icon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: var(--soft);
-  color: var(--accent);
-}
-.lld-module-number {
-  float: right;
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 900;
-  letter-spacing: 0.1em;
-}
-.lld-module h3 {
-  font-size: 16px;
-  letter-spacing: -0.02em;
-  margin: 18px 0 8px;
-}
-.lld-module p {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--muted);
-  margin: 0;
-}
-.lld-flow {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-  position: relative;
-}
-.lld-flow-step {
-  position: relative;
-  padding: 18px 14px;
-  min-height: 160px;
-  z-index: 1;
-}
-.lld-flow-step:not(:last-child):after {
-  content: "";
-  position: absolute;
-  top: 39px;
-  right: -14px;
-  width: 19px;
-  height: 1px;
-  background: var(--accent);
-  z-index: 2;
-}
-.lld-flow-step .lld-flow-num {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--accent);
-  font-weight: 900;
-}
-.lld-flow-step h3 {
-  font-size: 15px;
-  margin: 12px 0 7px;
-}
-.lld-flow-step p {
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--muted);
-  margin: 0;
-}
-.lld-flow-icon {
-  display: grid;
-  place-items: center;
-  width: 31px;
-  height: 31px;
-  border-radius: 11px;
-  background: var(--soft);
-  color: var(--accent);
-  margin-bottom: 12px;
-}
-.lld-diagram-panel {
-  margin-top: 22px;
-  padding: 24px;
-  border-radius: 22px;
-  border: 1px solid var(--border);
-  background: linear-gradient(135deg, var(--surface), var(--surface-2));
-}
-.lld-diagram-title {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 19px;
-}
-.lld-diagram-title h3 {
-  font-size: 16px;
-  margin: 0;
-}
-.lld-diagram-title span {
-  font-size: 10px;
-  font-weight: 850;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.lld-class-diagram {
-  display: grid;
-  grid-template-columns: 1fr auto 1.15fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-}
-.lld-uml-box {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 14px;
-  overflow: hidden;
-  min-width: 0;
-}
-.lld-uml-box strong {
-  display: block;
-  padding: 11px 13px;
-  background: var(--soft);
-  color: var(--text);
-  font-size: 12px;
-}
-.lld-uml-box span {
-  display: block;
-  padding: 9px 13px;
-  border-top: 1px solid var(--border);
-  font-size: 10px;
-  color: var(--muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.lld-diagram-arrow {
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-}
-.lld-state-track {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 22px;
-  flex-wrap: wrap;
-}
-.lld-state {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 9px 13px;
-  background: var(--surface);
-  font-size: 11px;
-  font-weight: 850;
-}
-.lld-state-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #6b7280;
-}
-.lld-state.is-active .lld-state-dot {
-  background: #31c48d;
-  box-shadow: 0 0 0 5px rgba(49, 196, 141, 0.14);
-}
-.lld-state-arrow {
-  color: var(--muted);
-}
-.lld-pattern-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.lld-pattern-card {
-  padding: 22px;
-}
-.lld-pattern-card h3 {
-  font-size: 17px;
-  margin: 0 0 4px;
-}
-.lld-pattern-card .lld-count {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 750;
-}
-.lld-pattern-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 17px;
-}
-.lld-pattern-pill {
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 7px 9px;
-  font-size: 10px;
-  font-weight: 750;
-}
-.lld-scope-note {
-  margin-top: 20px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  font-size: 12px;
-  line-height: 1.65;
-  color: var(--muted);
-}
-.lld-question-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-.lld-question {
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-}
-.lld-question:before {
-  content: attr(data-number);
-  position: absolute;
-  right: 16px;
-  top: 9px;
-  font-size: 51px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.06em;
-  color: var(--soft);
-  pointer-events: none;
-}
-.lld-question-top {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  position: relative;
-}
-.lld-question h3 {
-  font-size: 17px;
-  letter-spacing: -0.025em;
-  margin: 12px 0 4px;
-  position: relative;
-}
-.lld-question-product {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 700;
-}
-.lld-question-focus {
-  font-size: 12px;
-  color: var(--text);
-  line-height: 1.55;
-  margin: 13px 0 0;
-  max-width: 460px;
-}
-.lld-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 14px;
-}
-.lld-tag {
-  border-radius: 999px;
-  background: var(--soft);
-  color: var(--accent);
-  padding: 5px 8px;
-  font-size: 9px;
-  font-weight: 850;
-}
-.lld-code-card {
-  background: var(--code);
-  border-radius: 21px;
-  overflow: hidden;
-  color: #e5edff;
-  border: 1px solid rgba(140, 160, 220, 0.2);
-  box-shadow: var(--shadow);
-}
-.lld-code-top {
-  padding: 14px 17px;
-  border-bottom: 1px solid rgba(190, 205, 255, 0.13);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #b9c7e5;
-  font-weight: 800;
-}
-.lld-code-dots {
-  display: flex;
-  gap: 5px;
-}
-.lld-code-dots i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #61708e;
-}
-.lld-code-card pre {
-  padding: 21px;
-  margin: 0;
-  overflow: auto;
-  font:
-    12px/1.8 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
-  color: #e5edff;
-}
-.lld-highlight {
-  color: #a6bcff;
-}
-.lld-code-caption {
-  padding: 0 21px 19px;
-  font-size: 11px;
-  line-height: 1.6;
-  color: #9daecc;
-}
-.lld-faq {
-  max-width: 850px;
-  margin: 0 auto;
-  display: grid;
-  gap: 10px;
-}
-.lld-faq-item {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-}
-.lld-faq-button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  width: 100%;
-  padding: 18px 20px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-  font-size: 14px;
-  font-weight: 850;
-  cursor: pointer;
-}
-.lld-faq-answer {
-  padding: 0 20px 18px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-}
-.lld-final-cta {
-  position: relative;
-  overflow: hidden;
-  padding: clamp(28px, 5vw, 52px);
-  border-radius: 28px;
-  background: linear-gradient(130deg, #16234a, #373078 68%, #5a3f9f);
-  color: white;
-  display: grid;
-  grid-template-columns: 1fr minmax(250px, 310px);
-  gap: 32px;
-  align-items: center;
-  box-shadow: 0 24px 60px rgba(39, 44, 103, 0.22);
-}
-.lld-final-cta:after {
-  content: "";
-  position: absolute;
-  width: 330px;
-  height: 330px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  right: 18%;
-  top: -210px;
-  box-shadow:
-    0 0 0 35px rgba(255, 255, 255, 0.035),
-    0 0 0 72px rgba(255, 255, 255, 0.025);
-}
-.lld-final-copy,
-.lld-price-card {
-  position: relative;
-  z-index: 1;
-}
-.lld-final-copy h2 {
-  font-size: clamp(28px, 4vw, 42px);
-  line-height: 1.08;
-  letter-spacing: -0.045em;
-  margin: 15px 0;
-}
-.lld-final-copy p {
-  max-width: 560px;
-  color: #c5cee5;
-  font-size: 14px;
-  line-height: 1.75;
-}
-.lld-final-checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin-top: 18px;
-  font-size: 11px;
-  color: #e3eaff;
-  font-weight: 800;
-}
-.lld-final-checks span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.lld-price-card {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  padding: 23px;
-}
-.lld-price-label {
-  font-size: 11px;
-  color: #c7d2ed;
-  font-weight: 800;
-}
-.lld-price-line {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 9px 0;
-}
-.lld-price-now {
-  font-size: 36px;
-  font-weight: 950;
-  letter-spacing: -0.05em;
-  color: white;
-}
-.lld-price-old {
-  font-size: 15px;
-  color: #b8c2dc;
-  text-decoration: line-through;
-}
-.lld-discount {
-  font-size: 11px;
-  font-weight: 900;
-  color: #9ff0cb;
-}
-.lld-price-card .lld-cta {
-  margin-top: 16px;
-  width: 100%;
-  background: linear-gradient(100deg, #a99bff, #8ad8ff);
-  color: #141731 !important;
-}
-.lld-price-small {
-  font-size: 10px;
-  text-align: center;
-  color: #cad2e7;
-  line-height: 1.55;
-  margin: 11px 0 0;
-}
-.lld-footer {
-  padding: 31px 0 85px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.lld-footer-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  border-top: 1px solid var(--border);
-  padding-top: 23px;
-}
-.lld-mobile-buy {
-  display: none;
-}
-.lld-error {
-  font-size: 11px;
-  color: #ffb4bd;
-  line-height: 1.5;
-  margin: 10px 0 0;
-}
-.lld-skeleton {
-  height: 18px;
-  width: 95px;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.14),
-    rgba(255, 255, 255, 0.28),
-    rgba(255, 255, 255, 0.14)
-  );
-  background-size: 180% 100%;
-  animation: lldShimmer 1.2s infinite;
-}
-.lld-hld-section {
-  padding: 42px 0 18px;
-}
-.lld-hld-head {
-  max-width: 720px;
-  margin: 0 auto 24px;
-  text-align: center;
-}
-.lld-hld-head h2 {
-  margin: 9px 0 0;
-  color: var(--text);
-  font-size: clamp(25px, 4vw, 36px);
-  line-height: 1.12;
-  letter-spacing: -0.04em;
-}
-.lld-hld-head p {
-  max-width: 620px;
-  margin: 12px auto 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.7;
-}
-.lld-hld-card {
-  display: grid;
-  grid-template-columns: minmax(250px, 0.76fr) minmax(0, 1.24fr);
-  max-width: 930px;
-  margin: 0 auto;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.lld-hld-cover {
-  position: relative;
-  min-height: 360px;
-  overflow: hidden;
-  border-right: 1px solid var(--border);
-  background:
-    radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 38%),
-    linear-gradient(145deg, var(--surface-2), var(--soft));
-}
-.lld-hld-cover img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.lld-hld-cover-fallback {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 28px;
-  color: var(--text);
-}
-.lld-hld-cover-fallback small {
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.lld-hld-cover-fallback strong {
-  max-width: 260px;
-  margin-top: 12px;
-  font-size: 30px;
-  line-height: 1.05;
-  letter-spacing: -0.045em;
-}
-.lld-hld-details {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 30px;
-}
-.lld-hld-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.lld-hld-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 27px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 900;
-}
-.lld-hld-details h3 {
-  margin: 17px 0 0;
-  color: var(--text);
-  font-size: clamp(23px, 3vw, 31px);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-}
-.lld-hld-details > p {
-  margin: 13px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.75;
-}
-.lld-hld-topics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 17px;
-}
-.lld-hld-topic {
-  padding: 6px 9px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--bg);
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-}
-.lld-hld-price-box {
-  margin-top: 19px;
-  padding: 15px;
-  border: 1px solid var(--border);
-  border-radius: 15px;
-  background: var(--surface-2);
-}
-.lld-hld-price-label {
-  color: var(--accent);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.lld-hld-price-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 9px;
-  margin-top: 5px;
-}
-.lld-hld-current {
-  color: var(--text);
-  font-size: 24px;
-  font-weight: 900;
-}
-.lld-hld-old {
-  padding-bottom: 2px;
-  color: var(--muted);
-  font-size: 13px;
-  text-decoration: line-through;
-}
-.lld-hld-save {
-  padding-bottom: 2px;
-  color: #059669;
-  font-size: 10px;
-  font-weight: 900;
-}
-.lldPage[data-theme="dark"] .lld-hld-save {
-  color: #6ee7b7;
-}
-.lld-hld-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 19px;
-}
-.lld-hld-actions .lld-cta,
-.lld-hld-actions .lld-cta-outline {
-  min-height: 44px;
-  padding: 11px 15px;
-  font-size: 12px;
-}
-.lld-hld-error {
-  margin: 10px 0 0;
-  color: #b45309;
-  font-size: 11px;
-  line-height: 1.5;
-}
-.lldPage[data-theme="dark"] .lld-hld-error {
-  color: #fbbf24;
-}
-@keyframes lldFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotateY(-9deg);
-  }
-  50% {
-    transform: translateY(-9px) rotateY(-7deg);
-  }
-}
-@keyframes lldRotate {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes lldShimmer {
-  to {
-    background-position: -180% 0;
-  }
-}
-@media (max-width: 950px) {
-  .lld-hero-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .lld-book-stage {
-    min-height: 455px;
-  }
-  .lld-module-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .lld-flow {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .lld-flow-step:nth-child(3):after {
-    display: none;
-  }
-  .lld-final-cta {
-    grid-template-columns: 1fr 280px;
-  }
-}
-@media (max-width: 720px) {
-  .lld-shell {
-    width: min(100% - 28px, 620px);
-  }
-  .lld-nav-inner {
-    height: 62px;
-  }
-  .lld-nav-links {
-    display: none;
-  }
-  .lld-brand {
-    font-size: 13px;
-  }
-  .lld-nav-actions .lld-cta {
-    padding: 11px 13px;
-    font-size: 11px;
-  }
-  .lld-hero {
-    padding: 40px 0 56px;
-  }
-  .lld-hero-grid {
-    grid-template-columns: 1fr;
-  }
-  .lld-hero h1 {
-    font-size: clamp(36px, 11vw, 52px);
-    line-height: 1.02;
-  }
-  .lld-hero-copy {
-    font-size: 14px;
-  }
-  .lld-book-stage {
-    min-height: 390px;
-    margin-top: 0;
-  }
-  .lld-book-mock {
-    height: 365px;
-    width: 245px;
-  }
-  .lld-orbit {
-    width: 310px;
-    height: 310px;
-  }
-  .lld-chip-one {
-    left: 0;
-    top: 20px;
-  }
-  .lld-chip-two {
-    right: 0;
-    top: 90px;
-  }
-  .lld-chip-three {
-    bottom: 15px;
-    left: 0;
-  }
-  .lld-stats {
-    grid-template-columns: repeat(2, 1fr);
-    margin-top: -24px;
-  }
-  .lld-stat {
-    padding: 15px;
-  }
-  .lld-stat strong {
-    font-size: 21px;
-  }
-  .lld-section {
-    padding: 62px 0;
-  }
-  .lld-section-tight {
-    padding: 48px 0;
-  }
-  .lld-section-head {
-    margin-bottom: 27px;
-  }
-  .lld-module-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 9px;
-  }
-  .lld-module {
-    padding: 16px;
-    min-height: 185px;
-  }
-  .lld-module h3 {
-    font-size: 14px;
-    margin-top: 14px;
-  }
-  .lld-module p {
-    font-size: 11px;
-  }
-  .lld-flow {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .lld-flow-step:nth-child(3):after {
-    display: block;
-  }
-  .lld-flow-step:nth-child(even):after {
-    display: none;
-  }
-  .lld-flow-step {
-    min-height: 144px;
-  }
-  .lld-diagram-panel {
-    padding: 17px;
-  }
-  .lld-class-diagram {
-    grid-template-columns: 1fr;
-    gap: 7px;
-  }
-  .lld-diagram-arrow {
-    transform: rotate(90deg);
-    height: 18px;
-  }
-  .lld-state-track {
-    gap: 7px;
-  }
-  .lld-state {
-    padding: 8px 10px;
-    font-size: 10px;
-  }
-  .lld-pattern-grid {
-    grid-template-columns: 1fr;
-  }
-  .lld-question-grid {
-    grid-template-columns: 1fr;
-  }
-  .lld-question {
-    padding: 17px;
-  }
-  .lld-question h3 {
-    font-size: 16px;
-  }
-  .lld-final-cta {
-    grid-template-columns: 1fr;
-    padding: 27px 21px;
-    gap: 22px;
-  }
-  .lld-price-card {
-    max-width: none;
-  }
-  .lld-footer-inner {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .lld-mobile-buy {
-    display: flex;
-    position: fixed;
-    z-index: 35;
-    bottom: max(10px, env(safe-area-inset-bottom));
-    left: max(10px, env(safe-area-inset-left));
-    right: max(10px, env(safe-area-inset-right));
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 9px 10px 9px 14px;
-    border: 1px solid var(--border);
-    border-radius: 17px;
-    background: color-mix(in srgb, var(--surface) 91%, transparent);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 12px 35px rgba(15, 25, 50, 0.22);
-  }
-  .lld-mobile-price {
-    font-size: 12px;
-    font-weight: 900;
-    color: var(--text);
-  }
-  .lld-mobile-price small {
-    display: block;
-    font-size: 9px;
-    color: var(--muted);
-    font-weight: 700;
-  }
-  .lld-mobile-buy .lld-cta {
-    padding: 11px 14px;
-    font-size: 11px;
-  }
-  .lld-footer {
-    padding-bottom: 94px;
-  }
-  .lld-hld-card {
-    grid-template-columns: 1fr;
-    max-width: 580px;
-  }
-  .lld-hld-cover {
-    min-height: 285px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .lld-hld-details {
-    padding: 24px;
-  }
-  .lld-hld-section {
-    padding-top: 34px;
-  }
-}
-@media (max-width: 480px) {
-  .lld-shell {
-    width: min(100% - 22px, 560px);
-  }
-  .lld-hero-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-  .lld-hero-actions .lld-cta {
-    width: 100%;
-    min-height: 46px;
-  }
-  .lld-hero-bullets {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  .lld-book-stage {
-    min-height: 365px;
-  }
-  .lld-book-mock {
-    width: 230px;
-    height: 345px;
-  }
-  .lld-orbit {
-    width: 265px;
-    height: 265px;
-  }
-  .lld-float-chip {
-    padding: 8px 9px;
-    font-size: 9px;
-    border-radius: 12px;
-  }
-  .lld-chip-one {
-    top: 16px;
-  }
-  .lld-chip-two {
-    top: 78px;
-  }
-  .lld-chip-three {
-    bottom: 12px;
-  }
-  .lld-mobile-buy {
-    gap: 8px;
-  }
-  .lld-mobile-buy .lld-cta {
-    min-height: 42px;
-  }
-  .lld-hld-cover {
-    min-height: 230px;
-  }
-  .lld-hld-details {
-    padding: 20px;
-  }
-  .lld-hld-actions {
-    grid-template-columns: 1fr;
-  }
-  .lld-hld-actions .lld-cta,
-  .lld-hld-actions .lld-cta-outline {
-    width: 100%;
-  }
-  .lld-float-chip {
-    display: none;
-  }
-  .lld-flow {
-    grid-template-columns: 1fr;
-  }
-  .lld-flow-step:not(:last-child):after {
-    display: none;
-  }
-  .lld-book-stage {
-    min-height: 350px;
-  }
-  .lld-book-mock {
-    width: min(230px, 72vw);
-  }
-  .lld-final-cta {
-    border-radius: 22px;
-  }
-}
-@media (max-width: 390px) {
-  .lld-nav-actions .lld-cta {
-    display: none;
-  }
-  .lld-module-grid {
-    grid-template-columns: 1fr;
-  }
-  .lld-module {
-    min-height: 0;
-  }
-  .lld-hero-actions .lld-cta {
-    width: 100%;
-  }
-  .lld-state-track {
-    gap: 5px;
-  }
-  .lld-state {
-    font-size: 9px;
-    padding: 7px 8px;
-  }
-}
-
-.lldPage {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-}
-.lldPage section[id],
-.lldPage [id="patterns"],
-.lldPage [id="problems"] {
-  scroll-margin-top: 90px;
-}
-.lldPage button:focus-visible,
-.lldPage a:focus-visible,
-.lldPage summary:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 4px;
-}
-.lld-expanded section {
-  position: relative;
-}
-.lld-expanded [class~="bg-[#fbfdff]"] {
-  background: var(--surface);
-}
-.lld-expanded [class~="bg-white"] {
-  background-color: var(--surface);
-}
-.lld-expanded [class~="bg-slate-50"],
-.lld-expanded [class~="bg-slate-100"],
-.lld-expanded [class~="bg-blue-50"],
-.lld-expanded [class~="bg-blue-100"],
-.lld-expanded [class~="bg-emerald-50"] {
-  background-color: var(--surface-2);
-}
-.lld-expanded [class*="text-slate-9"],
-.lld-expanded [class~="text-slate-800"] {
-  color: var(--text);
-}
-.lld-expanded [class~="text-slate-700"],
-.lld-expanded [class~="text-slate-600"],
-.lld-expanded [class~="text-slate-500"],
-.lld-expanded [class~="text-slate-400"] {
-  color: var(--muted);
-}
-.lld-expanded [class~="text-blue-600"],
-.lld-expanded [class~="text-blue-700"],
-.lld-expanded [class~="text-blue-500"] {
-  color: var(--accent);
-}
-.lld-expanded [class*="border-slate-"],
-.lld-expanded [class*="border-blue-"],
-.lld-expanded [class*="border-emerald-"] {
-  border-color: var(--border);
-}
-.lld-expanded [class*="bg-blue-50/"] {
-  background-color: var(--soft);
-}
-.lld-expanded [class~="from-blue-50"] {
-  --tw-gradient-from: var(--surface-2);
-  --tw-gradient-to: var(--surface);
-}
-.lld-expanded [class~="via-white"] {
-  --tw-gradient-stops: var(--surface-2), var(--surface), var(--surface-2);
-}
-.lld-expanded [class~="to-slate-50"] {
-  --tw-gradient-to: var(--surface-2);
-}
-.lld-expanded [class~="to-white"] {
-  --tw-gradient-to: var(--surface);
-}
-.lld-expanded h2 {
-  letter-spacing: -0.04em;
-  font-size: clamp(27px, 4vw, 40px);
-  line-height: 1.14;
-}
-.lld-expanded pre {
-  background: var(--code) !important;
-  color: #dfebff !important;
-  border-radius: 16px;
-  font-size: 12px;
-  line-height: 1.85;
-  tab-size: 4;
-}
-.lld-expanded [class~="rounded-3xl"] {
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-}
-.lld-expanded details {
-  margin-top: 20px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface-2);
-  overflow: hidden;
-}
-.lld-expanded summary {
-  cursor: pointer;
-  padding: 15px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--accent);
-}
-.lld-requirements {
-  padding: 0 17px 18px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.8;
-}
-.lld-requirements h4 {
-  margin: 18px 0 9px;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 800;
-}
-.lld-requirements ul {
-  list-style: disc;
-  padding-left: 20px;
-  display: grid;
-  gap: 8px;
-}
-.lld-requirements code {
-  padding: 2px 4px;
-  background: var(--soft);
-  border-radius: 4px;
-  overflow-wrap: anywhere;
-  color: var(--accent);
-}
-.lld-requirements strong {
-  color: var(--text);
-}
-.lld-source-note {
-  border: 1px solid var(--border);
-  background: var(--soft);
-  padding: 22px;
-  border-radius: 20px;
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--muted);
-  margin: 28px auto;
-}
-
-.lldPage {
-  padding-top: var(--lld-navbar-offset, 64px);
-  padding-bottom: 48px;
-}
-.lld-book-mock:after {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 13px;
-  z-index: 3;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.34),
-    rgba(255, 255, 255, 0.12),
-    transparent
-  );
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-.lld-book-grid {
-  top: 35px;
-  height: 160px;
-}
-.lld-book-title {
-  font-size: 31px;
-  line-height: 1.1;
-}
-.lld-book-content {
-  bottom: 35px;
-}
-#problems .lld-design-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-#problems .lld-design-card {
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 26px;
-  background: linear-gradient(145deg, var(--surface), var(--surface-2));
-  box-shadow: var(--shadow);
-  transition:
-    transform 0.2s,
-    border-color 0.2s;
-}
-#problems .lld-design-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent);
-}
-@media (max-width: 720px) {
-  .lldPage {
-    padding-bottom: 88px;
-  }
-  .lld-book-title {
-    font-size: 27px;
-  }
-  .lld-book-grid {
-    height: 130px;
-  }
-  #problems .lld-design-grid {
-    grid-template-columns: 1fr;
-  }
-  #problems .lld-design-card {
-    padding: 21px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lldPage * {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* =========================
-   SECURE PDF PREVIEW
-   ========================= */
-.lld-preview-section {
-  padding: 30px 0 78px;
-}
-
-.lld-preview-card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 26px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.lld-preview-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, var(--surface), var(--surface-2));
-}
-
-.lld-preview-topbar-left {
-  min-width: 0;
-}
-
-.lld-preview-topbar-title {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-}
-
-.lld-preview-topbar-copy {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.55;
-}
-
-.lld-preview-badge {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 31px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.lld-pdf-shell {
-  position: relative;
-  padding: 14px;
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--bg));
-}
-
-.lld-pdf-viewport {
-  position: relative;
-  width: 100%;
-  height: min(78vh, 900px);
-  min-height: 560px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  scrollbar-gutter: stable;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: #dfe5ee;
-  outline: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.lldPage[data-theme="dark"] .lld-pdf-viewport {
-  background: #080e1b;
-}
-
-.lld-pdf-viewport:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
-  border-color: var(--accent);
-}
-
-.lld-pdf-document {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-}
-
-.lld-pdf-page-wrap {
-  position: relative;
-  width: fit-content;
-  max-width: 100%;
-  overflow: hidden;
-  border-radius: 6px;
-  background: #ffffff;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.12),
-    0 10px 28px rgba(15, 23, 42, 0.16);
-}
-
-.lld-pdf-page-number {
-  position: absolute;
-  z-index: 2;
-  right: 10px;
-  top: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 24px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: #ffffff;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  pointer-events: none;
-}
-
-.lld-pdf-page {
-  line-height: 0;
-  pointer-events: none;
-}
-
-.lld-pdf-page canvas {
-  display: block !important;
-  max-width: 100% !important;
-  height: auto !important;
-  pointer-events: none !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  -webkit-user-drag: none !important;
-}
-
-.lld-pdf-loading,
-.lld-pdf-error {
-  display: grid;
-  place-items: center;
-  min-height: 320px;
-  padding: 30px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.lld-pdf-loading-inner {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-}
-
-.lld-pdf-spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid color-mix(in srgb, var(--accent) 20%, var(--border));
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: lldPdfSpin 0.8s linear infinite;
-}
-
-.lld-pdf-error {
-  color: #b45309;
-}
-
-.lldPage[data-theme="dark"] .lld-pdf-error {
-  color: #fbbf24;
-}
-
-.lld-preview-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 13px 16px 15px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.6;
-}
-
-.lld-preview-note svg {
-  flex: 0 0 auto;
-  margin-top: 2px;
-  color: var(--accent);
-}
-
-@keyframes lldPdfSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 720px) {
-  .lld-preview-section {
-    padding: 18px 0 62px;
-  }
-
-  .lld-preview-card {
-    border-radius: 20px;
-  }
-
-  .lld-preview-topbar {
-    align-items: flex-start;
-    padding: 15px;
-  }
-
-  .lld-preview-topbar-title {
-    font-size: 13px;
-  }
-
-  .lld-preview-badge {
-    min-height: 28px;
-    padding: 6px 8px;
-    font-size: 9px;
-  }
-
-  .lld-pdf-shell {
-    padding: 8px;
-  }
-
-  .lld-pdf-viewport {
-    height: 72vh;
-    min-height: 480px;
-    padding: 7px;
-    border-radius: 14px;
-  }
-
-  .lld-pdf-document {
-    gap: 10px;
-  }
-
-  .lld-pdf-page-wrap {
-    border-radius: 4px;
-  }
-
-  .lld-pdf-page-number {
-    right: 7px;
-    top: 7px;
-    height: 21px;
-    min-width: 24px;
-    font-size: 8px;
-  }
-}
-
-@media (max-width: 420px) {
-  .lld-preview-topbar {
-    gap: 10px;
-  }
-
-  .lld-preview-topbar-copy {
-    font-size: 10px;
-  }
-
-  .lld-pdf-viewport {
-    height: 68vh;
-    min-height: 430px;
-    padding: 5px;
-  }
-
-  .lld-preview-note {
-    padding: 11px 12px 13px;
-  }
-}
-
-
-
-/* =====================================================
-   TARGET TREK LLD — ORANGE / CHARCOAL EDITORIAL THEME
-   Font contrast and purchase elements, both themes
-   ===================================================== */
-.lldPage { font-family: 'DM Sans', sans-serif; }
-.lldPage h1, .lldPage h2, .lldPage h3, .lldPage h4,
-.lldPage button, .lldPage .lld-price-now, .lldPage .lld-book-title {
-  font-family: 'Manrope', sans-serif;
-}
-.lldPage h1, .lldPage h2, .lldPage h3, .lldPage h4,
-.lldPage strong { color: var(--text); }
-.lld-hero h1, .lld-book-mock .lld-book-title, .lld-final-cta h2,
-.lld-final-cta .lld-price-now { color: #FFFFFF; }
-.lld-hero h1 { color: var(--hero-text); }
-.lldPage[data-theme="dark"] .lld-hero h1 { color: #FFF8F1; }
-.lld-gradient-text, .lldPage[data-theme="dark"] .lld-gradient-text {
-  background: linear-gradient(100deg,#EA580C,#F97316,#FB923C);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.lldPage[data-theme="dark"] .lld-gradient-text {
-  background: linear-gradient(100deg,#FDBA74,#FB923C,#FFEDD5);
-  -webkit-background-clip: text; background-clip: text;
-}
-.lld-hero { padding: 42px 0 50px; }
-.lld-hero-grid { gap: 28px; }
-.lld-hero h1 { font-size: clamp(32px, 4.5vw, 52px); line-height: 1.07; margin: 14px 0; }
-.lld-hero-copy { line-height: 1.67; }
-.lld-book-stage { min-height: 385px; }
-.lld-book-mock {
-  width: min(260px, 70vw); height: 390px;
-  background: linear-gradient(145deg,#221B17,#482919 65%,#9A3412);
-  border: 1px solid rgba(253,186,116,.38);
-  box-shadow: 15px 22px 45px rgba(32,19,12,.27);
-}
-.lld-book-kicker { color: #FDBA74; }
-.lld-book-subtitle { color: #F5DED0; }
-.lld-book-tag { color: #FFEDD5; }
-.lld-orbit { border-color: rgba(234,88,12,.22); }
-.lld-orbit:before, .lld-orbit:after { background: #FB923C; box-shadow: 0 0 17px rgba(249,115,22,.5); }
-.lld-cta {
-  padding: 12px 18px; border-radius: 11px;
-  background: linear-gradient(110deg,#EA580C,#F97316);
-  color: #FFF !important;
-  box-shadow: 0 10px 22px rgba(234,88,12,.20);
-}
-.lld-cta:hover { box-shadow: 0 12px 25px rgba(234,88,12,.29); }
-.lld-cta-outline { background: var(--surface); color: var(--text) !important; box-shadow: none; }
-.lld-hero .lld-cta-outline { color: var(--hero-outline-text) !important; }
-.lldPage .lld-section-head h2, .lldPage .lld-section-title { color: var(--text); }
-.lldPage .lld-module h3, .lldPage .lld-question h3,
-.lldPage .lld-pattern-card h3, .lldPage .lld-design-card h3 { color: var(--text); }
-.lldPage .lld-module p, .lldPage .lld-section-head p,
-.lldPage .lld-question-product, .lldPage .lld-faq-answer { color: var(--muted); }
-.lldPage .lld-kicker, .lldPage .lld-flow-num,
-.lldPage .lld-question-top, .lldPage .lld-tag { color: var(--accent); }
-.lldPage .lld-stat, .lldPage .lld-card, .lldPage .lld-faq-item,
-.lldPage .lld-hld-card { border-color: var(--border); }
-.lldPage .lld-tag, .lldPage .lld-module-icon,
-.lldPage .lld-flow-icon { background: var(--soft); }
-.lld-final-cta {
-  background: linear-gradient(125deg,#1C1917,#3A281D 65%,#9A3412);
-  box-shadow: 0 18px 45px rgba(29,20,16,.20);
-}
-.lld-final-copy h2, .lld-final-copy h3 { color: #FFF8F1; }
-.lld-final-copy p, .lld-price-label, .lld-price-old,
-.lld-price-small, .lld-final-checks { color: #E9D9CA; }
-.lld-price-card .lld-cta {
-  background: #F97316;
-  color: #FFFFFF !important;
-}
-.lld-discount, .lld-hld-save { color: #EA580C; }
-.lldPage[data-theme="dark"] .lld-discount,
-.lldPage[data-theme="dark"] .lld-hld-save { color: #FDBA74; }
-.lldPage .lld-code-card { background: #1C1917; border-color: #4B3629; }
-.lldPage .lld-code-top, .lldPage .lld-code-caption { color: #D6C6B6; }
-.lldPage .lld-highlight { color: #FDBA74; }
-.lldPage .lld-expanded [class~="text-blue-600"],
-.lldPage .lld-expanded [class~="text-blue-700"],
-.lldPage .lld-expanded [class~="text-blue-500"] { color: var(--accent); }
-.lldPage .lld-expanded [class~="text-slate-800"],
-.lldPage .lld-expanded [class~="text-slate-900"] { color: var(--text); }
-.lldPage .lld-expanded [class~="text-slate-600"],
-.lldPage .lld-expanded [class~="text-slate-500"] { color: var(--muted); }
-.lld-preview-topbar, .lld-preview-badge, .lld-preview-note { color: var(--text); }
-.lldPage[data-theme="dark"] .lld-preview-topbar,
-.lldPage[data-theme="dark"] .lld-preview-badge,
-.lldPage[data-theme="dark"] .lld-preview-note { color: #FAF7F3; }
-.lld-hld-cover { background: linear-gradient(140deg,var(--surface-2),var(--soft)); }
-.lld-mobile-buy .lld-cta { background: #F97316; color: #FFF !important; }
-@media(max-width:720px){
-  .lld-hero { padding: 28px 0 38px; }
-  .lld-book-stage { min-height: 340px; }
-  .lld-book-mock { width: min(225px,72vw); height: 335px; }
-  .lld-hero h1 { font-size: clamp(31px,8vw,42px); }
-}
-
-
-/* The optional combo uses the same orange/brown theme as the HLD card. */
-.lld-combo-card { margin-top: 24px; border: 1px solid var(--border); }
-.lldPage .lld-expanded .text-blue-600 { color: var(--accent) !important; }
-.lldPage .lld-expanded .text-blue-700 { color: var(--accent) !important; }
-.lldPage .lld-expanded .bg-blue-50 { background: var(--soft) !important; }
-.lldPage .lld-expanded .border-blue-100 { border-color: var(--border) !important; }
-.lldPage .lld-expanded .text-slate-950 { color: var(--text) !important; }
-.lldPage .lld-expanded .text-slate-600, .lldPage .lld-expanded .text-slate-500, .lldPage .lld-expanded .text-slate-400 { color: var(--muted) !important; }
-.lldPage .lld-expanded .bg-white { background-color: var(--surface) !important; }
-.lldPage .lld-expanded .bg-slate-50 { background-color: var(--surface-2) !important; }
-.lldPage .lld-expanded .border-slate-200 { border-color: var(--border) !important; }
-
-/* Java examples: explicit theme tokens prevent white-on-white code in light mode. */
-.lldPage .lld-java-example-card {
-  background: var(--surface) !important;
-  border-color: var(--border) !important;
-}
-.lldPage .lld-java-example-head {
-  background: var(--surface-2) !important;
-  border-color: var(--border) !important;
-}
-.lldPage .lld-java-example-head .text-slate-950 { color: var(--text) !important; }
-.lldPage .lld-java-example-head .text-slate-500 { color: var(--muted) !important; }
-.lldPage .lld-java-code {
-  display: block;
-  margin: 0;
-  background: #faf7f2 !important;
-  color: #292524 !important;
-  -webkit-text-fill-color: #292524;
-  border: 0;
-  tab-size: 2;
-  white-space: pre;
-  overflow-x: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-.lldPage[data-theme="dark"] .lld-java-code {
-  background: #171411 !important;
-  color: #f5e9dc !important;
-  -webkit-text-fill-color: #f5e9dc;
-}
-/* Responsive landscape 16:9 covers: neither crop nor distort artwork. */
-.lld-companion-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 22px;
-  max-width: 1120px;
-  margin-inline: auto;
-}
-.lld-companion-grid > .lld-hld-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  overflow: hidden;
-  border-radius: 20px;
-}
-.lld-companion-grid > .lld-hld-card:only-child {
-  max-width: 550px;
-  justify-self: center;
-}
-.lld-companion-grid .lld-hld-cover {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  height: auto;
-  min-height: 0;
-  flex: none;
-  border-right: 0;
-  border-bottom: 1px solid var(--border);
-  display: block;
-}
-.lld-companion-grid .lld-hld-cover img {
-  display: block;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  padding: 0;
-}
-.lld-companion-grid .lld-hld-cover-fallback {
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 20px;
-}
-.lld-companion-grid .lld-hld-cover-fallback strong {
-  font-size: clamp(21px, 2.8vw, 30px);
-}
-.lld-companion-grid .lld-hld-details {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  justify-content: flex-start;
-  padding: 22px;
-}
-.lld-companion-grid .lld-hld-details h3 {
-  font-size: clamp(18px, 2vw, 22px);
-  line-height: 1.3;
-}
-.lld-companion-grid .lld-hld-details > p {
-  font-size: 12.5px;
-  line-height: 1.7;
-}
-.lld-companion-grid .lld-hld-badge { font-size: 10px; padding: 5px 9px; }
-.lld-companion-grid .lld-hld-topics { margin-top: 12px; }
-.lld-companion-grid .lld-hld-price-box { margin-top: auto; }
-.lld-companion-grid .lld-hld-actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding-top: 12px;
-  margin-top: 0;
-}
-.lld-companion-grid .lld-hld-actions .lld-cta {
-  min-width: 0;
-  min-height: 42px;
-  padding: 10px 8px;
-  font-size: 11px;
-  text-align: center;
-}
-@media (max-width: 780px) {
-  .lld-companion-grid { grid-template-columns: minmax(0, 1fr); max-width: 550px; }
-  .lld-companion-grid > .lld-hld-card { max-width: 550px; }
-}
-@media (max-width: 420px) {
-  .lld-companion-grid { gap: 16px; }
-  .lld-companion-grid .lld-hld-details { padding: 16px; }
-  .lld-companion-grid .lld-hld-actions { grid-template-columns: 1fr; }
-}
-
-/* =========================================================
-   MOTION LAYER: scroll, hover, scale and sticky buy card
-   (individual transform properties so they compose with
-   framer-motion's inline transforms)
-========================================================= */
-.lld-progress {
-  position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 90;
-  height: 3px;
-  transform-origin: 0 50%;
-  background: linear-gradient(90deg, #EA580C, #FB923C, #F59E0B);
-  pointer-events: none;
-}
-
-.lld-card,
-.lld-module,
-.lld-stat,
-.lld-hld-card,
-.lld-flow-step,
-.lld-pattern-card,
-.lld-design-card,
-.lld-question,
-.lld-faq-item,
-.lld-code-card,
-.lld-preview-card,
-.lld-price-card {
-  transition:
-    translate 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    scale 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.4s ease,
-    border-color 0.4s ease;
-}
-.lld-card:hover,
-.lld-module:hover,
-.lld-stat:hover,
-.lld-hld-card:hover,
-.lld-flow-step:hover,
-.lld-pattern-card:hover,
-.lld-design-card:hover,
-.lld-question:hover,
-.lld-code-card:hover,
-.lld-price-card:hover {
-  translate: 0 -6px;
-  scale: 1.015;
-  box-shadow: 0 26px 60px rgba(234, 88, 12, 0.16);
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-}
-.lld-faq-item:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  scale: 1.005;
-}
-
-.lld-module-icon,
-.lld-flow-icon,
-.lld-module-number {
-  transition: rotate 0.4s ease, scale 0.4s ease, color 0.3s ease;
-}
-.lld-module:hover .lld-module-icon,
-.lld-flow-step:hover .lld-flow-icon {
-  rotate: -8deg;
-  scale: 1.18;
-}
-.lld-module:hover .lld-module-number {
-  scale: 1.12;
-}
-
-.lld-tag,
-.lld-pattern-pill,
-.lld-hld-topic,
-.lld-hld-badge {
-  transition: translate 0.25s ease, scale 0.25s ease, background 0.25s ease;
-}
-.lld-tag:hover,
-.lld-pattern-pill:hover,
-.lld-hld-topic:hover,
-.lld-hld-badge:hover {
-  translate: 0 -2px;
-  scale: 1.07;
-}
-
-.lld-hld-cover img,
-.lld-hld-cover-fallback {
-  transition: scale 0.5s cubic-bezier(0.22, 1, 0.36, 1), rotate 0.5s ease;
-}
-.lld-hld-card:hover .lld-hld-cover img,
-.lld-hld-card:hover .lld-hld-cover-fallback {
-  scale: 1.06;
-  rotate: -1.5deg;
-}
-
-/* CTA: press, glow and shimmer sweep */
-.lld-cta {
-  position: relative;
-  overflow: hidden;
-  transition:
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s,
-    filter 0.25s,
-    scale 0.2s;
-}
-.lld-cta:hover:not(:disabled) {
-  scale: 1.03;
-}
-.lld-cta:active:not(:disabled) {
-  scale: 0.97;
-}
-.lld-cta:not(.lld-cta-outline):not(:disabled)::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.38) 50%, transparent 70%);
-  transform: translateX(-130%);
-  animation: lldSheen 3.6s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes lldSheen {
-  0%, 55% { transform: translateX(-130%); }
-  100% { transform: translateX(130%); }
-}
-.lld-cta svg {
-  transition: translate 0.25s ease;
-}
-.lld-cta:hover svg:last-child {
-  translate: 4px 0;
-}
-
-/* animated gradient headline */
-.lld-gradient-text {
-  background-size: 200% auto !important;
-  animation: lldGradient 6s linear infinite;
-}
-@keyframes lldGradient {
-  to { background-position: 200% center; }
-}
-
-/* hero pointer parallax (uses translate/rotate so it never fights lldFloat) */
-.lld-book-stage {
-  --mx: 0;
-  --my: 0;
-}
-.lld-book-mock {
-  translate: calc(var(--mx) * -12px) calc(var(--my) * -10px);
-  rotate: calc(var(--mx) * 2.5deg);
-  transition: translate 0.3s ease-out, rotate 0.3s ease-out;
-}
-.lld-chip-one {
-  translate: calc(var(--mx) * 20px) calc(var(--my) * 14px);
-}
-.lld-chip-two {
-  translate: calc(var(--mx) * -18px) calc(var(--my) * 12px);
-}
-.lld-chip-three {
-  translate: calc(var(--mx) * 14px) calc(var(--my) * -16px);
-}
-.lld-orbit {
-  translate: calc(var(--mx) * 8px) calc(var(--my) * 6px);
-  transition: translate 0.4s ease-out;
-}
-.lld-float-chip {
-  transition: translate 0.3s ease-out;
-}
-
-/* FAQ answers stay in the DOM (crawlable) and animate open */
-.lld-faq-collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.32s ease;
-}
-.lld-faq-collapse.is-open {
-  grid-template-rows: 1fr;
-}
-.lld-faq-collapse-inner {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.lld-stats-scale,
-.lld-companion-scale {
-  will-change: transform, opacity;
-}
-
-/* RESPONSIVE STICKY BUY CARD
-   mobile: docked strip · sm: centered card · md/lg/xl/2xl: progressively wider.
-   On md+ it slides in only after the hero scrolls away. */
-.lld-mobile-buy {
-  display: none !important;
-}
-.lldPage > main {
-  padding-bottom: 104px;
-}
-.lld-sticky {
-  position: fixed;
-  inset: auto 0 0 0;
-  z-index: 60;
-  display: flex;
-  justify-content: center;
-  padding: 0 10px max(10px, env(safe-area-inset-bottom));
-  pointer-events: none;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
-}
-.lld-sticky.is-checkout-open {
-  transform: translateY(110%);
-  opacity: 0;
-  visibility: hidden;
-}
-.lld-sticky-card {
-  pointer-events: auto;
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 -10px 45px rgba(15, 23, 42, 0.18);
-}
-.lld-sticky-info {
-  min-width: 0;
-  padding-left: 4px;
-}
-.lld-sticky-title {
-  display: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.2;
-}
-.lld-sticky-price {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-}
-.lld-sticky-now {
-  color: var(--accent);
-  font-size: 19px;
-  font-weight: 900;
-  line-height: 1;
-}
-.lld-sticky-old {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-decoration: line-through;
-}
-.lld-sticky-off {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 800;
-}
-.lld-sticky-sub {
-  display: block;
-  margin-top: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-.lld-sticky-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.lld-sticky-preview {
-  display: none;
-}
-.lld-sticky-actions .lld-cta {
-  min-height: 48px;
-  padding: 0 16px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-.lld-pulse {
-  animation: lldPulse 2.4s ease-out infinite;
-}
-@keyframes lldPulse {
-  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.45); }
-  70%, 100% { box-shadow: 0 0 0 14px rgba(249, 115, 22, 0); }
-}
-
-@media (min-width: 640px) {
-  .lld-sticky { padding-inline: 16px; }
-  .lld-sticky-card { max-width: 576px; gap: 16px; padding: 12px; border-radius: 22px; }
-  .lld-sticky-title { display: block; }
-  .lld-sticky-price { margin-top: 4px; }
-  .lld-sticky-sub { display: none; }
-  .lld-sticky-now { font-size: 17px; }
-  .lld-sticky-actions .lld-cta { padding: 0 22px; font-size: 14px; }
-}
-@media (min-width: 768px) {
-  .lld-sticky { padding-bottom: 20px; }
-  .lld-sticky-card { max-width: 672px; padding: 12px 12px 12px 20px; border-radius: 18px; }
-  .lld-sticky.is-hero-visible:not(.is-checkout-open) {
-    transform: translateY(40px);
-    opacity: 0;
-    visibility: hidden;
-  }
-  .lld-pulse { animation: none; }
-}
-@media (min-width: 1024px) {
-  .lld-sticky-card { max-width: 768px; gap: 24px; }
-  .lld-sticky-title { font-size: 16px; }
-  .lld-sticky-now { font-size: 19px; }
-  .lld-sticky-preview { display: inline-flex; }
-}
-@media (min-width: 1280px) {
-  .lld-sticky-card { max-width: 896px; }
-}
-@media (min-width: 1536px) {
-  .lld-sticky-card { max-width: 1024px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lld-gradient-text,
-  .lld-pulse,
-  .lld-cta::after {
-    animation: none !important;
-  }
-  .lld-book-mock,
-  .lld-chip-one,
-  .lld-chip-two,
-  .lld-chip-three,
-  .lld-orbit {
-    translate: none;
-    rotate: none;
-  }
-}
-
-/* =========================================================
-   COMPANION CARDS (HLD + Combo): redesigned
-========================================================= */
-.lld-cc-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-  gap: 26px;
-  max-width: 1000px;
-  margin: 36px auto 0;
-  align-items: stretch;
-}
-.lld-cc {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  max-width: 560px;
-  width: 100%;
-  margin-inline: auto;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 30px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  isolation: isolate;
-  transition:
-    translate 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.45s ease,
-    border-color 0.45s ease;
-}
-.lld-cc:hover {
-  translate: 0 -8px;
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
-  box-shadow: 0 34px 80px rgba(234, 88, 12, 0.2);
-}
-.lld-cc--combo {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-}
-.lld-cc--combo::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: linear-gradient(135deg, #ea580c, #fbbf24, #ea580c);
-  background-size: 200% 200%;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: lldBorderShift 6s linear infinite;
-}
-@keyframes lldBorderShift {
-  to { background-position: 200% 200%; }
-}
-
-.lld-cc-stage {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 270px;
-  padding: 42px 20px 30px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 20% 15%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
-    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 55%),
-    linear-gradient(150deg, var(--soft), var(--surface-2));
-}
-.lld-cc-stage::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(color-mix(in srgb, var(--accent) 26%, transparent) 1.2px, transparent 1.2px);
-  background-size: 22px 22px;
-  opacity: 0.55;
-  mask-image: linear-gradient(to bottom, #000, transparent 85%);
-  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%);
-}
-.lld-cc-glow {
-  position: absolute;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
-  filter: blur(60px);
-  animation: lldGlow 5s ease-in-out infinite;
-}
-@keyframes lldGlow {
-  0%, 100% { scale: 1; opacity: 0.55; }
-  50% { scale: 1.2; opacity: 0.9; }
-}
-.lld-cc-ribbon {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: linear-gradient(110deg, #ea580c, #f97316);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
-}
-.lld-cc--combo .lld-cc-ribbon {
-  background: linear-gradient(110deg, #f59e0b, #ea580c);
-}
-.lld-cc-plus {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  z-index: 3;
-  padding: 6px 12px;
-  border: 1px solid var(--chip-border);
-  border-radius: 12px;
-  background: var(--chip-bg);
-  color: var(--chip-text);
-  font-size: 11px;
-  font-weight: 900;
-  backdrop-filter: blur(8px);
-}
-.lld-cc-cover {
-  position: relative;
-  z-index: 2;
-  width: min(168px, 52%);
-  aspect-ratio: 0.72;
-  border-radius: 6px 14px 14px 6px;
-  overflow: hidden;
-  background: linear-gradient(150deg, #221b17, #482919 65%, #9a3412);
-  box-shadow:
-    18px 24px 44px rgba(32, 19, 12, 0.35),
-    inset 6px 0 0 rgba(255, 255, 255, 0.1);
-  animation: lldCoverBob 5s ease-in-out infinite;
-  transition: scale 0.5s cubic-bezier(0.22, 1, 0.36, 1), rotate 0.5s ease;
-}
-.lld-cc:hover .lld-cc-cover {
-  scale: 1.08;
-  rotate: -3deg;
-}
-@keyframes lldCoverBob {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -10px; }
-}
-.lld-cc-cover img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.lld-cc-fallback {
-  display: flex;
-  height: 100%;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 16px;
-  color: #fff;
-}
-.lld-cc-fallback small {
-  color: #fdba74;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.lld-cc-fallback strong {
-  font-size: 19px;
-  line-height: 1.1;
-}
-
-.lld-cc-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 14px;
-  padding: 24px 24px 26px;
-}
-.lld-cc-eyebrow {
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.lld-cc-body h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: 21px;
-  line-height: 1.22;
-}
-.lld-cc-desc {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13.5px;
-  line-height: 1.7;
-}
-.lld-cc-features {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.lld-cc-features li {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-}
-.lld-cc-features svg {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  padding: 4px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
-}
-.lld-cc-topics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.lld-cc-topics span {
-  padding: 5px 11px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 700;
-  transition: translate 0.25s ease, scale 0.25s ease, border-color 0.25s, color 0.25s;
-}
-.lld-cc-topics span:hover {
-  translate: 0 -2px;
-  scale: 1.07;
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.lld-cc-price {
-  margin-top: auto;
-  padding: 16px 18px;
-  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-}
-.lld-cc-price-label {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.lld-cc-price-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  margin-top: 6px;
-}
-.lld-cc-now {
-  color: var(--text);
-  font-size: 32px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.lld-cc-old {
-  color: var(--muted);
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: line-through;
-}
-.lld-cc-save {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #16a34a;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 900;
-}
-.lld-cc-actions {
-  display: grid;
-  grid-template-columns: 1fr 1.25fr;
-  gap: 10px;
-}
-.lld-cc-actions .lld-cta {
-  min-height: 50px;
-  padding-inline: 12px;
-  font-size: 13px;
-}
-@media (max-width: 430px) {
-  .lld-cc-actions {
-    grid-template-columns: 1fr;
-  }
-  .lld-cc-body {
-    padding: 20px 18px 22px;
-  }
-  .lld-cc-now {
-    font-size: 28px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lld-cc-cover,
-  .lld-cc-glow,
-  .lld-cc--combo::before {
-    animation: none !important;
-  }
-  .lld-cc:hover,
-  .lld-cc:hover .lld-cc-cover {
-    translate: none;
-    scale: 1;
-    rotate: none;
-  }
-}
-
-
-html { scroll-behavior: smooth; }
-`;
-
-function CompanionCard({
-  variant,
-  animation,
-  cover,
-  coverAlt,
-  fallbackSmall,
-  fallbackTitle,
-  ribbon,
-  eyebrow,
-  title,
-  description,
-  features,
-  topics,
-  priceLabel,
-  status,
-  price,
-  mrp,
-  currency,
-  format,
-  href,
-  viewLabel,
-  buyLabel,
-  onBuy,
-  canBuy,
-  errorText,
-}) {
-  const save = mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
-
-  return (
-    <motion.article className={`lld-cc lld-cc--${variant}`} {...animation}>
-      <div className="lld-cc-stage">
-        <span className="lld-cc-ribbon">{variant === "combo" && <Sparkles size={12} />} {ribbon}</span>
-        <span className="lld-cc-glow" aria-hidden="true" />
-        <div className="lld-cc-cover">
-          {cover ? (
-            <img src={cover} alt={coverAlt} loading="lazy" />
-          ) : (
-            <div className="lld-cc-fallback">
-              <small>{fallbackSmall}</small>
-              <strong>{fallbackTitle}</strong>
-            </div>
-          )}
-        </div>
-        {variant === "combo" && <span className="lld-cc-plus" aria-hidden="true">HLD + LLD</span>}
-      </div>
-
-      <div className="lld-cc-body">
-        <div className="lld-cc-eyebrow">{eyebrow}</div>
-        <h3>{title}</h3>
-        <p className="lld-cc-desc">{description}</p>
-
-        <ul className="lld-cc-features">
-          {features.map((item) => (
-            <li key={item}>
-              <Check size={14} /> {item}
-            </li>
-          ))}
-        </ul>
-
-        <div className="lld-cc-topics">
-          {topics.map((topic) => (
-            <span key={topic}>{topic}</span>
-          ))}
-        </div>
-
-        <div className="lld-cc-price">
-          <div className="lld-cc-price-label">
-            {status === "loading"
-              ? "Loading latest price..."
-              : status === "ready"
-                ? priceLabel
-                : "Price temporarily unavailable"}
-          </div>
-          {status === "ready" && (
-            <div className="lld-cc-price-row">
-              <span className="lld-cc-now">{format(price, currency)}</span>
-              {mrp > price && <span className="lld-cc-old">{format(mrp, currency)}</span>}
-              {save > 0 && <span className="lld-cc-save">Save {save}%</span>}
-            </div>
-          )}
-          {status === "loading" && <div className="lld-skeleton" />}
-        </div>
-
-        <div className="lld-cc-actions">
-          <a className="lld-cta lld-cta-outline" href={href}>
-            {viewLabel} <ArrowRight size={15} />
-          </a>
-          <button className="lld-cta" type="button" onClick={onBuy} disabled={!canBuy}>
-            {buyLabel} <BookOpen size={15} />
-          </button>
-        </div>
-
-        {errorText && <p className="lld-hld-error">{errorText}</p>}
-      </div>
-    </motion.article>
-  );
-}
-
-export function ScrollProgress() {
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.3 });
-  return <motion.div aria-hidden="true" className="lld-progress" style={{ scaleX }} />;
-}
-
-export function CountUp({ to, suffix = "", duration = 1.4 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  const reduce = useReducedMotion();
-  const [value, setValue] = useState(reduce ? to : 0);
-
-  useEffect(() => {
-    if (!inView) return undefined;
-    if (reduce) {
-      setValue(to);
-      return undefined;
-    }
-    const controls = animate(0, to, {
-      duration,
-      ease: "easeOut",
-      onUpdate: (latest) => setValue(Math.round(latest)),
-    });
-    return () => controls.stop();
-  }, [inView, reduce, to, duration]);
-
-  return (
-    <span ref={ref}>
-      {value}
-      {suffix}
-    </span>
-  );
-}
-
-// Scroll-linked scale in / scale out: grows to full size entering the viewport
-// and eases back slightly as it leaves.
-export function ScrollScale({ children, className, from = 0.93 }) {
-  const ref = useRef(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const scale = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [from, 1, 1, from + 0.03]);
-  const opacity = useTransform(scrollYProgress, [0, 0.18, 0.82, 1], [0.35, 1, 1, 0.55]);
-
-  if (reduce) return <div className={className}>{children}</div>;
-
-  return (
-    <motion.div ref={ref} className={className} style={{ scale, opacity }}>
-      {children}
-    </motion.div>
-  );
-}
-
-export default function SystemDesignLLD({ navbarOffset = 64 }) {
-  const reduceMotion = useReducedMotion();
-  const [theme, setTheme] = useState(readTheme);
-  const [product, setProduct] = useState(null);
-  const [loadingProduct, setLoadingProduct] = useState(true);
-  const [productError, setProductError] = useState("");
-  const [hldProduct, setHldProduct] = useState(null);
-  const [comboProduct, setComboProduct] = useState(null);
-  const [loadingHldProduct, setLoadingHldProduct] = useState(true);
-  const [hldProductError, setHldProductError] = useState("");
-  const [openFaq, setOpenFaq] = useState(0);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [checkoutProduct, setCheckoutProduct] = useState(null);
-
-  // Sticky buy card: on md+ it appears once the hero CTA scrolls out of view.
-  const heroRef = useRef(null);
-  const [heroVisible, setHeroVisible] = useState(true);
-
-  useEffect(() => {
-    const el = heroRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver(
-      ([entry]) => setHeroVisible(entry.isIntersecting),
-      { threshold: 0 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // Pointer parallax for the hero book stage (CSS variables, no re-render).
-  const handleStageMove = (event) => {
-    if (reduceMotion) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty("--mx", (((event.clientX - rect.left) / rect.width) * 2 - 1).toFixed(3));
-    event.currentTarget.style.setProperty("--my", (((event.clientY - rect.top) / rect.height) * 2 - 1).toFixed(3));
-  };
-  const handleStageLeave = (event) => {
-    event.currentTarget.style.setProperty("--mx", "0");
-    event.currentTarget.style.setProperty("--my", "0");
-  };
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const referralCode = (params.get("referralCode") || params.get("ref") || "").trim();
-    if (referralCode) window.localStorage.setItem("referralCode", referralCode);
-  }, []);
-
-  useEffect(() => {
-    setTheme(readTheme());
-
-    const handleThemeChange = (event) => {
-      const nextTheme = event?.detail?.theme;
-      if (nextTheme === "dark" || nextTheme === "light") {
-        setTheme(nextTheme);
-      }
-    };
-
-    const handleStorageChange = (event) => {
-      if (event.key !== THEME_KEY) return;
-      if (event.newValue === "dark" || event.newValue === "light") {
-        setTheme(event.newValue);
-      }
-    };
-
-    window.addEventListener(THEME_EVENT, handleThemeChange);
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener(THEME_EVENT, handleThemeChange);
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const fetchProduct = async () => {
-      try {
-        setLoadingProduct(true);
-        setProductError("");
-        const redirectUrl = window.location.pathname;
-        const response = await fetch(
-          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(redirectUrl)}`,
-          {
-            method: "GET",
-            cache: "no-store",
-            headers: { Accept: "application/json" },
-            signal: controller.signal,
-          },
-        );
-        const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.success || !result?.data) {
-          throw new Error(
-            result?.error?.message ||
-              result?.message ||
-              "Unable to load the current product details.",
-          );
-        }
-        setProduct(result.data);
-      } catch (error) {
-        if (error?.name === "AbortError") return;
-        console.error("Failed to fetch LLD product:", error);
-        setProduct(null);
-        setProductError(error?.message || "Unable to load the current product details.");
-      } finally {
-        if (!controller.signal.aborted) setLoadingProduct(false);
-      }
-    };
-    fetchProduct();
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const fetchHldProduct = async () => {
-      try {
-        setLoadingHldProduct(true);
-        setHldProductError("");
-        const response = await fetch(
-          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(HLD_REDIRECT_URL)}`,
-          {
-            method: "GET",
-            cache: "no-store",
-            headers: { Accept: "application/json" },
-            signal: controller.signal,
-          },
-        );
-        const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.success || !result?.data) {
-          throw new Error(
-            result?.error?.message ||
-              result?.message ||
-              "Unable to load the HLD book details.",
-          );
-        }
-        setHldProduct(result.data);
-      } catch (error) {
-        if (error?.name === "AbortError") return;
-        console.error("Failed to fetch HLD product:", error);
-        setHldProduct(null);
-        setHldProductError(error?.message || "Unable to load the HLD book details.");
-      } finally {
-        if (!controller.signal.aborted) setLoadingHldProduct(false);
-      }
-    };
-    fetchHldProduct();
-    return () => controller.abort();
-  }, []);
-
-  // The bundle is optional: only an active and valid backend product is rendered.
-  useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const response = await fetch(
-          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(COMBO_REDIRECT_URL)}`,
-          { method: "GET", cache: "no-store", headers: { Accept: "application/json" }, signal: controller.signal },
-        );
-        const result = await response.json().catch(() => null);
-        const item = result?.data;
-        const amount = Number(item?.price);
-        if (response.ok && result?.success === true && item?._id && item.isActive !== false &&
-            item.price !== null && item.price !== undefined && item.price !== "" && Number.isFinite(amount) && amount >= 0) {
-          if (!controller.signal.aborted) setComboProduct(item);
-        } else if (!controller.signal.aborted) setComboProduct(null);
-      } catch (error) {
-        if (error?.name !== "AbortError") {
-          console.warn("Optional HLD + LLD bundle unavailable:", error);
-          if (!controller.signal.aborted) setComboProduct(null);
-        }
-      }
-    })();
-    return () => controller.abort();
-  }, []);
-
-  // Meta Pixel: real catalog price, fired after product API resolves.
-  // The helper returns false if Pixel is unavailable.
-  const trackedViewRef = useRef(null);
-  useEffect(() => {
-    if (!product?._id || product.price == null) return;
-    const amount = Number(product.price);
-    if (!Number.isFinite(amount) || amount < 0) return;
-    const key = `${product._id}:${amount}:${product.currency || "INR"}`;
-    if (trackedViewRef.current === key) return;
-    const sent = trackViewContent({
-      id: String(product._id),
-      title: product.title || "Mastering System Design — LLD (Java)",
-      price: amount,
-      currency: product.currency || "INR",
-    });
-    if (sent !== false) trackedViewRef.current = key;
-  }, [product?._id, product?.title, product?.price, product?.currency]);
-
-  const currency = product?.currency || "INR";
-  const currentPrice = Number(product?.price);
-  const validPrice =
-    product?.price != null &&
-    product.price !== "" &&
-    Number.isFinite(currentPrice) &&
-    currentPrice >= 0;
-  const mrp = Number(product?.mrp ?? 0);
-  const discount =
-    mrp > currentPrice && mrp > 0 ? Math.round(((mrp - currentPrice) / mrp) * 100) : 0;
-  const formatMoney = (amount, currencyCode = currency) => {
-    const locale =
-      { INR: "en-IN", USD: "en-US", GBP: "en-GB", EUR: "en-IE", AUD: "en-AU", CAD: "en-CA" }[
-        currencyCode
-      ] || "en";
-    try {
-      return new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency: currencyCode,
-        maximumFractionDigits: Number.isInteger(Number(amount)) ? 0 : 2,
-      }).format(Number(amount || 0));
-    } catch {
-      return `${currencyCode} ${Number(amount || 0)}`;
-    }
-  };
-  const canBuy =
-    !loadingProduct &&
-    !productError &&
-    validPrice &&
-    Boolean(product?._id) &&
-    product?.isActive !== false;
-  const displayedPrice = loadingProduct
-    ? "Loading"
-    : productError || !validPrice
-      ? "Unavailable"
-      : formatMoney(currentPrice);
-  const hldCurrency = hldProduct?.currency || "INR";
-  const hldCurrentPrice = Number(hldProduct?.price);
-  const hldValidPrice =
-    hldProduct?.price != null &&
-    hldProduct.price !== "" &&
-    Number.isFinite(hldCurrentPrice) &&
-    hldCurrentPrice >= 0;
-  const hldMrp = Number(hldProduct?.mrp ?? 0);
-  const hldCanBuy =
-    !loadingHldProduct &&
-    !hldProductError &&
-    hldValidPrice &&
-    Boolean(hldProduct?._id) &&
-    hldProduct?.isActive !== false;
-  const hldCoverImage =
-    hldProduct?.coverpageurl || hldProduct?.coverPageUrl || hldProduct?.cover_page_url || "";
-  const comboPrice = Number(comboProduct?.price);
-  const comboMrp = Number(comboProduct?.mrp ?? 0);
-  const comboCoverImage = comboProduct?.coverPageUrl || comboProduct?.coverpageurl || comboProduct?.cover_page_url || "";
-  const openComboCheckout = () => {
-    if (!comboProduct) return;
-    setCheckoutProduct(comboProduct);
-    setCheckoutOpen(true);
-  };
-  const openCheckout = () => {
-    if (!canBuy) return;
-    setCheckoutProduct(product);
-    setCheckoutOpen(true);
-  };
-  const openHldCheckout = () => {
-    if (!hldCanBuy) return;
-    setCheckoutProduct(hldProduct);
-    setCheckoutOpen(true);
-  };
-  const animation = reduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 28, scale: 0.96 },
-        whileInView: { opacity: 1, y: 0, scale: 1 },
-        viewport: { once: true, amount: 0.16 },
-        transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-      };
-
-  const supportEmail = SUPPORT_EMAIL;
-  const canonicalUrl = PAGE_URL;
-
-  const productName = product?.title || "Mastering System Design — Low-Level Design in Java";
-
-  const seoImage = product?.coverpageurl || product?.coverPageUrl || product?.cover_page_url || "";
-
-  const productSchema = {
-    "@type": "Product",
-    "@id": `${canonicalUrl}#product`,
-    name: productName,
-    description: SEO_LONG_DESCRIPTION,
-    url: canonicalUrl,
-    category: "Low-Level Design Java Ebook",
-    brand: {
-      "@type": "Brand",
-      name: SITE_NAME,
-    },
-    ...(product?._id ? { sku: String(product._id) } : {}),
-    ...(seoImage ? { image: [seoImage] } : {}),
-    ...(canBuy
-      ? {
-          offers: {
-            "@type": "Offer",
-            url: canonicalUrl,
-            price: currentPrice,
-            priceCurrency: currency,
-            priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
-            availability: "https://schema.org/InStock",
-            itemCondition: "https://schema.org/NewCondition",
-            hasMerchantReturnPolicy: {
-              "@type": "MerchantReturnPolicy",
-              returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
-            },
-            seller: {
-              "@type": "Organization",
-              name: SITE_NAME,
-              url: SITE_URL,
-            },
-          },
-        }
-      : {}),
-  };
-
-  const bookSchema = {
-    "@type": "Book",
-    "@id": `${canonicalUrl}#book`,
-    name: productName,
-    description: SEO_DESCRIPTION,
-    url: canonicalUrl,
-    bookFormat: "https://schema.org/EBook",
-    inLanguage: product?.language || "English",
-    ...(product?.edition ? { bookEdition: product.edition } : {}),
-    ...(seoImage ? { image: seoImage } : {}),
-    publisher: {
-      "@id": `${SITE_URL}/#organization`,
-    },
-  };
-
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": `${SITE_URL}/#organization`,
-        name: SITE_NAME,
-        url: SITE_URL,
-        email: supportEmail,
-      },
-      {
-        "@type": "WebSite",
-        "@id": `${SITE_URL}/#website`,
-        url: SITE_URL,
-        name: SITE_NAME,
-        publisher: {
-          "@id": `${SITE_URL}/#organization`,
-        },
-      },
-      {
-        "@type": "WebPage",
-        "@id": `${canonicalUrl}#webpage`,
-        url: canonicalUrl,
-        name: SEO_TITLE,
-        description: SEO_DESCRIPTION,
-        isPartOf: {
-          "@id": `${SITE_URL}/#website`,
-        },
-        about: {
-          "@id": `${canonicalUrl}#book`,
-        },
-        ...(seoImage
-          ? {
-              primaryImageOfPage: {
-                "@type": "ImageObject",
-                url: seoImage,
-              },
-            }
-          : {}),
-      },
-      {
-        "@type": "BreadcrumbList",
-        "@id": `${canonicalUrl}#breadcrumb`,
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: SITE_URL,
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Books",
-            item: `${SITE_URL}/books`,
-          },
-          {
-            "@type": "ListItem",
-            position: 3,
-            name: "System Design LLD in Java",
-            item: canonicalUrl,
-          },
-        ],
-      },
-      bookSchema,
-      productSchema,
-      {
-        "@type": "ItemList",
-        "@id": `${canonicalUrl}#curriculum`,
-        name: "14-part curriculum of the Java LLD handbook",
-        numberOfItems: modules.length,
-        itemListElement: modules.map((item, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          name: item.title,
-          description: item.detail,
-        })),
-      },
-      {
-        "@type": "FAQPage",
-        "@id": `${canonicalUrl}#faq`,
-        mainEntity: faqItems.map(({ q: question, a: answer }) => ({
-          "@type": "Question",
-          name: question,
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: answer,
-          },
-        })),
-      },
-    ],
-  };
-
-  const seoHead = (
-    <Helmet htmlAttributes={{ lang: "en" }}>
-      <title>{SEO_TITLE}</title>
-      <meta name="description" content={SEO_DESCRIPTION} />
-      <meta
-        name="keywords"
-        content="low level design Java, LLD interview preparation, system design LLD, Java OOP, SOLID principles, UML diagrams, Java design patterns, GoF design patterns, concurrency, locking, BookMyShow LLD, parking lot LLD, Splitwise LLD, TargetTrek"
-      />
-      <meta name="author" content={SITE_NAME} />
-      <meta name="application-name" content={SITE_NAME} />
-      <meta
-        name="robots"
-        content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-      />
-      <meta
-        name="googlebot"
-        content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-      />
-      <meta name="theme-color" content={theme === "dark" ? "#141210" : "#FAF9F6"} />
-      <meta name="color-scheme" content={theme === "dark" ? "dark light" : "light dark"} />
-      <link rel="canonical" href={canonicalUrl} />
-      <link rel="alternate" hrefLang="en-IN" href={canonicalUrl} />
-      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
-      {seoImage && <link rel="preload" as="image" href={seoImage} />}
-      <meta property="og:type" content="product" />
-      <meta property="og:site_name" content={SITE_NAME} />
-      <meta property="og:locale" content="en_IN" />
-      <meta property="og:title" content={SEO_TITLE} />
-      <meta property="og:description" content={SEO_DESCRIPTION} />
-      <meta property="og:url" content={canonicalUrl} />
-      {seoImage && <meta property="og:image" content={seoImage} />}
-      {seoImage && <meta property="og:image:alt" content={`${productName} ebook cover`} />}
-      {canBuy && (
-        <meta property="product:price:amount" content={String(currentPrice)} />
-      )}
-      {canBuy && <meta property="product:price:currency" content={currency} />}
-      <meta name="twitter:card" content={seoImage ? "summary_large_image" : "summary"} />
-      <meta name="twitter:title" content={SEO_TITLE} />
-      <meta name="twitter:description" content={SEO_DESCRIPTION} />
-      {seoImage && <meta name="twitter:image" content={seoImage} />}
-      {seoImage && <meta name="twitter:image:alt" content={`${productName} ebook cover`} />}
-      <script type="application/ld+json">
-        {JSON.stringify(structuredData).replace(/</g, "\\u003c")}
-      </script>
-    </Helmet>
-  );
-
-  return (
-    <>
-      <div
-        className="lldPage lld-expanded"
-      data-theme={theme}
-      style={{
-        "--lld-navbar-offset":
-          typeof navbarOffset === "number" ? `${navbarOffset}px` : navbarOffset,
-      }}
-    >
-      {seoHead}
-      <style>{styles}</style>
-      <ScrollProgress />
-
-      <main id="top">
-        <section className="lld-hero" ref={heroRef}>
-          <div className="lld-shell lld-hero-grid">
-            <motion.div {...animation}>
-              <div className="lld-eyebrow">
-                <Sparkles size={13} /> Java-first interview handbook
-              </div>
-              <h1>
-                Design with clarity.
-                <br />
-                <span className="lld-gradient-text">Code with confidence.</span>
-              </h1>
-              <p className="lld-hero-copy">
-                From Java OOP and UML to design patterns, Spring Boot, APIs, database modeling,
-                multithreading, synchronization, testing and 16 coded case studies: prepare for
-                both LLD interviews and real backend engineering.
-              </p>
-              <div className="lld-hero-actions">
-                <button className="lld-cta" type="button" onClick={openCheckout} disabled={!canBuy}>
-                  Get the ebook {displayedPrice !== "Unavailable" && <span>{displayedPrice}</span>}{" "}
-                  <ArrowRight size={16} />
-                </button>
-                <a className="lld-cta lld-cta-outline" href="#preview">
-                  <BookOpen size={16} /> Preview the book
-                </a>
-              </div>
-              {productError && (
-                <p className="lld-error">
-                  Price is temporarily unavailable. Please try again or contact {SUPPORT_EMAIL}.
-                </p>
-              )}
-              <div className="lld-hero-bullets">
-                <span>
-                  <Check size={14} /> Java implementations
-                </span>
-                <span>
-                  <Check size={14} /> 23 GoF patterns
-                </span>
-                <span>
-                  <Check size={14} /> 16 solved case studies
-                </span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="lld-book-stage"
-              onMouseMove={handleStageMove}
-              onMouseLeave={handleStageLeave}
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.65, delay: 0.08 }}
-            >
-              <div className="lld-orbit" />
-              <div className="lld-float-chip lld-chip-one">
-                <Code2 size={15} color="#9ce4ca" /> Java examples
-              </div>
-              <div className="lld-float-chip lld-chip-two">
-                <Network size={15} color="#b9a7ff" /> UML made practical
-              </div>
-              <div className="lld-float-chip lld-chip-three">
-                <Zap size={15} color="#ffd782" /> Spring Boot + concurrency
-              </div>
-              <div
-                className="lld-book-mock"
-                role="img"
-                aria-label="Mastering System Design LLD Java ebook cover"
-              >
-                {product?.coverpageurl ? (
-                  <img
-                    src={product.coverpageurl}
-                    alt="Mastering System Design LLD book cover"
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      zIndex: 2,
-                    }}
-                  />
-                ) : (
-                  <>
-                    <div className="lld-book-grid" aria-hidden="true">
-                      <svg viewBox="0 0 260 120" fill="none">
-                        <rect
-                          x="5"
-                          y="18"
-                          width="66"
-                          height="27"
-                          rx="7"
-                          stroke="#91B0FF"
-                          strokeOpacity=".8"
-                        />
-                        <rect
-                          x="98"
-                          y="4"
-                          width="68"
-                          height="27"
-                          rx="7"
-                          stroke="#B3A1FF"
-                          strokeOpacity=".8"
-                        />
-                        <rect
-                          x="188"
-                          y="22"
-                          width="66"
-                          height="27"
-                          rx="7"
-                          stroke="#91B0FF"
-                          strokeOpacity=".8"
-                        />
-                        <rect
-                          x="50"
-                          y="77"
-                          width="72"
-                          height="27"
-                          rx="7"
-                          stroke="#85DBD1"
-                          strokeOpacity=".8"
-                        />
-                        <rect
-                          x="153"
-                          y="78"
-                          width="72"
-                          height="27"
-                          rx="7"
-                          stroke="#F0BB87"
-                          strokeOpacity=".8"
-                        />
-                        <path
-                          d="M71 31h27m68-13h22M42 45l24 32m56-46 1 47m67-28-29 41m-87 0h31"
-                          stroke="#91B0FF"
-                          strokeOpacity=".75"
-                        />
-                        <circle cx="85" cy="31" r="3" fill="#F0BB87" />
-                        <circle cx="143" cy="64" r="3" fill="#B3A1FF" />
-                      </svg>
-                    </div>
-                    <div className="lld-book-content">
-                      <div className="lld-book-kicker">The Java Interview Guide</div>
-                      <div className="lld-book-title">
-                        MASTER
-                        <br />
-                        SYSTEM DESIGN
-                        <br />
-                        <span style={{ color: "#b8c5ff" }}>- LLD</span>
-                      </div>
-                      <div className="lld-book-subtitle">
-                        Java · UML · GoF Patterns · Spring Boot · Concurrency · 16 Case Studies
-                      </div>
-                      <span className="lld-book-tag">JAVA · BACKEND & INTERVIEW EDITION</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          </div>
-          <div className="lld-hero-bottom" />
-        </section>
-
-        <section className="lld-shell" aria-label="Book highlights">
-          <ScrollScale className="lld-stats-scale">
-          <div className="lld-stats">
-            {[
-              ["23", "GoF design patterns"],
-              ["16", "Interview design problems"],
-              ["60", "Minute design framework"],
-              ["14", "Detailed parts"],
-            ].map(([value, label], index) => (
-              <motion.div
-                className="lld-stat"
-                key={label}
-                {...animation}
-                transition={{ ...animation.transition, delay: index * 0.05 }}
-              >
-                <strong>
-                  <CountUp to={Number(value)} />
-                </strong>
-                <span>{label}</span>
-              </motion.div>
-            ))}
-          </div>
-          </ScrollScale>
-        </section>
-
-        <section className="lld-hld-section" aria-labelledby="hld-companion-title">
-          <div className="lld-shell">
-            <motion.div className="lld-hld-head" {...animation}>
-              <div className="lld-kicker">Complete your system design preparation</div>
-              <h2 id="hld-companion-title">Go beyond classes: HLD + LLD</h2>
-              <p>
-                LLD helps you design classes and object interactions. HLD helps you reason about
-                scalability, databases, caching, messaging, reliability and distributed
-                architecture.
-              </p>
-            </motion.div>
-            <ScrollScale className="lld-companion-scale">
-            <div className="lld-cc-grid">
-              <CompanionCard
-                variant="hld"
-                animation={animation}
-                cover={hldCoverImage}
-                coverAlt="Mastering System Design High-Level Design ebook cover"
-                fallbackSmall="Mastering System Design"
-                fallbackTitle="High-Level Design"
-                ribbon="HLD"
-                eyebrow="Architecture & scale"
-                title="Mastering System Design — High-Level Design"
-                description="Learn how production systems scale from a single service to distributed architectures: databases, Redis, load balancing, Kafka, replication, sharding, fault tolerance and full interview flows."
-                features={["24+ core topics", "15+ design examples", "Complete interview design flows"]}
-                topics={["Scalability", "Databases", "Redis", "Kafka", "Load Balancing", "Fault Tolerance"]}
-                priceLabel="Current HLD ebook price"
-                status={loadingHldProduct ? "loading" : hldProduct && hldValidPrice ? "ready" : "error"}
-                price={hldCurrentPrice}
-                mrp={hldMrp}
-                currency={hldCurrency}
-                format={formatMoney}
-                href={HLD_REDIRECT_URL}
-                viewLabel="View HLD Book"
-                buyLabel={loadingHldProduct ? "Loading..." : "Buy HLD Now"}
-                onBuy={openHldCheckout}
-                canBuy={hldCanBuy}
-                errorText={hldProductError ? `${hldProductError} You can still open the HLD book page.` : ""}
-              />
-              {comboProduct && (
-                <CompanionCard
-                  variant="combo"
-                  animation={animation}
-                  cover={comboCoverImage}
-                  coverAlt="High-Level Design and Low-Level Design combo ebook cover"
-                  fallbackSmall="Target Trek · Complete Preparation"
-                  fallbackTitle="HLD + LLD Combo"
-                  ribbon="Best value"
-                  eyebrow="2 books · one bundle"
-                  title={comboProduct.title || "Mastering System Design — HLD + LLD Combo"}
-                  description="Study distributed architecture, scaling, caching, messaging and reliability in HLD, then learn Java object design, patterns, concurrency, persistence and solved LLD problems in the companion book."
-                  features={["HLD + LLD together", "Architecture and Java code", "One checkout, both books"]}
-                  topics={["High-Level Design", "Java LLD", "UML", "Design Patterns", "Concurrency", "Backend Architecture"]}
-                  priceLabel="Current bundle price"
-                  status="ready"
-                  price={comboPrice}
-                  mrp={comboMrp}
-                  currency={comboProduct.currency || "INR"}
-                  format={formatMoney}
-                  href={COMBO_REDIRECT_URL}
-                  viewLabel="View Combo"
-                  buyLabel="Get HLD + LLD Combo"
-                  onBuy={openComboCheckout}
-                  canBuy
-                  errorText=""
-                />
-              )}
-            </div>
-            </ScrollScale>
-          </div>
-        </section>
-
-        <section className="lld-section" id="inside">
-          <div className="lld-shell">
-            <motion.div className="lld-section-head" {...animation}>
-              <div className="lld-kicker">A clear path from concept to code</div>
-              <h2>Everything you need to reason through LLD</h2>
-              <p>
-                Explore the complete 14-part curriculum: Java, UML, 23 GoF patterns, enterprise
-                architecture, concurrency, APIs, Spring Boot, testing and solved interview systems.
-              </p>
-            </motion.div>
-            <div className="lld-module-grid">
-              {modules.map((module, index) => {
-                const Icon = module.icon;
-                return (
-                  <motion.article
-                    className="lld-card lld-module"
-                    key={module.number}
-                    {...animation}
-                    transition={{ ...animation.transition, delay: (index % 4) * 0.06 }}
-                  >
-                    <span className="lld-module-number">{module.number}</span>
-                    <span className="lld-module-icon">
-                      <Icon size={19} />
-                    </span>
-                    <h3>{module.title}</h3>
-                    <p>{module.detail}</p>
-                  </motion.article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="lld-section-tight" aria-labelledby="flow-title">
-          <div className="lld-shell">
-            <motion.div className="lld-section-head" {...animation}>
-              <div className="lld-kicker">A repeatable interview approach</div>
-              <h2 id="flow-title">From prompt to a design you can explain</h2>
-              <p>
-                Follow a practical sequence instead of jumping straight into classes or patterns.
-              </p>
-            </motion.div>
-            <div className="lld-flow">
-              {flowSteps.map((step, index) => (
-                <motion.div
-                  className="lld-card lld-flow-step"
-                  key={step.n}
-                  {...animation}
-                  transition={{ ...animation.transition, delay: index * 0.055 }}
-                >
-                  <div className="lld-flow-icon">
-                    {index === 0 ? (
-                      <BookOpen size={15} />
-                    ) : index === 1 ? (
-                      <Layers3 size={15} />
-                    ) : index === 2 ? (
-                      <Network size={15} />
-                    ) : index === 3 ? (
-                      <Sparkles size={15} />
-                    ) : index === 4 ? (
-                      <Code2 size={15} />
-                    ) : (
-                      <ShieldCheck size={15} />
-                    )}
-                  </div>
-                  <span className="lld-flow-num">STEP {step.n}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.text}</p>
-                  {index < flowSteps.length - 1 && (
-                    <span className="lld-flow-step-arrow" aria-hidden="true" />
-                  )}
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div className="lld-diagram-panel" {...animation}>
-              <div className="lld-diagram-title">
-                <h3>Example: model a show-specific seat booking</h3>
-                <span>Class relationship + state flow</span>
-              </div>
-              <div
-                className="lld-class-diagram"
-                aria-label="Show contains show seats; booking holds selected show seats"
-              >
-                <div className="lld-uml-box">
-                  <strong>Show</strong>
-                  <span>id</span>
-                  <span>movie · screen · time</span>
-                </div>
-                <div className="lld-diagram-arrow">
-                  <ArrowRight size={18} />
-                  <small style={{ display: "block", fontSize: 9 }}>1 to many</small>
-                </div>
-                <div className="lld-uml-box">
-                  <strong>ShowSeat</strong>
-                  <span>seatId · category</span>
-                  <span>status: AVAILABLE / LOCKED / BOOKED</span>
-                </div>
-                <div className="lld-diagram-arrow">
-                  <ArrowRight size={18} />
-                  <small style={{ display: "block", fontSize: 9 }}>held by</small>
-                </div>
-                <div className="lld-uml-box">
-                  <strong>Booking</strong>
-                  <span>userId · seats</span>
-                  <span>status · holdExpiry</span>
-                </div>
-              </div>
-              <div
-                className="lld-state-track"
-                aria-label="Seat state transitions from available to locked to booked"
-              >
-                {["AVAILABLE", "LOCKED", "BOOKED"].map((state, index) => (
-                  <React.Fragment key={state}>
-                    <motion.div
-                      className={`lld-state ${index === 0 ? "is-active" : ""}`}
-                      animate={reduceMotion ? {} : { y: [0, -3, 0] }}
-                      transition={{
-                        duration: 2.4,
-                        delay: index * 0.35,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                    >
-                      <span className="lld-state-dot" /> {state}
-                    </motion.div>
-                    {index < 2 && (
-                      <ArrowRight size={14} className="lld-state-arrow" aria-hidden="true" />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-
-        <PdfPreviewSection file={lldPreviewPdf} animation={animation} />
-
-        <FullCurriculum
-          handleBuyNow={openCheckout}
-          canBuy={canBuy}
-          displayedPrice={displayedPrice}
-          currentPrice={currentPrice}
-          mrp={mrp}
-          discount={discount}
-          formatMoney={formatMoney}
-          supportEmail={SUPPORT_EMAIL}
-          productStatusMessage={
-            productError || (loadingProduct ? "Loading the current price..." : "")
-          }
-        />
-
-        <section className="lld-section-tight" id="faq">
-          <div className="lld-shell">
-            <motion.div className="lld-section-head" {...animation}>
-              <div className="lld-kicker">Quick answers</div>
-              <h2>Before you start</h2>
-              <p>Book contents, Java code, backend topics and buying details.</p>
-            </motion.div>
-            <div className="lld-faq">
-              {faqItems.map((item, index) => {
-                const isOpen = openFaq === index;
-                return (
-                  <div className="lld-faq-item" key={item.q}>
-                    <button
-                      className="lld-faq-button"
-                      type="button"
-                      onClick={() => setOpenFaq(isOpen ? null : index)}
-                      aria-expanded={isOpen}
-                      aria-controls={`lld-faq-${index}`}
-                    >
-                      <span>{item.q}</span>
-                      <motion.span animate={{ rotate: isOpen ? 180 : 0 }}>
-                        <ChevronDown size={17} />
-                      </motion.span>
-                    </button>
-                    <div
-                      className={`lld-faq-collapse${isOpen ? " is-open" : ""}`}
-                      id={`lld-faq-${index}`}
-                      role="region"
-                    >
-                      <div className="lld-faq-collapse-inner">
-                        <div className="lld-faq-answer">{item.a}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="lld-section-tight">
-          <div className="lld-shell">
-            <ScrollScale from={0.9}>
-            <motion.div className="lld-final-cta" {...animation}>
-              <div className="lld-final-copy">
-                <div className="lld-eyebrow">
-                  <Sparkles size={13} /> Build a stronger LLD approach
-                </div>
-                <h2>Turn interview prompts into designs you can defend.</h2>
-                <p>
-                  Get the Java LLD handbook and practice the full journey from requirements to
-                  classes, patterns, code and edge cases.
-                </p>
-                <div className="lld-final-checks">
-                  <span>
-                    <Check size={14} /> 23 patterns
-                  </span>
-                  <span>
-                    <Check size={14} /> 16 solved case studies
-                  </span>
-                  <span>
-                    <Check size={14} /> Java
-                  </span>
-                </div>
-              </div>
-              <div className="lld-price-card">
-                <div className="lld-price-label">Digital ebook · instant access after checkout</div>
-                <div className="lld-price-line">
-                  {loadingProduct ? (
-                    <div className="lld-skeleton" />
-                  ) : (
-                    <span className="lld-price-now">
-                      {productError || !validPrice
-                        ? "Price unavailable"
-                        : formatMoney(currentPrice)}
-                    </span>
-                  )}
-                  {!loadingProduct && !productError && mrp > currentPrice && (
-                    <span className="lld-price-old">{formatMoney(mrp)}</span>
-                  )}
-                </div>
-                {!loadingProduct && !productError && discount > 0 && (
-                  <div className="lld-discount">Save {discount}% on the current price</div>
-                )}
-                <button className="lld-cta" type="button" onClick={openCheckout} disabled={!canBuy}>
-                  {loadingProduct ? "Loading price..." : "Get the ebook"} <ArrowRight size={16} />
-                </button>
-                {productError && <p className="lld-error">{productError}</p>}
-                <p className="lld-price-small">
-                  Digital products are non-refundable after purchase.
-                  <br />
-                  Questions?{" "}
-                  <a href={`mailto:${SUPPORT_EMAIL}`} style={{ textDecoration: "underline" }}>
-                    {SUPPORT_EMAIL}
-                  </a>
-                </p>
-              </div>
-            </motion.div>
-            </ScrollScale>
-          </div>
-        </section>
-      </main>
-
-      <div
-        className={[
-          "lld-sticky",
-          heroVisible && !loadingProduct ? "is-hero-visible" : "",
-          checkoutOpen ? "is-checkout-open" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <div className="lld-sticky-card">
-          <div className="lld-sticky-info">
-            <strong className="lld-sticky-title">Master System Design — LLD in Java</strong>
-            <div className="lld-sticky-price">
-              <span className="lld-sticky-now">
-                {loadingProduct
-                  ? "Loading…"
-                  : productError || !validPrice
-                    ? "Price unavailable"
-                    : formatMoney(currentPrice)}
-              </span>
-              {!loadingProduct && !productError && mrp > currentPrice && (
-                <span className="lld-sticky-old">{formatMoney(mrp)}</span>
-              )}
-              {!loadingProduct && !productError && discount > 0 && (
-                <span className="lld-sticky-off">{discount}% off</span>
-              )}
-            </div>
-            <small className="lld-sticky-sub">Master System Design - LLD</small>
-          </div>
-          <div className="lld-sticky-actions">
-            <a className="lld-cta lld-cta-outline lld-sticky-preview" href="#preview">
-              <BookOpen size={15} /> Free preview
-            </a>
-            <button className="lld-cta lld-pulse" type="button" onClick={openCheckout} disabled={!canBuy}>
-              Get the ebook <ChevronRight size={15} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      </div>
-
-      {typeof document !== "undefined" &&
-        createPortal(
-          <PayUCheckoutModal
-            isOpen={checkoutOpen}
-            onClose={() => {
-              setCheckoutOpen(false);
-              setCheckoutProduct(null);
-            }}
-            product={checkoutProduct || product}
-          />,
-          document.body
-        )}
-    </>
-  );
-}
-
-
-function PdfPreviewSection({ file, animation }) {
-  const viewportRef = useRef(null);
-  const [pageCount, setPageCount] = useState(0);
-  const [pageWidth, setPageWidth] = useState(760);
-  const [previewError, setPreviewError] = useState("");
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return undefined;
-
-    const updateWidth = () => {
-      const horizontalPadding = window.innerWidth <= 720 ? 14 : 34;
-      const available = Math.max(220, viewport.clientWidth - horizontalPadding);
-      setPageWidth(Math.min(900, available));
-    };
-
-    updateWidth();
-
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
-
-    resizeObserver?.observe(viewport);
-    window.addEventListener("resize", updateWidth, { passive: true });
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, []);
-
-  const previewPages = Math.min(pageCount, 5);
-
-  const blockBrowserSaveOrPrint = (event) => {
-    if (!(event.ctrlKey || event.metaKey)) return;
-    const key = String(event.key || "").toLowerCase();
-    if (key === "s" || key === "p") event.preventDefault();
-  };
-
-  return (
-    <section className="lld-preview-section" id="preview" aria-labelledby="lld-preview-title" style={{ scrollMarginTop: "90px" }}>
-      <div className="lld-shell">
-        <motion.div className="lld-section-head" {...animation}>
-          <div className="lld-kicker">Read before you buy</div>
-          <h2 id="lld-preview-title">Preview the book directly on this page</h2>
-          <p>
-            Scroll through a short sample of the Java LLD handbook. The preview uses a custom
-            canvas viewer, so the browser PDF toolbar and its download or print buttons are not
-            shown.
-          </p>
-        </motion.div>
-
-        <motion.div className="lld-preview-card" {...animation}>
-          <div className="lld-preview-topbar">
-            <div className="lld-preview-topbar-left">
-              <div className="lld-preview-topbar-title">
-                <BookOpen size={17} /> Mastering System Design — LLD Java
-              </div>
-              <p className="lld-preview-topbar-copy">
-                Scroll vertically inside the preview. Optimized for desktop, tablet and mobile.
-              </p>
-            </div>
-            <div className="lld-preview-badge">
-              <ShieldCheck size={13} /> {previewPages || "4–5"} page preview
-            </div>
-          </div>
-
-          <div className="lld-pdf-shell">
-            <div
-              ref={viewportRef}
-              className="lld-pdf-viewport"
-              role="region"
-              aria-label="Scrollable PDF book preview"
-              tabIndex={0}
-              onContextMenu={(event) => event.preventDefault()}
-              onDragStart={(event) => event.preventDefault()}
-              onKeyDown={blockBrowserSaveOrPrint}
-            >
-              <Document
-                file={file}
-                onLoadSuccess={({ numPages }) => {
-                  setPageCount(numPages);
-                  setPreviewError("");
-                }}
-                onLoadError={(error) => {
-                  console.error("Failed to load LLD preview PDF:", error);
-                  setPreviewError("The preview could not be loaded. Please refresh and try again.");
-                }}
-                loading={
-                  <div className="lld-pdf-loading">
-                    <div className="lld-pdf-loading-inner">
-                      <span className="lld-pdf-spinner" aria-hidden="true" />
-                      <span>Loading book preview…</span>
-                    </div>
-                  </div>
-                }
-                error={
-                  <div className="lld-pdf-error">
-                    {previewError || "The preview could not be loaded. Please refresh and try again."}
-                  </div>
-                }
-                noData={<div className="lld-pdf-error">Preview file is unavailable.</div>}
-              >
-                <div className="lld-pdf-document">
-                  {Array.from({ length: previewPages }, (_, index) => {
-                    const pageNumber = index + 1;
-                    return (
-                      <div className="lld-pdf-page-wrap" key={pageNumber}>
-                        <span className="lld-pdf-page-number">{pageNumber}</span>
-                        <Page
-                          className="lld-pdf-page"
-                          pageNumber={pageNumber}
-                          width={pageWidth}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                          renderForms={false}
-                          loading={
-                            <div className="lld-pdf-loading" style={{ minHeight: 260 }}>
-                              Loading page {pageNumber}…
-                            </div>
-                          }
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </Document>
-            </div>
-          </div>
-
-          <div className="lld-preview-note">
-            <ShieldCheck size={14} />
-            <span>
-              This preview contains only a few selected pages from the book. Some topics may start or end midway and may not be fully covered in the preview. The complete explanations, code examples, diagrams, and remaining content are available in the full ebook.
-            </span>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function RevealSection({ children, ...props }) {
-  const reduced = useReducedMotion();
-  return (
-    <motion.section
-      {...props}
-      initial={reduced ? false : { opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.06 }}
-      transition={{ duration: reduced ? 0 : 0.45 }}
-    >
-      {children}
-    </motion.section>
-  );
-}
-
+/* ------------------------------------------------------------------ */
+/*  Page copy                                                          */
+/* ------------------------------------------------------------------ */
+
+// Same source the checkout modal uses (VITE_BOOKS_PAYMENT_GATEWAY, then
+// VITE_PAYMENT_GATEWAY).
+const PAYMENT_PROVIDER_NAME = gatewayLabel(preferredGateway("books"));
+
+const NAV_LINKS = [
+  { href: "#more-books", label: "HLD and combo" },
+  { href: "#curriculum", label: "Curriculum" },
+  { href: "#preview", label: "Free preview" },
+  { href: "#patterns", label: "23 patterns" },
+  { href: "#code", label: "Java code" },
+  { href: "#problems", label: "Case studies" },
+  { href: "#faq", label: "FAQ" },
+];
+
+const TAGLINE =
+  "Anyone can name a design pattern. Few can explain why this class owns that behaviour. This book trains that judgment in Java.";
+
+const FLOW_ICONS = [BookOpen, Stack, Network, Sparkle, Code, ShieldCheck];
+
+const WHY_POINTS = [
+  "Convert requirements into classes and responsibilities",
+  "Identify relationships between objects",
+  "Choose composition or inheritance correctly",
+  "Recognise when a design pattern actually helps",
+  "Handle changing business requirements",
+  "Design for concurrency and thread safety",
+  "Write clean, testable and extensible code",
+  "Explain your design clearly during interviews",
+];
+
+const MINDSET = [
+  ["01", "Understand", "What exactly does the system need to do?"],
+  ["02", "Identify", "What are the entities, responsibilities and relationships?"],
+  ["03", "Model", "How should classes collaborate?"],
+  ["04", "Choose", "Which principle or pattern solves the design problem?"],
+  ["05", "Code", "Convert the design into a clean implementation."],
+];
+
+const UML_BOXES = [
+  { name: "Show", fields: ["id", "movie · screen · time"], link: "1 to many" },
+  { name: "ShowSeat", fields: ["seatId · category", "status: AVAILABLE / LOCKED / BOOKED"], link: "held by" },
+  { name: "Booking", fields: ["userId · seats", "status · holdExpiry"] },
+];
+
+const OOP_PILLARS = [
+  ["Encapsulation", "Keep state and behaviour together while controlling access."],
+  ["Abstraction", "Expose what the object does without exposing unnecessary implementation."],
+  ["Inheritance", "Reuse and specialise behaviour where an is-a relationship genuinely exists."],
+  ["Polymorphism", "Allow different implementations to be used through a common contract."],
+];
+
+const PATTERN_KIND = {
+  Creational: "Object creation",
+  Structural: "Object composition",
+  Behavioral: "Object behaviour",
+};
+
+const PATTERN_CUES = [
+  ["Changing algorithm?", "Think Strategy."],
+  ["Different object creation?", "Think Factory."],
+  ["Multiple subscribers?", "Think Observer."],
+  ["Additional behaviour?", "Think Decorator."],
+  ["Many optional fields?", "Think Builder."],
+  ["Different object states?", "Think State."],
+  ["Incompatible external API?", "Think Adapter."],
+  ["Multiple handlers?", "Think Chain of Responsibility."],
+];
+
+const FUNCTIONAL = [
+  "Create a booking",
+  "Cancel a booking",
+  "Reserve a seat",
+  "Send a notification",
+  "Apply a coupon",
+  "Process a payment",
+  "Update inventory",
+  "Calculate a fare",
+];
+
+const NON_FUNCTIONAL = [
+  "Concurrency",
+  "Thread safety",
+  "Performance",
+  "Scalability",
+  "Reliability",
+  "Maintainability",
+  "Extensibility",
+  "Testability",
+  "Security",
+  "Availability",
+];
+
+const CONCURRENCY_TOPICS = [
+  "Race conditions",
+  "Critical sections",
+  "Mutex",
+  "Synchronized blocks",
+  "Read and write locks",
+  "Atomic operations",
+  "Deadlocks",
+  "Thread safety",
+  "Optimistic locking",
+  "Pessimistic locking",
+];
+
+const FRAMEWORK_STEPS = [
+  ["01", "Clarify requirements", "Identify scope, actors and core use cases."],
+  ["02", "Find entities", "Extract nouns, domain objects and responsibilities."],
+  ["03", "Define relationships", "Association, aggregation, composition and inheritance."],
+  ["04", "Assign responsibilities", "Decide which class owns which behaviour."],
+  ["05", "Identify changing parts", "Find areas likely to change independently."],
+  ["06", "Apply principles", "Use SOLID, KISS, DRY and low coupling."],
+  ["07", "Choose patterns", "Use patterns only where they solve a real problem."],
+  ["08", "Handle concurrency", "Identify shared state and synchronisation needs."],
+  ["09", "Write code", "Implement interfaces, classes and collaborations."],
+  ["10", "Discuss tradeoffs", "Explain alternatives and why your design works."],
+];
+
+const INSIDE_TOPICS = [
+  "OOP fundamentals",
+  "Classes and objects",
+  "Association",
+  "Aggregation",
+  "Composition",
+  "Inheritance",
+  "Polymorphism",
+  "Interfaces",
+  "Abstract classes",
+  "SOLID",
+  "KISS",
+  "DRY",
+  "YAGNI",
+  "Coupling",
+  "Cohesion",
+  "Composition vs inheritance",
+  "All 23 GoF patterns",
+  "UML thinking",
+  "Class relationships",
+  "Concurrency",
+  "Thread safety",
+  "Locking",
+  "Race conditions",
+  "Deadlocks",
+  "Functional requirements",
+  "Non functional requirements",
+  "Design tradeoffs",
+  "Machine coding",
+  "16 real world systems",
+  "Java",
+];
+
+const INTERVIEW_QUESTIONS = [
+  "Why did you create this interface?",
+  "Why Strategy instead of inheritance?",
+  "Why Factory instead of new?",
+  "Where would you use Observer?",
+  "What happens if two threads access this object?",
+  "Where is the critical section?",
+  "How would you make this design extensible?",
+  "What changes if another payment provider is added?",
+  "What happens if a new notification channel is introduced?",
+  "How would you test this design?",
+  "What is the responsibility of each class?",
+  "Which part of the design is likely to change?",
+];
+
+const AUDIENCE = [
+  ["Complete beginners", "Learn OOP, SOLID, relationships and design patterns from the ground up."],
+  ["SDE 1 developers", "Build the foundation required for machine coding and LLD interviews."],
+  ["SDE 2 developers", "Improve design thinking, extensibility and tradeoff discussions."],
+  ["Backend engineers", "Turn business requirements into clean object oriented services."],
+  ["Java developers", "See how object oriented design, patterns, concurrency and locking become clean Java."],
+  ["Interview candidates", "Practice realistic LLD questions with a structured design process."],
+];
+
+const LEARNING_PATH = [
+  ["01", "OOP", "Classes, objects, inheritance, abstraction and polymorphism."],
+  ["02", "Principles", "SOLID, KISS, DRY, YAGNI, coupling and cohesion."],
+  ["03", "Patterns", "All three pattern families and 23 GoF patterns."],
+  ["04", "Concurrency", "Threads, locks, race conditions and thread safe design."],
+  ["05", "Real systems", "16 practical LLD interview problems."],
+];
 const QUESTION_SUMMARIES = [
   "Model cities, theatres, screens and show-specific seats. Explore temporary seat holds, booking states, category pricing and safe cancellation.",
   "Track product batches across warehouses, reserve stock during checkout, apply issuance policies and trigger low-stock notifications.",
@@ -4409,18 +315,6 @@ const QUESTION_SUMMARIES = [
   "Coordinate restaurant menus, preparation states, courier assignment, delivery fees and order tracking.",
 ];
 
-function FullCurriculum({
-  handleBuyNow,
-  canBuy,
-  displayedPrice,
-  currentPrice,
-  mrp,
-  discount,
-  formatMoney,
-  supportEmail,
-  productStatusMessage,
-}) {
-  const productStatusClassName = "mt-3 text-sm text-slate-500";
   const patterns = {
     Creational: [
       {
@@ -4866,1004 +760,1371 @@ class NotificationDispatcher {
       short: "Minimize unnecessary dependencies between components.",
     },
   ];
+
+export default function SystemDesignLLD() {
+  const reduceMotion = useReducedMotion();
+  const theme = useSiteTheme();
+  const [product, setProduct] = useState(null);
+  const [loadingProduct, setLoadingProduct] = useState(true);
+  const [productError, setProductError] = useState("");
+  const [hldProduct, setHldProduct] = useState(null);
+  const [comboProduct, setComboProduct] = useState(null);
+  const [loadingHldProduct, setLoadingHldProduct] = useState(true);
+  const [hldProductError, setHldProductError] = useState("");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutProduct, setCheckoutProduct] = useState(null);
+
+  // Sticky buy bar: on tablet and up it appears once the hero scrolls away.
+  const heroRef = useRef(null);
+  const heroVisible = useInViewport(heroRef);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const referralCode = (params.get("referralCode") || params.get("ref") || "").trim();
+    if (referralCode) window.localStorage.setItem("referralCode", referralCode);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchProduct = async () => {
+      try {
+        setLoadingProduct(true);
+        setProductError("");
+        const redirectUrl = window.location.pathname;
+        const response = await fetch(
+          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(redirectUrl)}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          },
+        );
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result?.success || !result?.data) {
+          throw new Error(
+            result?.error?.message ||
+              result?.message ||
+              "Unable to load the current product details.",
+          );
+        }
+        setProduct(result.data);
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        console.error("Failed to fetch LLD product:", error);
+        setProduct(null);
+        setProductError(error?.message || "Unable to load the current product details.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingProduct(false);
+      }
+    };
+    fetchProduct();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchHldProduct = async () => {
+      try {
+        setLoadingHldProduct(true);
+        setHldProductError("");
+        const response = await fetch(
+          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(HLD_REDIRECT_URL)}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          },
+        );
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result?.success || !result?.data) {
+          throw new Error(
+            result?.error?.message ||
+              result?.message ||
+              "Unable to load the HLD book details.",
+          );
+        }
+        setHldProduct(result.data);
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        console.error("Failed to fetch HLD product:", error);
+        setHldProduct(null);
+        setHldProductError(error?.message || "Unable to load the HLD book details.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingHldProduct(false);
+      }
+    };
+    fetchHldProduct();
+    return () => controller.abort();
+  }, []);
+
+  // The bundle is optional: only an active and valid backend product is rendered.
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const response = await fetch(
+          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(COMBO_REDIRECT_URL)}`,
+          { method: "GET", cache: "no-store", headers: { Accept: "application/json" }, signal: controller.signal },
+        );
+        const result = await response.json().catch(() => null);
+        const item = result?.data;
+        const amount = Number(item?.price);
+        if (response.ok && result?.success === true && item?._id && item.isActive !== false &&
+            item.price !== null && item.price !== undefined && item.price !== "" && Number.isFinite(amount) && amount >= 0) {
+          if (!controller.signal.aborted) setComboProduct(item);
+        } else if (!controller.signal.aborted) setComboProduct(null);
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          console.warn("Optional HLD + LLD bundle unavailable:", error);
+          if (!controller.signal.aborted) setComboProduct(null);
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  // Meta Pixel: real catalog price, fired after product API resolves.
+  // The helper returns false if Pixel is unavailable.
+  const trackedViewRef = useRef(null);
+  useEffect(() => {
+    if (!product?._id || product.price == null) return;
+    const amount = Number(product.price);
+    if (!Number.isFinite(amount) || amount < 0) return;
+    const key = `${product._id}:${amount}:${product.currency || "INR"}`;
+    if (trackedViewRef.current === key) return;
+    const sent = trackViewContent({
+      id: String(product._id),
+      title: product.title || "Mastering System Design — LLD (Java)",
+      price: amount,
+      currency: product.currency || "INR",
+    });
+    if (sent !== false) trackedViewRef.current = key;
+  }, [product?._id, product?.title, product?.price, product?.currency]);
+
+  const currency = product?.currency || "INR";
+  const currentPrice = Number(product?.price);
+  const validPrice =
+    product?.price != null &&
+    product.price !== "" &&
+    Number.isFinite(currentPrice) &&
+    currentPrice >= 0;
+  const mrp = Number(product?.mrp ?? 0);
+  const discount =
+    mrp > currentPrice && mrp > 0 ? Math.round(((mrp - currentPrice) / mrp) * 100) : 0;
+  const formatMoney = (amount, currencyCode = currency) => {
+    const locale =
+      { INR: "en-IN", USD: "en-US", GBP: "en-GB", EUR: "en-IE", AUD: "en-AU", CAD: "en-CA" }[
+        currencyCode
+      ] || "en";
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: currencyCode,
+        maximumFractionDigits: Number.isInteger(Number(amount)) ? 0 : 2,
+      }).format(Number(amount || 0));
+    } catch {
+      return `${currencyCode} ${Number(amount || 0)}`;
+    }
+  };
+  const canBuy =
+    !loadingProduct &&
+    !productError &&
+    validPrice &&
+    Boolean(product?._id) &&
+    product?.isActive !== false;
+  const hldCurrency = hldProduct?.currency || "INR";
+  const hldCurrentPrice = Number(hldProduct?.price);
+  const hldValidPrice =
+    hldProduct?.price != null &&
+    hldProduct.price !== "" &&
+    Number.isFinite(hldCurrentPrice) &&
+    hldCurrentPrice >= 0;
+  const hldMrp = Number(hldProduct?.mrp ?? 0);
+  const hldCanBuy =
+    !loadingHldProduct &&
+    !hldProductError &&
+    hldValidPrice &&
+    Boolean(hldProduct?._id) &&
+    hldProduct?.isActive !== false;
+  const hldCoverImage =
+    hldProduct?.coverpageurl || hldProduct?.coverPageUrl || hldProduct?.cover_page_url || "";
+  const comboPrice = Number(comboProduct?.price);
+  const comboMrp = Number(comboProduct?.mrp ?? 0);
+  const comboCoverImage = comboProduct?.coverPageUrl || comboProduct?.coverpageurl || comboProduct?.cover_page_url || "";
+  const openComboCheckout = () => {
+    if (!comboProduct) return;
+    setCheckoutProduct(comboProduct);
+    setCheckoutOpen(true);
+  };
+  const openCheckout = () => {
+    if (!canBuy) return;
+    setCheckoutProduct(product);
+    setCheckoutOpen(true);
+  };
+  const openHldCheckout = () => {
+    if (!hldCanBuy) return;
+    setCheckoutProduct(hldProduct);
+    setCheckoutOpen(true);
+  };
+  const supportEmail = SUPPORT_EMAIL;
+  const canonicalUrl = PAGE_URL;
+
+  const productName = product?.title || "Mastering System Design — Low-Level Design in Java";
+
+  const seoImage = product?.coverpageurl || product?.coverPageUrl || product?.cover_page_url || "";
+
+  const productSchema = {
+    "@type": "Product",
+    "@id": `${canonicalUrl}#product`,
+    name: productName,
+    description: SEO_LONG_DESCRIPTION,
+    url: canonicalUrl,
+    category: "Low-Level Design Java Ebook",
+    brand: {
+      "@type": "Brand",
+      name: SITE_NAME,
+    },
+    ...(product?._id ? { sku: String(product._id) } : {}),
+    ...(seoImage ? { image: [seoImage] } : {}),
+    ...(canBuy
+      ? {
+          offers: {
+            "@type": "Offer",
+            url: canonicalUrl,
+            price: currentPrice,
+            priceCurrency: currency,
+            priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
+            availability: "https://schema.org/InStock",
+            itemCondition: "https://schema.org/NewCondition",
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+            },
+            seller: {
+              "@type": "Organization",
+              name: SITE_NAME,
+              url: SITE_URL,
+            },
+          },
+        }
+      : {}),
+  };
+
+  const bookSchema = {
+    "@type": "Book",
+    "@id": `${canonicalUrl}#book`,
+    name: productName,
+    description: SEO_DESCRIPTION,
+    url: canonicalUrl,
+    bookFormat: "https://schema.org/EBook",
+    inLanguage: product?.language || "English",
+    ...(product?.edition ? { bookEdition: product.edition } : {}),
+    ...(seoImage ? { image: seoImage } : {}),
+    publisher: {
+      "@id": `${SITE_URL}/#organization`,
+    },
+  };
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        email: supportEmail,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        url: SITE_URL,
+        name: SITE_NAME,
+        publisher: {
+          "@id": `${SITE_URL}/#organization`,
+        },
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${canonicalUrl}#webpage`,
+        url: canonicalUrl,
+        name: SEO_TITLE,
+        description: SEO_DESCRIPTION,
+        isPartOf: {
+          "@id": `${SITE_URL}/#website`,
+        },
+        about: {
+          "@id": `${canonicalUrl}#book`,
+        },
+        ...(seoImage
+          ? {
+              primaryImageOfPage: {
+                "@type": "ImageObject",
+                url: seoImage,
+              },
+            }
+          : {}),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${canonicalUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: SITE_URL,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Books",
+            item: `${SITE_URL}/books`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "System Design LLD in Java",
+            item: canonicalUrl,
+          },
+        ],
+      },
+      bookSchema,
+      productSchema,
+      {
+        "@type": "ItemList",
+        "@id": `${canonicalUrl}#curriculum`,
+        name: "14-part curriculum of the Java LLD handbook",
+        numberOfItems: modules.length,
+        itemListElement: modules.map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: item.title,
+          description: item.detail,
+        })),
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${canonicalUrl}#faq`,
+        mainEntity: faqItems.map(({ q: question, a: answer }) => ({
+          "@type": "Question",
+          name: question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: answer,
+          },
+        })),
+      },
+    ],
+  };
+
+  const seoHead = (
+    <Helmet htmlAttributes={{ lang: "en" }}>
+      <title>{SEO_TITLE}</title>
+      <meta name="description" content={SEO_DESCRIPTION} />
+      <meta
+        name="keywords"
+        content="low level design Java, LLD interview preparation, system design LLD, Java OOP, SOLID principles, UML diagrams, Java design patterns, GoF design patterns, concurrency, locking, BookMyShow LLD, parking lot LLD, Splitwise LLD, TargetTrek"
+      />
+      <meta name="author" content={SITE_NAME} />
+      <meta name="application-name" content={SITE_NAME} />
+      <meta
+        name="robots"
+        content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+      />
+      <meta
+        name="googlebot"
+        content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+      />
+      <meta name="theme-color" content={theme === "dark" ? "#000000" : "#ffffff"} />
+      <meta name="color-scheme" content={theme === "dark" ? "dark light" : "light dark"} />
+      <link rel="canonical" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="en-IN" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
+      {seoImage && <link rel="preload" as="image" href={seoImage} />}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href={FONT_HREF} rel="stylesheet" />
+      <meta property="og:type" content="product" />
+      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:locale" content="en_IN" />
+      <meta property="og:title" content={SEO_TITLE} />
+      <meta property="og:description" content={SEO_DESCRIPTION} />
+      <meta property="og:url" content={canonicalUrl} />
+      {seoImage && <meta property="og:image" content={seoImage} />}
+      {seoImage && <meta property="og:image:alt" content={`${productName} ebook cover`} />}
+      {canBuy && (
+        <meta property="product:price:amount" content={String(currentPrice)} />
+      )}
+      {canBuy && <meta property="product:price:currency" content={currency} />}
+      <meta name="twitter:card" content={seoImage ? "summary_large_image" : "summary"} />
+      <meta name="twitter:title" content={SEO_TITLE} />
+      <meta name="twitter:description" content={SEO_DESCRIPTION} />
+      {seoImage && <meta name="twitter:image" content={seoImage} />}
+      {seoImage && <meta name="twitter:image:alt" content={`${productName} ebook cover`} />}
+      <script type="application/ld+json">
+        {JSON.stringify(structuredData).replace(/</g, "\\u003c")}
+      </script>
+    </Helmet>
+  );
+
+  /* ---------------------------------------------------------------- */
+  /*  Presentation                                                     */
+  /* ---------------------------------------------------------------- */
+
+  const rootRef = useRef(null);
+  useNavOffset(rootRef);
+  const goTo = useGoToSection();
+  const goToPreview = (event) => goTo(event, "#preview");
+
+  const priceKnown = !loadingProduct && !productError && validPrice;
+  const priceNode = loadingProduct ? <PriceSkeleton /> : priceKnown ? formatMoney(currentPrice) : "Unavailable";
+  const mrpNode = priceKnown && mrp > currentPrice ? formatMoney(mrp) : null;
+  const savingsAmount = priceKnown && mrp > currentPrice ? mrp - currentPrice : 0;
+  const bookCover = product?.coverpageurl || product?.coverPageUrl || product?.cover_page_url || "";
+
   return (
-    <div className="lld-expanded">
-      <div className="lld-shell lld-source-note">
-        <strong>Real backend depth:</strong> Alongside interview-sized Java modeling exercises, the book covers REST APIs,
-        persistence, JPA/Hibernate, Spring Boot clean architecture, security, observability, testing and production-grade reliability.
-        The 16 case studies include UML, Java code and driver scenarios.
-      </div>
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-2">
-          <div>
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              Why Low-Level Design?
-            </div>
+    <>
+      <div ref={rootRef} className="hld min-h-screen overflow-x-hidden pb-28" data-theme={theme}>
+        {seoHead}
+        <SkipLink />
+        <ScrollProgress />
+        <FloatNav
+          links={NAV_LINKS}
+          show={!heroVisible && !checkoutOpen}
+          onBuy={openCheckout}
+          canBuy={canBuy}
+        />
+        <Breadcrumb current="System Design LLD (Java)" />
 
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Don't just write classes.
-              <span className="block text-blue-600">Learn how to design them.</span>
-            </h2>
-
-            <p className="mt-5 leading-8 text-slate-600">
-              LLD is about converting requirements into clean, extensible and maintainable
-              object-oriented designs. The goal is not to memorize patterns. The goal is to
-              understand <strong>why</strong> a particular design makes sense for a particular
-              problem.
-            </p>
-
-            <div className="mt-8 space-y-4">
-              {[
-                "Convert requirements into classes and responsibilities",
-                "Identify relationships between objects",
-                "Choose composition or inheritance correctly",
-                "Recognize when a design pattern actually helps",
-                "Handle changing business requirements",
-                "Design for concurrency and thread safety",
-                "Write clean, testable and extensible code",
-                "Explain your design clearly during interviews",
-              ].map((item) => (
-                <div key={item} className="flex gap-3">
-                  <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                    ✓
-                  </div>
-
-                  <p className="text-slate-700">{item}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-8">
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              The LLD Mindset
-            </div>
-
-            <h3 className="mt-3 text-2xl font-black text-slate-950">
-              Requirement → Design → Pattern → Code
-            </h3>
-
-            <div className="mt-7 space-y-4">
-              {[
-                ["01", "Understand", "What exactly does the system need to do?"],
-                ["02", "Identify", "What are the entities, responsibilities and relationships?"],
-                ["03", "Model", "How should classes collaborate?"],
-                ["04", "Choose", "Which principle or pattern solves the design problem?"],
-                ["05", "Code", "Convert the design into clean implementation."],
-              ].map(([number, title, text]) => (
-                <div
-                  key={number}
-                  className="flex gap-4 rounded-2xl border border-blue-100 bg-white p-4"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xs font-black text-white">
-                    {number}
-                  </div>
-
-                  <div>
-                    <div className="font-bold text-slate-950">{title}</div>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">{text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              Who Should Buy This?
-            </div>
-
-            <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-              Built for developers who want to design, not just code
-            </h2>
-
-            <p className="mt-4 leading-7 text-slate-600">
-              Whether you're starting LLD or preparing for an interview, the book follows a
-              progressive path from fundamentals to complete real-world systems.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              [
-                "Complete Beginners",
-                "Learn OOP, SOLID, relationships and design patterns from the ground up.",
-              ],
-              [
-                "SDE-1 Developers",
-                "Build the foundation required for machine-coding and LLD interviews.",
-              ],
-              [
-                "SDE-2 Developers",
-                "Improve design thinking, extensibility and trade-off discussions.",
-              ],
-              [
-                "Backend Engineers",
-                "Turn business requirements into clean object-oriented services.",
-              ],
-              [
-                "Java Developers",
-                "Learn how object-oriented design, patterns, concurrency and locking translate into clean Java implementations.",
-              ],
-              [
-                "Interview Candidates",
-                "Practice realistic LLD questions with a structured design process.",
-              ],
-            ].map(([title, text]) => (
-              <div
-                key={title}
-                className="rounded-2xl border border-slate-200 bg-[#fbfdff] p-6 transition hover:-translate-y-1 hover:shadow-xl"
-              >
-                <h3 className="font-black text-slate-950">{title}</h3>
-
-                <p className="mt-3 text-sm leading-7 text-slate-600">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="text-center">
-          <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-            Learning Path
-          </div>
-
-          <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-            Beginner → Interview Ready
-          </h2>
-        </div>
-
-        <div className="mt-12 grid gap-5 md:grid-cols-5">
-          {[
-            ["01", "OOP", "Classes, objects, inheritance, abstraction and polymorphism."],
-            ["02", "Principles", "SOLID, KISS, DRY, YAGNI, coupling and cohesion."],
-            ["03", "Patterns", "All three pattern families and 23 GoF patterns."],
-            ["04", "Concurrency", "Threads, locks, race conditions and thread-safe design."],
-            ["05", "Real Systems", "16 practical LLD interview problems."],
-          ].map(([number, title, text]) => (
-            <div key={number} className="rounded-2xl border border-slate-200 bg-white p-6">
-              <div className="text-sm font-black text-blue-600">{number}</div>
-
-              <h3 className="mt-3 font-black text-slate-950">{title}</h3>
-
-              <p className="mt-3 text-sm leading-6 text-slate-500">{text}</p>
-            </div>
-          ))}
-        </div>
-      </RevealSection>
-      <RevealSection className="border-y border-slate-200 bg-blue-50/50 text-slate-900">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              Foundation
-            </div>
-
-            <h2 className="mt-3 text-3xl font-black sm:text-4xl">OOP Fundamentals</h2>
-
-            <p className="mt-4 leading-7 text-slate-600">
-              Before patterns, understand how objects should own state, expose behavior and
-              collaborate with other objects.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Encapsulation", "Keep state and behavior together while controlling access."],
-              [
-                "Abstraction",
-                "Expose what the object does without exposing unnecessary implementation.",
-              ],
-              [
-                "Inheritance",
-                "Reuse and specialize behavior where an is-a relationship genuinely exists.",
-              ],
-              [
-                "Polymorphism",
-                "Allow different implementations to be used through a common contract.",
-              ],
-            ].map(([title, text]) => (
-              <div
-                key={title}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
-                <h3 className="font-black">{title}</h3>
-
-                <p className="mt-3 text-sm leading-7 text-slate-600">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8" id="inside">
-        <div className="max-w-3xl">
-          <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-            Design Principles
-          </div>
-
-          <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-            SOLID + KISS + DRY + YAGNI
-          </h2>
-
-          <p className="mt-4 leading-7 text-slate-600">
-            The book doesn't treat design principles as definitions to memorize. Each principle is
-            connected to practical design problems and refactoring decisions.
-          </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {principles.map((principle, index) => (
-            <div
-              key={principle.title}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <div className="text-xs font-black text-blue-600">
-                PRINCIPLE {String(index + 1).padStart(2, "0")}
-              </div>
-
-              <h3 className="mt-3 font-black text-slate-950">{principle.title}</h3>
-
-              <p className="mt-2 text-sm leading-6 text-slate-500">{principle.short}</p>
-            </div>
-          ))}
-        </div>
-      </RevealSection>
-      <RevealSection id="patterns" className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              Complete Pattern Library
-            </div>
-
-            <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-              All 23 GoF Design Patterns
-            </h2>
-
-            <p className="mt-4 leading-7 text-slate-600">
-              Learn the complete Creational, Structural and Behavioral pattern families with
-              purpose, use cases, examples and implementation thinking.
-            </p>
-          </div>
-
-          <div className="mt-12 space-y-12">
-            {Object.entries(patterns).map(([category, items]) => (
-              <div key={category}>
-                <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-950">{category} Patterns</h3>
-
-                    <p className="mt-1 text-sm text-slate-500">{items.length} patterns covered</p>
-                  </div>
-
-                  <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700">
-                    {category === "Creational"
-                      ? "Object Creation"
-                      : category === "Structural"
-                        ? "Object Composition"
-                        : "Object Behavior"}
+        <main id="page-main">
+          {/* ------------------------------ HERO ------------------------------ */}
+          <section ref={heroRef} aria-labelledby="lld-hero-title" className="bg-base relative">
+            <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center lg:px-8 lg:pb-24 lg:pt-12">
+              <div className="min-w-0">
+                <Reveal y={16}>
+                  <span className="chip chip-accent caption-3">
+                    <Code size={14} weight="bold" />
+                    Java first LLD handbook · PDF ebook
                   </span>
+                </Reveal>
+
+                <Reveal as="h1" delay={0.06} id="lld-hero-title" className="hero-title heading-1 mt-4 max-w-[680px] pb-1">
+                  <span className="block">Design with clarity.</span>
+                  <span className="block">Code with confidence.</span>
+                </Reveal>
+
+                <Reveal as="p" delay={0.12} className="body-3 t2 mt-6 max-w-[680px] sm:text-lg sm:leading-7">
+                  From Java OOP and UML to design patterns, Spring Boot, APIs, database modeling,
+                  multithreading, testing and 16 coded case studies. Prepare for LLD interviews and
+                  for real backend engineering with one handbook.
+                </Reveal>
+
+                <Reveal delay={0.18} className="mt-8 flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={openCheckout} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+                    Get the ebook {priceNode !== "Unavailable" && priceNode}
+                    <ArrowRight className="arrow" size={20} weight="bold" />
+                  </button>
+                  <a href="#preview" onClick={goToPreview} className="btn btn-ghost btn-lg button-md">
+                    <BookOpen size={20} weight="bold" />
+                    Preview the book
+                  </a>
+                </Reveal>
+
+                {productError && (
+                  <p className="caption-1 tbad mt-4" role="alert">
+                    The price is temporarily unavailable. Please try again or contact {SUPPORT_EMAIL}.
+                  </p>
+                )}
+
+                <Reveal delay={0.24} className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+                  {[
+                    [DownloadSimple, "Instant access after payment"],
+                    [Lock, `Secure checkout via ${PAYMENT_PROVIDER_NAME}`],
+                    [FileText, "Free preview before you buy"],
+                  ].map(([Icon, text]) => (
+                    <span key={text} className="caption-1 t2 inline-flex items-center gap-2">
+                      <Icon className="ta" size={16} weight="bold" />
+                      {text}
+                    </span>
+                  ))}
+                </Reveal>
+              </div>
+
+              <Reveal delay={0.15} className="mx-auto w-full max-w-sm lg:max-w-none">
+                <div className="bg-s2 bd relative rounded-3xl p-6 sm:p-8">
+                  <FloatChip className="left-3 top-6 sm:left-4" delay={0.5}>
+                    <p className="heading-6 mono ta">23</p>
+                    <p className="caption-4 t2">GoF patterns</p>
+                  </FloatChip>
+                  <FloatChip className="right-3 top-1/3 sm:right-4" delay={0.8}>
+                    <p className="heading-6 mono ta">16</p>
+                    <p className="caption-4 t2">coded case studies</p>
+                  </FloatChip>
+
+                  <Tilt className="mx-auto w-40 sm:w-48">
+                    <div className="overflow-hidden rounded-xl bg-[#181818] shadow-[0_24px_48px_rgba(0,0,0,0.3)]">
+                      {bookCover ? (
+                        <img
+                          src={bookCover}
+                          alt="Mastering System Design LLD Java ebook cover"
+                          className="block h-auto w-full object-cover"
+                          loading="eager"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="flex aspect-[0.72] flex-col justify-between p-4 text-white">
+                          <p className="caption-3 uppercase tracking-wider text-[#fb923c]">The Java interview guide</p>
+                          <div>
+                            <p className="heading-5">Master System Design</p>
+                            <p className="body-5 mt-2 text-[#fb923c]">Low Level Design · Java</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Tilt>
+
+                  <div className="card mt-8 rounded-2xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="eyebrow caption-3">Digital PDF ebook</p>
+                        <div className="mt-2 flex flex-wrap items-baseline gap-2">
+                          <span className="heading-4 mono t1">{priceNode}</span>
+                          {mrpNode && <span className="body-5 mono t3 strike">{mrpNode}</span>}
+                        </div>
+                      </div>
+                      {priceKnown && discount > 0 && (
+                        <span className="chip chip-accent caption-3 mono">{discount}% off</span>
+                      )}
+                    </div>
+                    {savingsAmount > 0 && (
+                      <p className="caption-3 tok mt-2">You save {formatMoney(savingsAmount)} today</p>
+                    )}
+                    <p className="caption-5 t3 mt-2">
+                      Instant access after successful payment. Digital purchases are not refundable.
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+
+          {/* ----------------------- OTHER BOOKS (HLD, COMBO) ------------------- */}
+          <Section id="more-books" alt labelledBy="more-books-title">
+            <SectionHeader
+              id="more-books-title"
+              eyebrow="Complete your system design prep"
+              title="Add HLD, or get both books together"
+              description="LLD teaches you to design classes and object interactions. HLD teaches you to reason about scale, databases, caching, messaging and reliability. Most interview loops test both."
+            />
+
+            <div className={cx("mt-10 grid gap-6", comboProduct ? "lg:grid-cols-2" : "max-w-2xl")}>
+              <Reveal>
+                <BookOfferCard
+                  eyebrow="High level design"
+                  title={hldProduct?.title || "Mastering System Design: High Level Design"}
+                  subtitle="Architecture and scale"
+                  description="How production systems grow from one service to a distributed architecture: databases, Redis, load balancing, Kafka, replication, sharding and fault tolerance."
+                  cover={hldCoverImage}
+                  features={["19 interview case studies", "45 minute interview playbook", "16 core building blocks"]}
+                  pills={["Scalability", "Databases", "Redis", "Kafka"]}
+                  status={loadingHldProduct ? "loading" : hldProduct && hldValidPrice ? "ready" : "error"}
+                  price={hldCurrentPrice}
+                  mrp={hldMrp}
+                  currency={hldCurrency}
+                  onBuy={openHldCheckout}
+                  canBuy={hldCanBuy}
+                  buyLabel="Get the HLD book"
+                  href={HLD_REDIRECT_URL}
+                  errorText={hldProductError ? `${hldProductError} You can still open the HLD book page.` : ""}
+                />
+              </Reveal>
+
+              {comboProduct && (
+                <Reveal delay={0.1}>
+                  <BookOfferCard
+                    featured
+                    badge="Best value"
+                    eyebrow="Complete system design bundle"
+                    title={comboProduct.title || "Mastering System Design: HLD + LLD Combo"}
+                    subtitle="Two books, one checkout"
+                    description="Distributed architecture, scaling, caching and reliability in HLD, plus Java object design, patterns, concurrency and solved problems in LLD."
+                    cover={comboCoverImage}
+                    features={["HLD and LLD together", "19 HLD case studies plus 16 LLD problems", "Architecture, Java code and design patterns"]}
+                    status="ready"
+                    price={comboPrice}
+                    mrp={comboMrp}
+                    currency={comboProduct.currency || "INR"}
+                    onBuy={openComboCheckout}
+                    canBuy
+                    buyLabel="Get the combo"
+                    href={COMBO_REDIRECT_URL}
+                  />
+                </Reveal>
+              )}
+            </div>
+          </Section>
+
+          {/* ------------------------------ PROOF ------------------------------ */}
+          <StatsStrip
+            label="Book highlights"
+            items={[
+              [23, "", "GoF design patterns"],
+              [16, "", "Coded case studies"],
+              [60, " min", "Interview framework"],
+              [14, "", "Detailed parts"],
+            ]}
+          />
+
+          <TaglineReveal text={TAGLINE} />
+
+          {/* ------------------------------ WHY LLD ---------------------------- */}
+          <Section id="why-lld" alt labelledBy="why-title">
+            <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+              <div>
+                <SectionHeader
+                  id="why-title"
+                  eyebrow="Why low level design"
+                  title="Do not just write classes. Learn how to design them."
+                  description="LLD turns requirements into clean, extensible and maintainable object oriented designs. The goal is not to memorise patterns. It is to understand why a design fits a problem."
+                />
+                <ul className="mt-8 space-y-3">
+                  {WHY_POINTS.map((item, index) => (
+                    <Reveal as="li" key={item} y={16} delay={Math.min(index, 5) * 0.04} className="flex items-start gap-3">
+                      <Check className="ta mt-1 shrink-0" size={16} weight="bold" />
+                      <span className="body-3 t1">{item}</span>
+                    </Reveal>
+                  ))}
+                </ul>
+              </div>
+
+              <Reveal delay={0.1}>
+                <div className="card rounded-3xl p-6 sm:p-8">
+                  <p className="eyebrow caption-3">The LLD mindset</p>
+                  <h3 className="heading-5 t1 mt-2">Requirement, design, pattern, code</h3>
+                  <ol className="mt-6 space-y-3">
+                    {MINDSET.map(([number, title, text]) => (
+                      <li key={number} className="bg-s2 row-hover flex gap-4 rounded-xl p-4">
+                        <span className="tile body-4 mono h-10 w-10 rounded-lg">{number}</span>
+                        <div>
+                          <p className="body-1 t1">{title}</p>
+                          <p className="body-6 t2 mt-1">{text}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </Reveal>
+            </div>
+          </Section>
+
+          {/* ----------------------------- CURRICULUM -------------------------- */}
+          <Section id="curriculum" labelledBy="curriculum-title">
+            <SectionHeader
+              id="curriculum-title"
+              eyebrow="A clear path from concept to code"
+              title="Everything you need to reason through LLD"
+              description="The complete 14 part curriculum: Java, UML, 23 GoF patterns, enterprise architecture, concurrency, APIs, Spring Boot, testing and solved interview systems."
+            />
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {modules.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal key={item.number} delay={(index % 4) * 0.06} y={24}>
+                    <article className="card lift flex h-full gap-4 rounded-3xl p-4 sm:flex-col sm:p-6">
+                      <div className="flex items-start justify-between gap-3 sm:w-full">
+                        <span className="tile h-12 w-12 rounded-xl">
+                          <Icon size={24} weight="duotone" />
+                        </span>
+                        <span className="num caption-3 mono hidden sm:block">{item.number}</span>
+                      </div>
+                      <div>
+                        <h3 className="title-2 t1">{item.title}</h3>
+                        <p className="body-6 t2 mt-1 sm:mt-2">{item.detail}</p>
+                      </div>
+                    </article>
+                  </Reveal>
+                );
+              })}
+            </div>
+
+            <Reveal className="mt-6">
+              <p className="note body-6 rounded-2xl p-4 sm:p-6">
+                <strong className="font-semibold">Real backend depth. </strong>
+                Alongside interview sized Java modeling exercises, the book covers REST APIs, persistence,
+                JPA and Hibernate, Spring Boot clean architecture, security, observability, testing and
+                production reliability. All 16 case studies include UML, Java code and driver scenarios.
+              </p>
+            </Reveal>
+          </Section>
+
+          {/* ------------------------------- FLOW ------------------------------ */}
+          <Section id="flow" alt labelledBy="flow-title">
+            <SectionHeader
+              id="flow-title"
+              eyebrow="A repeatable interview approach"
+              title="From prompt to a design you can explain"
+              description="Follow a practical sequence instead of jumping straight into classes or patterns."
+            />
+
+            <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+              {flowSteps.map((step, index) => {
+                const Icon = FLOW_ICONS[index];
+                return (
+                  <Reveal key={step.n} delay={index * 0.06} y={24}>
+                    <article className="card lift h-full rounded-2xl p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="tile h-10 w-10 rounded-lg">
+                          <Icon size={20} weight="duotone" />
+                        </span>
+                        <span className="num caption-3 mono">{step.n}</span>
+                      </div>
+                      <h3 className="title-3 t1 mt-4">{step.title}</h3>
+                      <p className="body-6 t2 mt-1">{step.text}</p>
+                    </article>
+                  </Reveal>
+                );
+              })}
+            </div>
+
+            <Reveal className="mt-6">
+              <div className="card rounded-3xl p-6 sm:p-8">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="heading-6 t1">Example: model a show specific seat booking</h3>
+                  <span className="caption-1 t3">Class relationship and state flow</span>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {items.map((pattern, index) => (
-                    <div
-                      key={pattern.name}
-                      className="group rounded-2xl border border-slate-200 bg-[#fbfdff] p-6 transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-blue-600">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-500">
-                          {category}
-                        </span>
+                <div
+                  className="mt-6 flex flex-col items-stretch gap-3 lg:flex-row lg:items-center"
+                  aria-label="Show contains show seats; booking holds selected show seats"
+                >
+                  {UML_BOXES.map((box, index) => (
+                    <React.Fragment key={box.name}>
+                      <div className="uml flex-1 rounded-xl p-4">
+                        <p className="body-1 mono t1">{box.name}</p>
+                        {box.fields.map((field) => (
+                          <p key={field} className="caption-2 mono t2 mt-1">
+                            {field}
+                          </p>
+                        ))}
                       </div>
-
-                      <h4 className="mt-4 text-lg font-black text-slate-950">{pattern.name}</h4>
-
-                      <p className="mt-3 text-sm leading-6 text-slate-600">{pattern.purpose}</p>
-
-                      <div className="mt-5 rounded-xl bg-blue-50 p-4">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-blue-600">
-                          Example
+                      {index < UML_BOXES.length - 1 && (
+                        <div className="flex items-center justify-center gap-2 lg:flex-col">
+                          <ArrowRight className="ta rotate-90 lg:rotate-0" size={20} weight="bold" />
+                          <span className="caption-4 t3">{box.link}</span>
                         </div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
 
-                        <div className="mt-1 text-sm font-semibold text-slate-700">
-                          {pattern.example}
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                          When to use
-                        </div>
-
-                        <p className="mt-1 text-xs leading-5 text-slate-500">{pattern.when}</p>
-                      </div>
-                    </div>
+                <div
+                  className="mt-6 flex flex-wrap items-center gap-3"
+                  aria-label="Seat state transitions from available to locked to booked"
+                >
+                  {["AVAILABLE", "LOCKED", "BOOKED"].map((state, index) => (
+                    <React.Fragment key={state}>
+                      <motion.span
+                        className={cx("chip caption-3 mono", index === 2 && "chip-accent")}
+                        animate={reduceMotion ? undefined : { y: [0, -4, 0] }}
+                        transition={{ duration: 2.4, delay: index * 0.35, repeat: Infinity, ease: FLOAT_EASE }}
+                      >
+                        {state}
+                      </motion.span>
+                      {index < 2 && <ArrowRight className="t3" size={14} weight="bold" aria-hidden="true" />}
+                    </React.Fragment>
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-8 lg:p-12">
-          <div className="grid gap-12 lg:grid-cols-2">
-            <div>
-              <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-                Pattern Thinking
-              </div>
+            </Reveal>
+          </Section>
 
-              <h2 className="mt-3 text-3xl font-black text-slate-950">
-                Don't force a pattern.
-                <span className="block text-blue-600">Let the requirement reveal it.</span>
-              </h2>
+          {/* ----------------------------- PREVIEW ----------------------------- */}
+          <PdfPreviewSection file={lldPreviewPdf} onBuy={openCheckout} canBuy={canBuy} priceNode={priceNode} />
 
-              <p className="mt-5 leading-7 text-slate-600">
-                A common LLD mistake is trying to use every design pattern in every problem. The
-                book teaches you to first understand the requirement and then identify the design
-                pressure.
-              </p>
-            </div>
+          {/* ---------------------------- FOUNDATIONS -------------------------- */}
+          <Section id="principles" alt labelledBy="principles-title">
+            <SectionHeader
+              id="principles-title"
+              eyebrow="Foundations"
+              title="OOP first, then the principles that keep designs clean"
+              description="Before patterns, understand how objects own state, expose behaviour and collaborate. Every principle is tied to a practical design problem and a refactoring decision."
+            />
 
-            <div className="space-y-4">
-              {[
-                ["Changing algorithm?", "Think Strategy."],
-                ["Different object creation?", "Think Factory."],
-                ["Multiple subscribers?", "Think Observer."],
-                ["Additional behavior?", "Think Decorator."],
-                ["Object has many optional fields?", "Think Builder."],
-                ["Different object states?", "Think State."],
-                ["Incompatible external API?", "Think Adapter."],
-                ["Multiple handlers?", "Think Chain of Responsibility."],
-              ].map(([question, answer]) => (
-                <div
-                  key={question}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-blue-100 bg-white p-4"
-                >
-                  <span className="text-sm font-semibold text-slate-700">{question}</span>
-
-                  <span className="shrink-0 text-sm font-black text-blue-600">{answer}</span>
-                </div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {OOP_PILLARS.map(([title, text], index) => (
+                <Reveal key={title} delay={index * 0.07}>
+                  <article className="card lift h-full rounded-3xl p-6">
+                    <span className="num caption-3 mono">OOP {twoDigits(index + 1)}</span>
+                    <h3 className="heading-6 t1 mt-3">{title}</h3>
+                    <p className="body-6 t2 mt-2">{text}</p>
+                  </article>
+                </Reveal>
               ))}
             </div>
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              Start With Requirements
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {principles.map((principle, index) => (
+                <Reveal key={principle.title} delay={(index % 3) * 0.06} y={24}>
+                  <article className="card lift h-full rounded-2xl p-4 sm:p-6">
+                    <span className="num caption-3 mono">Principle {twoDigits(index + 1)}</span>
+                    <h3 className="title-2 t1 mt-2">{principle.title}</h3>
+                    <p className="body-6 t2 mt-1">{principle.short}</p>
+                  </article>
+                </Reveal>
+              ))}
             </div>
+          </Section>
 
-            <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-              Functional + Non-Functional Requirements
-            </h2>
+          {/* ----------------------------- PATTERNS ---------------------------- */}
+          <PatternLibrary />
 
-            <p className="mt-4 leading-7 text-slate-600">
-              Before drawing classes, understand what the system must do and what qualities the
-              system must maintain.
-            </p>
-          </div>
+          {/* --------------------------- REQUIREMENTS -------------------------- */}
+          <Section id="requirements" alt labelledBy="requirements-title">
+            <SectionHeader
+              id="requirements-title"
+              eyebrow="Start with requirements"
+              title="Functional and non functional requirements"
+              description="Before drawing classes, understand what the system must do and which qualities it must keep under real conditions."
+            />
 
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            <div className="rounded-3xl border border-blue-100 bg-blue-50 p-7">
-              <h3 className="text-xl font-black text-slate-950">Functional Requirements</h3>
-
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                What should the system actually do?
-              </p>
-
-              <div className="mt-6 space-y-3">
-                {[
-                  "Create a booking",
-                  "Cancel a booking",
-                  "Reserve a seat",
-                  "Send a notification",
-                  "Apply a coupon",
-                  "Process a payment",
-                  "Update inventory",
-                  "Calculate a fare",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-[#fbfdff] p-7">
-              <h3 className="text-xl font-black text-slate-950">Non-Functional Requirements</h3>
-
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                How should the system behave under real conditions?
-              </p>
-
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {[
-                  "Concurrency",
-                  "Thread Safety",
-                  "Performance",
-                  "Scalability",
-                  "Reliability",
-                  "Maintainability",
-                  "Extensibility",
-                  "Testability",
-                  "Security",
-                  "Availability",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="border-y border-slate-200 bg-blue-50/50 text-slate-900">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-2">
-            <div>
-              <div className="text-sm font-bold uppercase tracking-wider text-black">
-                Concurrency & Thread Safety
-              </div>
-
-              <h2 className="mt-3 text-3xl font-black sm:text-4xl">Locking is part of LLD.</h2>
-
-              <p className="mt-5 leading-7 text-slate-600">
-                Real-world LLD problems often contain shared state. Two users may attempt the same
-                seat, two orders may update the same inventory, or multiple threads may write to the
-                same resource.
-              </p>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                {[
-                  "Race Conditions",
-                  "Critical Sections",
-                  "Mutex",
-                  "Synchronized Blocks",
-                  "Read / Write Locks",
-                  "Atomic Operations",
-                  "Deadlocks",
-                  "Thread Safety",
-                  "Optimistic Locking",
-                  "Pessimistic Locking",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700">Seat / Inventory Locking</span>
-
-              </div>
-
-         
-<pre
-  className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 sm:p-5 sm:text-sm sm:leading-7"
-  style={{
-    color: "#000000",
-    WebkitTextFillColor: "#000000",
-    backgroundColor: "#f8fafc",
-  }}
->
-  {`class Inventory {
-
-    private final Object lock = new Object();
-    private int stock = 10;
-
-    boolean reserve(int quantity) {
-
-        synchronized (lock) {
-
-            if (stock < quantity)
-                return false;
-
-            stock -= quantity;
-
-            return true;
-        }
-    }
-}`}
-</pre>
-
-
-              <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-black">
-                The book explains why the critical section exists, what race condition can occur
-                without it, and how different locking approaches affect the design.
-              </div>
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="text-center">
-          <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-            Code-First Learning
-          </div>
-
-          <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-            Design Patterns in Java
-          </h2>
-
-          <p className="mx-auto mt-4 max-w-3xl leading-7 text-slate-600">
-            Each design problem is explained conceptually and then translated into practical,
-            interview-focused Java code.
-          </p>
-        </div>
-
-        <div className="lld-java-examples mt-8 space-y-7">
-          {codeTabs.map(([key, title]) => (
-            <div
-              key={key}
-              className="lld-java-example-card overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
-            >
-              <div className="lld-java-example-head flex flex-col items-start gap-3 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <div>
-                  <div className="font-black text-slate-950">{title}</div>
-
-                  <div className="mt-1 text-xs text-slate-500">Java implementation</div>
-                </div>
-
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                  Java
-                </span>
-              </div>
-
-              <pre className="lld-java-code overflow-x-auto p-4 text-xs leading-6 sm:p-6 sm:text-sm sm:leading-7">
-                {codeExamples[key]}
-              </pre>
-            </div>
-          ))}
-        </div>
-      </RevealSection>
-      <RevealSection className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="text-center">
-            <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-              Interview Framework
-            </div>
-
-            <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-              A Repeatable LLD Design Process
-            </h2>
-          </div>
-
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["01", "Clarify Requirements", "Identify scope, actors and core use cases."],
-              ["02", "Find Entities", "Extract nouns, domain objects and responsibilities."],
-              [
-                "03",
-                "Define Relationships",
-                "Association, aggregation, composition and inheritance.",
-              ],
-              ["04", "Assign Responsibilities", "Decide which class owns which behavior."],
-              ["05", "Identify Changing Parts", "Find areas likely to change independently."],
-              ["06", "Apply Principles", "Use SOLID, KISS, DRY and low coupling."],
-              ["07", "Choose Patterns", "Use patterns only where they solve a real problem."],
-              [
-                "08",
-                "Handle Concurrency",
-                "Identify shared state and synchronization requirements.",
-              ],
-              ["09", "Write Code", "Implement interfaces, classes and collaborations."],
-              ["10", "Discuss Trade-offs", "Explain alternatives and why your design works."],
-            ].map(([number, title, text]) => (
-              <div key={number} className="rounded-2xl border border-slate-200 bg-[#fbfdff] p-6">
-                <div className="text-xs font-black text-blue-600">{number}</div>
-
-                <h3 className="mt-3 font-black text-slate-950">{title}</h3>
-
-                <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </RevealSection>
-      <RevealSection
-        id="problems"
-        className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8"
-      >
-        <div className="max-w-3xl">
-          <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-            Inside the book · Real-world design practice
-          </div>
-
-          <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-            16 System Designs Covered in the Book
-          </h2>
-
-          <p className="mt-4 leading-7 text-slate-600">
-            Explore the systems included in the book. Each card highlights the domain, core classes
-            and design concepts you will practice. The full practice prompts and requirements are
-            inside the book.
-          </p>
-        </div>
-
-        <div className="mt-10 lld-design-grid">
-          {designQuestions.map((question, index) => (
-            <div key={question.title} className="lld-design-card">
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
-                  {question.company}
-                </span>
-
-                <span className="text-xs font-bold text-slate-400">
-                  LLD {String(index + 1).padStart(2, "0")}
-                </span>
-              </div>
-
-              <h3 className="mt-5 text-xl font-black text-slate-950">{question.title}</h3>
-
-              <div className="mt-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                {question.focus}
-              </div>
-
-              <div className="mt-5 rounded-xl bg-slate-50 p-4">
-                <div className="text-[10px] font-black uppercase tracking-wider text-blue-600">
-                  What you will explore
-                </div>
-
-                <p className="mt-2 text-sm leading-6 text-slate-600">{QUESTION_SUMMARIES[index]}</p>
-              </div>
-
-              <div className="mt-5">
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Key Classes
-                </div>
-
-                <p className="mt-2 text-xs leading-6 text-slate-600">{question.classes}</p>
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                {question.patterns.map((pattern) => (
-                  <span
-                    key={pattern}
-                    className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-bold text-blue-700"
-                  >
-                    {pattern}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </RevealSection>
-      {/* <RevealSection className="border-y border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-blue-700">
-              Example: BookMyShow
-            </div>
-
-            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Movie Ticket Booking
-            </h2>
-
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              A practical LLD exercise around shows, seats, users, bookings, payments and the most
-              important challenge: handling concurrent seat reservations.
-            </p>
-          </div>
-
-          <div className="mt-10 grid min-w-0 gap-6 lg:grid-cols-2 lg:items-stretch">
-            <div className="min-w-0 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6 lg:p-8">
-              <div className="mb-6">
-                <span className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">
-                  What you'll design
-                </span>
-
-                <h3 className="mt-2 text-xl font-black text-slate-950 sm:text-2xl">
-                  Booking System Responsibilities
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                {[
-                  "Identify Movie, Theatre, Screen and Show",
-                  "Model individual Seat and SeatStatus",
-                  "Create Booking and Payment abstractions",
-                  "Define seat lifecycle",
-                  "Handle temporary seat locking",
-                  "Prevent duplicate booking",
-                  "Calculate booking/payment amounts",
-                  "Notify users after booking state changes",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4"
-                  >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-black text-blue-700">
-                      ✓
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
+              {[
+                ["Functional requirements", "What should the system actually do?", FUNCTIONAL],
+                ["Non functional requirements", "How should it behave under real conditions?", NON_FUNCTIONAL],
+              ].map(([title, text, items], index) => (
+                <Reveal key={title} delay={index * 0.08}>
+                  <article className="card h-full rounded-3xl p-6 sm:p-8">
+                    <h3 className="heading-6 t1">{title}</h3>
+                    <p className="body-6 t2 mt-2">{text}</p>
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {items.map((item) => (
+                        <span key={item} className="chip caption-1">
+                          {item}
+                        </span>
+                      ))}
                     </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </Section>
 
-                    <p className="min-w-0 break-words text-sm font-semibold leading-6 text-slate-700">
-                      {item}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-7">
-                <div className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                  Patterns & Concepts
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {["State", "Strategy", "Observer", "Locking"].map((item) => (
-                    <span
-                      key={item}
-                      className="max-w-full break-words rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700"
-                    >
+          {/* ---------------------------- CONCURRENCY -------------------------- */}
+          <Section id="concurrency" labelledBy="concurrency-title">
+            <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+              <div>
+                <SectionHeader
+                  id="concurrency-title"
+                  eyebrow="Concurrency and thread safety"
+                  title="Locking is part of LLD"
+                  description="Real LLD problems contain shared state. Two users try for the same seat, two orders update the same inventory, or several threads write to the same resource."
+                />
+                <Reveal delay={0.08} className="mt-8 flex flex-wrap gap-2">
+                  {CONCURRENCY_TOPICS.map((item) => (
+                    <span key={item} className="chip caption-1">
                       {item}
                     </span>
                   ))}
-                </div>
+                </Reveal>
               </div>
-            </div>
 
-            <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
-                <div className="min-w-0">
-                  <div className="text-sm font-black text-slate-950">Seat Locking</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    Thread-safe seat state transition
+              <Reveal delay={0.1}>
+                <div className="card rounded-3xl p-4 sm:p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="title-3 t1">Seat and inventory locking</p>
+                    <span className="chip chip-accent caption-3 mono">Java</span>
                   </div>
+                  <pre className="code mt-4 rounded-xl p-4">{codeExamples.Locking}</pre>
+                  <p className="note body-6 mt-4 rounded-xl p-4">
+                    The book explains why the critical section exists, which race condition appears
+                    without it, and how different locking approaches change the design.
+                  </p>
                 </div>
+              </Reveal>
+            </div>
+          </Section>
 
-                <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                  Java
-                </span>
+          {/* ------------------------------- CODE ------------------------------ */}
+          <CodeShowcase />
+
+          {/* ---------------------------- FRAMEWORK ---------------------------- */}
+          <Section id="framework" labelledBy="framework-title">
+            <SectionHeader
+              id="framework-title"
+              eyebrow="Interview framework"
+              title="A repeatable LLD design process"
+              description="Ten steps you can run in every round, from the first clarifying question to the final tradeoff discussion."
+            />
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {FRAMEWORK_STEPS.map(([number, title, text], index) => (
+                <Reveal key={number} delay={(index % 5) * 0.06} y={24}>
+                  <article className="card lift h-full rounded-2xl p-4 sm:p-6">
+                    <span className="num heading-5 mono">{number}</span>
+                    <h3 className="title-3 t1 mt-3">{title}</h3>
+                    <p className="body-6 t2 mt-1">{text}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </Section>
+
+          {/* ---------------------------- CASE STUDIES ------------------------- */}
+          <Section id="problems" alt labelledBy="problems-title">
+            <SectionHeader
+              id="problems-title"
+              eyebrow="Real world design practice"
+              title="16 system designs covered in the book"
+              description="Each card shows the domain, the core classes and the design concepts you will practice. The full prompts and requirements are inside the book."
+            />
+
+            <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {designQuestions.map((question, index) => (
+                <Reveal key={question.title} delay={(index % 3) * 0.06}>
+                  <article className="card lift flex h-full flex-col rounded-3xl p-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="chip chip-accent caption-3">{question.company}</span>
+                      <span className="num caption-3 mono">LLD {twoDigits(index + 1)}</span>
+                    </div>
+                    <h3 className="heading-6 t1 mt-4">{question.title}</h3>
+                    <p className="caption-3 t3 mt-1 uppercase tracking-wider">{question.focus}</p>
+                    <p className="body-6 t2 mt-4">{QUESTION_SUMMARIES[index]}</p>
+                    <p className="caption-3 t3 mt-4 uppercase tracking-wider">Key classes</p>
+                    <p className="caption-2 mono t2 mt-1">{question.classes}</p>
+                    <div className="mt-auto flex flex-wrap gap-2 pt-6">
+                      {question.patterns.map((pattern) => (
+                        <span key={pattern} className="chip caption-4">
+                          {pattern}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+
+            <Reveal className="mt-10 flex flex-col items-center gap-3 text-center">
+              <p className="body-2 t1">All 16 designs come with UML and Java code.</p>
+              <button type="button" onClick={openCheckout} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+                Get the ebook {priceNode !== "Unavailable" && priceNode}
+                <ArrowRight className="arrow" size={18} weight="bold" />
+              </button>
+            </Reveal>
+          </Section>
+
+          {/* --------------------------- INSIDE + QUESTIONS -------------------- */}
+          <Section id="inside" labelledBy="inside-title">
+            <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+              <div>
+                <SectionHeader
+                  id="inside-title"
+                  eyebrow="Inside the book"
+                  title="Everything you need for LLD"
+                  description="A structured progression from object oriented thinking to complete design problems and their implementation."
+                />
+                <Reveal delay={0.08} className="mt-8 flex flex-wrap gap-2">
+                  {INSIDE_TOPICS.map((item) => (
+                    <span key={item} className="chip caption-1">
+                      <Check className="ta" size={12} weight="bold" />
+                      {item}
+                    </span>
+                  ))}
+                </Reveal>
               </div>
 
-              <div className="min-w-0 overflow-hidden bg-white text-bl">
-                <pre className="max-w-full overflow-x-auto whitespace-pre bg-slate-50 p-4 text-[11px] leading-6 text-black sm:p-6 sm:text-sm sm:leading-7">
-                  {`enum SeatState { AVAILABLE, LOCKED, BOOKED }
-
-class Seat {
-
-    private SeatState state = SeatState.AVAILABLE;
-
-    public synchronized boolean lock() {
-
-        if (state != SeatState.AVAILABLE)
-            return false;
-
-        state = SeatState.LOCKED;
-        return true;
-    }
-
-    public synchronized void book() {
-
-        if (state != SeatState.LOCKED)
-            throw new IllegalStateException();
-
-        state = SeatState.BOOKED;
-    }
-}`}
-                </pre>
-              </div>
-
-              <div className="border-t border-slate-200 bg-blue-50/60 p-4 sm:p-6">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-xs font-black text-white">
-                    ?
-                  </div>
-
-                  <h4 className="text-sm font-black text-slate-950">Design Thinking</h4>
+              <Reveal delay={0.1}>
+                <div className="card rounded-3xl p-6 sm:p-8">
+                  <p className="eyebrow caption-3">Interview preparation</p>
+                  <h3 className="heading-5 t1 mt-2">Questions you will learn to answer</h3>
+                  <p className="body-6 t2 mt-2">
+                    The goal is to explain your reasoning, not simply draw classes on a whiteboard.
+                  </p>
+                  <ul className="rule mt-6 grid gap-px overflow-hidden rounded-xl">
+                    {INTERVIEW_QUESTIONS.map((question) => (
+                      <li key={question} className="bg-s2 row-hover body-5 t1 px-4 py-3">
+                        {question}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-
-                <p className="mt-3 break-words text-sm leading-7 text-slate-600">
-                  The important part is not memorizing this class. The important part is recognizing
-                  that seat state changes need controlled transitions and concurrency protection.
-                </p>
-              </div>
+              </Reveal>
             </div>
-          </div>
+          </Section>
 
-          <div className="mt-6 overflow-hidden rounded-3xl border border-blue-100 bg-blue-50/50 p-4 sm:p-6">
-            <div className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">
-              Seat Lifecycle
-            </div>
+          {/* ------------------------------ AUDIENCE --------------------------- */}
+          <Section id="audience" alt labelledBy="audience-title">
+            <SectionHeader
+              id="audience-title"
+              eyebrow="Who should buy this"
+              title="Built for developers who want to design, not just code"
+              description="Whether you are starting LLD or preparing for an interview, the book moves from fundamentals to complete real world systems."
+            />
 
-            <div className="mt-5 hidden items-center justify-center gap-3 sm:flex">
-              <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700">
-                AVAILABLE
-              </div>
-              <span className="font-black text-blue-500">→</span>
-              <div className="rounded-xl border border-blue-200 bg-blue-100 px-5 py-3 text-sm font-bold text-blue-700">
-                LOCKED
-              </div>
-              <span className="font-black text-blue-500">→</span>
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700">
-                BOOKED
-              </div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {AUDIENCE.map(([title, text], index) => (
+                <Reveal key={title} delay={(index % 3) * 0.07}>
+                  <article className="card lift h-full rounded-3xl p-6">
+                    <span className="num caption-3 mono">{twoDigits(index + 1)}</span>
+                    <h3 className="heading-6 t1 mt-3">{title}</h3>
+                    <p className="body-6 t2 mt-2">{text}</p>
+                  </article>
+                </Reveal>
+              ))}
             </div>
 
-            <div className="mt-5 flex flex-col items-stretch gap-2 sm:hidden">
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-xs font-bold text-slate-700">
-                AVAILABLE
-              </div>
-              <div className="text-center font-black text-blue-500">↓</div>
-              <div className="rounded-xl border border-blue-200 bg-blue-100 px-4 py-3 text-center text-xs font-bold text-blue-700">
-                LOCKED
-              </div>
-              <div className="text-center font-black text-blue-500">↓</div>
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-xs font-bold text-emerald-700">
-                BOOKED
-              </div>
+            <Reveal className="mt-10">
+              <p className="eyebrow caption-3">Learning path</p>
+              <h3 className="heading-5 t1 mt-2">From beginner to interview ready</h3>
+            </Reveal>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {LEARNING_PATH.map(([number, title, text], index) => (
+                <Reveal key={number} delay={index * 0.06} y={24}>
+                  <article className="card lift h-full rounded-2xl p-4 sm:p-6">
+                    <span className="num heading-5 mono">{number}</span>
+                    <h4 className="title-3 t1 mt-3">{title}</h4>
+                    <p className="body-6 t2 mt-1">{text}</p>
+                  </article>
+                </Reveal>
+              ))}
             </div>
-          </div>
-        </div>
-      </RevealSection> */}
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="text-center">
-          <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-            Pattern Practice Map
-          </div>
+          </Section>
 
-          <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-            Connect each pattern to a familiar design problem
-          </h2>
-        </div>
+          {/* -------------------------------- FAQ ------------------------------ */}
+          <Section id="faq" narrow labelledBy="faq-title">
+            <SectionHeader
+              id="faq-title"
+              eyebrow="Quick answers"
+              title="Before you start"
+              description="Book contents, Java code, backend topics and buying details."
+              align="center"
+            />
+            <FaqList items={faqItems} idPrefix="lld-faq" defaultOpen={0} />
+          </Section>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Movie Ticket Booking", "Composition + State"],
-            ["Inventory Management", "Strategy + Observer"],
-            ["Parking Lot", "Strategy + Factory"],
-            ["Notification System", "Strategy + Observer"],
-            ["Rate Limiter", "Strategy + Concurrency"],
-            ["Logger", "Registry + Strategy"],
-            ["Train Reservation", "State + Queue"],
-            ["Car Rental", "Strategy + Decorator"],
-            ["Expense Sharing", "Strategy + Graph"],
-            ["Live Cricket Score", "Events + State"],
-            ["Coupon Engine", "Strategy + Chain"],
-            ["Ride Booking", "Strategy + State"],
-            ["Payment Gateway", "Adapter + Strategy"],
-            ["Video Conferencing", "Mediator + Composition"],
-            ["Order Management", "State + Strategy"],
-            ["Food Delivery", "Strategy + State"],
-          ].map(([title, pattern]) => (
-            <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h3 className="font-black text-slate-950">{title}</h3>
+          <FinalCta
+            titleId="lld-final-title"
+            eyebrow="Build a stronger LLD approach"
+            title="Turn interview prompts into designs you can defend."
+            copy="Get the Java LLD handbook and practice the full journey from requirements to classes, patterns, code and edge cases."
+            price={priceNode}
+            mrp={mrpNode}
+            onBuy={openCheckout}
+            canBuy={canBuy}
+            buyLabel="Get the ebook"
+            secondary={{ label: "Read the free preview first", onClick: goToPreview }}
+            note="Digital products are not refundable after purchase."
+          />
+        </main>
 
-              <div className="mt-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                {pattern}
+        <footer className="bg-base caption-2 t3 px-4 pb-8 text-center">
+          <p>Mastering System Design: Low Level Design in Java · Digital PDF ebook</p>
+          <p className="mt-2">
+            Questions?{" "}
+            <a className="link focusable font-semibold" href={`mailto:${SUPPORT_EMAIL}`}>
+              {SUPPORT_EMAIL}
+            </a>
+          </p>
+          <p className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <a className="link focusable font-medium" href={HLD_REDIRECT_URL}>System Design HLD</a>
+            <a className="link focusable font-medium" href={COMBO_REDIRECT_URL}>HLD + LLD Combo</a>
+            <a className="link focusable font-medium" href="/books">All books</a>
+          </p>
+        </footer>
+
+        <BuyBar
+          title="Mastering System Design LLD (Java)"
+          price={priceNode}
+          mrp={mrpNode}
+          discount={priceKnown ? discount : 0}
+          onBuy={openCheckout}
+          canBuy={canBuy}
+          buyLabel="Get the ebook"
+          hidden={checkoutOpen}
+          heroVisible={heroVisible && !loadingProduct}
+          secondary={{ label: "Free preview", onClick: goToPreview }}
+        />
+      </div>
+
+      {typeof document !== "undefined" &&
+        createPortal(
+          <PayUCheckoutModal
+            isOpen={checkoutOpen}
+            onClose={() => {
+              setCheckoutOpen(false);
+              setCheckoutProduct(null);
+            }}
+            product={checkoutProduct || product}
+          />,
+          document.body
+        )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sections with their own state                                      */
+/* ------------------------------------------------------------------ */
+
+function PatternLibrary() {
+  const reduce = useReducedMotion();
+  const categories = Object.keys(patterns);
+  const [category, setCategory] = useState(categories[0]);
+  const items = patterns[category];
+
+  return (
+    <Section id="patterns" labelledBy="patterns-title">
+      <SectionHeader
+        id="patterns-title"
+        eyebrow="Complete pattern library"
+        title="All 23 GoF design patterns"
+        description="The Creational, Structural and Behavioral families with purpose, use cases, examples and implementation thinking."
+      />
+
+      <Reveal className="mt-8">
+        <PillTabs
+          label="Pattern families"
+          value={category}
+          onChange={setCategory}
+          items={categories.map((name) => ({ id: name, label: name, count: patterns[name].length }))}
+        />
+      </Reveal>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={category}
+          role="tabpanel"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+        >
+          {items.map((pattern, index) => (
+            <article key={pattern.name} className="card lift flex h-full flex-col rounded-3xl p-6">
+              <div className="flex items-center justify-between gap-3">
+                <span className="num caption-3 mono">{twoDigits(index + 1)}</span>
+                <span className="chip caption-4">{PATTERN_KIND[category]}</span>
               </div>
-            </div>
+              <h3 className="heading-6 t1 mt-4">{pattern.name}</h3>
+              <p className="body-6 t2 mt-2">{pattern.purpose}</p>
+              <div className="bg-s2 mt-4 rounded-xl p-4">
+                <p className="caption-3 ta uppercase tracking-wider">Example</p>
+                <p className="body-5 t1 mt-1">{pattern.example}</p>
+              </div>
+              <p className="caption-3 t3 mt-4 uppercase tracking-wider">When to use</p>
+              <p className="body-6 t2 mt-1">{pattern.when}</p>
+            </article>
           ))}
-        </div>
-      </RevealSection>
-      <RevealSection className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-2">
+        </motion.div>
+      </AnimatePresence>
+
+      <Reveal className="mt-10">
+        <div className="card rounded-3xl p-6 sm:p-8">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
             <div>
-              <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-                Inside The Book
-              </div>
-
-              <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
-                Everything You Need for LLD
-              </h2>
-
-              <p className="mt-4 leading-7 text-slate-600">
-                A structured progression from object-oriented thinking to complete design problems
-                and implementation.
+              <p className="eyebrow caption-3">Pattern thinking</p>
+              <h3 className="heading-4 t1 mt-2">Do not force a pattern. Let the requirement reveal it.</h3>
+              <p className="body-3 t2 mt-4">
+                A common LLD mistake is using every pattern in every problem. The book teaches you to
+                understand the requirement first, then identify the design pressure.
               </p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                "OOP Fundamentals",
-                "Classes & Objects",
-                "Association",
-                "Aggregation",
-                "Composition",
-                "Inheritance",
-                "Polymorphism",
-                "Interfaces",
-                "Abstract Classes",
-                "SOLID",
-                "KISS",
-                "DRY",
-                "YAGNI",
-                "Coupling",
-                "Cohesion",
-                "Composition vs Inheritance",
-                "All 23 GoF Patterns",
-                "UML Thinking",
-                "Class Relationships",
-                "Concurrency",
-                "Thread Safety",
-                "Locking",
-                "Race Conditions",
-                "Deadlocks",
-                "Functional Requirements",
-                "Non-Functional Requirements",
-                "Design Trade-offs",
-                "Machine Coding",
-                "16 Real-World Systems",
-                "Java",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-[#fbfdff] p-3 text-sm font-semibold text-slate-700"
-                >
-                  <span className="text-blue-600">✓</span>
-
-                  {item}
-                </div>
+            <ul className="rule grid gap-px overflow-hidden rounded-xl">
+              {PATTERN_CUES.map(([question, answer]) => (
+                <li key={question} className="bg-s2 row-hover flex items-center justify-between gap-4 px-4 py-3">
+                  <span className="body-5 t1">{question}</span>
+                  <span className="body-4 ta shrink-0">{answer}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </div>
-      </RevealSection>
-      <RevealSection className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12">
-          <div className="grid gap-12 lg:grid-cols-2">
-            <div>
-              <div className="text-sm font-bold uppercase tracking-wider text-blue-600">
-                Interview Preparation
+      </Reveal>
+    </Section>
+  );
+}
+
+function CodeShowcase() {
+  const reduce = useReducedMotion();
+  const tabs = codeTabs.filter(([key]) => key !== "Locking");
+  const [active, setActive] = useState(tabs[0][0]);
+
+  return (
+    <Section id="code" alt labelledBy="code-title">
+      <SectionHeader
+        id="code-title"
+        eyebrow="Code first learning"
+        title="Design patterns in Java"
+        description="Every design problem is explained as a concept, then translated into practical, interview focused Java code."
+      />
+
+      <Reveal className="mt-8">
+        <PillTabs
+          label="Java examples"
+          value={active}
+          onChange={setActive}
+          items={tabs.map(([key, title]) => ({ id: key, label: title }))}
+        />
+      </Reveal>
+
+      <Reveal className="mt-6">
+        <div className="card rounded-3xl p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="title-3 t1">{tabs.find(([key]) => key === active)?.[1]}</p>
+            <span className="chip chip-accent caption-3 mono">Java</span>
+          </div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.pre
+              key={active}
+              role="tabpanel"
+              tabIndex={0}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: EASE }}
+              className="code focusable mt-4 rounded-xl p-4"
+            >
+              {codeExamples[active]}
+            </motion.pre>
+          </AnimatePresence>
+        </div>
+      </Reveal>
+    </Section>
+  );
+}
+
+function PdfPreviewSection({ file, onBuy, canBuy, priceNode }) {
+  const viewportRef = useRef(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [pageWidth, setPageWidth] = useState(760);
+  const [previewError, setPreviewError] = useState("");
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return undefined;
+
+    const updateWidth = () => {
+      const horizontalPadding = window.innerWidth <= 720 ? 16 : 32;
+      const available = Math.max(220, viewport.clientWidth - horizontalPadding);
+      setPageWidth(Math.min(900, available));
+    };
+
+    updateWidth();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
+
+    resizeObserver?.observe(viewport);
+    window.addEventListener("resize", updateWidth, { passive: true });
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
+
+  const previewPages = Math.min(pageCount, 5);
+
+  const blockBrowserSaveOrPrint = (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    const key = String(event.key || "").toLowerCase();
+    if (key === "s" || key === "p") event.preventDefault();
+  };
+
+  const failure = "The preview could not be loaded. Please refresh and try again.";
+
+  return (
+    <Section id="preview" labelledBy="lld-preview-title">
+      <SectionHeader
+        id="lld-preview-title"
+        eyebrow="Read before you buy"
+        title="Preview the book right on this page"
+        description="Scroll through a short sample of the Java LLD handbook and judge the depth yourself."
+      />
+
+      <Reveal className="mt-10">
+        <div className="card rounded-3xl p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <span className="tile h-12 w-12 rounded-xl">
+                <BookOpen size={24} weight="duotone" />
+              </span>
+              <div>
+                <p className="title-3 t1">Mastering System Design LLD Java sample</p>
+                <p className="caption-2 t3 mt-1">Scroll inside the preview to read the pages.</p>
               </div>
-
-              <h2 className="mt-3 text-3xl font-black text-slate-950">
-                What Will You Learn to Answer?
-              </h2>
-
-              <p className="mt-4 leading-7 text-slate-600">
-                The goal is to explain your reasoning, not simply draw classes on a whiteboard.
-              </p>
             </div>
+            <span className="chip chip-accent caption-3 self-start sm:self-auto">
+              {previewPages ? `${previewPages} page preview` : "Short preview"}
+            </span>
+          </div>
 
-            <div className="space-y-3">
-              {[
-                "Why did you create this interface?",
-                "Why Strategy instead of inheritance?",
-                "Why Factory instead of new?",
-                "Where would you use Observer?",
-                "What happens if two threads access this object?",
-                "Where is the critical section?",
-                "How would you make this design extensible?",
-                "What changes if another payment provider is added?",
-                "What happens if a new notification channel is introduced?",
-                "How would you test this design?",
-                "What is the responsibility of each class?",
-                "Which part of the design is likely to change?",
-              ].map((question) => (
-                <div
-                  key={question}
-                  className="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-700"
-                >
-                  {question}
-                </div>
-              ))}
-            </div>
+          <div
+            ref={viewportRef}
+            className="pdf-viewport mt-4 rounded-2xl p-2 sm:p-4"
+            role="region"
+            aria-label="Scrollable PDF book preview"
+            tabIndex={0}
+            onContextMenu={(event) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
+            onKeyDown={blockBrowserSaveOrPrint}
+          >
+            <Document
+              file={file}
+              onLoadSuccess={({ numPages }) => {
+                setPageCount(numPages);
+                setPreviewError("");
+              }}
+              onLoadError={(error) => {
+                console.error("Failed to load LLD preview PDF:", error);
+                setPreviewError(failure);
+              }}
+              loading={<div className="skel-block mx-auto aspect-[0.707] w-full max-w-3xl rounded-xl" role="status" aria-label="Loading book preview" />}
+              error={<p className="body-6 t2 p-6 text-center">{previewError || failure}</p>}
+              noData={<p className="body-6 t2 p-6 text-center">The preview file is unavailable.</p>}
+            >
+              <div className="space-y-4">
+                {Array.from({ length: previewPages }, (_, index) => {
+                  const pageNumber = index + 1;
+                  return (
+                    <div key={pageNumber}>
+                      <p className="caption-4 mono t3 mb-2 px-1">
+                        Preview page {twoDigits(pageNumber)} / {twoDigits(previewPages)}
+                      </p>
+                      <Page
+                        className="pdf-page flex justify-center"
+                        pageNumber={pageNumber}
+                        width={pageWidth}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        renderForms={false}
+                        loading={<div className="skel-block aspect-[0.707] w-full rounded-xl" />}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </Document>
+          </div>
+
+          <p className="caption-2 t3 mt-4 flex items-start gap-2">
+            <ShieldCheck className="ta mt-0.5 shrink-0" size={16} weight="bold" />
+            This preview holds only a few selected pages, so some topics start or end midway. The
+            complete explanations, code, diagrams and remaining content are in the full ebook.
+          </p>
+
+          <div className="mt-6 flex flex-col items-center gap-3 text-center">
+            <button type="button" onClick={onBuy} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
+              Get the full ebook {priceNode !== "Unavailable" && priceNode}
+              <ArrowRight className="arrow" size={18} weight="bold" />
+            </button>
           </div>
         </div>
-      </RevealSection>
-    </div>
+      </Reveal>
+    </Section>
   );
 }

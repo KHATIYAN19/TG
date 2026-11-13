@@ -43,7 +43,9 @@ export const recordEvents = handler(async (req, res) => {
 
   if (clean.some((e) => e.type === "open")) {
     const now = new Date();
-    await MemoryPage.updateOne({ _id: page._id }, { $inc: { "activity.opens": clean.filter((e) => e.type === "open").length }, $set: { "activity.lastOpenedAt": now }, $min: { "activity.firstOpenedAt": now } });
+    // ($min can't be used for the first-open time: the field starts as null, and null always "wins" a $min)
+    const firstEver = !page.activity?.firstOpenedAt && !(page.activity?.opens > 0);
+    await MemoryPage.updateOne({ _id: page._id }, { $inc: { "activity.opens": clean.filter((e) => e.type === "open").length }, $set: { "activity.lastOpenedAt": now, ...(firstEver ? { "activity.firstOpenedAt": now } : {}) } });
   }
   // a hard cap per page, so a script can't fill the database
   const have = await MemoryEvent.countDocuments({ page: page._id });
@@ -72,8 +74,7 @@ export const giveAnswer = handler(async (req, res) => {
   const updated = await MemoryPage.findOneAndUpdate(
     { _id: page._id, "answer.final": { $ne: true } },
     {
-      $set: { "answer.value": b.answer, "answer.final": b.answer !== "later", "answer.at": now },
-      $min: { "answer.firstAt": now },
+      $set: { "answer.value": b.answer, "answer.final": b.answer !== "later", "answer.at": now, ...(page.answer?.firstAt || page.answer?.value ? {} : { "answer.firstAt": now }) },
       $push: { "answer.history": { $each: [{ value: b.answer, at: now }], $slice: -20 } },
     },
     { new: true }
@@ -96,7 +97,7 @@ export const sendReply = handler(async (req, res) => {
   if (last && Date.now() - new Date(last.at).getTime() < 3000) throw new MemoryError(429, "Please wait a moment before sending another reply.", "TOO_FAST");
 
   const updated = await MemoryPage.findOneAndUpdate(
-    { _id: page._id, $expr: { $lt: [{ $size: "$replies" }, MAX_REPLIES] } },
+    { _id: page._id, $expr: { $lt: [{ $size: { $ifNull: ["$replies", []] } }, MAX_REPLIES] } },
     { $push: { replies: { text: b.text, at: new Date(), visitor } } },
     { new: true }
   );

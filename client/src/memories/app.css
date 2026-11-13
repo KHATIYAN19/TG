@@ -1,0 +1,130 @@
+/*
+  THE SIGNED-IN MEMORIES APP (/memories/app). Light pink, flat surfaces, one curve for every movement.
+  It builds on landing.css (text styles, buttons, inputs): the app root carries both .ml-root and .ma-root.
+*/
+.ma-root { --ml-bg: #fff5f8; --ml-line: #f8d7e0; --ma-card: #ffffff; --ma-pink: #ffe4ec; --ma-soft: #fff0f4; background: var(--ml-bg); }
+.ma-root .mem-anchor { scroll-margin-top: 5rem; }
+
+/* cards */
+.ma-card { background: var(--ma-card); border-radius: 24px; box-shadow: inset 0 0 0 1px var(--ml-line); }
+.ma-lift { transition: transform 0.5s var(--ml-ease), box-shadow 0.5s var(--ml-ease); }
+.ma-lift:hover { transform: translateY(-4px); box-shadow: inset 0 0 0 1px #f4b9c8, 0 24px 40px -24px rgba(190, 18, 60, 0.35); }
+.ma-icon { transition: transform 0.7s var(--ml-ease); }
+/* the little picture of a look comes alive when its card is hovered (the card itself never changes colour) */
+.ma-lift i, .ma-pick i { transition: transform 0.7s var(--ml-ease); }
+.ma-lift:hover .ml-look-a, .ma-pick:hover .ml-look-a { transform: scale(1.25); }
+.ma-lift:hover .ml-look-b, .ma-pick:hover .ml-look-b { transform: translate(12px, -12px) scale(1.15); }
+.ma-lift:hover .ma-icon, .ma-pick:hover .ma-icon, .ma-tab:hover .ma-icon { transform: rotate(-12deg) scale(1.12); }
+
+/* things you pick (templates, looks): a ring when chosen */
+.ma-pick { position: relative; background: #ffffff; box-shadow: inset 0 0 0 1px var(--ml-line); transition: transform 0.5s var(--ml-ease), box-shadow 0.3s var(--ml-ease), background-color 0.3s var(--ml-ease); }
+.ma-pick:hover { transform: translateY(-4px); box-shadow: inset 0 0 0 1px #f4b9c8, 0 16px 32px -20px rgba(190, 18, 60, 0.4); }
+.ma-pick:active { transform: scale(0.98); }
+.ma-pick[aria-checked="true"], .ma-pick[aria-pressed="true"] { background: var(--ma-soft); box-shadow: inset 0 0 0 2px var(--ml-accent); }
+.ma-tick { position: absolute; right: 8px; top: 8px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; background: var(--ml-accent); color: #fff; animation: ma-pop 0.5s var(--ml-ease) both; }
+@keyframes ma-pop { from { opacity: 0; transform: scale(0.4) rotate(-90deg); } to { opacity: 1; transform: none; } }
+
+/* entrances */
+@keyframes ma-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.ma-in { animation: ma-rise 0.6s var(--ml-ease) both; animation-delay: calc(var(--i, 0) * 60ms); }
+@keyframes ma-spin-in { from { opacity: 0; transform: rotate(-24deg) scale(0.6); } to { opacity: 1; transform: none; } }
+.ma-spin-in { animation: ma-spin-in 0.7s var(--ml-ease) both; }
+@keyframes ma-wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+.ma-wiggle { animation: ma-wiggle 2.4s var(--ml-ease) infinite; transform-origin: 50% 80%; }
+@keyframes ma-float { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-10px) rotate(var(--r, 0deg)); } }
+.ma-float { animation: ma-float 6s cubic-bezier(0.45, 0, 0.55, 1) infinite; animation-delay: var(--d, 0s); }
+
+/* navigation */
+.ma-bar { background: rgba(255, 255, 255, 0.82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px var(--ml-line), 0 12px 32px -16px rgba(190, 18, 60, 0.3); }
+.ma-tab { position: relative; color: #8a6a80; transition: color 0.3s var(--ml-ease), background-color 0.3s var(--ml-ease), transform 0.5s var(--ml-ease); }
+.ma-tab:hover { color: var(--ml-accent-deep); }
+.ma-tab:active { transform: scale(0.96); }
+.ma-tab.on { color: #ffffff; background: var(--ml-accent); }
+.ma-side-link { color: #6b3a5a; transition: background-color 0.3s var(--ml-ease), color 0.3s var(--ml-ease), transform 0.5s var(--ml-ease); }
+.ma-side-link:hover { background: var(--ma-soft); transform: translateX(4px); }
+.ma-side-link.on { background: var(--ma-pink); color: var(--ml-accent-deep); }
+
+/* chips and small buttons */
+.ma-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 9999px; white-space: nowrap; }
+.ma-mini { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 12px; border-radius: 12px; background: #ffffff; color: var(--ml-accent-deep); box-shadow: inset 0 0 0 1px var(--ml-line); transition: transform 0.5s var(--ml-ease), background-color 0.3s var(--ml-ease); }
+.ma-mini:hover { background: var(--ma-soft); transform: translateY(-2px); }
+.ma-mini:active { transform: scale(0.96); }
+.ma-mini:disabled { opacity: 0.45; transform: none; cursor: not-allowed; }
+.ma-round { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9999px; flex-shrink: 0; color: #6b3a5a; transition: background-color 0.3s var(--ml-ease), transform 0.5s var(--ml-ease), color 0.3s var(--ml-ease); }
+.ma-round:hover { background: var(--ma-pink); color: var(--ml-accent-deep); transform: rotate(90deg); }
+.ma-round:disabled { opacity: 0.4; }
+
+/* stepper for packs */
+.ma-step { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9999px; transition: transform 0.5s var(--ml-ease), background-color 0.3s var(--ml-ease); }
+.ma-step:hover:not(:disabled) { transform: scale(1.1); }
+.ma-step:active:not(:disabled) { transform: scale(0.92); }
+.ma-step:disabled { opacity: 0.35; cursor: not-allowed; }
+@keyframes ma-bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.ma-bump { animation: ma-bump 0.4s var(--ml-ease); }
+
+/* skeleton loading */
+@keyframes ma-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.ma-skel { background: var(--ma-pink); border-radius: 16px; animation: ma-pulse 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+
+/* ------------------------------------------------ modals: a sheet from the bottom on phones, a dialog in the middle on larger screens */
+.ml-root.ma-overlay {
+  position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-end; justify-content: center; min-height: 0;
+  background: rgba(42, 16, 35, 0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: ma-fade 0.3s var(--ml-ease) both; overscroll-behavior: contain;
+}
+@keyframes ma-fade { from { opacity: 0; } to { opacity: 1; } }
+.ma-sheet {
+  position: relative; display: flex; flex-direction: column; width: 100%; min-width: 0;
+  max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+  background: var(--ml-bg, #fff5f8); border-radius: 24px 24px 0 0; overflow: hidden;
+  box-shadow: 0 -24px 64px -16px rgba(42, 16, 35, 0.45);
+  animation: ma-sheet-up 0.5s var(--ml-ease) both;
+}
+@keyframes ma-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.ma-sheet-head { flex-shrink: 0; display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: #ffffff; box-shadow: inset 0 -1px 0 var(--ml-line); }
+.ma-sheet-grab { position: absolute; left: 50%; top: 6px; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: #f4b9c8; }
+.ma-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 16px; }
+.ma-sheet-foot { flex-shrink: 0; padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); background: #ffffff; box-shadow: inset 0 1px 0 var(--ml-line); }
+.ma-close { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 9999px; background: var(--ma-pink); color: var(--ml-accent-deep); transition: transform 0.5s var(--ml-ease), background-color 0.3s var(--ml-ease), color 0.3s var(--ml-ease); }
+.ma-close:hover { background: var(--ml-accent); color: #ffffff; transform: rotate(90deg); }
+.ma-close:active { transform: scale(0.92); }
+.ma-close:disabled { opacity: 0.4; }
+@media (min-width: 640px) {
+  .ml-root.ma-overlay { align-items: center; padding: 24px; }
+  .ma-sheet { border-radius: 24px; max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); box-shadow: 0 32px 80px -24px rgba(42, 16, 35, 0.5); animation-name: ma-dialog-in; }
+  .ma-sheet-grab { display: none; }
+  .ma-sheet-head, .ma-sheet-body, .ma-sheet-foot { padding-left: 24px; padding-right: 24px; }
+}
+@keyframes ma-dialog-in { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+.ma-row { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; text-align: left; transition: background-color 0.3s var(--ml-ease), transform 0.5s var(--ml-ease); }
+.ma-row:hover:not(:disabled) { background: #ffffff; transform: translateX(4px); }
+.ma-row:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ma-in, .ma-spin-in, .ma-sheet, .ml-root.ma-overlay, .ma-tick { animation: none !important; }
+}
+
+/* the price bar that stays in reach: solid, so the page scrolling under it never shows through */
+.ma-buybar { background: #ffffff; box-shadow: inset 0 0 0 1px var(--ml-line), 0 16px 40px -16px rgba(190, 18, 60, 0.4); }
+
+/* THE BUY DOCK: one compact dark row that stays above the tabs. Price on the left, the one button on the right. */
+.ma-dock { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 20px; border-radius: 9999px; background: #2a1023; color: #ffffff; box-shadow: 0 16px 40px -12px rgba(42, 16, 35, 0.55); animation: ma-rise 0.6s var(--ml-ease) both; }
+.ma-dock .ml-btn { padding: 12px 16px; white-space: nowrap; flex-shrink: 0; max-width: 62%; }
+.ma-dock > div { overflow: hidden; }
+@media (max-width: 399px) { .ma-dock { padding-left: 16px; gap: 8px; } .ma-dock .ml-btn, .ma-two .ml-btn { font-size: 0.875rem; line-height: 1.25rem; padding-left: 12px; padding-right: 12px; } }
+.ma-two .ml-btn { white-space: nowrap; min-width: 0; }
+.ma-dock .ml-btn:disabled { background: var(--ml-accent); }
+@media (min-width: 640px) { .ma-dock { padding: 12px 12px 12px 24px; } .ma-dock .ml-btn { padding: 12px 24px; } }
+.ma-dock-link { display: inline-flex; align-items: center; gap: 4px; padding: 12px 16px; border-radius: 9999px; color: #ffffff; white-space: nowrap; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); transition: background-color 0.3s var(--ml-ease), transform 0.5s var(--ml-ease); }
+.ma-dock-link:hover { background: #4a2340; transform: translateY(-2px); }
+
+/* the banner at the top of the templates tab */
+.ma-hero { position: relative; overflow: hidden; border-radius: 24px; background: var(--ma-pink); }
+.ma-num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; background: var(--ml-accent); color: #ffffff; letter-spacing: 0; }
+.ma-tcard { position: relative; display: flex; width: 100%; height: 100%; flex-direction: column; align-items: flex-start; padding: 16px; border-radius: 24px; text-align: left; overflow: hidden; transition: transform 0.5s var(--ml-ease), box-shadow 0.3s var(--ml-ease); }
+.ma-tcard:hover { transform: translateY(-6px) rotate(-1deg); box-shadow: 0 20px 32px -20px rgba(42, 16, 35, 0.45); }
+.ma-tcard:active { transform: scale(0.98); }
+.ma-tcard[aria-pressed="true"] { box-shadow: inset 0 0 0 3px #2a1023; }
+.ma-tcard .ma-tcard-big { position: absolute; right: -12px; bottom: -12px; opacity: 0.35; transition: transform 0.7s var(--ml-ease); }
+.ma-tcard:hover .ma-tcard-big { transform: rotate(-16deg) scale(1.15); }

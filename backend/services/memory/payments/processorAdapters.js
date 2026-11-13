@@ -41,9 +41,9 @@ const make = ({ id, label, needsPublicUrl, withClientVerify }) => {
     /* The gateway's own answer, in the shape settleOrder expects. A wrong amount is passed through so settleOrder records AMOUNT_MISMATCH. */
     async fetchStatus(order) {
       const r = await verifyPayment({ product: PRODUCT, gateway: id, gatewayOrderId: order.gatewayOrderId, expectedAmountPaise: order.amount });
-      return r.status === "paid" || r.reason === "AMOUNT_MISMATCH"
-        ? { paid: true, paymentId: r.paymentId, amountPaise: r.amountPaise }
-        : { paid: false };
+      if (r.status === "paid" || r.reason === "AMOUNT_MISMATCH") return { paid: true, paymentId: r.paymentId, amountPaise: r.amountPaise };
+      // "failed" = the gateway says every attempt was declined or cancelled; anything else is simply not paid yet
+      return r.status === "failed" ? { paid: false, failed: true, reason: r.reason || "GATEWAY_FAILED" } : { paid: false };
     },
 
     parseWebhook({ rawBody, headers }) {

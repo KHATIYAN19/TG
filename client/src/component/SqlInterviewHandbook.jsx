@@ -31,7 +31,7 @@ import {
   ScrollProgress,
   CountUp,
   ScrollScale,
-} from "./SystemDesignLLD.jsx";
+} from "./lldLegacyBase.jsx";
 
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
