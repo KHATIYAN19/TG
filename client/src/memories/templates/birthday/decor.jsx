@@ -34,6 +34,9 @@ export const PetalSvg = ({ c = "#ff7a9a", s = 22 }) => (
 export const NoteSvg = ({ c = "#7c5cff", s = 22 }) => (
   <svg viewBox="0 0 24 24" width={s} height={s} aria-hidden><path d="M9 18V5l11-2v13" stroke={c} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /><circle cx="6.5" cy="18" r="3.2" fill={c} /><circle cx="17.5" cy="16" r="3.2" fill={c} /></svg>
 );
+export const SnowSvg = ({ c = "#ffffff", s = 18 }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden><g stroke={c} strokeWidth="2" strokeLinecap="round" fill="none"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" /></g><circle cx="12" cy="12" r="2.2" fill={c} /></svg>
+);
 export const SparkleSvg = ({ c = "#ffffff", s = 18 }) => (
   <svg viewBox="0 0 24 24" width={s} height={s} aria-hidden><path d="M12 0c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12C7 11 11 7 12 0z" fill={c} /></svg>
 );
@@ -338,6 +341,7 @@ function FloatArt({ kind, color, text, size }) {
     case "leaf": return <LeafSvg c={color} s={size * 1.2} />;
     case "hibiscus": return <HibiscusSvg c={color} s={size * 1.6} />;
     case "sparkle": return <SparkleSvg c={color} s={size} />;
+    case "snow": return <SnowSvg c={color} s={size * 0.8} />;
     case "planet": return <Planet className="bd-fl-planet" />;
     case "bear": return <BearFace s={size * 1.3} />;
     case "butterfly": return <ButterflyFloat c={color} s={size * 1.5} />;
@@ -364,7 +368,7 @@ export function BgFloat({ theme, spec: specProp }) {
           left: r() * 96, top: r() * 100,
           size: kind === "bubble" ? 17 + r() * 8 : 14 + r() * 22,
           dur, delay: dir === "twinkle" ? -r() * dur : -r() * dur,
-          rot: (r() - 0.5) * 360, color: theme.balloons[Math.floor(r() * theme.balloons.length)],
+          rot: (r() - 0.5) * 360, color: kind === "snow" && theme.snow ? theme.snow : theme.balloons[Math.floor(r() * theme.balloons.length)],
           text: BUBBLES[Math.floor(r() * BUBBLES.length)], sway: 8 + r() * 26,
         });
       }

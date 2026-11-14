@@ -24,6 +24,7 @@ const TEMPLATE_PAGES = {
   anniversary: lazy(() => import("./templates/anniversary/AnniversaryPage")),
   proposal: lazy(() => import("./templates/proposal/ProposalPage")),
   thanks: lazy(() => import("./templates/thanks/ThanksPage")),
+  christmas: lazy(() => import("./templates/christmas/ChristmasPage")),
 };
 
 const tokenKey = (code) => `memories:unlock:${code}`;

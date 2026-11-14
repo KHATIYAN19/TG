@@ -182,6 +182,9 @@ const ProposalPreview = lazy(() =>
 const ThanksPreview = lazy(() =>
   import("./memories/templates/thanks/ThanksPreview.jsx")
 );
+const ChristmasPreview = lazy(() =>
+  import("./memories/templates/christmas/ChristmasPreview.jsx")
+);
 const MemoriesPaymentResult = lazy(() =>
   import("./memories/MemoriesPaymentResult.jsx")
 );
@@ -1085,6 +1088,10 @@ function App() {
           <Route
             path="/memories/preview/thanks"
             element={<ThanksPreview />}
+          />
+          <Route
+            path="/memories/preview/christmas"
+            element={<ChristmasPreview />}
           />
           <Route
             path="/prep-buddy"

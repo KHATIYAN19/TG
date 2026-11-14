@@ -24,6 +24,7 @@ const COPY = {
   proposal: { subject: (s) => `${s} has a question for you`, headline: (r, s) => `${r}, ${s} wrote you something`, line: (s) => `${s} made you a page and would love for you to open it. Take your time. Whatever you answer is entirely yours to decide.`, button: "Open your page", emoji: "💍" },
   anniversary: { subject: (s) => `${s} made you an anniversary page`, headline: (r) => `Happy anniversary, ${r}`, line: (s) => `${s} made you a page about your story together.`, button: "Open your page", emoji: "🥂" },
   thanks: { subject: (s) => `${s} wrote you a thank-you page`, headline: (r) => `Thank you, ${r}`, line: (s) => `${s} made you a page to say thank you.`, button: "Open your page", emoji: "🍂" },
+  christmas: { subject: (s) => `${s} sent you a Christmas page`, headline: (r) => `Merry Christmas, ${r}`, line: (s) => `${s} made you a little Christmas page, with a few surprises under the tree and a wish waiting just for you.`, button: "Open your page", emoji: "🎄" },
 };
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

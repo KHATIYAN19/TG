@@ -327,7 +327,7 @@ const OTHER_ADMIN_ROUTES = [
     name: "Memory Pages",
     icon: Heart,
     description:
-      "Birthday, proposal and sorry pages: users and logins, live links with PIN, deactivate and delete controls, payments, access codes, price and upload limits.",
+      "Birthday, proposal, Christmas and sorry pages: users and logins, live links with PIN, deactivate and delete controls, payments, access codes, price and upload limits.",
     category: "Users & Access",
     keywords:
       "memory memories birthday proposal sorry love page pin link private public codes price limits photos videos",

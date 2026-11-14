@@ -417,5 +417,75 @@ export const EMAIL_LOOKS = {
         "line": "rgba(255,255,255,.18)"
       }
     }
+  },
+  "christmas": {
+    "default": "classic",
+    "looks": {
+      "classic": {
+        "name": "Classic Christmas",
+        "dark": false,
+        "bg": "#fff5ea",
+        "bg2": "#ffd6d0",
+        "ink": "#3b0d12",
+        "muted": "#7d3a40",
+        "accent": "#c1121f",
+        "accent2": "#1f7a3d",
+        "onAccent": "#ffffff",
+        "card": "#ffffff",
+        "line": "rgba(0,0,0,.08)"
+      },
+      "snowy": {
+        "name": "Snowy Night",
+        "dark": true,
+        "bg": "#0b1630",
+        "bg2": "#1c2e5c",
+        "ink": "#f2f7ff",
+        "muted": "#b8cdf0",
+        "accent": "#8fd3ff",
+        "accent2": "#ffd86b",
+        "onAccent": "#0b1630",
+        "card": "#1c2e5c",
+        "line": "rgba(255,255,255,.18)"
+      },
+      "gingerbread": {
+        "name": "Gingerbread Cozy",
+        "dark": false,
+        "bg": "#fbefdc",
+        "bg2": "#f0c9a0",
+        "ink": "#4a2410",
+        "muted": "#8a5233",
+        "accent": "#b5522a",
+        "accent2": "#d9385a",
+        "onAccent": "#ffffff",
+        "card": "#ffffff",
+        "line": "rgba(0,0,0,.08)"
+      },
+      "aurora": {
+        "name": "Northern Lights",
+        "dark": true,
+        "bg": "#07201f",
+        "bg2": "#0f4a4a",
+        "ink": "#eafff8",
+        "muted": "#a5e6d6",
+        "accent": "#5cf2c0",
+        "accent2": "#b690ff",
+        "onAccent": "#052a26",
+        "card": "#0f4a4a",
+        "line": "rgba(255,255,255,.18)"
+      },
+      "golden": {
+        "name": "Golden Glow",
+        "dark": false,
+        "bg": "#fffaf0",
+        "bg2": "#f7e3b0",
+        "ink": "#2d2a12",
+        "muted": "#7a6a2a",
+        "accent": "#b8860b",
+        "accent2": "#1f6b4a",
+        "onAccent": "#ffffff",
+        "card": "#ffffff",
+        "line": "rgba(0,0,0,.08)"
+      }
+    }
   }
 };

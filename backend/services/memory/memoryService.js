@@ -67,6 +67,7 @@ export const TEMPLATE_THEMES = {
   anniversary: ["lovey", "golden", "candlelight", "garden", "sunset"],
   proposal: ["romance", "starlit", "blossom", "fairytale", "sunrise"],
   thanks: ["harvest", "cozy", "sunshine", "professional", "meadow", "twilight"],
+  christmas: ["classic", "snowy", "gingerbread", "aurora", "golden"],
 };
 export const MAX_TIMELINE = 8;
 export const MAX_REASONS = 12;
@@ -84,6 +85,8 @@ export const styleFor = (page) => {
 
 export const MAX_PEOPLE = 10;
 export const THANKS_AUDIENCES = ["friend", "family", "colleague", "team", "mentor", "community"];
+/* every wording a page can be written for: the Thank You ones, plus "partner" (Christmas pages for someone you love) */
+export const PAGE_AUDIENCES = [...THANKS_AUDIENCES, "partner"];
 export const timelineOut = (page) => (page.timeline || []).map((m) => ({ id: String(m._id), date: m.date || "", title: m.title, note: m.note || "" }));
 export const statsOut = (page) => (page.stats || []).map((s) => ({ id: String(s._id), label: s.label, value: s.value }));
 
@@ -101,15 +104,36 @@ export const updateSettings = (patch) =>
 
 const DEFAULT_OCCASIONS = [
   ["Birthday", "birthday"],
-  ["Marriage Proposal", "proposal"],
+  ["Proposal", "proposal"],
   ["Sorry", "sorry"],
   ["Anniversary", "anniversary"],
   ["Thank You", "thanks"],
+  ["Christmas", "christmas"],
 ];
 
+/* Templates added after the first launch. A database that already has occasions gets each of these once (see ensureOccasions). */
+const ADDED_OCCASIONS = [["Christmas", "christmas"]];
+let toppedUp = false;
+
 export const ensureOccasions = async () => {
-  if (await MemoryOccasion.estimatedDocumentCount()) return;
-  await MemoryOccasion.insertMany(DEFAULT_OCCASIONS.map(([name, theme], i) => ({ name, theme, sortOrder: i })), { ordered: false }).catch(() => {});
+  if (!(await MemoryOccasion.estimatedDocumentCount())) {
+    await MemoryOccasion.insertMany(DEFAULT_OCCASIONS.map(([name, theme], i) => ({ name, theme, sortOrder: i })), { ordered: false }).catch(() => {});
+    toppedUp = true;
+    return;
+  }
+  if (toppedUp) return;
+  toppedUp = true; // once per server start; a failure below lets the next request try again
+  try {
+    // "Marriage Proposal" is now just "Proposal" (it also asks girlfriend / boyfriend). Only the untouched default name is renamed.
+    await MemoryOccasion.updateOne({ name: "Marriage Proposal", theme: "proposal" }, { $set: { name: "Proposal" } }).catch((e) => { if (e?.code !== 11000) throw e; });
+    for (const [name, theme] of ADDED_OCCASIONS) {
+      if (await MemoryOccasion.exists({ theme })) continue;
+      await MemoryOccasion.create({ name, theme, sortOrder: await MemoryOccasion.countDocuments() }).catch((e) => { if (e?.code !== 11000) throw e; });
+    }
+  } catch (e) {
+    toppedUp = false;
+    console.error("[memory] could not update the template list:", e.message);
+  }
 };
 
 /* =====================================================
@@ -202,6 +226,7 @@ export const EVENT_TYPES = new Set([
   "jar_reason", "toast", "bouquet", "lantern", // anniversary
   "box_open", // proposal
   "leaf", "react", // thank you
+  "ornament", "snow_shake", "wish", "santa_tap", // christmas
 ]);
 export const MAX_EVENTS_PER_PAGE = 4000;
 export const MAX_REPLIES = 30;

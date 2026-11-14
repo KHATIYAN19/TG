@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Cake, Champagne, CircleNotch, Diamond, HeartBreak, Leaf } from "@phosphor-icons/react";
+import { Cake, Champagne, CircleNotch, Diamond, HeartBreak, Leaf, TreeEvergreen } from "@phosphor-icons/react";
 
 import { cx } from "./ui";
 
@@ -15,6 +15,7 @@ export const OCCASION = {
   proposal: { Icon: Diamond, tint: "#fef3c7", ink: "#b45309", short: "The big question" },
   anniversary: { Icon: Champagne, tint: "#ffedd5", ink: "#c2410c", short: "Your love story" },
   thanks: { Icon: Leaf, tint: "#dcfce7", ink: "#15803d", short: "Say thank you" },
+  christmas: { Icon: TreeEvergreen, tint: "#fee2e2", ink: "#b91c1c", short: "Wishes under the tree" },
 };
 
 /** The flat button used across Memories. `to` makes a router link, `href` a plain link, neither a button. `loading` shows a spinner and blocks taps. */

@@ -1,0 +1,62 @@
+/* ---------- Santa, his sleigh and the reindeer ---------- */
+.xm-hero, .xm-finale { position: relative; overflow-x: clip; }
+.xm-fly { position: absolute; left: 0; z-index: 4; pointer-events: none; animation: xm-fly var(--dur, 18s) linear var(--delay, 2s) infinite; transform: translateX(-340px); }
+.xm-fly.once { animation-iteration-count: 1; animation-fill-mode: forwards; }
+.xm-fly.gate { z-index: 1; }
+@keyframes xm-fly { from { transform: translateX(-340px); } to { transform: translateX(calc(100vw + 40px)); } }
+.xm-fly-in { display: block; width: 100%; padding: 0; background: none; border: 0; cursor: pointer; pointer-events: auto; animation: xm-bob 2.2s ease-in-out infinite; filter: drop-shadow(0 8px 10px rgba(0,0,0,.25)); -webkit-tap-highlight-color: transparent; }
+.xm-fly-in:focus-visible { outline: 2px solid var(--bd-accent); border-radius: 12px; }
+@keyframes xm-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
+.xm-sleigh { width: 100%; height: auto; display: block; }
+.xm-leg { animation: xm-gallop .5s ease-in-out infinite alternate; }
+.xm-leg.b { animation-direction: alternate-reverse; }
+@keyframes xm-gallop { from { transform: rotate(-26deg); } to { transform: rotate(26deg); } }
+.xm-nose { animation: xm-nose 1s ease-in-out infinite; filter: drop-shadow(0 0 6px #ff2d2d); }
+@keyframes xm-nose { 50% { opacity: .55; } }
+.xm-trail circle { animation: xm-trail 1s ease-out infinite; animation-delay: calc(var(--k) * -.15s); }
+@keyframes xm-trail { from { opacity: 1; } to { opacity: 0; transform: translate(-14px, 8px); } }
+.xm-santa-bob { animation: xm-santa-bob 1.1s ease-in-out infinite; transform-origin: 74px 60px; }
+@keyframes xm-santa-bob { 50% { transform: translateY(-2px) rotate(-2deg); } }
+.xm-wave { animation: xm-wave .7s ease-in-out infinite alternate; }
+@keyframes xm-wave { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
+.xm-hoho { position: absolute; left: 50%; top: -34px; transform: translateX(-50%); padding: .3rem .8rem; border-radius: 999px; background: #fff; color: #c1121f; font-family: var(--f-head); font-weight: 700; font-size: 1.05rem; white-space: nowrap; box-shadow: 0 6px 16px rgba(0,0,0,.2); animation: bd-pop-in .4s both; }
+.xm-drop { position: absolute; top: 70%; font-style: normal; font-size: 1.5rem; animation: xm-drop 1.5s cubic-bezier(.4,0,.8,.6) both; }
+@keyframes xm-drop { from { transform: translateY(0) rotate(0); opacity: 1; } to { transform: translateY(180px) rotate(240deg); opacity: 0; } }
+.xm-finale .xm-fly { top: 20px; }
+
+/* Santa in the wish card */
+.xm-santa-row { position: relative; display: grid; justify-items: center; gap: .4rem; }
+.xm-santa { width: clamp(96px, 26vw, 128px); height: auto; filter: drop-shadow(0 8px 10px rgba(0,0,0,.2)); animation: xm-santa-in 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes xm-santa-in { 50% { transform: translateY(-4px); } }
+.xm-santa.cheer { animation: xm-cheer .5s ease-in-out 6; }
+@keyframes xm-cheer { 50% { transform: translateY(-14px) rotate(-4deg) scale(1.04); } }
+.xm-santa .xm-wave.big { animation-duration: .6s; }
+.xm-santa.cheer .xm-wave.big { animation-duration: .25s; }
+.xm-eyes { animation: xm-blink 4s infinite; transform-origin: 62px 58px; }
+@keyframes xm-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+.xm-head { animation: xm-nod 3.2s ease-in-out infinite; transform-origin: 62px 100px; }
+.xm-santa.cheer .xm-head { animation-duration: .5s; }
+@keyframes xm-nod { 50% { transform: rotate(3deg); } }
+.xm-pom { animation: xm-pom 1.6s ease-in-out infinite alternate; }
+@keyframes xm-pom { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+.xm-bubble { position: relative; margin: 0; padding: .45rem .9rem; border-radius: 16px; background: var(--bd-card-solid); border: 1px solid var(--bd-line); color: var(--bd-ink); font-weight: 600; font-size: .9rem; text-align: center; animation: bd-pop-in .45s both; }
+.xm-bubble::before { content: ""; position: absolute; left: 50%; top: -7px; width: 12px; height: 12px; background: inherit; border-left: 1px solid var(--bd-line); border-top: 1px solid var(--bd-line); transform: translateX(-50%) rotate(45deg); }
+.xm-wish-fly { position: absolute; top: 40%; left: 50%; font-style: normal; font-size: 1.4rem; animation: xm-wish-fly 1.6s ease-out both; }
+@keyframes xm-wish-fly { from { transform: translate(var(--x), 60px) scale(.6); opacity: 1; } to { transform: translate(calc(var(--x) * 2), -170px) scale(1.2) rotate(160deg); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) { .xm-fly { display: none; } .xm-leg, .xm-wave, .xm-santa-bob, .xm-santa, .xm-head, .xm-eyes, .xm-pom, .xm-fly-in, .xm-nose, .xm-trail circle { animation: none !important; } }
+
+/* inside a phone-sized scene (landing cards): fly across the scene, not the whole window */
+.xm-fly.scene { animation-name: xm-fly-scene; }
+@keyframes xm-fly-scene { from { transform: translateX(-300px); } to { transform: translateX(290px); } }
+
+/* the Santa hat on the logo */
+.xm-hat { position: absolute; left: -7px; top: -13px; width: 30px; height: auto; transform: rotate(-16deg); pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); transform-origin: 20% 90%; animation: xm-hat 3s ease-in-out infinite; }
+@keyframes xm-hat { 50% { transform: rotate(-9deg); } }
+.xm-hat .xm-pom { animation: xm-pom 1.2s ease-in-out infinite alternate; }
+
+/* gentle snow for any section */
+.xm-snowfall { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.xm-snowfall i { position: absolute; top: -12px; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .85; box-shadow: 0 0 4px rgba(150,190,230,.7); animation: xm-snow var(--d) linear infinite; animation-delay: var(--w); }
+@keyframes xm-snow { 0% { transform: translate(0, 0); } 50% { transform: translate(14px, 50%); } 100% { transform: translate(-8px, 105%); opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .xm-snowfall i, .xm-hat { animation: none !important; } }

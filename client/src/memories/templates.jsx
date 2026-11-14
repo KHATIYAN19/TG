@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, ChevronLeft, ChevronRight, Eye, Quote, X } from "lucide-react";
 
 import { Button, cx } from "./ui";
+import { FlyingSleigh, SantaSvg, SnowFall } from "./templates/christmas/Santa";
 
 /* =====================================================
    TEMPLATE CATALOG
@@ -47,18 +48,18 @@ export const TEMPLATES = [
     sample: "I know I made a mistake, Emma, and I never want to hurt you. You mean the world to me. Please forgive me?",
   },
   {
-    id: "proposal", theme: "proposal", name: "Marriage Proposal", status: "live", demo: "/memories/preview/proposal",
+    id: "proposal", theme: "proposal", name: "Proposal", status: "live", demo: "/memories/preview/proposal",
     tagline: "Make the biggest question feel as big as it is.",
     tint: "from-amber-100 via-yellow-50 to-rose-100", accent: "text-amber-600",
-    best: ["Proposing from afar", "A surprise before the real moment", "Saving the story forever"],
+    best: ["Asking someone to be your girlfriend or boyfriend", "Proposing marriage", "Proposing from afar", "Saving the story forever"],
     inside: [
       "A sparkling ring reveal with a slow, dreamy opening",
-      "Your own question: marriage, boyfriend or girlfriend, in your words",
+      "Your own question, in your words: marriage, girlfriend, boyfriend or anything else",
       "Your story told through photos, one memory at a time",
       "A private PIN so only they can open it",
       "A big celebration when they say yes, and kind, gentle screens if they need time or say no",
     ],
-    sample: "From the first hello to every tomorrow, you are my home. Emma, will you marry me?",
+    sample: "From the first hello to every tomorrow, you are my home. Emma, will you be mine forever?",
   },
   {
     id: "anniversary", theme: "anniversary", name: "Anniversary", status: "live", demo: "/memories/preview/anniversary",
@@ -91,6 +92,23 @@ export const TEMPLATES = [
       "Share it with a link or keep it private with a PIN",
     ],
     sample: "Thank you for always being there, Emma. I'm lucky to have someone like you in my life.",
+  },
+  {
+    id: "christmas", theme: "christmas", name: "Christmas", status: "live", demo: "/memories/preview/christmas",
+    tagline: "A little Christmas card with a tree to light up and a wish to make.",
+    tint: "from-red-100 via-rose-50 to-emerald-100", accent: "text-red-600",
+    best: ["Partner, friends or family", "Colleagues and teams", "Long distance Christmas", "A Christmas wish list"],
+    inside: [
+      "A wrapped gift that opens into a glowing Christmas tree, with a countdown to the 25th",
+      "Ask them a wish: \"What do you wish for this Christmas?\" or your own question, with ideas to tap",
+      "Their wish is sent straight back to you, to read in your activity",
+      "A wishing tree where every ornament hides a wish or a note from you",
+      "Gifts under the tree you name yourself, like \"Hot chocolate date\"",
+      "Your year in moments, your promises for next year, a letter and your photos and videos",
+      "Wording for a partner, friend, family or colleague",
+      "Five looks: Classic Christmas, Snowy Night, Gingerbread Cozy, Northern Lights and Golden Glow, with sleigh bells and falling snow",
+    ],
+    sample: "Merry Christmas, Emma! I made you a little tree. Open your gifts, and tell me what you wish for.",
   },
 ];
 
@@ -199,12 +217,13 @@ function ProposalScene() {
       </svg>
       <div className="absolute inset-x-0 top-[262px] text-center">
         <p className="mem-script text-[30px] leading-none text-[#b7791f]">Emma,</p>
-        <p className="mem-script mem-gradient-text mt-1 text-[44px] leading-[1.05]">will you marry me?</p>
+        <p className="mem-script mem-gradient-text mt-1 text-[44px] leading-[1.05]">will you be mine?</p>
       </div>
       <div className="absolute inset-x-0 bottom-[74px] flex justify-center gap-3">
         <span className="rounded-full bg-gradient-to-r from-amber-400 to-rose-400 px-5 py-2 text-xs font-bold text-white shadow-lg">Yes!</span>
         <span className="rounded-full bg-gradient-to-r from-rose-400 to-pink-500 px-5 py-2 text-xs font-bold text-white shadow-lg">Of course!</span>
       </div>
+      <p className="absolute inset-x-0 bottom-[48px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#b7791f]">Girlfriend · Boyfriend · Marriage</p>
       <p className="absolute inset-x-0 bottom-6 text-center text-[10px] font-medium text-[#a16a2a]">Opened with a private PIN</p>
     </div>
   );
@@ -256,7 +275,34 @@ function ThanksScene() {
   );
 }
 
-const SCENES = { birthday: BirthdayScene, sorry: SorryScene, proposal: ProposalScene, anniversary: AnniversaryScene, thanks: ThanksScene };
+function ChristmasScene() {
+  return (
+    <div className="relative h-full w-full overflow-hidden" style={{ background: "linear-gradient(170deg,#fff5ea,#ffd6d0 50%,#e6f4e4)" }}>
+      <SnowFall count={26} />
+      <Stars items={[[30, 60, 9, 0], [220, 96, 11, 0.8], [60, 250, 8, 1.2], [224, 236, 10, 0.4]]} />
+      <FlyingSleigh scene top={30} size={170} dur={9} delay={0.4} />
+      <div className="absolute inset-x-0 top-[88px] text-center">
+        <p className="mem-script text-[38px] leading-none text-[#c1121f]">Merry Christmas</p>
+        <p className="mem-script text-[24px] text-[#1f7a3d]">Emma</p>
+      </div>
+      <div className="absolute inset-x-0 top-[168px] grid justify-items-center">
+        <div className="relative">
+          <SantaSvg className="xm-santa !w-[118px]" />
+          <span className="absolute -right-12 top-1 rounded-xl bg-white px-2 py-1 text-[10px] font-bold text-[#c1121f] shadow-md">Ho ho ho!</span>
+        </div>
+      </div>
+      <div className="absolute inset-x-5 bottom-[52px] rounded-2xl bg-white/90 p-3 text-center shadow-md">
+        <p className="mem-script text-[18px] leading-tight text-[#7f1d1d]">What do you wish for this Christmas?</p>
+        <div className="mt-2 flex flex-wrap justify-center gap-1">
+          {["A cozy night in", "More time together"].map((t) => <span key={t} className="rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold text-red-700 ring-1 ring-red-200">{t}</span>)}
+        </div>
+      </div>
+      <div className="mem-beat absolute inset-x-0 bottom-3 text-center text-[20px]" aria-hidden>🎁🔔🎁</div>
+    </div>
+  );
+}
+
+const SCENES = { birthday: BirthdayScene, sorry: SorryScene, proposal: ProposalScene, anniversary: AnniversaryScene, thanks: ThanksScene, christmas: ChristmasScene };
 
 export function TemplateScene({ theme, scale = 1, className }) {
   const Scene = SCENES[theme] || BirthdayScene;

@@ -27,7 +27,7 @@ import { Sheet } from "./appUi";
 
 const TITLE = {
   birthday: (n) => `Happy Birthday, ${n}`, sorry: (n) => `I'm sorry, ${n}`, proposal: (n) => `A question for ${n}`,
-  anniversary: (n) => `Happy Anniversary, ${n}`, thanks: (n) => `Thank you, ${n}`,
+  anniversary: (n) => `Happy Anniversary, ${n}`, thanks: (n) => `Thank you, ${n}`, christmas: (n) => `Merry Christmas, ${n}`,
 };
 const field = "block w-full rounded-xl border border-rose-100 bg-white px-3.5 py-2.5 text-sm text-[#3a1530] outline-none transition placeholder:text-[#c4a8b8] focus:border-rose-400 focus:ring-4 focus:ring-rose-100";
 const label = "mb-1 block text-xs font-bold uppercase tracking-wider text-[#a07890]";
@@ -241,7 +241,7 @@ export default function PageBuilder({ mode, cfg, onPageCreated, reload }) {
     setData(draft?.data ? { ...emptyData(params.template, first), ...draft.data } : { ...emptyData(params.template, first) });
     setThemeId(on(ask) ? ask : on(draft?.themeId) ? draft.themeId : o?.themes.find((x) => on(x.id))?.id || firstLook(o) || META[params.template].themes[0].id);
     setTitle(draft?.title || "");
-    if (params.template === "thanks" && search.get("audience")) setData((d) => ({ ...d, audience: search.get("audience") }));
+    if ((params.template === "thanks" || params.template === "christmas") && search.get("audience")) setData((d) => ({ ...d, audience: search.get("audience") }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edit, params.id, params.template]);
 
@@ -330,7 +330,7 @@ export default function PageBuilder({ mode, cfg, onPageCreated, reload }) {
   const validate = () => {
     if (!edit && !data.recipientName.trim()) return fail("Who is this page for? Add their name.");
     if (!edit && !data.senderName.trim()) return fail("Add your name. It shows on the page, like “from James”.");
-    if (builder.fields.includes("question") && !(data.question || "").trim()) return fail(templateId === "proposal" ? "Write the question you want to ask." : "Add a greeting, like “Happy Thanksgiving”.");
+    if (builder.fields.includes("question") && !(data.question || "").trim()) return fail(templateId === "proposal" ? "Write the question you want to ask." : templateId === "christmas" ? "Write the wish you want to ask them, like “What do you wish for this Christmas?”." : "Add a greeting, like “Happy Thanksgiving”.");
     if (data.since && new Date(`${data.since}T00:00:00`) > new Date()) return fail("The date can't be in the future.");
     if (visibility === "private" && pin && !/^\d{6}$/.test(pin)) return fail("A PIN is exactly 6 digits, or leave it empty and we'll make one.");
     if (shareEmail.trim() && !EMAIL_RX.test(shareEmail.trim())) return fail("That email address doesn't look right. Use something like name@example.com, or leave it empty.");

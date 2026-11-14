@@ -171,6 +171,14 @@ export function createSound() {
     lantern: run(() => { const t = now(); noise(t, 1.0, { type: "lowpass", freq: 300, sweepTo: 1100, q: 0.6, gain: 0.16, attack: 0.3 }); ["G5", "C6", "E6"].forEach((n, i) => tone(NOTE[n], t + 0.15 + i * 0.12, 0.7, { gain: 0.07, release: 0.8 })); }),
     kiss: run(() => { const t = now(); tone(900, t, 0.07, { type: "sine", gain: 0.22, glideTo: 420, attack: 0.003, release: 0.04 }); noise(t, 0.05, { type: "bandpass", freq: 1800, q: 1.2, gain: 0.09 }); }),
     yes: run(() => { const t = now(); [["C5", 0], ["E5", 0.1], ["G5", 0.2], ["C6", 0.32], ["E6", 0.46], ["G6", 0.6]].forEach(([n, d]) => tone(NOTE[n], t + d, 0.3, { type: "triangle", gain: 0.2, release: 0.5 })); }),
+    jingle: run(() => { // sleigh bells
+      const t = now();
+      for (let i = 0; i < 8; i++) {
+        const d = i * 0.08;
+        tone(2600 + (i % 3) * 430, t + d, 0.16, { type: "sine", gain: 0.09, release: 0.2 });
+        noise(t + d, 0.05, { type: "highpass", freq: 6000, gain: 0.07 });
+      }
+    }),
     rustle: run(() => noise(now(), 0.25, { type: "highpass", freq: 3000, gain: 0.12, attack: 0.05 })),
   };
 

@@ -17,7 +17,7 @@ import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
 import User from "../../models/User.js";
 import { canResend, sendPageMail } from "../../services/memory/pageMail.js";
 import {
-  MAX_GIFTS, MAX_PEOPLE, THANKS_AUDIENCES, MAX_PROMISES, MAX_REASONS, MAX_STATS, MAX_TIMELINE, MAX_WISHES, MemoryError, assertId, availableCredits, checkPin, ensureOccasions, getSettings, grantCredits,
+  MAX_GIFTS, MAX_PEOPLE, PAGE_AUDIENCES, MAX_PROMISES, MAX_REASONS, MAX_STATS, MAX_TIMELINE, MAX_WISHES, MemoryError, assertId, availableCredits, checkPin, ensureOccasions, getSettings, grantCredits,
   hashPin, encryptPin, newPin, newSlug, pageView, parse, sendError, deleteMediaObjects, buildActivity, purgePageEvents, MAX_EVENTS_PER_PAGE, MAX_EMAIL_SENDS, lifetimeDays, expiryFrom, isExpired, decryptPin,
 } from "../../services/memory/memoryService.js";
 import { addonCatalog, addonOut, emptyExtra, hasCoveringCredit, limitsFor, limitsOut, occasionForUser, passesFor, priceOf, resolveTheme, spendCredit, themeEnabled, themeIdsOf, toRupees } from "../../services/memory/catalog.js";
@@ -233,10 +233,10 @@ const extras = {
   })).max(MAX_GIFTS).optional(),
   wishes: z.array(z.string().trim().min(1).max(60)).max(MAX_WISHES).optional(),
   promises: z.array(z.string().trim().min(1).max(120)).max(MAX_PROMISES).optional(),
-  // proposal
+  // proposal (the question) + christmas (the wish question)
   question: z.string().trim().max(100).optional(),
-  // thank you
-  audience: z.enum(["", ...THANKS_AUDIENCES]).optional(),
+  // thank you + christmas
+  audience: z.enum(["", ...PAGE_AUDIENCES]).optional(),
   people: z.array(z.object({
     date: z.string().trim().max(30).optional(),
     title: z.string().trim().min(1).max(60),

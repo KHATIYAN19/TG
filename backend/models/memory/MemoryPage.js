@@ -63,10 +63,10 @@ const memoryPageSchema = new Schema(
     promises: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
     /* Anniversary: "together since" (YYYY-MM-DD), their story, reasons they are loved, and love-in-numbers facts */
     since: { type: String, trim: true, maxlength: 10, default: "" },
-    /* Proposal: the question itself, e.g. "Will you marry me?" */
+    /* Proposal: the question itself, e.g. "Will you marry me?" / "Will you be my girlfriend?". Christmas: the wish question, e.g. "What do you wish for this Christmas?" */
     question: { type: String, trim: true, maxlength: 100, default: "" },
-    /* Thank You: who it is for (friend, family, colleague, team, mentor, community) and the people to thank by name */
-    audience: { type: String, enum: ["", "friend", "family", "colleague", "team", "mentor", "community"], default: "" },
+    /* Thank You + Christmas: who it is for (friend, family, colleague, team, mentor, community; partner for Christmas) and the people to thank by name */
+    audience: { type: String, enum: ["", "friend", "family", "colleague", "team", "mentor", "community", "partner"], default: "" },
     people: { type: [milestoneSchema], default: [] },
     timeline: { type: [milestoneSchema], default: [] },
     reasons: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },

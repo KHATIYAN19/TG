@@ -9,6 +9,7 @@ import { THEME_LIST as SORRY_THEMES } from "./templates/sorry/themes";
 import { THEME_LIST as ANNIVERSARY_THEMES } from "./templates/anniversary/themes";
 import { THEME_LIST as PROPOSAL_THEMES } from "./templates/proposal/themes";
 import { THEME_LIST as THANKS_THEMES } from "./templates/thanks/themes";
+import { THEME_LIST as CHRISTMAS_THEMES } from "./templates/christmas/themes";
 import { AUDIENCES } from "./templates/thanks/audiences";
 
 /* what each template adds on top of the catalog entry: an icon for its tab and the looks the sender can pick */
@@ -18,6 +19,7 @@ export const META = {
   proposal: { emoji: "💍", themes: PROPOSAL_THEMES, short: "The big question" },
   anniversary: { emoji: "🥂", themes: ANNIVERSARY_THEMES, short: "Your love story" },
   thanks: { emoji: "🍂", themes: THANKS_THEMES, short: "Say thank you" },
+  christmas: { emoji: "🎄", themes: CHRISTMAS_THEMES, short: "Wishes under the tree" },
 };
 /** a scale for small screens and one for big ones, kept in step with the window */
 export function useScale(small, big, breakpoint = 640) {

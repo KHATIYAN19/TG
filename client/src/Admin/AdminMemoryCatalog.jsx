@@ -105,7 +105,7 @@ export function Templates({ http, run, setDialog }) {
   const patch = async (o, body, msg) => { const d = await run(() => http.patch(`/occasions/${o.id}`, body), msg); if (d && d !== true) { setRows((l) => l.map((x) => (x.id === o.id ? d : x))); return true; } return false; };
   const toggleLook = (o, id) => patch(o, { themes: o.themes.map((t) => ({ key: t.id, enabled: t.id === id ? !t.enabled : t.enabled, price: t.price })) });
   const add = () => setDialog({
-    kind: "form", title: "New template", label: "Add", intro: "The theme key picks which page design is shown (birthday, proposal, sorry, anniversary, thanks).",
+    kind: "form", title: "New template", label: "Add", intro: "The theme key picks which page design is shown (birthday, proposal, sorry, anniversary, thanks, christmas).",
     fields: [{ name: "name", label: "Name" }, { name: "theme", label: "Theme key", placeholder: "birthday" }],
     onSubmit: async (v) => { const d = await run(() => http.post("/occasions", { name: v.name, ...(v.theme ? { theme: v.theme } : {}) }), "Template added"); if (d) load(); else return false; },
   });

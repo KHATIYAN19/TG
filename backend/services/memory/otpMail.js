@@ -23,7 +23,7 @@ const COPY = {
     preheader: (m) => `Use this code to finish creating your Memories account. It expires in ${plural(m, "minute")}.`,
     eyebrow: "Welcome to Memories",
     heading: (n) => `Hi ${n}, let's confirm your email`,
-    lead: "You're one step away from making a page for someone special: birthday, thank you, anniversary, sorry or proposal. Enter this code on the sign-up screen to finish.",
+    lead: "You're one step away from making a page for someone special: birthday, Christmas, thank you, anniversary, sorry or proposal. Enter this code on the sign-up screen to finish.",
     steps: ["Go back to the Memories sign-up screen.", "Type the 6-digit code from this email.", "Tap Verify, and start your first page."],
     notYou: "If you didn't try to sign up for Memories, you can ignore this email. No account is created until the code is used.",
     reason: "You're getting this because someone used this email address to sign up for Memories by Target Trek.",

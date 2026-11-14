@@ -123,7 +123,7 @@ export default function AdminMemoryPages() {
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/20 backdrop-blur"><Heart size={24} fill="currentColor" /></span>
             <div className="min-w-[220px] flex-1">
               <h1 className="text-2xl font-extrabold tracking-tight">Memory Pages</h1>
-              <p className="text-sm text-white/85">Birthday, proposal and sorry pages: users, live links, payments and limits in one place.</p>
+              <p className="text-sm text-white/85">Birthday, proposal, Christmas and sorry pages: users, live links, payments and limits in one place.</p>
             </div>
             <Link to="/admin" className="rounded-xl bg-white/20 px-3 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/30">← Admin home</Link>
           </div>
@@ -325,7 +325,7 @@ function Pages({ http, run, setDialog, openPage, search }) {
     },
   });
 
-  const EMOJI = { birthday: "🎂", sorry: "🧸", proposal: "💍", anniversary: "🥂", thanks: "🍂" };
+  const EMOJI = { birthday: "🎂", sorry: "🧸", proposal: "💍", anniversary: "🥂", thanks: "🍂", christmas: "🎄" };
   const menuFor = (p) => [
     { label: "Open the page", icon: <ExternalLink size={14} />, onClick: () => window.open(p.url, "_blank", "noopener,noreferrer") },
     { label: "Copy link", icon: <Copy size={14} />, onClick: () => { navigator.clipboard?.writeText(p.url); toast.success("Link copied"); } },

@@ -11,6 +11,7 @@ import { logout } from "../Redux/authSlice";
 import { fetchPublicInfo, formatPrice, signOutRequest } from "./api";
 import { useMemoriesChrome, useReveal } from "./chrome";
 import { TEMPLATES, TemplateScene } from "./templates";
+import { FlyingSleigh, SantaHat, SnowFall } from "./templates/christmas/Santa";
 import MemoriesFooter from "./legal/MemoriesFooter";
 import { useLifetimeDays } from "./legal/useLifetime";
 import VoiceNote from "./VoiceNote";
@@ -85,7 +86,7 @@ function Header() {
     <>
       <header className="fixed inset-x-0 top-3 z-50 px-3">
         <div className="ml-nav mx-auto flex w-full max-w-md items-center gap-2 rounded-full p-2 pl-4 lg:w-fit lg:max-w-none">
-          <Logo />
+          <span className="relative inline-flex"><Logo /><SantaHat /></span>
           <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="Sections">
             {NAV.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={current === id ? "true" : undefined} className="ml-nav-link title-4">{label}</a>)}
           </nav>
@@ -165,10 +166,13 @@ function Hero({ priceLabel }) {
           <Heart key={i} weight="fill" className="ml-drift text-rose-200" size={size} style={{ left: `${left}%`, animationDuration: `${dur}s`, animationDelay: `${delay}s` }} />
         ))}
       </div>
+      {/* Christmas is here: snow, and Santa's sleigh crossing the sky every little while */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] overflow-hidden" aria-hidden><SnowFall count={34} /></div>
+      <div className="pointer-events-none absolute inset-x-0 top-20 h-44 overflow-hidden"><FlyingSleigh top={14} size={scale < 1 ? 190 : 250} dur={22} delay={2} /></div>
 
       <div className="relative mx-auto max-w-6xl px-4 text-center sm:px-6">
         <p className="mem-reveal in caption-3 mx-auto inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[#be123c] ring-1 ring-[#f5dfe4]">
-          <Sparkle size={14} weight="fill" aria-hidden /> Birthdays · Proposals · Apologies · Anniversaries · Thank yous
+          <Sparkle size={14} weight="fill" aria-hidden /> Birthdays · Proposals · Christmas · Apologies · Anniversaries · Thank yous
         </p>
         <h1 className="ml-hero-title mem-reveal in heading-1 mx-auto mt-6 max-w-[680px] pb-1" style={{ "--rd": ".08s" }}>
           Say it with a page<br className="hidden sm:block" /> they will never forget
@@ -188,7 +192,8 @@ function Hero({ priceLabel }) {
       {/* five phones: the middle one is the REAL template, the others are tap targets that bring theirs to the middle */}
       <div ref={stage} className="ml-fan mem-reveal in mx-auto mt-12 max-w-6xl" style={{ height: h + 72, "--rd": ".4s" }}>
         {TEMPLATES.map((t, i) => {
-          const o = ((i - idx + n + 2) % n) - 2; // -2 .. 2, how far this phone sits from the middle
+          let o = (i - idx + n) % n; // how far this phone sits from the middle, wrapped to -2 .. 2 (any further out is hidden)
+          if (o > n / 2) o -= n;
           const a = Math.abs(o);
           return (
             <div key={t.id} className="ml-fan-slot" data-a={a} style={{ "--o": o, "--a": a, width: w, height: h, marginLeft: -w / 2, zIndex: 3 - a }}>
@@ -211,7 +216,7 @@ function Hero({ priceLabel }) {
           return (
             <button key={t.id} type="button" role="tab" aria-selected={i === idx} onClick={() => pick(i)}
               className={cx("ml-chip caption-3 inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2", i === idx ? "bg-[#2a1023] text-white" : "bg-white text-[#6b3a5a] ring-1 ring-inset ring-[#f5dfe4]")}>
-              <Ic size={16} weight={i === idx ? "fill" : "regular"} aria-hidden /> {t.name}
+              <span className="relative inline-flex">{t.id === "christmas" && <SantaHat className="xm-hat !-left-1 !-top-2 !w-[14px]" />}<Ic size={16} weight={i === idx ? "fill" : "regular"} aria-hidden /></span> {t.name}
             </button>
           );
         })}
@@ -222,7 +227,7 @@ function Hero({ priceLabel }) {
 }
 
 /* ---------------------------------------------------- a strip of the moments inside the pages */
-const MOMENTS = ["Pop the balloons", "Cut the cake", "Mend a broken heart", "Open the ring box", "Pull a reason from the love jar", "Build a bouquet", "Climb the gratitude tree", "Clink a champagne toast", "Unwrap a gift", "Read a letter in handwriting"];
+const MOMENTS = ["Pop the balloons", "Cut the cake", "Mend a broken heart", "Open the ring box", "Pull a reason from the love jar", "Build a bouquet", "Climb the gratitude tree", "Clink a champagne toast", "Tell Santa your wish", "Light up the Christmas tree", "Unwrap a gift", "Read a letter in handwriting"];
 
 function Moments() {
   const group = (hidden) => (
@@ -408,7 +413,7 @@ function Faq({ info }) {
     ["What if the link gets shared with the wrong person?", "You can close the link in one tap, change the PIN, or create a completely new link. The old link stops working immediately."],
     ["How many photos and videos can I add?", l ? `Up to ${l.photos} photos (${l.photoMb} MB each) and ${l.videos} video${l.videos === 1 ? "" : "s"} (${l.videoMb} MB and ${secLabel(l.videoSec || 60)} each). You pick one main photo and one main video to open the page. The exact numbers for each template are in the pricing section, and you can buy more room with an add on.` : "You can add several photos and videos, and choose a main photo and video. Exact limits are shown while you build your page."],
     ["Can I add my own voice?", l?.audioMb ? `Yes. Record up to ${secLabel(l.audioSec || 120)} with your microphone, or upload an audio file up to ${l.audioMb} MB. It shows on the page, under your photos, as a beautiful voice message they can play. A longer or bigger one is available as an add on.` : "Yes. Record with your microphone, or upload an audio file. It shows on the page, under your photos, as a beautiful voice message they can play."],
-    ["Is this only for couples?", "Not at all. Birthday and Thank You pages work for friends, family, mentors and colleagues. Sorry, Proposal and Anniversary are for the people closest to you."],
+    ["Is this only for couples?", "Not at all. Birthday, Christmas and Thank You pages work for friends, family, mentors and colleagues. Sorry, Proposal and Anniversary are for the people closest to you."],
     ["What if they say no to my proposal?", "The page is kind about it. A yes gets a big celebration. \"I need a little time\" and \"I'm sorry, I can't\" each get a gentle, respectful screen, and they can always go back and answer again."],
     ["Can I change the names after I create a page?", "No. The name of the person it's for and your name are fixed the moment you create the page, so please check the spelling first. If a name is wrong, create a new page with the right one."],
     ["What can I change after I create a page?", `While your page is online you can edit the message, gifts, reasons, promises, photos and videos, switch between public and private, change the PIN, close or reopen the link, or make a new link. You can switch to any look at the price you paid or less. The names can't be changed. A page stays online for ${days} days unless you buy the extra days add on.`],
@@ -525,11 +530,11 @@ export default function MemoriesLanding() {
   return (
     <div ref={root} className="mem-root ml-root min-h-screen overflow-x-clip">
       <Helmet>
-        <title>Memories: Birthday, proposal, sorry, anniversary and thank you pages | Target Trek</title>
-        <meta name="description" content="Create a beautiful interactive page for a birthday, proposal, apology, anniversary or thank you. Pick a look, add your words, photos, videos and your own voice, then share a private or public link." />
+        <title>Memories: Birthday, proposal, Christmas, sorry, anniversary and thank you pages | Target Trek</title>
+        <meta name="description" content="Create a beautiful interactive page for a birthday, proposal, Christmas, apology, anniversary or thank you. Pick a look, add your words, photos, videos and your own voice, then share a private or public link." />
         <link rel="canonical" href="https://www.targettrek.in/memories" />
         <meta property="og:title" content="Memories: pages they will never forget" />
-        <meta property="og:description" content="Birthday, proposal, sorry, anniversary and thank you pages with your photos and videos. Share a link or lock it with a PIN." />
+        <meta property="og:description" content="Birthday, proposal, Christmas, sorry, anniversary and thank you pages with your photos and videos. Share a link or lock it with a PIN." />
         <meta name="theme-color" content="#fffaf6" />
         {FONT_LINKS.map((l) => <link key={l.href} {...l} />)}
       </Helmet>

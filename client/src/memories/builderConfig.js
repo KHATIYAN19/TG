@@ -4,6 +4,8 @@ import { EDITOR as PROPOSAL_EDITOR } from "./templates/proposal/editor";
 import { EDITOR as ANNIVERSARY_EDITOR } from "./templates/anniversary/editor";
 import { EDITOR as THANKS_EDITOR } from "./templates/thanks/editor";
 import { QUESTION_PRESETS } from "./templates/proposal/dummy";
+import { EDITOR as CHRISTMAS_EDITOR } from "./templates/christmas/editor";
+import { DEFAULT_QUESTION as WISH_QUESTION } from "./templates/christmas/audiences";
 import { GREETING_PRESETS } from "./templates/thanks/audiences";
 
 /*
@@ -16,12 +18,13 @@ export const BUILDERS = {
   proposal: { editor: PROPOSAL_EDITOR, fields: ["since", "question", "timeline", "reasons", "promises", "wishes"], blurb: "Your question, your story, why it's them and your vows." },
   anniversary: { editor: ANNIVERSARY_EDITOR, fields: ["since", "timeline", "reasons", "stats", "promises", "gifts", "wishes"], blurb: "Your date, story, reasons, numbers, promises and gifts." },
   thanks: { editor: THANKS_EDITOR, fields: ["audience", "question", "people", "reasons", "timeline", "stats", "promises", "gifts", "wishes"], blurb: "Who you're thanking, what you're grateful for, and a letter." },
+  christmas: { editor: CHRISTMAS_EDITOR, fields: ["audience", "question", "reasons", "timeline", "promises", "gifts", "wishes"], blurb: "Who it's for, the wish you ask, ornament wishes, gifts and a letter." },
 };
 
 export const emptyData = (templateId, senderName = "") => ({
   recipientName: "", senderName, message: "", age: null, gifts: [], wishes: [], promises: [], since: "",
-  question: templateId === "proposal" ? QUESTION_PRESETS[0] : templateId === "thanks" ? GREETING_PRESETS[0] : "",
-  audience: templateId === "thanks" ? "friend" : "", people: [], timeline: [], reasons: [], stats: [],
+  question: templateId === "proposal" ? QUESTION_PRESETS[0] : templateId === "thanks" ? GREETING_PRESETS[0] : templateId === "christmas" ? WISH_QUESTION : "",
+  audience: templateId === "thanks" || templateId === "christmas" ? "friend" : "", people: [], timeline: [], reasons: [], stats: [],
 });
 
 /** A page as the server sends it, shaped like the form (ids are kept so list items stay stable while editing). */
