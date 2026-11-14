@@ -109,6 +109,45 @@ export const EMAIL_LOOKS = {
         "onAccent": "#14123a",
         "card": "#1c1250",
         "line": "rgba(255,255,255,.18)"
+      },
+      "royal": {
+        "name": "Royal Gold",
+        "dark": true,
+        "bg": "#14110f",
+        "bg2": "#1f1a15",
+        "ink": "#fbf3df",
+        "muted": "#cdbf9f",
+        "accent": "#e9c46a",
+        "accent2": "#c9952f",
+        "onAccent": "#1b150c",
+        "card": "#211b15",
+        "line": "rgba(255,255,255,.18)"
+      },
+      "garden": {
+        "name": "Garden Tea Party",
+        "dark": false,
+        "bg": "#f6f1e3",
+        "bg2": "#e6efdc",
+        "ink": "#27402e",
+        "muted": "#5f7a64",
+        "accent": "#4f7f5c",
+        "accent2": "#e58a66",
+        "onAccent": "#ffffff",
+        "card": "#ffffff",
+        "line": "rgba(0,0,0,.08)"
+      },
+      "retro": {
+        "name": "Retro Disco",
+        "dark": true,
+        "bg": "#1a0b3a",
+        "bg2": "#2c0f57",
+        "ink": "#fff4fb",
+        "muted": "#d3b8f2",
+        "accent": "#ff3d9a",
+        "accent2": "#ff7a3d",
+        "onAccent": "#ffffff",
+        "card": "#2c0f57",
+        "line": "rgba(255,255,255,.18)"
       }
     }
   },

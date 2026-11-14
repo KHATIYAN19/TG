@@ -1,6 +1,6 @@
 /*
   BIRTHDAY THEMES
-  The admin picks one (Admin > Memory Pages > Settings). Each theme is a set of CSS variables that
+  The sender picks one while building the page. Each theme is a set of CSS variables that
   the whole page, the cake SVG and the chocolate read from, plus the colours used by the balloons
   and the confetti. Add a theme here and add its id to TEMPLATE_THEMES in the backend service.
 */
@@ -137,9 +137,60 @@ export const THEMES = {
       "--gift-1": "#7cf0ff", "--gift-2": "#c084fc", "--gift-3": "#ffd166", "--gift-4": "#ff7ad9",
     },
   },
+  royal: {
+    id: "royal", name: "Royal Gold", blurb: "Black tie, champagne gold and a little sparkle", dark: true,
+    swatch: ["#e9c46a", "#f6e7b4", "#14110f"],
+    balloons: ["#e9c46a", "#f6e7b4", "#ffffff", "#b8892f", "#d4a373", "#3a342c"],
+    confetti: ["#e9c46a", "#f6e7b4", "#ffffff", "#b8892f", "#fff3c4", "#d4a373"],
+    shapes: ["star", "rect", "rect", "circle", "streamer"], balloonShapes: ["round", "round", "star"], giftPattern: "stripes",
+    vars: {
+      "--bd-bg-a": "#14110f", "--bd-bg-b": "#1f1a15", "--bd-bg-c": "#2b2218",
+      "--bd-name-a": "#f6e7b4", "--bd-name-b": "#c9952f",
+      "--bd-ink": "#fbf3df", "--bd-muted": "#cdbf9f", "--bd-card": "rgba(255,244,214,.07)", "--bd-card-solid": "#211b15",
+      "--bd-line": "rgba(233,196,106,.34)", "--bd-accent": "#e9c46a", "--bd-accent-2": "#c9952f", "--bd-on-accent": "#1b150c",
+      "--ck-sponge": "#f3dfb8", "--ck-sponge-2": "#dcbf87", "--ck-cream": "#fffaf0", "--ck-frost": "#2a241d", "--ck-frost-2": "#14110f",
+      "--ck-fill": "#e9c46a", "--ck-plate": "#f6e7b4", "--ck-plate-2": "#c9952f", "--ck-berry": "#e9c46a", "--ck-text": "#f6e7b4",
+      "--ch-1": "#4a2a18", "--ch-2": "#6b4126", "--ch-3": "#2e180c",
+      "--gift-1": "#e9c46a", "--gift-2": "#3a342c", "--gift-3": "#b8892f", "--gift-4": "#8a7a5c",
+    },
+  },
+  garden: {
+    id: "garden", name: "Garden Tea Party", blurb: "Sage green, peach blooms and butterflies", dark: false,
+    swatch: ["#5f8f6b", "#f4a988", "#f6f1e3"],
+    balloons: ["#5f8f6b", "#f4a988", "#f7c8d0", "#e9c46a", "#a8c8a0", "#d98a8a"],
+    confetti: ["#5f8f6b", "#f4a988", "#f7c8d0", "#e9c46a", "#a8c8a0", "#ffffff"],
+    shapes: ["petal", "petal", "circle", "heart", "rect"], balloonShapes: ["round", "round", "heart"], giftPattern: "dots",
+    vars: {
+      "--bd-bg-a": "#f6f1e3", "--bd-bg-b": "#e6efdc", "--bd-bg-c": "#fde3d6",
+      "--bd-name-a": "#4f7f5c", "--bd-name-b": "#e58a66",
+      "--bd-ink": "#27402e", "--bd-muted": "#5f7a64", "--bd-card": "rgba(255,255,255,.76)", "--bd-card-solid": "#ffffff",
+      "--bd-line": "rgba(95,143,107,.3)", "--bd-accent": "#4f7f5c", "--bd-accent-2": "#e58a66", "--bd-on-accent": "#ffffff",
+      "--ck-sponge": "#fbe6c5", "--ck-sponge-2": "#eec893", "--ck-cream": "#fffdf6", "--ck-frost": "#f7c8d0", "--ck-frost-2": "#eea4b2",
+      "--ck-fill": "#a8c8a0", "--ck-plate": "#ffffff", "--ck-plate-2": "#dbe8d2", "--ck-berry": "#e2566c", "--ck-text": "#ffffff",
+      "--ch-1": "#6b3a22", "--ch-2": "#8a5133", "--ch-3": "#4a2514",
+      "--gift-1": "#5f8f6b", "--gift-2": "#f4a988", "--gift-3": "#d98a8a", "--gift-4": "#e9c46a",
+    },
+  },
+  retro: {
+    id: "retro", name: "Retro Disco", blurb: "A mirror ball, neon lights and a dance floor", dark: true,
+    swatch: ["#ff3d9a", "#27e0d6", "#1a0b3a"],
+    balloons: ["#ff3d9a", "#27e0d6", "#ffe14d", "#a259ff", "#ff7a3d", "#5cf28b"],
+    confetti: ["#ff3d9a", "#27e0d6", "#ffe14d", "#a259ff", "#ff7a3d", "#ffffff"],
+    shapes: ["rect", "star", "circle", "rect", "streamer"], balloonShapes: ["round", "star", "round"], giftPattern: "waves",
+    vars: {
+      "--bd-bg-a": "#1a0b3a", "--bd-bg-b": "#2c0f57", "--bd-bg-c": "#4a1260",
+      "--bd-name-a": "#ffe14d", "--bd-name-b": "#ff3d9a",
+      "--bd-ink": "#fff4fb", "--bd-muted": "#d3b8f2", "--bd-card": "rgba(255,255,255,.09)", "--bd-card-solid": "#2c0f57",
+      "--bd-line": "rgba(39,224,214,.36)", "--bd-accent": "#ff3d9a", "--bd-accent-2": "#ff7a3d", "--bd-on-accent": "#ffffff",
+      "--ck-sponge": "#ffd9a8", "--ck-sponge-2": "#f2b877", "--ck-cream": "#fff7fb", "--ck-frost": "#a259ff", "--ck-frost-2": "#7a35d6",
+      "--ck-fill": "#27e0d6", "--ck-plate": "#f2e6ff", "--ck-plate-2": "#b99ae6", "--ck-berry": "#ff3d9a", "--ck-text": "#ffe14d",
+      "--ch-1": "#5a301c", "--ch-2": "#7a4630", "--ch-3": "#3a1c10",
+      "--gift-1": "#ff3d9a", "--gift-2": "#27e0d6", "--gift-3": "#ffe14d", "--gift-4": "#a259ff",
+    },
+  },
 };
 
 /* same order as TEMPLATE_THEMES.birthday in the backend (the first one is the default) */
-export const THEME_IDS = ["candy", "love", "friendship", "citrus", "dreamy", "midnight", "tropical", "galaxy"];
+export const THEME_IDS = ["candy", "love", "friendship", "citrus", "dreamy", "midnight", "tropical", "galaxy", "royal", "garden", "retro"];
 export const THEME_LIST = THEME_IDS.map((id) => THEMES[id]);
 export const resolveTheme = (id) => THEMES[id] || THEMES[DEFAULT_THEME];

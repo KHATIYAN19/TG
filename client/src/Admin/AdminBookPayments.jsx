@@ -1011,6 +1011,39 @@ function getRemainingTime(
    Both are merged so every order shows whatever it has.
 ========================================================= */
 
+/* All-transactions page: exact payment.status values, filtered in the database. */
+const TX_FILTERS = [
+  { key: "ALL", label: "All", icon: Filter },
+  { key: "SUCCESS", label: "Success", icon: CheckCircle2 },
+  { key: "PENDING", label: "Pending", icon: Clock3 },
+  { key: "FAILED", label: "Failed", icon: XCircle },
+  { key: "CANCELLED", label: "Cancelled", icon: ShieldOff },
+  { key: "REFUNDED", label: "Refunded", icon: RotateCcw },
+  { key: "PARTIALLY_REFUNDED", label: "Part refunded", icon: RotateCcw },
+];
+
+const PAGE_SIZES = [10, 20, 50, 100, 200];
+
+function PageSizeSelect({ value, onChange }) {
+  return (
+    <label className="ml-3 inline-flex items-center gap-2">
+      <span>Rows per page</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="tt-search-input tt-select"
+        style={{ width: "auto", paddingLeft: 10, paddingRight: 28 }}
+      >
+        {PAGE_SIZES.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 const SOURCE_FILTERS = [
   { key: "ALL", label: "All traffic", icon: Globe2 },
   { key: "meta", label: "Meta Ads", icon: Megaphone },
@@ -2083,6 +2116,7 @@ function ActionMenu({
 
 function PaymentCard({
   order,
+  showBook,
 
   index,
 
@@ -2263,6 +2297,18 @@ function PaymentCard({
               </p>
 
               <SourceChip order={order} />
+              {showBook && book.title ? (
+                <p
+                  className="mt-1.5 inline-flex max-w-full items-center gap-1.5 truncate rounded-lg px-2 py-1 text-[11px] font-black"
+                  style={{
+                    background: "var(--tt-primary-soft, rgba(234,179,8,0.15))",
+                    color: "var(--tt-primary)",
+                  }}
+                >
+                  <ShoppingBag className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{book.title}</span>
+                </p>
+              ) : null}
 
 
               <div
@@ -3638,7 +3684,7 @@ function BreakdownPanel({
    MAIN PAGE
 ========================================================= */
 
-export default function AdminBookPayments() {
+export default function AdminBookPayments({ mode } = {}) {
   const navigate =
     useNavigate();
 
@@ -3647,6 +3693,12 @@ export default function AdminBookPayments() {
     bookId,
   } =
     useParams();
+
+
+  /* "all" mode = every transaction of every book, filtered + paged on the server. */
+  const isAll =
+    mode === "all" ||
+    !bookId;
 
 
   const token =
@@ -4158,6 +4210,75 @@ export default function AdminBookPayments() {
 
 
   /* =======================================================
+     ALL-TRANSACTIONS MODE (server-side filters + paging)
+  ======================================================= */
+
+  const [pageSize, setPageSize] = useState(20);
+
+  const [txFilters, setTxFilters] = useState({
+    bookId: "ALL",
+    provider: "ALL",
+    orderStatus: "ALL",
+    dateFrom: "",
+    dateTo: "",
+    sort: "newest",
+  });
+
+  const [debouncedQ, setDebouncedQ] = useState("");
+
+  const [statusCounts, setStatusCounts] = useState({});
+
+  const [txOptions, setTxOptions] = useState({
+    books: [],
+    providers: [],
+    orderStatuses: [],
+  });
+
+  useEffect(() => {
+    const t = window.setTimeout(
+      () => setDebouncedQ(searchQuery.trim()),
+      400
+    );
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (isAll) {
+      setPage(1);
+    }
+  }, [isAll, statusFilter, debouncedQ, txFilters, pageSize]);
+
+  const buildAllUrl = useCallback(
+    (requestedPage) => {
+      const params = new URLSearchParams();
+
+      params.set("page", String(requestedPage));
+      params.set("limit", String(pageSize));
+
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (debouncedQ) params.set("q", debouncedQ);
+
+      Object.entries(txFilters).forEach(([key, value]) => {
+        if (value && value !== "ALL") params.set(key, value);
+      });
+
+      return `${BASE_URL}/admin/books/transactions?${params.toString()}`;
+    },
+    [pageSize, statusFilter, debouncedQ, txFilters]
+  );
+
+  const lifetimeBookIds = useMemo(
+    () =>
+      new Set(
+        (txOptions.books || [])
+          .filter((b) => b.lifetime)
+          .map((b) => String(b._id))
+      ),
+    [txOptions.books]
+  );
+
+
+  /* =======================================================
      FETCH CURRENT PAGE
   ======================================================= */
 
@@ -4171,10 +4292,7 @@ export default function AdminBookPayments() {
           undefined
       ) => {
         try {
-          if (
-            !bookId ||
-            !token
-          ) {
+          if ((!isAll && !bookId) || !token) {
             return;
           }
 
@@ -4191,9 +4309,9 @@ export default function AdminBookPayments() {
 
           const response =
             await fetch(
-              `${BASE_URL}/admin/books/${encodeURIComponent(
-                bookId
-              )}/payments/page/${requestedPage}`,
+              isAll
+                ? buildAllUrl(requestedPage)
+                : `${BASE_URL}/admin/books/${encodeURIComponent(bookId)}/payments/page/${requestedPage}`,
               {
                 method:
                   "GET",
@@ -4245,6 +4363,12 @@ export default function AdminBookPayments() {
             data.book ||
             null
           );
+
+          if (isAll) {
+            setStatusCounts(data.statusCounts || {});
+            setTxOptions(data.options || { books: [], providers: [], orderStatuses: [] });
+          }
+
 
 
           setSummary({
@@ -4429,6 +4553,8 @@ export default function AdminBookPayments() {
         bookId,
         token,
         page,
+        isAll,
+        buildAllUrl,
       ]
     );
 
@@ -4690,7 +4816,7 @@ export default function AdminBookPayments() {
      load all backend pages.
   ======================================================= */
 
-  const isGlobalFilterMode =
+  const isGlobalFilterModeRaw =
     statusFilter !==
       "ALL" ||
 
@@ -4700,6 +4826,11 @@ export default function AdminBookPayments() {
     Boolean(
       searchQuery.trim()
     );
+
+  const isGlobalFilterMode =
+    !isAll &&
+    isGlobalFilterModeRaw;
+
 
 
   useEffect(
@@ -4815,6 +4946,10 @@ export default function AdminBookPayments() {
   const visiblePayments =
     useMemo(
       () => {
+        if (isAll) {
+          return payments;
+        }
+
         const normalizedSearch =
           searchQuery
             .trim()
@@ -4935,6 +5070,7 @@ export default function AdminBookPayments() {
         );
       },
       [
+        isAll,
         payments,
         allPayments,
         isGlobalFilterMode,
@@ -6178,7 +6314,7 @@ export default function AdminBookPayments() {
         const response =
           await fetch(
             `${BASE_URL}/admin/books/${encodeURIComponent(
-              bookId
+              isAll ? deleteOrder.bookId : bookId
             )}/payments/${encodeURIComponent(
               deleteOrder._id
             )}`,
@@ -8041,6 +8177,8 @@ export default function AdminBookPayments() {
         .tt-dot-other { background: #ea580c; }
         .tt-dot-organic { background: #22c55e; }
 
+        .tt-filter-field { display: flex; flex-direction: column; gap: 6px; }
+        .tt-search-input.tt-select { padding-left: 0.9rem; padding-right: 0.9rem; }
         .tt-bar {
           height: 6px;
           border-radius: 999px;
@@ -8075,7 +8213,9 @@ export default function AdminBookPayments() {
 
               onClick={() =>
                 navigate(
-                  `/admin/book/${bookId}`
+                  isAll
+                    ? "/admin/dashboard"
+                    : `/admin/book/${bookId}`
                 )
               }
 
@@ -8085,14 +8225,15 @@ export default function AdminBookPayments() {
                 className="h-4 w-4"
               />
 
-              Back to Book Details
+              {isAll ? "Back to Dashboard" : "Back to Book Details"}
             </button>
 
 
             <div
               className="flex flex-wrap gap-2"
             >
-              <button
+              {!isAll ? (
+<button
                 type="button"
 
                 onClick={() =>
@@ -8109,6 +8250,7 @@ export default function AdminBookPayments() {
 
                 Manage Reviews
               </button>
+              ) : null}
 
 
               <button
@@ -8153,7 +8295,7 @@ export default function AdminBookPayments() {
               <div
                 className="flex min-w-0 items-start gap-4"
               >
-                {book?.coverPageUrl ? (
+                {!isAll && book?.coverPageUrl ? (
                   <img
                     src={
                       book.coverPageUrl
@@ -8188,15 +8330,17 @@ export default function AdminBookPayments() {
                         "var(--tt-primary)",
                     }}
                   >
-                    Revenue & Access Control
+                    {isAll ? "Every book · every payment" : "Revenue & Access Control"}
                   </p>
 
 
                   <h1
                     className="mt-1 max-w-4xl text-2xl font-black tracking-tight sm:text-3xl"
                   >
-                    {book?.title ||
-                      "Book Payments"}
+                    {isAll
+                      ? "All Transactions"
+                      : book?.title ||
+                        "Book Payments"}
                   </h1>
 
 
@@ -8210,7 +8354,7 @@ export default function AdminBookPayments() {
 
 
                   <div
-                    className="mt-3 flex flex-wrap gap-2"
+                    className={`mt-3 flex-wrap gap-2 ${isAll ? "hidden" : "flex"}`}
                   >
                     {book?.slug ? (
                       <span
@@ -8472,7 +8616,8 @@ export default function AdminBookPayments() {
               BREAKDOWN
           ================================================= */}
 
-          <div
+          {!isAll ? (
+<div
             className="mt-4"
           >
             <BreakdownPanel
@@ -8485,13 +8630,15 @@ export default function AdminBookPayments() {
               }
             />
           </div>
+          ) : null}
 
 
           {/* =================================================
               TRAFFIC SOURCES / UTM
           ================================================= */}
 
-          <TrafficSourcesPanel
+          {!isAll ? (
+<TrafficSourcesPanel
             orders={
               allPaymentsLoaded
                 ? allPayments
@@ -8516,6 +8663,7 @@ export default function AdminBookPayments() {
                 : `Based on the ${payments.length} orders on this page. Pick a source or filter to analyse every order.`
             }
           />
+          ) : null}
 
 
           {/* =================================================
@@ -8531,7 +8679,7 @@ export default function AdminBookPayments() {
               <div
                 className="flex flex-wrap gap-2"
               >
-                {FILTERS.map(
+                {(isAll ? TX_FILTERS : FILTERS).map(
                   (
                     item
                   ) => {
@@ -8579,10 +8727,7 @@ export default function AdminBookPayments() {
                         <span
                           className="tt-filter-count"
                         >
-                          {filterCounts[
-                            item.key
-                          ] ||
-                            0}
+                          {(isAll ? statusCounts : filterCounts)[item.key] || 0}
                         </span>
                       </button>
                     );
@@ -8621,7 +8766,146 @@ export default function AdminBookPayments() {
             </div>
 
 
-            {isGlobalFilterMode ? (
+            {isAll ? (
+              <div
+                className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              >
+                <label className="tt-filter-field">
+                  <span className="tt-label">Book</span>
+                  <select
+                    value={txFilters.bookId}
+                    onChange={(e) =>
+                      setTxFilters((f) => ({ ...f, bookId: e.target.value }))
+                    }
+                    className="tt-search-input tt-select"
+                  >
+                    <option value="ALL">All books</option>
+                    {(txOptions.books || []).map((b) => (
+                      <option key={b._id} value={b._id}>
+                        {b.title} ({b.orders})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="tt-filter-field">
+                  <span className="tt-label">Gateway</span>
+                  <select
+                    value={txFilters.provider}
+                    onChange={(e) =>
+                      setTxFilters((f) => ({ ...f, provider: e.target.value }))
+                    }
+                    className="tt-search-input tt-select"
+                  >
+                    <option value="ALL">All gateways</option>
+                    {(txOptions.providers || []).map((p) => (
+                      <option key={p.provider} value={p.provider}>
+                        {p.provider} ({p.orders})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="tt-filter-field">
+                  <span className="tt-label">Order status</span>
+                  <select
+                    value={txFilters.orderStatus}
+                    onChange={(e) =>
+                      setTxFilters((f) => ({ ...f, orderStatus: e.target.value }))
+                    }
+                    className="tt-search-input tt-select"
+                  >
+                    <option value="ALL">Any order status</option>
+                    {(txOptions.orderStatuses || []).map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="tt-filter-field">
+                  <span className="tt-label">Sort</span>
+                  <select
+                    value={txFilters.sort}
+                    onChange={(e) =>
+                      setTxFilters((f) => ({ ...f, sort: e.target.value }))
+                    }
+                    className="tt-search-input tt-select"
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="amountHigh">Amount: high to low</option>
+                    <option value="amountLow">Amount: low to high</option>
+                  </select>
+                </label>
+
+                <label className="tt-filter-field">
+                  <span className="tt-label">From date</span>
+                  <input
+                    type="date"
+                    value={txFilters.dateFrom}
+                    max={txFilters.dateTo || undefined}
+                    onChange={(e) =>
+                      setTxFilters((f) => ({ ...f, dateFrom: e.target.value }))
+                    }
+                    className="tt-search-input tt-select"
+                  />
+                </label>
+
+                <label className="tt-filter-field">
+                  <span className="tt-label">To date</span>
+                  <input
+                    type="date"
+                    value={txFilters.dateTo}
+                    min={txFilters.dateFrom || undefined}
+                    onChange={(e) =>
+                      setTxFilters((f) => ({ ...f, dateTo: e.target.value }))
+                    }
+                    className="tt-search-input tt-select"
+                  />
+                </label>
+
+                <div className="flex items-end gap-2 lg:col-span-2">
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-secondary"
+                    onClick={() => {
+                      setTxFilters({
+                        bookId: "ALL",
+                        provider: "ALL",
+                        orderStatus: "ALL",
+                        dateFrom: "",
+                        dateTo: "",
+                        sort: "newest",
+                      });
+                      setStatusFilter("ALL");
+                      setSearchQuery("");
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                    Clear filters
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {isAll ? (
+              <p className="tt-helper mt-3">
+                Showing{" "}
+                <strong style={{ color: "var(--tt-text)" }}>
+                  {pagination.returnedItems || 0}
+                </strong>{" "}
+                of{" "}
+                <strong style={{ color: "var(--tt-text)" }}>
+                  {pagination.totalItems || 0}
+                </strong>{" "}
+                matching transactions. Filters run on the database.
+              </p>
+            ) : null}
+
+            
+{isGlobalFilterMode ? (
               <div
                 className="tt-soft-card mt-4 px-4 py-3"
               >
@@ -8797,6 +9081,7 @@ export default function AdminBookPayments() {
                       order._id ||
                       order.orderId
                     }
+                    showBook={isAll}
 
                     order={
                       order
@@ -8867,7 +9152,9 @@ export default function AdminBookPayments() {
                     }
 
                     showMemoriesMail={
-                      book?.membership?.plan === "lifetime"
+                      isAll
+                        ? lifetimeBookIds.has(String(order.bookId))
+                        : book?.membership?.plan === "lifetime"
                     }
 
                     onExtend={
@@ -9036,7 +9323,10 @@ export default function AdminBookPayments() {
                 {pagination.totalItems ||
                   0}{" "}
                 records
-              </p>
+              {isAll ? (
+                  <PageSizeSelect value={pageSize} onChange={setPageSize} />
+                ) : null}
+</p>
 
 
               <div

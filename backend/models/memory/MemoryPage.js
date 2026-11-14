@@ -66,7 +66,7 @@ const memoryPageSchema = new Schema(
     /* Proposal: the question itself, e.g. "Will you marry me?" / "Will you be my girlfriend?". Christmas: the wish question, e.g. "What do you wish for this Christmas?" */
     question: { type: String, trim: true, maxlength: 100, default: "" },
     /* Thank You + Christmas: who it is for (friend, family, colleague, team, mentor, community; partner for Christmas) and the people to thank by name */
-    audience: { type: String, enum: ["", "friend", "family", "colleague", "team", "mentor", "community", "partner"], default: "" },
+    audience: { type: String, enum: ["", "friend", "family", "colleague", "team", "mentor", "community", "partner", "parent", "sibling", "child"], default: "" },
     people: { type: [milestoneSchema], default: [] },
     timeline: { type: [milestoneSchema], default: [] },
     reasons: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },

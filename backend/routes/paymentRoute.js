@@ -5,6 +5,7 @@ import {
   getBookPayments,
   deleteBookPayment,
   getDailyAdminPayments,
+  getAllTransactions,
 } from "../controllers/paymentController.js";
 
 import {
@@ -49,6 +50,18 @@ router.get(
   auth,
   isAdmin,
   getDailyAdminPayments
+);
+
+/* =====================================================
+   ADMIN - ALL TRANSACTIONS (every book, filters + paging)
+   GET /admin/books/transactions
+===================================================== */
+
+router.get(
+  "/transactions",
+  auth,
+  isAdmin,
+  getAllTransactions
 );
 
 /* =====================================================

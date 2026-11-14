@@ -41,6 +41,7 @@ const ROUTES = {
   "/resources/hld/api-gateway": "src/hld/HLDApiGatewayResource.jsx",
   "/resources/sql": "src/sql/SQLResource.jsx",
   "/resources/apis": "src/api/APIResource.jsx",
+  "/memories/birthday": "src/memories/BirthdayLanding.jsx",
 };
 
 // Keep the pristine SPA shell: dist/index.html is overwritten below with the

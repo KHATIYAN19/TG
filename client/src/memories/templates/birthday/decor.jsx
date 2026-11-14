@@ -328,6 +328,9 @@ const FLOAT_ITEMS = {
   citrus: [["dot", 14, "up"], ["sparkle", 6, "up"]],
   dreamy: [["sparkle", 14, "up"], ["dot", 8, "up"]],
   midnight: [["sparkle", 14, "twinkle"], ["star", 8, "twinkle"]],
+  royal: [["sparkle", 16, "twinkle"], ["star", 6, "twinkle"]],
+  garden: [["petal", 10, "down"], ["butterfly", 4, "up"], ["leaf", 5, "down"]],
+  retro: [["star", 10, "twinkle"], ["sparkle", 10, "twinkle"], ["note", 6, "up"]],
 };
 const BUBBLES = ["BFF", "Yay!", "LOL", "Squad", "<3", "Best!"];
 
@@ -437,6 +440,33 @@ export function HeroDecor({ theme }) {
       return <div className="bd-decor" aria-hidden><Cloud className="bd-cloud c1" /><Cloud className="bd-cloud c2" /><Cloud className="bd-cloud c3" /></div>;
     case "midnight":
       return <div className="bd-decor" aria-hidden><Moon className="bd-moon" /><span className="bd-shoot s1" /><span className="bd-shoot s2" /></div>;
+    case "royal":
+      return (
+        <div className="bd-decor" aria-hidden>
+          <div className="bd-decor-top"><Bunting colors={["#e9c46a", "#2a241d", "#f6e7b4", "#b8892f", "#3a342c"]} /></div>
+          <svg className="pt-crown" viewBox="0 0 96 64" focusable="false">
+            <path d="M8,52 L4,16 L28,34 L48,6 L68,34 L92,16 L88,52 Z" fill="#e9c46a" stroke="#b8892f" strokeWidth="2" strokeLinejoin="round" />
+            <rect x="8" y="50" width="80" height="10" rx="3" fill="#c9952f" />
+            <circle cx="48" cy="6" r="5" fill="#fff3c4" /><circle cx="4" cy="16" r="4" fill="#fff3c4" /><circle cx="92" cy="16" r="4" fill="#fff3c4" />
+            <circle cx="48" cy="40" r="5" fill="#e11d48" /><circle cx="28" cy="44" r="3.4" fill="#27e0d6" /><circle cx="68" cy="44" r="3.4" fill="#27e0d6" />
+          </svg>
+        </div>
+      );
+    case "garden":
+      return (
+        <div className="bd-decor" aria-hidden>
+          <div className="bd-decor-top"><Bunting colors={["#5f8f6b", "#f4a988", "#f7c8d0", "#e9c46a", "#a8c8a0"]} /></div>
+          <RoseSprig className="bd-sprig left" tone="pink" />
+          <RoseSprig className="bd-sprig right" tone="pink" flip />
+        </div>
+      );
+    case "retro":
+      return (
+        <div className="bd-decor" aria-hidden>
+          <div className="pt-hero-ball"><span /></div>
+          <span className="bd-shoot s1" /><span className="bd-shoot s2" />
+        </div>
+      );
     default:
       return null;
   }
@@ -497,6 +527,7 @@ export function SlotArt({ theme, x, y, i, uid }) {
   if (theme === "friendship") return i === 2 ? <FlagG x={x} y={y} s={0.95} /> : <StarG x={x} y={y - 12} s={0.78} c={i % 2 ? "#ffc233" : "#ff7a45"} />;
   if (theme === "tropical") return i === 2 ? <UmbrellaG x={x} y={y} s={0.95} /> : <HibiscusG x={x} y={y - 12} s={0.52} c={i % 2 ? "#ff9a3c" : "#ff4d7f"} />;
   if (theme === "galaxy") return i === 2 ? <RocketG x={x} y={y} s={0.9} /> : i === 1 ? <StarG x={x} y={y - 12} s={0.8} c="#ffd166" /> : <MiniPlanetG x={x} y={y - 12} s={0.95} c={i === 0 ? "#c084fc" : "#ff7ad9"} />;
+  if (theme === "royal" || theme === "retro") return <StarG x={x} y={y - 12} s={0.8} c={theme === "royal" ? "#e9c46a" : i % 2 ? "#ffe14d" : "#27e0d6"} />;
   // default: a cherry
   return (
     <g>

@@ -1,15 +1,31 @@
 import { withImages, withVideo } from "../demoMedia";
 /*
   DUMMY DATA for the birthday page. The shape matches what the live page will be given later:
-  names + message from the page, photos/video from the page's media, gifts and wishes from the template.
+  names, message, who it is for, the wish question, gifts, reasons, coupons (promises) and moments (timeline) from the page, photos/video from its media.
   A photo/video with a `url` is shown for real; one without gets a pretty placeholder.
 */
-export const DEFAULT_WISHES = ["You make everything brighter!", "Make a big wish!", "Cake time!", "Today is all yours", "Smile, it's your day!"];
 
 export const DUMMY_BIRTHDAY = {
   recipientName: "Emma",
   senderName: "James",
   age: 21,
+  audience: "friend",
+  question: "What is your birthday wish this year?",
+  reasons: [
+    "You pick up on the first ring, every single time",
+    "You make boring days feel like an adventure",
+    "You never judge my terrible ideas, you join them",
+    "Your laugh is the loudest one in the room",
+    "You remember the little things nobody else does",
+    "Life is simply better with you in it",
+  ],
+  promises: ["One free coffee run, any time", "A no-questions-asked favour", "You pick the movie, I won't complain", "A road trip, I'll drive"],
+  timeline: [
+    { id: "t1", date: "2016", title: "The day we met", note: "First day of college, last bench. You shared your notes and I never left." },
+    { id: "t2", date: "2019", title: "Our first trip", note: "We got lost, missed the bus and it was still the best weekend ever." },
+    { id: "t3", date: "2022", title: "The big move", note: "New city, new job, same you. I have never been prouder." },
+    { id: "t4", date: "Today", title: "Your birthday", note: "Another year of you. Lucky me." },
+  ],
   message:
     "Happy Birthday, Emma! Another year older, and somehow even more wonderful. Thank you for every laugh, every late-night chat and every time you made a bad day better just by showing up. I hope today is full of cake, chocolate, silly photos and everything you love. You deserve all the happiness in the world, and I'll be right here cheering the loudest. Now make a wish, you've earned it!",
   wishes: [

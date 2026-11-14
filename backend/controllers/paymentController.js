@@ -2324,3 +2324,358 @@ export const getDailyAdminPayments = async (req, res) => {
     });
   }
 };
+
+/* =====================================================
+   ADMIN - ALL TRANSACTIONS (EVERY BOOK, SERVER-SIDE
+   FILTERS + PAGING)
+
+   GET /admin/books/transactions
+     ?page=1&limit=20
+     &status=SUCCESS|PENDING|FAILED|CANCELLED|REFUNDED|PARTIALLY_REFUNDED
+     &bookId=<id>
+     &provider=PAYU|RAZORPAY|CASHFREE ...
+     &orderStatus=<orderStatus>
+     &q=<search text>
+     &dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD   (IST days)
+     &sort=newest|oldest|amountHigh|amountLow
+===================================================== */
+
+const escapeRegex = (value = "") =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const TX_STATUSES = [
+  "SUCCESS",
+  "PENDING",
+  "FAILED",
+  "CANCELLED",
+  "REFUNDED",
+  "PARTIALLY_REFUNDED",
+];
+
+export const getAllTransactions = async (req, res) => {
+  try {
+    const currentPage = Number(req.query.page || 1);
+    const pageLimit = Number(req.query.limit || 20);
+
+    if (
+      !Number.isInteger(currentPage) ||
+      currentPage < 1 ||
+      !Number.isInteger(pageLimit) ||
+      pageLimit < 1 ||
+      pageLimit > 200
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Page must be >= 1 and limit must be 1 to 200.",
+      });
+    }
+
+    const str = (v) =>
+      typeof v === "string" ? v.trim() : "";
+
+    const status = str(req.query.status).toUpperCase();
+    const bookId = str(req.query.bookId);
+    const provider = str(req.query.provider);
+    const orderStatus = str(req.query.orderStatus).toUpperCase();
+    const q = str(req.query.q);
+    const dateFrom = str(req.query.dateFrom);
+    const dateTo = str(req.query.dateTo);
+    const sortKey = str(req.query.sort) || "newest";
+
+    if (status && status !== "ALL" && !TX_STATUSES.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment status.",
+      });
+    }
+
+    if (bookId && bookId !== "ALL" && !mongoose.Types.ObjectId.isValid(bookId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID.",
+      });
+    }
+
+    // Filters that apply to everything (status excluded so the status chips can show their own counts).
+    const baseFilter = {};
+
+    if (bookId && bookId !== "ALL") {
+      const oid = new mongoose.Types.ObjectId(bookId);
+      baseFilter.$or = [{ bookId: oid }, { purchasedBookIds: oid }];
+    }
+
+    if (provider && provider !== "ALL") {
+      baseFilter["payment.provider"] = {
+        $regex: `^${escapeRegex(provider)}$`,
+        $options: "i",
+      };
+    }
+
+    if (orderStatus && orderStatus !== "ALL") {
+      baseFilter.orderStatus = orderStatus;
+    }
+
+    if (dateFrom || dateTo) {
+      const created = {};
+
+      if (dateFrom) {
+        const range = getISTDateRange(dateFrom);
+        if (!range) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid dateFrom. Use YYYY-MM-DD.",
+          });
+        }
+        created.$gte = range.start;
+      }
+
+      if (dateTo) {
+        const range = getISTDateRange(dateTo);
+        if (!range) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid dateTo. Use YYYY-MM-DD.",
+          });
+        }
+        created.$lt = range.end;
+      }
+
+      baseFilter.createdAt = created;
+    }
+
+    if (q) {
+      const rx = { $regex: escapeRegex(q), $options: "i" };
+      const searchOr = [
+        { orderId: rx },
+        { "customer.name": rx },
+        { "customer.email": rx },
+        { "customer.phone": rx },
+        { "book.title": rx },
+        { "payment.transactionId": rx },
+        { "payment.paymentId": rx },
+        { "payment.affiliateCode": rx },
+        { "coupon.code": rx },
+        { "metadata.utmSource": rx },
+        { "metadata.utmCampaign": rx },
+      ];
+
+      if (mongoose.Types.ObjectId.isValid(q)) {
+        searchOr.push({ _id: new mongoose.Types.ObjectId(q) });
+      }
+
+      baseFilter.$and = [{ $or: searchOr }];
+    }
+
+    const listFilter = { ...baseFilter };
+
+    if (status && status !== "ALL") {
+      listFilter["payment.status"] = status;
+    }
+
+    const sortMap = {
+      newest: { createdAt: -1, _id: -1 },
+      oldest: { createdAt: 1, _id: 1 },
+      amountHigh: { "payment.amount": -1, _id: -1 },
+      amountLow: { "payment.amount": 1, _id: -1 },
+    };
+
+    const amountExpr = {
+      $ifNull: ["$payment.amount", { $ifNull: ["$book.price", 0] }],
+    };
+
+    const sumWhen = (statuses) => ({
+      $sum: {
+        $cond: [{ $in: ["$payment.status", statuses] }, amountExpr, 0],
+      },
+    });
+
+    const PAID = ["SUCCESS", "REFUNDED", "PARTIALLY_REFUNDED"];
+
+    const [orders, filteredCount, statusRows, totalsRows, bookRows, providerRows] =
+      await Promise.all([
+        Order.find(listFilter)
+          .sort(sortMap[sortKey] || sortMap.newest)
+          .skip((currentPage - 1) * pageLimit)
+          .limit(pageLimit)
+          .lean(),
+
+        Order.countDocuments(listFilter),
+
+        // Per-status counts for the base filter (drives the filter chips).
+        Order.aggregate([
+          { $match: baseFilter },
+          {
+            $group: {
+              _id: "$payment.status",
+              count: { $sum: 1 },
+              amount: { $sum: amountExpr },
+            },
+          },
+        ]),
+
+        // Totals for exactly what the list is showing.
+        Order.aggregate([
+          { $match: listFilter },
+          {
+            $group: {
+              _id: null,
+              totalOrders: { $sum: 1 },
+              grossPaidAmount: sumWhen(PAID),
+              successfulAmount: sumWhen(["SUCCESS"]),
+              pendingAmount: sumWhen(["PENDING"]),
+              failedAmount: sumWhen(["FAILED"]),
+              cancelledAmount: sumWhen(["CANCELLED"]),
+              totalRefundedAmount: {
+                $sum: { $ifNull: ["$refund.refundedAmount", 0] },
+              },
+              couponOrders: {
+                $sum: { $cond: [{ $eq: ["$coupon.applied", true] }, 1, 0] },
+              },
+              couponDiscount: {
+                $sum: {
+                  $cond: [
+                    { $eq: ["$coupon.applied", true] },
+                    { $ifNull: ["$coupon.discountAmount", 0] },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+        ]),
+
+        // Books for the book filter dropdown.
+        Order.aggregate([
+          {
+            $group: {
+              _id: "$bookId",
+              title: { $last: "$book.title" },
+              orders: { $sum: 1 },
+            },
+          },
+          { $sort: { title: 1 } },
+        ]),
+
+        Order.aggregate([
+          { $group: { _id: "$payment.provider", orders: { $sum: 1 } } },
+        ]),
+      ]);
+
+    const lifetimeIds = new Set(
+      (
+        await Book.find({
+          _id: { $in: bookRows.map((r) => r._id).filter(Boolean) },
+          "membership.plan": "lifetime",
+        })
+          .select("_id")
+          .lean()
+      ).map((x) => String(x._id))
+    );
+
+    const counts = { ALL: 0 };
+    const amounts = {};
+
+    TX_STATUSES.forEach((s) => {
+      counts[s] = 0;
+      amounts[s] = 0;
+    });
+
+    statusRows.forEach((row) => {
+      counts.ALL += row.count;
+      if (row._id) {
+        counts[row._id] = row.count;
+        amounts[row._id] = roundAmount(row.amount);
+      }
+    });
+
+    const t = totalsRows[0] || {};
+    const gross = roundAmount(t.grossPaidAmount);
+    const refunded = roundAmount(t.totalRefundedAmount);
+    const totalPages = Math.max(Math.ceil(filteredCount / pageLimit), 1);
+
+    return res.status(200).json({
+      success: true,
+      message: "Transactions fetched successfully.",
+
+      data: {
+        filters: {
+          status: status || "ALL",
+          bookId: bookId || "ALL",
+          provider: provider || "ALL",
+          orderStatus: orderStatus || "ALL",
+          q,
+          dateFrom,
+          dateTo,
+          sort: sortKey,
+        },
+
+        summary: {
+          totalOrders: t.totalOrders || 0,
+          totalOrderAmount: roundAmount(
+            (t.successfulAmount || 0) +
+              (t.pendingAmount || 0) +
+              (t.failedAmount || 0) +
+              (t.cancelledAmount || 0)
+          ),
+          payments: {
+            successfulPayments: counts.SUCCESS,
+            failedPayments: counts.FAILED,
+            pendingPayments: counts.PENDING,
+            cancelledPayments: counts.CANCELLED,
+            fullyRefundedPayments: counts.REFUNDED,
+            partiallyRefundedPayments: counts.PARTIALLY_REFUNDED,
+            successfulAmount: roundAmount(t.successfulAmount),
+            pendingAmount: roundAmount(t.pendingAmount),
+            failedAmount: roundAmount(t.failedAmount),
+            cancelledAmount: roundAmount(t.cancelledAmount),
+            grossPaidAmount: gross,
+            netRevenue: roundAmount(gross - refunded),
+          },
+          refunds: { totalRefundedAmount: refunded },
+          coupons: {
+            couponAppliedOrders: t.couponOrders || 0,
+            totalCouponDiscountAmount: roundAmount(t.couponDiscount),
+          },
+        },
+
+        statusCounts: counts,
+        statusAmounts: amounts,
+
+        options: {
+          books: bookRows
+            .filter((b) => b._id)
+            .map((b) => ({
+              _id: b._id,
+              title: b.title || "Untitled book",
+              orders: b.orders,
+              lifetime: lifetimeIds.has(String(b._id)),
+            })),
+          providers: providerRows
+            .filter((p) => p._id)
+            .map((p) => ({ provider: p._id, orders: p.orders })),
+          orderStatuses: Order.schema.path("orderStatus")?.enumValues || [],
+        },
+
+        pagination: {
+          enabled: true,
+          page: currentPage,
+          limit: pageLimit,
+          totalItems: filteredCount,
+          totalPages,
+          returnedItems: orders.length,
+          hasNextPage: currentPage < totalPages,
+          hasPreviousPage: currentPage > 1,
+        },
+
+        payments: orders.map(safeAdminPayment),
+      },
+    });
+  } catch (error) {
+    console.error("Get all transactions error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch transactions.",
+    });
+  }
+};

@@ -7,13 +7,14 @@ import { QUESTION_PRESETS } from "./templates/proposal/dummy";
 import { EDITOR as CHRISTMAS_EDITOR } from "./templates/christmas/editor";
 import { DEFAULT_QUESTION as WISH_QUESTION } from "./templates/christmas/audiences";
 import { GREETING_PRESETS } from "./templates/thanks/audiences";
+import { DEFAULT_AUDIENCE as BIRTHDAY_AUDIENCE, QUESTION_DEFAULT as BIRTHDAY_QUESTION } from "./templates/birthday/audiences";
 
 /*
   THE PAGE BUILDER'S RULES, one entry per template: which fields the sender fills in (the same config the live customize panel uses),
   what a brand-new page starts with, and how the form turns into what the server stores.
 */
 export const BUILDERS = {
-  birthday: { editor: BIRTHDAY_EDITOR, fields: ["age", "gifts", "wishes"], blurb: "Their name, age, balloon wishes, gifts and a letter." },
+  birthday: { editor: BIRTHDAY_EDITOR, fields: ["age", "audience", "question", "gifts", "reasons", "timeline", "promises", "wishes"], blurb: "Who it is for, the wish you ask, gifts, reasons, coupons, memories and a letter." },
   sorry: { editor: SORRY_EDITOR, fields: ["gifts", "promises", "wishes"], blurb: "Your apology, promises and little peace offerings." },
   proposal: { editor: PROPOSAL_EDITOR, fields: ["since", "question", "timeline", "reasons", "promises", "wishes"], blurb: "Your question, your story, why it's them and your vows." },
   anniversary: { editor: ANNIVERSARY_EDITOR, fields: ["since", "timeline", "reasons", "stats", "promises", "gifts", "wishes"], blurb: "Your date, story, reasons, numbers, promises and gifts." },
@@ -23,8 +24,8 @@ export const BUILDERS = {
 
 export const emptyData = (templateId, senderName = "") => ({
   recipientName: "", senderName, message: "", age: null, gifts: [], wishes: [], promises: [], since: "",
-  question: templateId === "proposal" ? QUESTION_PRESETS[0] : templateId === "thanks" ? GREETING_PRESETS[0] : templateId === "christmas" ? WISH_QUESTION : "",
-  audience: templateId === "thanks" || templateId === "christmas" ? "friend" : "", people: [], timeline: [], reasons: [], stats: [],
+  question: templateId === "proposal" ? QUESTION_PRESETS[0] : templateId === "thanks" ? GREETING_PRESETS[0] : templateId === "christmas" ? WISH_QUESTION : templateId === "birthday" ? BIRTHDAY_QUESTION : "",
+  audience: templateId === "thanks" || templateId === "christmas" ? "friend" : templateId === "birthday" ? BIRTHDAY_AUDIENCE : "", people: [], timeline: [], reasons: [], stats: [],
 });
 
 /** A page as the server sends it, shaped like the form (ids are kept so list items stay stable while editing). */

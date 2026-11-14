@@ -179,6 +179,16 @@ export function createSound() {
         noise(t + d, 0.05, { type: "highpass", freq: 6000, gain: 0.07 });
       }
     }),
+    pour: run(() => { // a drink glugging into a glass, rising in pitch as it fills
+      const t = now();
+      for (let i = 0; i < 7; i++) tone(260 + i * 55, t + i * 0.085, 0.06, { type: "sine", gain: 0.2, glideTo: 420 + i * 70, attack: 0.004, release: 0.04 });
+      noise(t, 0.65, { type: "bandpass", freq: 900, sweepTo: 2600, q: 0.9, gain: 0.12, attack: 0.08 });
+    }),
+    whack: run(() => { // a stick hitting the pinata
+      const t = now();
+      tone(150, t, 0.1, { type: "triangle", gain: 0.5, glideTo: 60, attack: 0.002, release: 0.06 });
+      noise(t, 0.07, { type: "lowpass", freq: 1400, gain: 0.45 });
+    }),
     rustle: run(() => noise(now(), 0.25, { type: "highpass", freq: 3000, gain: 0.12, attack: 0.05 })),
   };
 
@@ -199,6 +209,37 @@ export function createSound() {
     rainNode.g.gain.setTargetAtTime(Math.max(0, Math.min(1, level)) * 0.11, now(), 0.4);
   }
 
+  /*
+    THE BIRTHDAY SONG: the traditional tune, played like a little music box with a soft bass under it.
+    One play at a time; `onEnd` fires when it finishes by itself (not when it is stopped).
+  */
+  const TUNE = [
+    ["G4", 0.75], ["G4", 0.25], ["A4", 1], ["G4", 1], ["C5", 1], ["B4", 2],
+    ["G4", 0.75], ["G4", 0.25], ["A4", 1], ["G4", 1], ["D5", 1], ["C5", 2],
+    ["G4", 0.75], ["G4", 0.25], ["G5", 1], ["E5", 1], ["C5", 1], ["B4", 1], ["A4", 2],
+    ["F5", 0.75], ["F5", 0.25], ["E5", 1], ["C5", 1], ["D5", 1], ["C5", 3],
+  ];
+  const BASS = [[0, "C3"], [3, "G2"], [6, "G2"], [9, "C3"], [12, "C3"], [15, "F2"], [18, "F2"], [19, "C3"], [21, "G2"], [22, "C3"]];
+  function playSong(onEnd) {
+    if (!ensure()) return false;
+    stopSong();
+    const beat = 0.46;
+    const bus = ctx.createGain();
+    bus.gain.value = 0.9;
+    bus.connect(master);
+    const t0 = now() + 0.08;
+    let at = 0;
+    TUNE.forEach(([n, len]) => {
+      const t = t0 + at * beat;
+      tone(NOTE[n], t, len * beat * 0.92, { type: "triangle", gain: 0.2, release: 0.28, vib: len >= 2 ? 0.6 : 0, dest: bus });
+      tone(NOTE[n] * 2, t, 0.12, { type: "sine", gain: 0.07, release: 0.5, dest: bus }); // the music-box sparkle on top
+      at += len;
+    });
+    BASS.forEach(([b, n]) => tone(NOTE[n], t0 + (b + 1) * beat, beat * 1.7, { type: "sine", gain: 0.16, release: 0.3, dest: bus }));
+    song = watch(bus, at * beat + 0.6, onEnd);
+    return true;
+  }
+
   function stopSong(silent) {
     if (!song) return;
     clearInterval(song.timer);
@@ -209,7 +250,7 @@ export function createSound() {
       setTimeout(() => { try { old.disconnect(); } catch { /* already gone */ } }, 600);
     } catch { /* ignore */ }
     song = null;
-    if (!silent) return;
+    void silent;
   }
 
   return {
@@ -217,6 +258,8 @@ export function createSound() {
     sfx,
     rain,
     stopSong,
+    playSong,
+    get playing() { return Boolean(song); },
     setVolume(v) { volume = Math.max(0, Math.min(1, Number(v) || 0)); applyGain(); },
     setMuted(m) { muted = Boolean(m); applyGain(); },
     get volume() { return volume; },

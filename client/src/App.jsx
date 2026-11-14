@@ -161,6 +161,9 @@ const AdminMemoryPages = lazy(() =>
 const MemoriesLanding = lazy(() =>
   import("./memories/MemoriesLanding.jsx")
 );
+const BirthdayLanding = lazy(() =>
+  import("./memories/BirthdayLanding.jsx")
+);
 const MemoriesAuth = lazy(() =>
   import("./memories/MemoriesAuth.jsx")
 );
@@ -1042,6 +1045,10 @@ function App() {
             element={<MemoriesLanding />}
           />
           <Route
+            path="/memories/birthday"
+            element={<BirthdayLanding />}
+          />
+          <Route
             path="/memories/login"
             element={<MemoriesAuth />}
           />
@@ -1406,6 +1413,12 @@ function App() {
             path="/admin/website-analytics"
             element={requireAdmin(
               <WebsiteAnalytics />
+            )}
+          />
+          <Route
+            path="/admin/transactions"
+            element={requireAdmin(
+              <AdminBookPayments mode="all" />
             )}
           />
           <Route

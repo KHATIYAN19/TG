@@ -142,6 +142,30 @@ const PRIORITY_ROUTES = [
     priority: 4,
   },
   {
+    path: "/admin/transactions",
+    name: "All Transactions",
+    icon: Receipt,
+    description:
+      "Every payment ever made across all books, with paging, a page-size selector, database filters (status, book, gateway, dates, search) and all order actions.",
+    category: "Finance & Revenue",
+    keywords:
+      "all transactions payments history success pending failed books orders paging filter gateway refund access mail",
+    featured: true,
+    priority: 3,
+  },
+  {
+    path: "/admin/book-offers/payments",
+    name: "Offer Payments",
+    icon: CreditCard,
+    description:
+      "Orders placed through multi-book offers: resend access links, email PDFs, send payment reminders, and extend or revoke access.",
+    category: "Finance & Revenue",
+    keywords:
+      "offer payments orders bundle combo multi book resend access link pdf reminder revoke",
+    featured: true,
+    priority: 3,
+  },
+  {
     path: "/admin/coupon/dashboard",
     name: "Coupon Dashboard",
     icon: TicketPercent,
@@ -648,6 +672,7 @@ const CATEGORY_ACCENT = {
 };
 
 const PATH_ACCENT = {
+  "/admin/transactions": "#CA8A04", // yellow
   "/admin/memories": "#DB2777", // pink
   "/admin/interviews": "#0F766E",
 };

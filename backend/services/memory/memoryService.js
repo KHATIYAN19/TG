@@ -62,7 +62,7 @@ export const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&
 /* Allowed theme ids per template. The designs live in the client (memories/templates/<name>/themes.js).
    The SENDER picks one for their page; if none is picked the first one is used. */
 export const TEMPLATE_THEMES = {
-  birthday: ["candy", "love", "friendship", "citrus", "dreamy", "midnight", "tropical", "galaxy"],
+  birthday: ["candy", "love", "friendship", "citrus", "dreamy", "midnight", "tropical", "galaxy", "royal", "garden", "retro"],
   sorry: ["teddy", "rain", "rose", "starry", "sunflower", "friends"],
   anniversary: ["lovey", "golden", "candlelight", "garden", "sunset"],
   proposal: ["romance", "starlit", "blossom", "fairytale", "sunrise"],
@@ -85,8 +85,9 @@ export const styleFor = (page) => {
 
 export const MAX_PEOPLE = 10;
 export const THANKS_AUDIENCES = ["friend", "family", "colleague", "team", "mentor", "community"];
-/* every wording a page can be written for: the Thank You ones, plus "partner" (Christmas pages for someone you love) */
-export const PAGE_AUDIENCES = [...THANKS_AUDIENCES, "partner"];
+/* every wording a page can be written for: the Thank You ones, plus "partner" (Christmas and Birthday pages for someone you love)
+   and the closest family for Birthday pages: a parent, a brother or sister, a son or daughter */
+export const PAGE_AUDIENCES = [...THANKS_AUDIENCES, "partner", "parent", "sibling", "child"];
 export const timelineOut = (page) => (page.timeline || []).map((m) => ({ id: String(m._id), date: m.date || "", title: m.title, note: m.note || "" }));
 export const statsOut = (page) => (page.stats || []).map((s) => ({ id: String(s._id), label: s.label, value: s.value }));
 
@@ -226,7 +227,7 @@ export const deleteMediaObjects = (media) => removeFiles((media || []).map((m) =
 /* What a page may report about itself. "answer" and "reply" are NOT here: they only come from their own endpoints. */
 export const EVENT_TYPES = new Set([
   "open", "gate_open", "time_spent", "media_view", "letter_open", "finale", "song",
-  "balloon_pop", "candles_blown", "cake_cut", "gift_open", "gifts_all_open", "chocolate_bite", // birthday
+  "balloon_pop", "candles_blown", "cake_cut", "gift_open", "gifts_all_open", "chocolate_bite", "party_on", "cheers", "pinata", "fortune", "reason", "coupon", "fireworks", // birthday ("wish" is shared with christmas)
   "comfort", "heart_mended", "promise_flip", "gesture", // sorry
   "jar_reason", "toast", "bouquet", "lantern", // anniversary
   "box_open", // proposal

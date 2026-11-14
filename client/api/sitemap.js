@@ -39,6 +39,8 @@ const STATIC_PAGES = [
   "/blogs",
   "/interviews",
   "/prep-buddy",
+  "/memories",
+  "/memories/birthday",
 ];
 
 const xmlEsc = (s) =>

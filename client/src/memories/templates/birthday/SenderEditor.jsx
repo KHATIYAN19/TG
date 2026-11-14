@@ -3,6 +3,7 @@ import { Gift, Lock, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 
 import { THEME_LIST } from "./themes";
 import { emojiFor } from "./Gifts";
+import { AUDIENCES, audienceFor } from "./audiences";
 
 /*
   SENDER EDITOR
@@ -20,15 +21,33 @@ export const MAX_PEOPLE = 10;
 const SUGGESTIONS = ["Movie date", "Coffee on me", "Dinner together", "A giant hug", "Weekend getaway", "Shopping spree", "Concert tickets", "Spa day"];
 
 /* what the panel shows for each template; Birthday is the default */
+const BIRTHDAY_QUESTIONS = AUDIENCES.map((a) => a.question);
 export const BIRTHDAY_EDITOR = {
-  themes: THEME_LIST, age: true, promises: false,
+  themes: THEME_LIST, age: true,
+  // who it is for: sets the wording of the whole page, and the ideas offered below
+  audiences: AUDIENCES, audienceLabel: "Who is it for?",
+  // a question that was never typed by hand follows the person it is for
+  onAudience: (id, data) => { const q = (data.question || "").trim(); return !q || BIRTHDAY_QUESTIONS.includes(q) ? { question: audienceFor(id).question } : {}; },
+  question: true, questionLabel: "The birthday wish you ask them", questionPlaceholder: "What is your birthday wish this year?",
+  questionPresets: (aud) => audienceFor(aud).questions,
   giftsTitle: "Gifts for them",
   giftsHint: <>Name each gift, like &ldquo;Movie date&rdquo;. They tap a box to unwrap it. <b>No gifts? The gifts section is hidden.</b></>,
-  giftSuggestions: SUGGESTIONS,
+  giftSuggestions: (aud) => (aud ? audienceFor(aud).giftIdeas : SUGGESTIONS),
+  reasons: true, reasonsTitle: "Reasons they are special",
+  reasonsHint: <>They flip through these like a deck of cards, one at a time. <b>None? The deck is hidden.</b></>,
+  reasonIdeas: (aud) => audienceFor(aud).reasonIdeas,
+  timeline: true, timelineTitle: "Moments through the years",
+  timelineHint: <>Your memories with them in order, like &ldquo;The day we met&rdquo;. <b>None? That section is hidden.</b></>,
+  promises: true, promisesTitle: "Birthday coupons", promiseWord: "Coupon",
+  promisesHint: <>Little promises they can redeem, like &ldquo;One free coffee run&rdquo;. Each one is a ticket they tap to stamp. <b>None? That section is hidden.</b></>,
+  promiseIdeas: (aud) => audienceFor(aud).couponIdeas,
   wishesTitle: "Balloon wishes",
-  wishesHint: "One short wish per line. They pop out when a balloon is burst. Leave empty for the default wishes.",
-  messageTitle: "Your message",
+  wishesHint: "One short wish per line. They pop out when a balloon is burst. Leave empty for wishes that match who it is for.",
+  messageTitle: "Your birthday letter",
 };
+
+/* an editor setting that is either a list, or a function of who the page is for */
+const listFor = (v, audience) => (typeof v === "function" ? v(audience) : v) || [];
 
 /*
   Every row needs an id that no other row in the SAME list has: editing a row finds it by id, so two rows with one id
@@ -114,10 +133,10 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
               {config.since && <div className="col-span-2"><label className={label} htmlFor="se-since">Together since</label><input id="se-since" type="date" className={field} max={new Date().toISOString().slice(0, 10)} value={data.since || ""} onChange={(e) => set({ since: e.target.value })} /></div>}
               {config.audiences && (
                 <div className="col-span-2">
-                  <span className={label}>Who are you thanking?</span>
-                  <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Who are you thanking">
+                  <span className={label}>{config.audienceLabel || "Who are you thanking?"}</span>
+                  <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={config.audienceLabel || "Who are you thanking"}>
                     {config.audiences.map((a) => (
-                      <button key={a.id} type="button" role="radio" aria-checked={data.audience === a.id} onClick={() => set({ audience: a.id })} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${data.audience === a.id ? "border-pink-400 bg-pink-50 text-pink-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{a.emoji} {a.label}</button>
+                      <button key={a.id} type="button" role="radio" aria-checked={data.audience === a.id} onClick={() => set({ audience: a.id, ...(config.onAudience?.(a.id, data) || {}) })} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${data.audience === a.id ? "border-pink-400 bg-pink-50 text-pink-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{a.emoji} {a.label}</button>
                     ))}
                   </div>
                 </div>
@@ -127,7 +146,7 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
                   <label className={label} htmlFor="se-q">{config.questionLabel || "The question you will ask"}</label>
                   <input id="se-q" className={field} maxLength={100} value={data.question || ""} placeholder={config.questionPlaceholder || "Will you marry me?"} onChange={(e) => set({ question: e.target.value })} />
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {(config.questionPresets || []).map((q) => (
+                    {listFor(config.questionPresets, data.audience).map((q) => (
                       <button key={q} type="button" onClick={() => set({ question: q })} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${data.question === q ? "border-pink-400 bg-pink-50 text-pink-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{q}</button>
                     ))}
                   </div>
@@ -176,7 +195,7 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
             </button>
             {gifts.length < MAX_GIFTS && (
               <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Gift ideas">
-                {config.giftSuggestions.filter((x) => !gifts.some((g) => g.title === x)).slice(0, 6).map((x) => (
+                {listFor(config.giftSuggestions, data.audience).filter((x) => !gifts.some((g) => g.title === x)).slice(0, 6).map((x) => (
                   <button key={x} type="button" onClick={() => set({ gifts: [...gifts, newGift(x, gifts)] })} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-pink-100 hover:text-pink-700">+ {x}</button>
                 ))}
               </div>
@@ -242,6 +261,13 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
               </ul>
               <button type="button" disabled={reasons.length >= MAX_REASONS} onClick={() => set({ reasons: [...reasons, ""] })}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add a reason</button>
+              {reasons.length < MAX_REASONS && (
+                <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Reason ideas">
+                  {listFor(config.reasonIdeas, data.audience).filter((x) => !reasons.includes(x)).map((x) => (
+                    <button key={x} type="button" onClick={() => set({ reasons: [...reasons.filter(Boolean), x] })} className="rounded-full bg-slate-100 px-2.5 py-1 text-left text-xs font-medium text-slate-600 hover:bg-pink-100 hover:text-pink-700">+ {x}</button>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -272,13 +298,20 @@ export function EditorFields({ data, onData, themeId, onTheme, config = BIRTHDAY
               <ul className="space-y-2">
                 {promises.map((p, i) => (
                   <li key={i} className="flex items-center gap-2">
-                    <input className={field} maxLength={120} placeholder={`Promise ${i + 1}`} value={p} onChange={(e) => set({ promises: promises.map((x, k) => (k === i ? e.target.value : x)) })} aria-label={`Promise ${i + 1}`} />
+                    <input className={field} maxLength={120} placeholder={`${config.promiseWord || "Promise"} ${i + 1}`} value={p} onChange={(e) => set({ promises: promises.map((x, k) => (k === i ? e.target.value : x)) })} aria-label={`Promise ${i + 1}`} />
                     <button type="button" onClick={() => set({ promises: promises.filter((_, k) => k !== i) })} aria-label={`Remove promise ${i + 1}`} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
                   </li>
                 ))}
               </ul>
               <button type="button" disabled={promises.length >= MAX_PROMISES} onClick={() => set({ promises: [...promises, ""] })}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add a promise</button>
+                className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-pink-300 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add a {(config.promiseWord || "promise").toLowerCase()}</button>
+              {promises.length < MAX_PROMISES && (
+                <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Ideas">
+                  {listFor(config.promiseIdeas, data.audience).filter((x) => !promises.includes(x)).map((x) => (
+                    <button key={x} type="button" onClick={() => set({ promises: [...promises.filter(Boolean), x] })} className="rounded-full bg-slate-100 px-2.5 py-1 text-left text-xs font-medium text-slate-600 hover:bg-pink-100 hover:text-pink-700">+ {x}</button>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
