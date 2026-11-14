@@ -1637,6 +1637,8 @@ function ActionMenu({
   onEbookPdfs,
 
   onArenaMail,
+  onMemoriesMail,
+  showMemoriesMail,
 
   onExtend,
 
@@ -1871,6 +1873,29 @@ function ActionMenu({
               </button>
 
 
+              {showMemoriesMail && (
+              <button
+                type="button"
+
+                onClick={() =>
+                  onMemoriesMail(
+                    order
+                  )
+                }
+
+                title="Re-send the email with the buyer's free Memories page code (Lifetime pack only)"
+
+                className="tt-menu-item"
+              >
+                <Mail
+                  className="h-4 w-4"
+                />
+
+                Resend Memories Code Mail
+              </button>
+              )}
+
+
               <button
                 type="button"
 
@@ -2074,6 +2099,8 @@ function PaymentCard({
   onEbookPdfs,
 
   onArenaMail,
+  onMemoriesMail,
+  showMemoriesMail,
 
   onExtend,
 
@@ -2339,6 +2366,14 @@ function PaymentCard({
 
               onArenaMail={
                 onArenaMail
+              }
+
+              onMemoriesMail={
+                onMemoriesMail
+              }
+
+              showMemoriesMail={
+                showMemoriesMail
               }
 
               onExtend={
@@ -5340,6 +5375,95 @@ export default function AdminBookPayments() {
           error?.message ||
 
           "Unable to send the Arena credit mail.",
+          {
+            id:
+              toastId,
+          }
+        );
+      }
+    };
+
+
+  const handleResendMemoriesMail =
+    async (
+      order
+    ) => {
+      if (
+        !order?._id
+      ) {
+        toast.error(
+          "Order ID is missing."
+        );
+
+        return;
+      }
+
+      setMenuOrderId(
+        null
+      );
+
+      const toastId =
+        toast.loading(
+          `Queueing the Memories code mail to ${
+            order.customer?.email ||
+            "customer"
+          }...`
+        );
+
+      try {
+        const response =
+          await fetch(
+            `${BASE_URL}/api/admin/membership/orders/${encodeURIComponent(
+              order._id
+            )}/resend-memories-mail`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Accept:
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
+
+        const result =
+          await readResponse(
+            response
+          );
+
+        if (
+          !response.ok ||
+
+          result?.success ===
+            false
+        ) {
+          throw new Error(
+            result?.message ||
+
+            "Unable to send the Memories code mail."
+          );
+        }
+
+        toast.success(
+          result?.message ||
+
+          "Memories code mail queued.",
+          {
+            id:
+              toastId,
+          }
+        );
+      } catch (
+        error
+      ) {
+        toast.error(
+          error?.message ||
+
+          "Unable to send the Memories code mail.",
           {
             id:
               toastId,
@@ -8736,6 +8860,14 @@ export default function AdminBookPayments() {
 
                     onArenaMail={
                       handleResendArenaMail
+                    }
+
+                    onMemoriesMail={
+                      handleResendMemoriesMail
+                    }
+
+                    showMemoriesMail={
+                      book?.membership?.plan === "lifetime"
                     }
 
                     onExtend={

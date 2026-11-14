@@ -1,7 +1,9 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import toast from "react-hot-toast";
 
-import { useMemConfig } from "./memApi";
+import { claimMyCodes, useMemConfig } from "./memApi";
 import AppShell, { Loading } from "./AppShell";
 import MemoriesPay from "./MemoriesPay";
 import MemoriesStudio from "./MemoriesStudio";
@@ -20,7 +22,27 @@ import { SupportList, SupportThread } from "./MemoriesSupport";
 export default function MemoriesApp() {
   const location = useLocation();
   const token = useSelector((s) => s.auth?.token);
+  const navigate = useNavigate();
   const { cfg, error, reload } = useMemConfig();
+
+  /*
+    Right after sign-up / login: a Lifetime pack comes with one Memories page, emailed as a code. If this account's email bought one,
+    the page is added here by itself (no typing). Runs once per visit; nothing happens for everyone else.
+  */
+  const claimed = useRef(false);
+  useEffect(() => {
+    if (!token || claimed.current) return;
+    claimed.current = true;
+    claimMyCodes()
+      .then(async (r) => {
+        if (!r?.added) return;
+        await reload();
+        toast.success(r.added > 1 ? `${r.added} free pages from your Lifetime pack were added.` : "Your free page from the Lifetime pack was added.", { id: "memories-pack-gift", duration: 6000 });
+        // from the email's "Create a page" link or the sign-in screen: take them to the templates with a welcome
+        if (/^\/memories\/app(\/pay)?\/?$/.test(location.pathname)) navigate("/memories/app", { replace: true, state: { welcome: "gift", added: r.added } });
+      })
+      .catch(() => { claimed.current = false; }); // offline / server busy: try again on the next visit to this screen
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!token) return <Navigate to="/memories/login" replace state={{ from: location }} />;
 

@@ -19,6 +19,7 @@ const WELCOME = {
   payment: "Payment received. Create your page below.",
   code: "Code accepted. Pick a template and create your page.",
   free: "Your free page is ready.",
+  gift: "Your Lifetime pack includes a free page.",
 };
 
 const packsQuery = (packs) => Object.entries(packs).filter(([, n]) => n > 0).map(([k, n]) => `${k}:${n}`).join(",");
@@ -194,7 +195,7 @@ export default function MemoriesStudio({ cfg }) {
   const [params, setParams] = useSearchParams();
   const [busy, setBusy] = useState(false);
   const added = Number(location.state?.added) || 0;
-  const welcome = added > 1 ? `Code accepted. ${added} pages added.` : WELCOME[location.state?.welcome];
+  const welcome = location.state?.welcome === "gift" ? (added > 1 ? `Your Lifetime pack added ${added} free pages.` : WELCOME.gift) : added > 1 ? `Code accepted. ${added} pages added.` : WELCOME[location.state?.welcome];
 
   // a template the admin has hidden (or switched all its looks off) is not shown at all
   const shown = useMemo(() => TEMPLATES.map((t) => ({ t, occ: cfg.occasions?.find((o) => o.theme === t.theme) })).filter((x) => x.occ), [cfg.occasions]);
@@ -214,7 +215,7 @@ export default function MemoriesStudio({ cfg }) {
   return (
     <div className="py-6 sm:py-8">
       {welcome && (
-        <Banner tone="ok" title={welcome} className="mb-6"><p className="flex items-center gap-2"><Confetti size={16} weight="fill" className="ma-wiggle shrink-0" aria-hidden /> Pick a template below and make your page.</p></Banner>
+        <Banner tone="ok" title={welcome} className="mb-6"><p className="flex items-center gap-2"><Confetti size={16} weight="fill" className="ma-wiggle shrink-0" aria-hidden /> {location.state?.welcome === "gift" ? "It was added to your account. Pick a template below and make it for someone you love: a birthday, an apology, a thank-you, a proposal." : "Pick a template below and make your page."}</p></Banner>
       )}
 
       <header className="ma-hero ma-in p-6 sm:p-8">

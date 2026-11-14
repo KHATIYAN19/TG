@@ -30,6 +30,8 @@ const answerLimit = budget({ name: "memory-answer", limit: () => envInt("MEMORY_
 const replyLimit = budget({ name: "memory-reply", limit: () => envInt("MEMORY_REPLY_LIMIT", 20), windowSec: HOUR, key: (req) => `${byIp(req)}:${req.params.slug}`, message: "Too many replies." });
 const emailResendLimit = budget({ name: "memory-email-resend", limit: () => envInt("MEMORY_EMAIL_RESEND_LIMIT", 20), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many emails." });
 const codeLimit = budget({ name: "memory-code", limit: () => envInt("MEMORY_CODE_LIMIT", 10), windowSec: 10 * MINUTE, key: (req) => [byIp(req), req.user?.id], message: "Too many code attempts.", failClosed: true });
+// the automatic "add my Lifetime-pack page" call the app makes on each visit: cheap, so a roomier allowance than typing codes
+const claimLimit = budget({ name: "memory-code-claim", limit: () => envInt("MEMORY_CODE_CLAIM_LIMIT", 30), windowSec: 10 * MINUTE, key: (req) => req.user?.id, message: "Too many requests." });
 // the price shown while a user moves the add-on steppers: cheap to answer, so a generous per-user allowance
 const quoteLimit = budget({ name: "memory-quote", limit: () => envInt("MEMORY_QUOTE_LIMIT", 240), windowSec: 10 * MINUTE, key: (req) => req.user?.id, message: "Too many price checks. Please wait a moment." });
 // support tickets: a handful of new tickets and a steady trickle of replies per user
@@ -66,6 +68,7 @@ userRouter.use(auth);
 
 userRouter.get("/config", U.getConfig);
 userRouter.post("/codes/redeem", codeLimit, U.redeemCode);
+userRouter.post("/codes/claim-mine", claimLimit, U.claimMyCodes);
 userRouter.post("/gumroad/redeem-order", codeLimit, U.redeemGumroadOrder);
 userRouter.post("/credits/free", codeLimit, U.claimFreeCredit);
 userRouter.post("/payments/quote", quoteLimit, P.quote);
@@ -155,6 +158,7 @@ adminRouter.delete("/gumroad/products/:id", A.deleteGumroadProduct);
 adminRouter.get("/gumroad/sales", A.listGumroadSales);
 adminRouter.get("/codes", A.listCodes);
 adminRouter.post("/codes", A.createCodes);
+adminRouter.post("/codes/:id/resend-mail", A.resendCodeMail);
 adminRouter.patch("/codes/:id", A.updateCode);
 adminRouter.delete("/codes/:id", A.deleteCode);
 

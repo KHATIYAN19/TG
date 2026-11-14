@@ -342,6 +342,19 @@ export default function AdminMembership() {
     }
   };
 
+  const [memBusy, setMemBusy] = useState(null);
+  const resendMemories = async (m) => {
+    setMemBusy(m._id);
+    try {
+      const r = await http.post(`/members/${m._id}/resend-memories-mail`);
+      flash(r.data.message);
+      await load();
+    } catch (e) {
+      flash(errText(e, "Could not send the Memories code mail."));
+    } finally {
+      setMemBusy(null);
+    }
+  };
   const doSuspend = () => run(async () => (await http.patch(`/members/${modal.row._id}/suspend`, { reason })).data.message);
   const doUnsuspend = () => run(async () => (await http.patch(`/members/${modal.row._id}/unsuspend`)).data.message);
   const doDeleteMember = () => run(async () => (await http.delete(`/members/${modal.row._id}`)).data.message);
@@ -478,7 +491,7 @@ export default function AdminMembership() {
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                  <tr><th className="p-3">Member</th><th className="p-3">Pack</th><th className="p-3">Status</th><th className="p-3">Prep Arena</th><th className="p-3">Purchase</th><th className="p-3 text-right">Actions</th></tr>
+                  <tr><th className="p-3">Member</th><th className="p-3">Pack</th><th className="p-3">Status</th><th className="p-3">Prep Arena</th><th className="p-3">Purchase</th><th className="p-3">Memories code</th><th className="p-3 text-right">Actions</th></tr>
                 </thead>
                 <tbody>
                   {members.rows.map((m) => {
@@ -510,6 +523,21 @@ export default function AdminMembership() {
                           ) : <span className="text-xs text-slate-400">No matches</span>}
                         </td>
                         <td className="p-3 text-xs"><div className="font-semibold text-slate-800">{m.bookTitle || "-"}</div><div className="text-slate-500">{inr(m.paidAmount)} · {when(m.activatedAt)}</div><div className="font-mono text-[10px] text-slate-400">{m.orderId}</div></td>
+                        <td className="p-3 text-xs">
+                          {m.memories ? (
+                            <div>
+                              <div className="font-mono font-semibold text-slate-800">{m.memories.code || "not made yet"}</div>
+                              <div title={m.memories.lastError} className={m.memories.used ? "text-emerald-700" : m.memories.mailStatus === "failed" ? "text-rose-600" : "text-slate-500"}>
+                                {m.memories.used ? "page created" : `mail ${{ none: "not sent", sending: "sending", queued: "queued", sent: "sent", failed: "failed" }[m.memories.mailStatus] || m.memories.mailStatus}${m.memories.sends > 1 ? ` ×${m.memories.sends}` : ""}`}
+                              </div>
+                              {!m.memories.used && (
+                                <button type="button" disabled={memBusy === m._id} onClick={() => resendMemories(m)} className="mt-1 inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-bold text-orange-700 transition hover:bg-orange-100 disabled:opacity-50">
+                                  {memBusy === m._id ? "Sending…" : m.memories.mailStatus === "failed" || m.memories.mailStatus === "none" ? "Retry mail" : "Resend mail"}
+                                </button>
+                              )}
+                            </div>
+                          ) : <span className="text-slate-300">Lifetime only</span>}
+                        </td>
                         <td className="p-3">
                           <div className="flex justify-end gap-1.5">
                             {sus ? (
@@ -523,7 +551,7 @@ export default function AdminMembership() {
                       </tr>
                     );
                   })}
-                  {!loading && members.rows.length === 0 && <tr><td colSpan={6} className="p-10 text-center text-slate-400">No members match.</td></tr>}
+                  {!loading && members.rows.length === 0 && <tr><td colSpan={7} className="p-10 text-center text-slate-400">No members match.</td></tr>}
                 </tbody>
               </table>
             </div>

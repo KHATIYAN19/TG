@@ -6,6 +6,7 @@ import MemoryPage from "../../models/memory/MemoryPage.js";
 import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
 import MemoryAddon from "../../models/memory/MemoryAddon.js";
 import { ADDON_DEFS, addonCatalog, addonOut, baseLimits, emptyExtra, ensureAddons, limitsFor, limitsOut, occasionForAdmin } from "../../services/memory/catalog.js";
+import { assertResendable, sendPackCodeMail } from "../../services/memory/packCode.js";
 import MemoryCode from "../../models/memory/MemoryCode.js";
 import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryOrder from "../../models/memory/MemoryOrder.js";
@@ -541,7 +542,23 @@ export const deleteUserPages = handler(async (req, res) => {
 
 export const listCodes = handler(async (req, res) => {
   const codes = await MemoryCode.find().sort({ createdAt: -1 }).limit(500).lean();
-  ok(res, codes.map((c) => ({ id: String(c._id), code: c.code, maxUses: c.maxUses, usedCount: c.usedCount, expiresAt: c.expiresAt, isActive: c.isActive, note: c.note || "", createdAt: c.createdAt })));
+  ok(res, codes.map((c) => ({
+    id: String(c._id), code: c.code, maxUses: c.maxUses, usedCount: c.usedCount, expiresAt: c.expiresAt, isActive: c.isActive, note: c.note || "", createdAt: c.createdAt,
+    source: c.source || "admin", ownerEmail: c.ownerEmail || "", orderId: c.orderId || "",
+    mail: c.source === "lifetime_pack" ? { status: c.mail?.status || "none", sends: c.mail?.sends || 0, lastAt: c.mail?.sentAt || c.mail?.queuedAt || null, lastTo: c.mail?.lastTo || "", lastError: c.mail?.lastError || "" } : null,
+  })));
+});
+
+/** Re-send a Lifetime-pack buyer's code email (optionally to a different address). Goes through the mail queue like the first one. */
+export const resendCodeMail = handler(async (req, res) => {
+  assertId(req.params.id, "code id");
+  const b = parse(z.object({ email: z.string().trim().email().max(254).optional() }), req.body);
+  const code = await MemoryCode.findById(req.params.id);
+  if (!code) throw new MemoryError(404, "Code not found.", "CODE_NOT_FOUND");
+  if (code.source !== "lifetime_pack") throw new MemoryError(400, "Only the codes made for Lifetime pack orders have an email to resend.", "NOT_PACK_CODE");
+  assertResendable(code);
+  const r = await sendPackCodeMail(code, { to: b.email, force: true });
+  ok(res, { status: r.status, to: r.to });
 });
 
 export const createCodes = handler(async (req, res) => {

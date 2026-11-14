@@ -10,6 +10,8 @@ const data = (r) => r.data?.data;
 
 export const getConfig = () => memoriesHttp.get("/config").then(data);
 export const redeemCode = (code) => memoriesHttp.post("/codes/redeem", { code }).then(data);
+/* right after sign-up / login: adds the free page that came with a Lifetime pack bought with this account's email. Safe to call on every visit. */
+export const claimMyCodes = () => memoriesHttp.post("/codes/claim-mine").then(data);
 export const redeemGumroadOrder = (orderId, email) => memoriesHttp.post("/gumroad/redeem-order", { orderId, email }).then(data);
 /* a free look: the pass is made for the template + look the user picked */
 export const claimFreeCredit = (occasionId, theme) => memoriesHttp.post("/credits/free", { occasionId, ...(theme ? { theme } : {}) }).then(data);

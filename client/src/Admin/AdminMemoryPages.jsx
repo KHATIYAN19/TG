@@ -469,6 +469,26 @@ function Codes({ http, run, setDialog }) {
     },
   });
 
+  /* Lifetime-pack codes are emailed to the buyer through the mail queue. Resend goes the same way, optionally to a corrected address. */
+  const resend = (c) => setDialog({
+    kind: "form", title: "Resend the Memories code email", label: "Resend",
+    intro: `Sends ${c.code} again. It is queued like the first email and usually arrives within seconds.`,
+    fields: [{ name: "email", label: "Send to", value: c.ownerEmail, type: "email", placeholder: "buyer@example.com", hint: "Change it only if the buyer gave a wrong address. The page is then claimed by whoever signs up with this email." }],
+    onSubmit: async (v) => {
+      const email = String(v.email || "").trim();
+      const d = await run(() => http.post(`/codes/${c.id}/resend-mail`, email ? { email } : {}), "Email queued");
+      if (!d) return false;
+      load();
+      return true;
+    },
+  });
+
+  const mailChip = (m) => {
+    const tone = { none: "bg-slate-100 text-slate-700 ring-slate-200", sending: "bg-amber-50 text-amber-700 ring-amber-200", queued: "bg-sky-50 text-sky-700 ring-sky-200", sent: STATUS.active, failed: STATUS.failed }[m.status] || STATUS.created;
+    const label = { none: "not sent", sending: "sending", queued: "queued", sent: "sent", failed: "failed" }[m.status] || m.status;
+    return <span title={m.lastError || (m.lastTo ? `to ${m.lastTo}` : "")}><Chip className={tone}>{label}{m.sends > 1 ? ` ×${m.sends}` : ""}</Chip></span>;
+  };
+
   return (
     <div>
       <div className="mb-3 flex justify-end"><Btn tone="primary" onClick={create}><Plus size={12} /> Generate codes</Btn></div>
@@ -476,10 +496,12 @@ function Codes({ http, run, setDialog }) {
         { h: "Code", v: (c) => (<span className="font-mono font-bold">{c.code} <button className="ml-1 text-slate-400 hover:text-slate-700" aria-label="Copy" onClick={() => { navigator.clipboard?.writeText(c.code); toast.success("Copied"); }}><Copy size={12} className="inline" /></button></span>) },
         { h: "Used", v: (c) => `${c.usedCount} / ${c.maxUses}` },
         { h: "Expires", v: (c) => (c.expiresAt ? when(c.expiresAt) : "never") },
-        { h: "Note", v: (c) => c.note || "" },
+        { h: "Note", v: (c) => (c.source === "lifetime_pack" ? (<span><Chip className="bg-rose-50 text-rose-700 ring-rose-200">Lifetime pack</Chip><span className="mt-0.5 block text-xs text-slate-500">{c.ownerEmail}{c.orderId ? ` · ${c.orderId}` : ""}</span></span>) : (c.note || "")) },
+        { h: "Email", v: (c) => (c.mail ? mailChip(c.mail) : "") },
         { h: "Status", v: (c) => (!c.isActive ? <Chip className={STATUS.failed}>disabled</Chip> : c.usedCount >= c.maxUses ? <Chip className={STATUS.closed}>used up</Chip> : <Chip className={STATUS.active}>active</Chip>) },
         { h: "", v: (c) => (
           <div className="flex gap-1.5">
+            {c.source === "lifetime_pack" && <Btn onClick={() => resend(c)} disabled={c.usedCount >= c.maxUses}>Resend email</Btn>}
             <Btn onClick={async () => { if (await run(() => http.patch(`/codes/${c.id}`, { isActive: !c.isActive }))) load(); }}>{c.isActive ? "Disable" : "Enable"}</Btn>
             <Btn tone="danger" onClick={() => setDialog({ kind: "confirm", title: "Delete code?", text: c.code, label: "Delete", onSubmit: async () => { if (await run(() => http.delete(`/codes/${c.id}`))) load(); } })}><Trash2 size={12} /></Btn>
           </div>) },

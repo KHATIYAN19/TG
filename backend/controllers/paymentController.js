@@ -36,7 +36,7 @@ export const getBookPayments = async (req, res) => {
 
     const book = await Book.findById(bookId)
       .select(
-        "title slug price mrp currency coverPageUrl stats active"
+        "title slug price mrp currency coverPageUrl stats active membership"
       )
       .lean();
 

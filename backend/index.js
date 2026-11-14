@@ -41,6 +41,7 @@ import marketingCampaignRoutes from "./routes/marketingCampaignRoutes.js";
 import { unsubscribePage, unsubscribeSubmit } from "./controllers/unsubscribeController.js";
 import { publicFormLimiter } from "./Middleware/rateLimiter.js";
 import { startMailWorker } from "./services/mail/mailWorker.js";
+import { startPackCodeSweeper } from "./services/memory/packCode.js";
 
 import InterviewExperience from "./routes/InterviewExperience.js";
 import BookReviewRoute from "./routes/bookReviewRoute.js";
@@ -830,6 +831,7 @@ const startServer = async () => {
 
     startAnalyticsJobs();
     startEbookEmailSweeper();
+    startPackCodeSweeper();
     await backfillExpiry().catch((error) => console.error("[memory] expiry backfill failed:", error.message));
     startStorageSweeper();
     startExpirySweeper();

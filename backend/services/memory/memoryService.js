@@ -143,6 +143,11 @@ export const ensureOccasions = async () => {
 export const newSlug = () => crypto.randomBytes(9).toString("base64url");
 export const newPin = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
 export const newCode = () => crypto.randomBytes(5).toString("hex").toUpperCase();
+
+/* A code that is easy to read out and type: MEM-7K4P-X9QD (no 0/O/1/I/L, so it is never mistyped). ~8.5e11 combinations. */
+const CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const codeChunk = (n) => Array.from({ length: n }, () => CODE_CHARS[crypto.randomInt(CODE_CHARS.length)]).join("");
+export const newPackCode = () => `MEM-${codeChunk(4)}-${codeChunk(4)}`;
 export const hashPin = (pin) => bcrypt.hash(pin, 10);
 
 /*

@@ -4,6 +4,7 @@ import Book from "../models/Book.js";
 import EbookMailSettings from "../models/EbookMailSettings.js";
 import sendMail from "./MailSender.js";
 import { scheduleMembershipActivation } from "../services/membership/membershipService.js";
+import { schedulePackCodeMail } from "../services/memory/packCode.js";
 
 /* =====================================================
    EBOOK PDF EMAIL DELIVERY
@@ -738,6 +739,8 @@ export const getEbookMailSettings = async () => {
 
 export const scheduleEbookEmail = (order) => {
   if (order?._id) {
+    // Lifetime pack: its own queued "Memories page code" mail. First, and independent of everything below, so it is never held up by them.
+    schedulePackCodeMail(order);
     isAutoEbookEmailEnabled()
       .then((enabled) => {
         if (!enabled) return;

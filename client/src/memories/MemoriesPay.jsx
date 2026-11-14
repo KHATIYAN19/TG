@@ -41,9 +41,9 @@ export function Stepper({ current }) {
 const Label = ({ htmlFor, children }) => <label htmlFor={htmlFor} className="title-4 mb-2 block text-[#4a2340]">{children}</label>;
 
 /* ------------------------------------------------------------------ redeem: a unique code, or a Gumroad order */
-function Redeem({ cfg, reload, after, wantsGumroad }) {
+function Redeem({ cfg, reload, after, wantsGumroad, initialCode = "" }) {
   const user = useSelector((s) => s.auth?.user);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [redeeming, setRedeeming] = useState(false);
   const [codeError, setCodeError] = useState("");
   const [gOrder, setGOrder] = useState("");
@@ -83,7 +83,7 @@ function Redeem({ cfg, reload, after, wantsGumroad }) {
           <Label htmlFor="mem-code">Your code</Label>
           <div className="relative">
             <Key size={18} weight="duotone" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#e11d48]" aria-hidden />
-            <input id="mem-code" value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setCodeError(""); }} maxLength={40} autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="LOVE2025"
+            <input id="mem-code" value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setCodeError(""); }} maxLength={40} autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="MEM-XXXX-XXXX"
               className={cx("ml-input !pl-12 font-mono tracking-widest", codeError && "ml-input-bad")} aria-invalid={Boolean(codeError)} aria-describedby={codeError ? "code-err" : undefined} />
           </div>
           {codeError && <p id="code-err" role="alert" className="caption-4 mt-2 text-[#be123c]">{codeError}</p>}
@@ -330,7 +330,7 @@ export default function MemoriesPay({ cfg, reload }) {
 
         <div className="mt-8">
           {occ && <h2 className="ml-kicker caption-3 mb-4 text-center">Or use a code</h2>}
-          <Redeem cfg={cfg} reload={reload} after={after} wantsGumroad={wantsGumroad} />
+          <Redeem cfg={cfg} reload={reload} after={after} wantsGumroad={wantsGumroad} initialCode={String(params.get("code") || "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40)} />
         </div>
       </div>
 

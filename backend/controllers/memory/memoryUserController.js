@@ -4,7 +4,6 @@ import { z } from "zod";
 
 import MemoryPage from "../../models/memory/MemoryPage.js";
 import MemoryOccasion from "../../models/memory/MemoryOccasion.js";
-import MemoryCode from "../../models/memory/MemoryCode.js";
 import MemoryCredit from "../../models/memory/MemoryCredit.js";
 import MemoryEvent from "../../models/memory/MemoryEvent.js";
 import MemoryGumroadProduct from "../../models/memory/MemoryGumroadProduct.js";
@@ -15,6 +14,7 @@ import { createUploadTarget, headObject, keyBelongsTo, userPrefix } from "../../
 import { removeFiles, trackUpload, uploadAttached } from "../../services/memory/storageCleanup.js";
 import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
 import User from "../../models/User.js";
+import { claimPackCodesForUser, redeemCodeForUser } from "../../services/memory/codes.js";
 import { canResend, sendPageMail } from "../../services/memory/pageMail.js";
 import {
   MAX_GIFTS, MAX_PEOPLE, PAGE_AUDIENCES, MAX_PROMISES, MAX_REASONS, MAX_STATS, MAX_TIMELINE, MAX_WISHES, MemoryError, assertId, availableCredits, checkPin, ensureOccasions, getSettings, grantCredits,
@@ -157,37 +157,14 @@ export const redeemGumroadOrder = handler(async (req, res) => {
 
 export const redeemCode = handler(async (req, res) => {
   const { code } = parse(z.object({ code: z.string().trim().min(3).max(40) }), req.body);
-  const userId = uid(req);
-  const now = new Date();
-  const normalized = code.toUpperCase();
+  await redeemCodeForUser(uid(req), code);
+  ok(res, { credits: await availableCredits(uid(req)) });
+});
 
-  // One atomic update: valid + not expired + not used up + not already used by this user.
-  const claimed = await MemoryCode.findOneAndUpdate(
-    {
-      code: normalized,
-      isActive: true,
-      redeemedBy: { $ne: new mongoose.Types.ObjectId(userId) },
-      $and: [{ $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] }, { $expr: { $lt: ["$usedCount", "$maxUses"] } }],
-    },
-    { $inc: { usedCount: 1 }, $push: { redeemedBy: userId } },
-    { new: true }
-  );
-
-  if (!claimed) {
-    const c = await MemoryCode.findOne({ code: normalized }).lean();
-    if (!c || !c.isActive) throw new MemoryError(400, "Invalid code.", "CODE_INVALID");
-    if (c.expiresAt && c.expiresAt < now) throw new MemoryError(400, "This code has expired.", "CODE_EXPIRED");
-    if (c.redeemedBy.some((id) => String(id) === userId)) throw new MemoryError(400, "You have already used this code.", "CODE_ALREADY_USED_BY_YOU");
-    throw new MemoryError(400, "This code has already been used.", "CODE_USED_UP");
-  }
-
-  try {
-    await grantCredits(userId, { source: "code", ref: claimed.code });
-  } catch (e) {
-    await MemoryCode.updateOne({ _id: claimed._id }, { $inc: { usedCount: -1 }, $pull: { redeemedBy: userId } });
-    throw e;
-  }
-  ok(res, { credits: await availableCredits(userId) });
+/* Called by the app right after sign-up / login: adds the free page that came with a Lifetime pack bought with this account's email. */
+export const claimMyCodes = handler(async (req, res) => {
+  const added = await claimPackCodesForUser(uid(req));
+  ok(res, { added, credits: await availableCredits(uid(req)) });
 });
 
 /* A free template (price 0): the user claims their pass here. Never piles up: they get one only when they hold no unused pass. */

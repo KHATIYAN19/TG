@@ -6,6 +6,7 @@ import User from "../models/User.js";
 import ArenaProfile from "../models/arena/ArenaProfile.js";
 import ArenaEntry from "../models/arena/ArenaEntry.js";
 import Membership from "../models/Membership.js";
+import MemoryCode from "../models/memory/MemoryCode.js";
 import BookSuggestion from "../models/BookSuggestion.js";
 import BookLaunchNotice from "../models/BookLaunchNotice.js";
 import {
@@ -182,13 +183,19 @@ export const adminListMembers = handler(async (req, res) => {
   const left = new Map();
   for (const e of entries) left.set(String(e.user), (left.get(String(e.user)) || 0) + Math.max(0, e.matchesAllowed - e.matchesUsed));
 
+  // Lifetime members only: where their Memories page code stands (made? emailed? used?)
+  const codes = await MemoryCode.find({ orderId: { $in: rows.filter((r) => r.plan === "lifetime").map((r) => r.orderId) } }).select("orderId code usedCount maxUses mail").lean();
+  const codeBy = new Map(codes.map((c) => [c.orderId, c]));
+
   res.json({
     success: true,
     data: {
       rows: rows.map((r) => {
         const uid = idByEmail.get(r.email);
+        const c = r.plan === "lifetime" ? codeBy.get(r.orderId) : null;
+        const memories = r.plan === "lifetime" ? { code: c?.code || null, used: Boolean(c && c.usedCount >= c.maxUses), mailStatus: c?.mail?.status || "none", sends: c?.mail?.sends || 0, lastError: c?.mail?.lastError || "" } : null;
         const profile = uid ? profileBy.get(String(uid)) : null;
-        return { ...r, arena: { hasAccount: Boolean(uid), profileStatus: profile?.status || null, alias: profile?.alias || null, matchesLeft: uid ? left.get(String(uid)) || 0 : 0 } };
+        return { ...r, memories, arena: { hasAccount: Boolean(uid), profileStatus: profile?.status || null, alias: profile?.alias || null, matchesLeft: uid ? left.get(String(uid)) || 0 : 0 } };
       }),
       total,
       page,

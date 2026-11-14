@@ -1,6 +1,8 @@
 import express from "express";
 
 import { resendPurchaseMailForOrder } from "../services/membership/membershipService.js";
+import { deliverPackCodeForOrder } from "../services/memory/packCode.js";
+import Membership from "../models/Membership.js";
 import { auth, isAdmin } from "../Middleware/auth.js";
 import { budget, byIp, byUser } from "../Middleware/budget.js";
 import {
@@ -43,6 +45,30 @@ adminRouter.post("/orders/:orderId/resend-purchase-mail", async (req, res) => {
     const { email } = await resendPurchaseMailForOrder(req.params.orderId);
     res.json({ success: true, message: `Prep Arena credit mail sent to ${email}.` });
   } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message || "Unable to send the mail." });
+  }
+});
+/* Re-send the Memories page code email for one paid Lifetime-pack order (makes the code first if the order never got one). */
+adminRouter.post("/orders/:orderId/resend-memories-mail", async (req, res) => {
+  try {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim() : undefined;
+    const r = await deliverPackCodeForOrder(req.params.orderId, { force: true, to: email || undefined });
+    res.json({ success: true, message: `Memories page code ${r.status === "queued" ? "queued for" : "sent to"} ${r.to}.` });
+  } catch (error) {
+    if (error?.name === "CastError") return res.status(400).json({ success: false, message: "Invalid order." });
+    res.status(error.status || 500).json({ success: false, message: error.message || "Unable to send the mail." });
+  }
+});
+/* Members page: retry / resend the Memories code mail for one Lifetime member. */
+adminRouter.post("/members/:id/resend-memories-mail", async (req, res) => {
+  try {
+    const member = await Membership.findById(req.params.id).select("orderId plan").lean();
+    if (!member) return res.status(404).json({ success: false, message: "Member not found." });
+    if (member.plan !== "lifetime") return res.status(400).json({ success: false, message: "Only Lifetime pack members get a Memories code." });
+    const r = await deliverPackCodeForOrder(member.orderId, { force: true });
+    res.json({ success: true, message: `Memories page code ${r.status === "queued" ? "queued for" : "sent to"} ${r.to}.` });
+  } catch (error) {
+    if (error?.name === "CastError") return res.status(400).json({ success: false, message: "Invalid member." });
     res.status(error.status || 500).json({ success: false, message: error.message || "Unable to send the mail." });
   }
 });
