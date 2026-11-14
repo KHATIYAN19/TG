@@ -10,6 +10,7 @@ import * as V from "../../controllers/memory/memoryPublicController.js";
 import * as A from "../../controllers/memory/memoryAdminController.js";
 import * as P from "../../controllers/memory/memoryPaymentController.js";
 import * as RS from "../../controllers/memory/memoryResponseController.js";
+import * as T from "../../controllers/memory/memoryTicketController.js";
 
 /* ---------- limits ---------- */
 // Wrong-PIN guessing: per visitor per page (10 / 15 min) plus a per-page ceiling (60 / hour); fail closed if Redis is down.
@@ -31,6 +32,9 @@ const emailResendLimit = budget({ name: "memory-email-resend", limit: () => envI
 const codeLimit = budget({ name: "memory-code", limit: () => envInt("MEMORY_CODE_LIMIT", 10), windowSec: 10 * MINUTE, key: (req) => [byIp(req), req.user?.id], message: "Too many code attempts.", failClosed: true });
 // the price shown while a user moves the add-on steppers: cheap to answer, so a generous per-user allowance
 const quoteLimit = budget({ name: "memory-quote", limit: () => envInt("MEMORY_QUOTE_LIMIT", 240), windowSec: 10 * MINUTE, key: (req) => req.user?.id, message: "Too many price checks. Please wait a moment." });
+// support tickets: a handful of new tickets and a steady trickle of replies per user
+const ticketCreateLimit = budget({ name: "memory-ticket-create", limit: () => envInt("MEMORY_TICKET_LIMIT", 8), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many tickets. Please wait a little." });
+const ticketReplyLimit = budget({ name: "memory-ticket-reply", limit: () => envInt("MEMORY_TICKET_REPLY_LIMIT", 40), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many messages. Please wait a little." });
 const uploadLimit = budget({ name: "memory-upload", limit: () => envInt("MEMORY_UPLOAD_LIMIT", 100), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many uploads." });
 
 /* =====================================================
@@ -69,6 +73,13 @@ userRouter.post("/payments/create", PB.payCreateHourly, PB.payCreateDaily, P.cre
 userRouter.post("/payments/verify", PB.payVerifyHourly, P.verifyPayment);
 userRouter.get("/payments/mine", P.myPayments);
 userRouter.get("/payments/:orderId/status", PB.payStatusTenMin, P.paymentStatus);
+
+userRouter.get("/tickets", T.myTickets);
+userRouter.get("/tickets/unread", T.myUnreadCount);
+userRouter.post("/tickets", ticketCreateLimit, T.createTicket);
+userRouter.get("/tickets/:id", T.getMyTicket);
+userRouter.post("/tickets/:id/reply", ticketReplyLimit, T.replyMine);
+userRouter.post("/tickets/:id/close", T.closeMine);
 
 userRouter.post("/pages", U.createPage);
 userRouter.get("/pages", U.listPages);
@@ -113,6 +124,16 @@ adminRouter.post("/pages/:id/regenerate-link", A.regenerateLink);
 adminRouter.post("/pages/:id/block", A.blockPage);
 adminRouter.delete("/pages/:id/media/:mediaId", A.removePageMedia);
 adminRouter.delete("/pages/:id", A.deletePage);
+
+adminRouter.get("/tickets", T.adminList);
+adminRouter.get("/tickets/stats", T.adminStats);
+adminRouter.post("/tickets/bulk", T.adminBulk);
+adminRouter.get("/tickets/:id", T.adminGet);
+adminRouter.post("/tickets/:id/reply", T.adminReply);
+adminRouter.post("/tickets/:id/status", T.adminSetStatus);
+adminRouter.post("/tickets/:id/meta", T.adminSetMeta);
+adminRouter.post("/tickets/:id/unread", T.adminMarkUnread);
+adminRouter.delete("/tickets/:id", T.adminDelete);
 
 adminRouter.get("/users", A.listUsers);
 adminRouter.post("/users/:userId/credits", A.grantUserCredits);

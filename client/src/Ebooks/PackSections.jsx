@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, BellRing, BookOpen, Check, ChevronDown, Gift, Lightbulb, Swords } from "lucide-react";
+import { ArrowRight, BellRing, BookOpen, Check, ChevronDown, Gift, Heart, Lightbulb, Swords } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
@@ -158,6 +158,12 @@ export function PackCard({ pack, worth, current, onBuy, showLink = true }) {
             <span>Free limited Prep Arena credits when we launch new features</span>
           </li>
         )}
+        {lifetime && (
+          <li className="pk-strong pk-memories">
+            <Heart size={15} />
+            <span>1 Memories page free: your redeem code is emailed after purchase</span>
+          </li>
+        )}
         {lifetime ? (
           <li className="pk-strong">
             <Lightbulb size={15} />
@@ -284,6 +290,7 @@ export const PACK_CSS = `
 .pk-note{margin:0 0 14px;padding:10px 12px;border-radius:12px;background:var(--pk-soft);border:1px solid var(--pk-line);font-size:13px;color:var(--pk-ink)}
 .pk-inline-link{color:var(--pk-or2);font-weight:800;text-decoration:underline}
 .pk-gift svg{color:#B45309}
+.pk-memories svg{color:#E11D48;fill:rgba(225,29,72,.18)}
 .pk-explain-gift{background:linear-gradient(135deg,var(--pk-soft),transparent)}
 .pk-inside{margin:0 0 16px}
 .pk-inside-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border:1px solid var(--pk-line);border-radius:12px;background:var(--pk-soft);color:var(--pk-ink);font:inherit;cursor:pointer;transition:border-color .2s,box-shadow .2s}

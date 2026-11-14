@@ -22,6 +22,7 @@ import {
   Link2,
   Loader2,
   Lock,
+  LifeBuoy,
   PackagePlus,
   Plus,
   Receipt,
@@ -40,6 +41,7 @@ import { ActionMenu, Btn, Chip, Field, Modal, Pager, Person, STATUS, Table, errT
 
 // the two long lists are only downloaded when their tab is opened
 const UsersTab = lazy(() => import("./AdminMemoryUsers.jsx"));
+const Tickets = lazy(() => import("./AdminMemoryTickets.jsx"));
 const Logins = lazy(() => import("./AdminMemoryLogins.jsx"));
 const Catalog = lazy(() => import("./AdminMemoryCatalog.jsx").then((m) => ({ default: m.Templates })));
 const Addons = lazy(() => import("./AdminMemoryCatalog.jsx").then((m) => ({ default: m.Addons })));
@@ -54,6 +56,7 @@ const TabLoading = () => <div className="grid place-items-center rounded-2xl bor
      Overview     numbers at a glance
      Pages        every page with live link controls
      Users        who signed up, credits, last login
+     Support tickets  help requests: reply, close, reopen, delete
      Logins       sign-in history
      Codes        free-access codes
      Orders       payments
@@ -68,6 +71,7 @@ const TABS = [
   ["overview", "Overview", Sparkles],
   ["pages", "Pages", Heart],
   ["users", "Users", Users],
+  ["tickets", "Support tickets", LifeBuoy],
   ["logins", "Logins", Activity],
   ["codes", "Codes", Ticket],
   ["gumroad", "Gumroad", Globe],
@@ -146,6 +150,7 @@ export default function AdminMemoryPages() {
           {tab === "orders" && <Orders {...ctx} />}
           {tab === "settings" && <Settings {...ctx} />}
           {tab === "users" && <UsersTab {...ctx} />}
+          {tab === "tickets" && <Tickets {...ctx} />}
           {tab === "logins" && <Logins {...ctx} />}
         </Suspense>
         {tab === "codes" && <Codes {...ctx} />}

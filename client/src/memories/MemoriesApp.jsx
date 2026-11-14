@@ -9,6 +9,7 @@ import MyPages from "./MyPages";
 import PageBuilder from "./PageBuilder";
 import OwnerPreview from "./OwnerPreview";
 import PageActivity from "./PageActivity";
+import { SupportList, SupportThread } from "./MemoriesSupport";
 
 /*
   The signed-in Memories app.
@@ -33,6 +34,8 @@ export default function MemoriesApp() {
         <Route index element={<MemoriesStudio cfg={cfg} />} />
         <Route path="pay" element={<MemoriesPay cfg={cfg} reload={reload} />} />
         <Route path="pages" element={<MyPages cfg={cfg} emailEnabled={cfg.emailEnabled !== false} />} />
+        <Route path="support" element={<SupportList />} />
+        <Route path="support/:id" element={<SupportThread />} />
         <Route path="pages/:id/preview" element={<OwnerPreview />} />
         <Route path="pages/:id/activity" element={<PageActivity />} />
         <Route path="pages/:id/edit" element={<PageBuilder mode="edit" cfg={cfg} reload={reload} />} />

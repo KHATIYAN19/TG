@@ -128,3 +128,11 @@ export const resendEmail = (id) => memoriesHttp.post(`/pages/${pid(id)}/email/re
 
 /* the owner's view of what happened on one of their pages */
 export const getActivity = (id) => memoriesHttp.get(`/pages/${encodeURIComponent(id)}/activity`).then(data);
+
+/* help and support tickets */
+export const listTickets = (params = {}) => memoriesHttp.get("/tickets", { params }).then(data);
+export const getTicketUnread = () => memoriesHttp.get("/tickets/unread").then(data);
+export const createTicket = (body) => memoriesHttp.post("/tickets", body).then(data);
+export const getTicket = (id) => memoriesHttp.get(`/tickets/${pid(id)}`).then(data);
+export const replyTicket = (id, message) => memoriesHttp.post(`/tickets/${pid(id)}/reply`, { message }).then(data);
+export const closeTicket = (id) => memoriesHttp.post(`/tickets/${pid(id)}/close`).then(data);
