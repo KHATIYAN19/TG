@@ -49,6 +49,8 @@ import "./styles/forms.css";
 // Components
 import ScrollTop from "./component/ScrollTop.jsx";
 import MetaPageTracker from "./component/MetaPageTracker.jsx";
+import ClarityTracker from "./component/ClarityTracker.jsx";
+import { initClarity } from "./lib/clarity.js";
 
 // React Router
 import { BrowserRouter } from "react-router-dom";
@@ -68,6 +70,7 @@ import { captureAttribution } from "./lib/attribution.js";
 
 // Remember paid-ad clicks (Meta / Google) before the app renders.
 captureAttribution();
+initClarity();
 
 // After a new deploy, an open tab may request lazy chunks whose hashed
 // filenames no longer exist. Reload once to pick up the new build.
@@ -114,6 +117,7 @@ ReactDOM.createRoot(rootElement).render(
 
         {/* Redux provider */}
         <Provider store={store}>
+          <ClarityTracker />
           <App />
         </Provider>
 
