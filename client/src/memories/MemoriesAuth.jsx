@@ -16,6 +16,7 @@ import { API_ROOT, http, errMsg, errCode, retryAfterOf } from "../arena/api";
 import GoogleButton, { googleEnabled } from "../arena/GoogleButton";
 import { useMedia, useMemoriesChrome } from "./chrome";
 import { FONT_LINKS, Logo, cx } from "./ui";
+import "./refCapture";
 import { TEMPLATES, TemplateScene } from "./templates";
 import { THEME_TOTAL } from "./Showcase";
 import { Btn, OCCASION, useStickyFix } from "./landingUi";

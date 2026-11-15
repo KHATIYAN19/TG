@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,9 @@ import { useLifetimeDays } from "./legal/useLifetime";
 import VoiceNote from "./VoiceNote";
 import { LivePhone, THEME_TOTAL, useScale } from "./Showcase";
 import { FONT_LINKS, Logo, cx } from "./ui";
+import ReferralSection from "./LandingReferral";
+import LandingSeo, { AnswerBlock } from "./LandingSeo";
+import "./refCapture";
 import { trackCtaClick, trackLandingView } from "./metaTracking";
 import PricingSection, { TaglineReveal } from "./LandingPricing";
 import { LookWall, TemplateStory } from "./LandingTemplates";
@@ -38,7 +41,6 @@ function useSpy(ids) {
   }, [ids]);
   return on;
 }
-const SPY_IDS = NAV.map(([id]) => id);
 
 /* a thin line across the top that fills as the page is read (one scroll listener, throttled to a frame) */
 function Progress() {
@@ -60,9 +62,12 @@ function Progress() {
 }
 
 /* ---------------------------------------------------- navigation: a floating pill, and a full height menu on phones */
-function Header() {
+function Header({ info }) {
   const [open, setOpen] = useState(false);
-  const current = useSpy(SPY_IDS);
+  // "Refer & earn" joins the menu (just before Looks, where its section is) only while the admin has it switched on
+  const nav = useMemo(() => (info?.referral?.enabled ? [...NAV.slice(0, 1), ["refer", "Refer & earn"], ...NAV.slice(1)] : NAV), [info?.referral?.enabled]);
+  const spyIds = useMemo(() => nav.map(([id]) => id), [nav]);
+  const current = useSpy(spyIds);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const token = useSelector((s) => s.auth?.token);
@@ -88,7 +93,7 @@ function Header() {
         <div className="ml-nav mx-auto flex w-full max-w-md items-center gap-2 rounded-full p-2 pl-4 lg:w-fit lg:max-w-none">
           <span className="relative inline-flex"><Logo /><SantaHat /></span>
           <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="Sections">
-            {NAV.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={current === id ? "true" : undefined} className="ml-nav-link title-4">{label}</a>)}
+            {nav.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={current === id ? "true" : undefined} className="ml-nav-link title-4">{label}</a>)}
           </nav>
           <div className="ml-auto flex items-center gap-2 lg:ml-4">
             {token ? (
@@ -111,13 +116,13 @@ function Header() {
 
       <div id="ml-menu" className={cx("ml-menu fixed inset-0 z-40 flex flex-col overflow-y-auto px-6 pb-8 pt-24 lg:hidden", open && "open")} aria-hidden={!open}>
         <nav className="flex flex-col" aria-label="Sections">
-          {NAV.map(([id, label], i) => (
+          {nav.map(([id, label], i) => (
             <a key={id} href={`#${id}`} tabIndex={open ? 0 : -1} onClick={() => setOpen(false)} style={{ "--i": i }} className="ml-menu-item heading-5 flex items-center justify-between rounded-2xl px-3 py-3 text-[#2a1023] transition-colors duration-300 hover:bg-rose-50">
               {label} <ArrowRight size={20} className="text-[#e11d48]" aria-hidden />
             </a>
           ))}
         </nav>
-        <div className="ml-menu-item mt-auto flex flex-col gap-3 pt-8" style={{ "--i": NAV.length }}>
+        <div className="ml-menu-item mt-auto flex flex-col gap-3 pt-8" style={{ "--i": nav.length }}>
           {token ? (
             <>
               <p className="body-6 text-center text-[#7a5370]">Signed in as {String(user?.name || "you").split(" ")[0]}</p>
@@ -388,8 +393,8 @@ function Features({ info }) {
 /* ---------------------------------------------------- FAQ */
 const FAQ_FIRST = 8;
 
-function Faq({ info }) {
-  const [all, setAll] = useState(false);
+/* the questions and answers, one list for the visible FAQ and for the FAQPage structured data (so the two always match) */
+export function faqItems(info) {
   const days = info?.pageLifetimeDays ?? 30;
   const l = info?.limits;
   const price = formatPrice(info?.price);
@@ -419,6 +424,12 @@ function Faq({ info }) {
     ["What can I change after I create a page?", `While your page is online you can edit the message, gifts, reasons, promises, photos and videos, switch between public and private, change the PIN, close or reopen the link, or make a new link. You can switch to any look at the price you paid or less. The names can't be changed. A page stays online for ${days} days unless you buy the extra days add on.`],
     ["Is my media safe?", "Your photos, videos and voice message are stored privately. They can only be viewed through your page, and private pages stay locked behind the PIN. When a page is deleted, or reaches the end of its time, its photos and videos are removed from storage."],
   ];
+  return items;
+}
+
+function Faq({ info }) {
+  const [all, setAll] = useState(false);
+  const items = faqItems(info);
   const shown = all ? items : items.slice(0, FAQ_FIRST);
 
   return (
@@ -529,23 +540,18 @@ export default function MemoriesLanding() {
 
   return (
     <div ref={root} className="mem-root ml-root min-h-screen overflow-x-clip">
-      <Helmet>
-        <title>Memories: Birthday, proposal, Christmas, sorry, anniversary and thank you pages | Target Trek</title>
-        <meta name="description" content="Create a beautiful interactive page for a birthday, proposal, Christmas, apology, anniversary or thank you. Pick a look, add your words, photos, videos and your own voice, then share a private or public link." />
-        <link rel="canonical" href="https://www.targettrek.in/memories" />
-        <meta property="og:title" content="Memories: pages they will never forget" />
-        <meta property="og:description" content="Birthday, proposal, Christmas, sorry, anniversary and thank you pages with your photos and videos. Share a link or lock it with a PIN." />
-        <meta name="theme-color" content="#fffaf6" />
-        {FONT_LINKS.map((l) => <link key={l.href} {...l} />)}
-      </Helmet>
+      <LandingSeo info={info} faq={faqItems(info)} />
+      <Helmet>{FONT_LINKS.map((l) => <link key={l.href} {...l} />)}</Helmet>
 
       <a href="#main" className="button-sm sr-only left-3 top-3 z-[70] rounded-full bg-white px-3 py-2 text-[#2a1023] focus:not-sr-only focus:fixed">Skip to content</a>
       <Progress />
-      <Header />
+      <Header info={info} />
       <main id="main">
         <Hero priceLabel={priceLabel} />
+        <AnswerBlock info={info} priceLabel={priceLabel} />
         <Moments />
         <TemplateStory />
+        <ReferralSection info={info} />
         <LookWall />
         <TaglineReveal />
         <HowItWorks />

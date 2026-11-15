@@ -41,6 +41,7 @@ const ROUTES = {
   "/resources/hld/api-gateway": "src/hld/HLDApiGatewayResource.jsx",
   "/resources/sql": "src/sql/SQLResource.jsx",
   "/resources/apis": "src/api/APIResource.jsx",
+  "/memories": "src/memories/MemoriesLanding.jsx",
   "/memories/birthday": "src/memories/BirthdayLanding.jsx",
 };
 

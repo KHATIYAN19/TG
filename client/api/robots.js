@@ -24,8 +24,16 @@ const PRIVATE = [
   "/interview/create",
 ];
 
+// Memories: every /memories/<code> is someone's personal page (and /memories/app, /login, /payment-result are private), so the whole
+// folder is closed to crawlers EXCEPT the public pages below. The longest matching rule wins, so these Allow lines beat the Disallow.
+const MEMORIES_PUBLIC = ["/memories/birthday", "/memories/preview/", "/memories/terms", "/memories/privacy", "/memories/refund", "/memories/contact"];
+
 export default function handler(req, res) {
-  const disallow = PRIVATE.map((p) => `Disallow: ${p}`).join("\n");
+  const disallow = [
+    ...PRIVATE.map((p) => `Disallow: ${p}`),
+    "Disallow: /memories/",
+    ...MEMORIES_PUBLIC.map((p) => `Allow: ${p}`),
+  ].join("\n");
 
   // Explicitly welcome search + answer-engine crawlers.
   const bots = [

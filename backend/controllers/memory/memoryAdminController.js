@@ -24,7 +24,7 @@ import { changeAccountSecurityState, invalidateUserAuth, revokeAllRedisSessions 
 import { purgeUser } from "../../services/arena/purge.js";
 import { activeGateways, knownGateways } from "../../services/memory/payments/index.js";
 import {
-  TEMPLATE_THEMES, MemoryError, assertId, deleteMediaObjects, purgePageEvents, ensureOccasions, escapeRegex, getSettings, grantCredits,
+  TEMPLATE_THEMES, MemoryError, assertId, deleteMediaObjects, mediaKeys, purgePageEvents, ensureOccasions, escapeRegex, getSettings, grantCredits,
   hashPin, encryptPin, buildActivity, MAX_EVENTS_PER_PAGE, newCode, newPin, newSlug, pageView, parse, sendError, updateSettings,
 } from "../../services/memory/memoryService.js";
 
@@ -110,6 +110,11 @@ export const saveSettings = handler(async (req, res) => {
       emailEnabled: z.boolean(),
       maxEmailsPerUserPerDay: z.number().int().min(1).max(200),
       enabled: z.boolean(),
+      referralEnabled: z.boolean(),
+      referralsPerCredit: z.number().int().min(1).max(1000),
+      referralCashEnabled: z.boolean(),
+      referralCashPerCredit: z.number().min(1).max(100000),
+      referralMinPayoutCredits: z.number().int().min(1).max(1000),
       enabledGateways: z.array(z.string()).max(20),
       defaultGateway: z.string().max(30),
     }).partial(),
@@ -331,13 +336,14 @@ export const removePageMedia = handler(async (req, res) => {
   const media = page.media.id(req.params.mediaId);
   if (!media) throw new MemoryError(404, "Media not found.", "MEDIA_NOT_FOUND");
   const { key, kind, isMain } = media;
+  const allKeys = mediaKeys(media);
   media.deleteOne();
   if (isMain) {
     const next = page.media.find((m) => m.kind === kind);
     if (next) next.isMain = true;
   }
   await page.save();
-  await removeFiles([key]);
+  await removeFiles(allKeys);
   ok(res, await out(page._id, { withMedia: true }));
 });
 

@@ -16,6 +16,18 @@ const mediaSchema = new Schema(
     width: { type: Number, min: 1, max: 20000, default: null },
     height: { type: Number, min: 1, max: 20000, default: null },
     durationSec: { type: Number, min: 0, max: 86400, default: null },
+    /* FAST COPIES made on the server after upload. The original (`key`) is never touched; these are what the viewer loads. */
+    processing: { type: String, enum: ["none", "pending", "done", "failed"], default: "none" },
+    processingTries: { type: Number, default: 0 },
+    /* photos: WebP at 480 / 1080 / 2400 px wide (keys), plus a tiny blurred preview (a data: URI of ~300 bytes) */
+    thumbKey: { type: String, default: "" },
+    mediumKey: { type: String, default: "" },
+    largeKey: { type: String, default: "" },
+    blur: { type: String, default: "", maxlength: 2000 },
+    /* videos: a first-frame poster and web-ready MP4s (faststart, H.264) at 1080p-or-source and 720p */
+    posterKey: { type: String, default: "" },
+    hdKey: { type: String, default: "" },
+    sdKey: { type: String, default: "" },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

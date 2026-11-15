@@ -1413,6 +1413,9 @@ const calculateFinance = async (
   // Affiliate information only.
   // NOT deducted from any financial calculation.
   let totalAffiliateCommissionPaise = 0;
+  // LKH (own referral code) commission: shown separately, never deducted.
+  let lkhCommissionPaise = 0;
+  let lkhOrders = 0;
 
   let successfulOrders = 0;
   let skippedOrders = 0;
@@ -1457,6 +1460,8 @@ const calculateFinance = async (
         // Reporting only.
         affiliateCommissionPaise: 0,
         affiliateOrders: 0,
+        lkhCommissionPaise: 0,
+        lkhOrders: 0,
 
         orders: 0,
       });
@@ -1602,18 +1607,27 @@ const calculateFinance = async (
     const affiliateCommissionPaise =
       getAffiliateCommissionPaise(order);
 
+    const orderAffiliateCode = String(
+      order.payment?.affiliateCode ??
+      "UNKNOWN"
+    )
+      .trim()
+      .toLowerCase();
+
+    const isLkh = orderAffiliateCode === "lkh";
+
     if (affiliateCommissionPaise > 0) {
-      totalAffiliateCommissionPaise +=
-        affiliateCommissionPaise;
+      if (isLkh) {
+        lkhCommissionPaise +=
+          affiliateCommissionPaise;
+        lkhOrders++;
+      } else {
+        totalAffiliateCommissionPaise +=
+          affiliateCommissionPaise;
+        affiliateOrders++;
+      }
 
-      affiliateOrders++;
-
-      const affiliateCode = String(
-        order.payment?.affiliateCode ??
-        "UNKNOWN"
-      )
-        .trim()
-        .toLowerCase();
+      const affiliateCode = orderAffiliateCode;
 
       const code =
         affiliateCode || "UNKNOWN";
@@ -1651,11 +1665,18 @@ const calculateFinance = async (
       bucket.gatewayFeePaise +=
         chargePaise;
 
-      bucket.affiliateCommissionPaise +=
-        affiliateCommissionPaise;
-
-      if (affiliateCommissionPaise > 0) {
-        bucket.affiliateOrders++;
+      if (isLkh) {
+        bucket.lkhCommissionPaise +=
+          affiliateCommissionPaise;
+        if (affiliateCommissionPaise > 0) {
+          bucket.lkhOrders++;
+        }
+      } else {
+        bucket.affiliateCommissionPaise +=
+          affiliateCommissionPaise;
+        if (affiliateCommissionPaise > 0) {
+          bucket.affiliateOrders++;
+        }
       }
 
       bucket.orders++;
@@ -1864,6 +1885,10 @@ const calculateFinance = async (
 
         affiliateOrders:
           row.affiliateOrders,
+
+        lkhCommission: toRupees(
+          row.lkhCommissionPaise
+        ),
       };
     });
 
@@ -1918,6 +1943,13 @@ const calculateFinance = async (
       ),
 
       affiliateOrders,
+
+      // LKH commission: separate, not deducted
+      lkhCommission: toRupees(
+        lkhCommissionPaise
+      ),
+
+      lkhOrders,
     },
 
     incomeBreakdown:

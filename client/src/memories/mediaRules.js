@@ -1,4 +1,4 @@
-import { measureMedia } from "./memApi";
+import { measureMedia, mimeOf } from "./memApi";
 import { secLabel } from "./pricing";
 
 /* The rules for photos and videos, in one place (the create form, the edit screen and the post-create uploader all use it). */
@@ -9,9 +9,9 @@ export const AUDIO_ACCEPT = [...AUDIO_TYPES, ".m4a", ".mp3", ".wav", ".aac", ".o
 export const AUDIO_MAX_SEC = 120; // the default; the real limit comes from the server (limits.audioSec) and grows with add-ons
 /** "audio/webm;codecs=opus" -> "audio/webm" (what the server accepts) */
 export const baseType = (t) => String(t || "").split(";")[0].trim().toLowerCase();
-export const ACCEPT = [...PHOTO_TYPES, ...VIDEO_TYPES].join(",");
+export const ACCEPT = [...PHOTO_TYPES, ...VIDEO_TYPES, ".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".m4v", ".webm"].join(","); // extensions too: some phones/browsers give no type
 
-export const kindOf = (file) => (PHOTO_TYPES.includes(file.type) ? "photo" : VIDEO_TYPES.includes(file.type) ? "video" : AUDIO_TYPES.includes(baseType(file.type)) ? "audio" : null);
+export const kindOf = (file) => { const t = mimeOf(file); return PHOTO_TYPES.includes(t) ? "photo" : VIDEO_TYPES.includes(t) ? "video" : AUDIO_TYPES.includes(t) ? "audio" : null; };
 export const mbOf = (bytes) => (bytes / 1048576).toFixed(bytes > 10485760 ? 0 : 1);
 
 /**

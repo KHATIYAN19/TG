@@ -3,11 +3,13 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 
-import { claimMyCodes, useMemConfig } from "./memApi";
+import { claimMyCodes, claimReferral, useMemConfig } from "./memApi";
+import { clearMref, readMref } from "./refCapture";
 import AppShell, { Loading } from "./AppShell";
 import MemoriesPay from "./MemoriesPay";
 import MemoriesStudio from "./MemoriesStudio";
 import MyPages from "./MyPages";
+import MemoriesReferral from "./MemoriesReferral";
 import PageBuilder from "./PageBuilder";
 import OwnerPreview from "./OwnerPreview";
 import PageActivity from "./PageActivity";
@@ -44,6 +46,15 @@ export default function MemoriesApp() {
       .catch(() => { claimed.current = false; }); // offline / server busy: try again on the next visit to this screen
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Refer & earn: a friend who came with a link (email sign-up or Google) is tied to whoever shared it. Quiet; tried again next visit if the server was busy. */
+  const referred = useRef(false);
+  useEffect(() => {
+    const code = readMref();
+    if (!token || !code || referred.current) return;
+    referred.current = true;
+    claimReferral(code).then(() => clearMref()).catch((e) => { if (e?.response?.status && e.response.status < 500) clearMref(); else referred.current = false; });
+  }, [token]);
+
   if (!token) return <Navigate to="/memories/login" replace state={{ from: location }} />;
 
   if (error) return <AppShell title="My Memories"><p role="alert" className="py-20 text-center text-rose-600">{error}</p></AppShell>;
@@ -56,6 +67,7 @@ export default function MemoriesApp() {
         <Route index element={<MemoriesStudio cfg={cfg} />} />
         <Route path="pay" element={<MemoriesPay cfg={cfg} reload={reload} />} />
         <Route path="pages" element={<MyPages cfg={cfg} emailEnabled={cfg.emailEnabled !== false} />} />
+        <Route path="refer" element={<MemoriesReferral cfg={cfg} reload={reload} />} />
         <Route path="support" element={<SupportList />} />
         <Route path="support/:id" element={<SupportThread />} />
         <Route path="pages/:id/preview" element={<OwnerPreview />} />

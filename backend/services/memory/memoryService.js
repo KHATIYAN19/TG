@@ -201,24 +201,39 @@ export const verifyPageToken = (token, page) => {
 /* as long as a PIN unlock lasts (12 hours), so a page left open in a tab keeps showing its photos and videos */
 const MEDIA_URL_TTL = () => Number(process.env.MEMORY_MEDIA_URL_TTL_SECONDS) || 12 * 3600;
 
-const mediaOut = async (m) => {
-  let url = null;
+const signKey = async (key) => {
+  if (!key) return null;
   try {
-    url = (await createDownloadUrl(m.key, { inline: true, ttl: MEDIA_URL_TTL() })).url;
+    return (await createDownloadUrl(key, { inline: true, ttl: MEDIA_URL_TTL(), stable: true })).url;
   } catch (e) {
     console.error("[memory] could not sign media url:", e.message);
+    return null;
   }
+};
+
+const mediaOut = async (m) => {
+  const ready = m.processing === "done";
+  const [original, thumb, medium, large, poster, hd, sd] = await Promise.all(
+    [m.key, ready && m.thumbKey, ready && m.mediumKey, ready && m.largeKey, ready && m.posterKey, ready && m.hdKey, ready && m.sdKey].map(signKey)
+  );
+  // `url` is what the viewer shows. A ready photo gets the 2400px copy and a ready video the web-ready 1080p one; until then (or if
+  // processing failed) it is the original, so nothing is ever missing.
+  const url = m.kind === "photo" ? large || original : m.kind === "video" ? hd || original : original;
+  const photoSet = m.kind === "photo" && thumb && medium && large ? { thumbUrl: thumb, srcSet: `${thumb} 480w, ${medium} 1080w, ${large} 2400w` } : {};
+  const videoSet = m.kind === "video" ? { posterUrl: poster, lowUrl: sd, originalUrl: original } : {};
   const width = m.width || null;
   const height = m.height || null;
   // landscape (16:9 and friends), portrait (9:16) or square: the page uses this to choose how to show it
   const orientation = width && height ? (width / height > 1.05 ? "landscape" : width / height < 0.95 ? "portrait" : "square") : null;
-  return { id: String(m._id), kind: m.kind, isMain: Boolean(m.isMain), contentType: m.contentType, size: m.size, name: m.originalName, caption: m.caption || "", url, width, height, orientation, durationSec: m.durationSec ?? null };
+  return { id: String(m._id), kind: m.kind, isMain: Boolean(m.isMain), contentType: m.contentType, size: m.size, name: m.originalName, caption: m.caption || "", url, ...photoSet, ...videoSet, blur: m.blur || null, processing: m.processing || "none", width, height, orientation, durationSec: m.durationSec ?? null };
 };
 
 export const signMedia = (page) => Promise.all((page.media || []).map(mediaOut));
 
 /** Every file of these media entries leaves the bucket now (queued for retry if the bucket refuses). */
-export const deleteMediaObjects = (media) => removeFiles((media || []).map((m) => m.key));
+/** the original plus every fast copy made from it */
+export const mediaKeys = (m) => [m.key, m.thumbKey, m.mediumKey, m.largeKey, m.posterKey, m.hdKey, m.sdKey].filter(Boolean);
+export const deleteMediaObjects = (media) => removeFiles((media || []).flatMap(mediaKeys));
 
 /* =====================================================
    RECEIVER ACTIVITY: events, the locked answer, replies

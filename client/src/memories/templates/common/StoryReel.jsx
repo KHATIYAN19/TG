@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Preparing, pickVideo } from "../../mediaSrc.jsx";
 import { Play } from "lucide-react";
 import { track } from "../../track";
 import "./reveal.css";
@@ -12,6 +13,7 @@ import "./reveal.css";
 const clamp = (r, lo, hi) => Math.min(hi, Math.max(lo, r));
 
 export default function StoryReel({ video, photos = [], name, sender, sound, line = "A little film, made just for you." }) {
+  const [force, setForce] = useState(false);
   const [stage, setStage] = useState("idle"); // idle | starting | playing
   const [ratio, setRatio] = useState(9 / 16);
   const vid = useRef(null);
@@ -79,8 +81,9 @@ export default function StoryReel({ video, photos = [], name, sender, sound, lin
         <p className="mx-reel-pill" aria-live="polite">{stage === "idle" ? "Tap play to begin" : "Starting the reel…"}</p>
 
         <div className="mx-reel-screen">
-          {video?.url
-            ? <video ref={vid} src={video.url} controls playsInline preload="metadata" controlsList="nodownload"
+          {video?.url && video.preparing && !force && <Preparing poster={video.poster} onTry={() => setForce(true)} />}
+          {video?.url && video.preparing && !force ? null : video?.url
+            ? <video ref={vid} src={pickVideo(video)} poster={video.poster || undefined} controls playsInline preload="auto" controlsList="nodownload"
                 onLoadedMetadata={(e) => { const { videoWidth: w, videoHeight: h } = e.currentTarget; if (w && h) setRatio(w / h); }} />
             : <p className="mx-reel-empty">Your film will play here.</p>}
         </div>

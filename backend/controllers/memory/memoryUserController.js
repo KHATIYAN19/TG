@@ -12,13 +12,14 @@ import { findSale, orderLookupEnabled } from "../../services/memory/gumroad.js";
 
 import { createUploadTarget, headObject, keyBelongsTo, userPrefix } from "../../services/storage/s3.js";
 import { removeFiles, trackUpload, uploadAttached } from "../../services/memory/storageCleanup.js";
+import { enqueueMedia } from "../../services/memory/mediaProcessor.js";
 import MemoryMailBlock from "../../models/memory/MemoryMailBlock.js";
 import User from "../../models/User.js";
 import { claimPackCodesForUser, redeemCodeForUser } from "../../services/memory/codes.js";
 import { canResend, sendPageMail } from "../../services/memory/pageMail.js";
 import {
   MAX_GIFTS, MAX_PEOPLE, PAGE_AUDIENCES, MAX_PROMISES, MAX_REASONS, MAX_STATS, MAX_TIMELINE, MAX_WISHES, MemoryError, assertId, availableCredits, checkPin, ensureOccasions, getSettings, grantCredits,
-  hashPin, encryptPin, newPin, newSlug, pageView, parse, sendError, deleteMediaObjects, buildActivity, purgePageEvents, MAX_EVENTS_PER_PAGE, MAX_EMAIL_SENDS, lifetimeDays, expiryFrom, isExpired, decryptPin,
+  hashPin, encryptPin, newPin, newSlug, pageView, parse, sendError, deleteMediaObjects, mediaKeys, buildActivity, purgePageEvents, MAX_EVENTS_PER_PAGE, MAX_EMAIL_SENDS, lifetimeDays, expiryFrom, isExpired, decryptPin,
 } from "../../services/memory/memoryService.js";
 import { addonCatalog, addonOut, emptyExtra, hasCoveringCredit, limitsFor, limitsOut, occasionForUser, passesFor, priceOf, resolveTheme, spendCredit, themeEnabled, themeIdsOf, toRupees } from "../../services/memory/catalog.js";
 import { gatewaysForUsers } from "./memoryPaymentController.js";
@@ -572,6 +573,10 @@ export const confirmMedia = handler(async (req, res) => {
   );
   if (!updated) await reject(400, `You can add up to ${max} ${b.kind}s.`, "MEDIA_LIMIT");
   await uploadAttached(b.key);
+  if (b.kind !== "audio") {
+    const added = updated.media.find((m) => m.key === b.key);
+    if (added) { await MemoryPage.updateOne({ _id: page._id, "media._id": added._id }, { $set: { "media.$.processing": "pending" } }); enqueueMedia(page._id, added._id); }
+  }
   ok(res, await reload(page._id, { withMedia: true }), 201);
 });
 
@@ -603,12 +608,13 @@ export const removeMedia = handler(async (req, res) => {
   const media = page.media.id(req.params.mediaId);
   if (!media) throw new MemoryError(404, "Media not found.", "MEDIA_NOT_FOUND");
   const { key, kind, isMain } = media;
+  const allKeys = mediaKeys(media);
   media.deleteOne();
   if (isMain) {
     const next = page.media.find((m) => m.kind === kind);
     if (next) next.isMain = true; // promote the next one
   }
   await page.save();
-  await removeFiles([key]); // gone from the bucket now (retried if the bucket refuses)
+  await removeFiles(allKeys); // gone from the bucket now (retried if the bucket refuses)
   ok(res, await reload(page._id, { withMedia: true }));
 });

@@ -1,8 +1,12 @@
 import crypto from "node:crypto";
 import path from "node:path";
 
-import { S3Client, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import fs from "node:fs";
+import { pipeline } from "node:stream/promises";
+
+import { S3Client, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getSignedUrl as getCfSignedUrl } from "@aws-sdk/cloudfront-signer";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 
 /*
@@ -172,6 +176,27 @@ export const validateUploadRequest = ({ purpose, contentType, size }) => {
   return rule;
 };
 
+/* Uploaded media never changes under its key, so browsers and CDNs may keep it a long time (no re-download on revisit). */
+const CACHE_CONTROL = "public, max-age=31536000, immutable";
+
+/*
+  OPTIONAL CDN (CloudFront in front of the same bucket, private, origin access control). When these are set, media is served from the
+  nearest edge instead of the bucket's region, with signed URLs that last as long as the S3 ones.
+    MEDIA_CDN_DOMAIN            e.g. media.example.com or d123.cloudfront.net
+    MEDIA_CDN_KEY_PAIR_ID       CloudFront public key id
+    MEDIA_CDN_PRIVATE_KEY       the matching private key (PEM; "\\n" is accepted for newlines)
+*/
+const cdnUrl = (key, now, life) => {
+  const domain = firstEnv("MEDIA_CDN_DOMAIN");
+  const keyPairId = firstEnv("MEDIA_CDN_KEY_PAIR_ID");
+  const privateKey = firstEnv("MEDIA_CDN_PRIVATE_KEY").replace(/\\n/g, "\n");
+  if (!domain || !keyPairId || !privateKey) return "";
+  // expire on an hour boundary so the url is identical for everyone for an hour (browser + edge cache hits)
+  const expires = Math.ceil((now + life * 1000) / 3600_000) * 3600;
+  const base = `https://${domain.replace(/^https?:\/\//, "")}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  return getCfSignedUrl({ url: base, keyPairId, privateKey, dateLessThan: new Date(expires * 1000).toISOString() });
+};
+
 /* ---------- S3 operations ---------- */
 
 /**
@@ -188,10 +213,11 @@ export const createUploadTarget = async ({ userId, purpose, contentType, size, f
     Bucket: cfg.bucket,
     Key: key,
     Expires: cfg.uploadTtl,
-    Fields: { "Content-Type": contentType },
+    Fields: { "Content-Type": contentType, "Cache-Control": CACHE_CONTROL },
     Conditions: [
       ["content-length-range", 1, rule.maxBytes],
       ["eq", "$Content-Type", contentType],
+      ["eq", "$Cache-Control", CACHE_CONTROL],
     ],
   });
 
@@ -210,22 +236,56 @@ export const headObject = async (key) => {
   }
 };
 
-export const createDownloadUrl = async (key, { filename, inline = false, ttl } = {}) => {
+/**
+ * `stable: true` signs at the start of the current hour instead of "now", so the same file gets the SAME url for the whole hour
+ * (a fresh signature on every request means the browser can never reuse a photo/video it already downloaded). An extra hour is added to
+ * the expiry, so the link still lives at least `ttl` seconds.
+ */
+export const createDownloadUrl = async (key, { filename, inline = false, ttl, stable = false } = {}) => {
   const { s3, cfg } = client();
+  const life = ttl || cfg.downloadTtl;
+  const HOUR = 3600_000;
+  const now = Date.now();
+  const signingDate = stable ? new Date(Math.floor(now / HOUR) * HOUR) : undefined;
+  const expiresIn = stable ? life + 3600 : life; // constant, so the url is byte-identical all hour
+  const cdn = cdnUrl(key, now, life);
+  if (cdn && !filename) return { url: cdn, expiresIn };
   const safeName = filename ? String(filename).replace(/[^\w.\- ]+/g, "_").slice(0, 120) : "";
   const url = await getSignedUrl(
     s3,
     new GetObjectCommand({
       Bucket: cfg.bucket,
       Key: key,
+      ResponseCacheControl: CACHE_CONTROL,
       ...(safeName ? { ResponseContentDisposition: `${inline ? "inline" : "attachment"}; filename="${safeName}"` } : {}),
     }),
-    { expiresIn: ttl || cfg.downloadTtl }
+    { expiresIn, ...(signingDate ? { signingDate } : {}) }
   );
-  return { url, expiresIn: ttl || cfg.downloadTtl };
+  return { url, expiresIn };
 };
 
 export const deleteObject = async (key) => {
   const { s3, cfg } = client();
   await s3.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
+};
+
+/** Streams an object to a local file (for the media processor). */
+export const downloadToFile = async (key, filePath) => {
+  const { s3, cfg } = client();
+  const out = await s3.send(new GetObjectCommand({ Bucket: cfg.bucket, Key: key }));
+  await pipeline(out.Body, fs.createWriteStream(filePath));
+};
+
+/** Uploads a local file under `key` with long-lived caching (derived files never change under their key). */
+export const uploadFile = async (key, filePath, contentType) => {
+  const { s3, cfg } = client();
+  const { size } = await fs.promises.stat(filePath);
+  await s3.send(new PutObjectCommand({ Bucket: cfg.bucket, Key: key, Body: fs.createReadStream(filePath), ContentLength: size, ContentType: contentType, CacheControl: CACHE_CONTROL }));
+  return size;
+};
+
+export const uploadBuffer = async (key, buffer, contentType) => {
+  const { s3, cfg } = client();
+  await s3.send(new PutObjectCommand({ Bucket: cfg.bucket, Key: key, Body: buffer, ContentType: contentType, CacheControl: CACHE_CONTROL }));
+  return buffer.length;
 };

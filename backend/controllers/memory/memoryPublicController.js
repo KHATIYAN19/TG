@@ -101,6 +101,10 @@ export const publicInfo = handler(async (req, res) => {
       occasions: cards.map((c) => ({ name: c.name, theme: c.theme, price: c.price, themes: c.themes, limits: c.limits })), // each template: its price, its looks with prices, its own limits
       addons: addons.map(addonOut), // what the admin sells as extras, with the admin's prices
       onlineDays: lifetimeDays(s),
+      // refer & earn, shown on the landing page only when the admin has switched it on
+      referral: s.referralEnabled
+        ? { enabled: true, perCredit: s.referralsPerCredit || 5, cashEnabled: Boolean(s.referralCashEnabled), cashPerCredit: s.referralCashPerCredit || 0 }
+        : { enabled: false },
     },
   });
 });

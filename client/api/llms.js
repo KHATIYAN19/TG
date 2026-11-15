@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     `- [Computer Networks Ebook](${SITE_URL}/book/computer-network)`,
     "",
     "## Memories: interactive greeting pages",
-    `- [Memories](${SITE_URL}/memories): Make an interactive page for a birthday, proposal, anniversary, apology, thank you or Christmas, and share it as one link.`,
+    `- [Memories](${SITE_URL}/memories): Make an interactive page for a birthday, proposal, anniversary, apology, thank you or Christmas, and share it as one link. Add a message, photos, videos and your own voice; the receiver opens it in any browser with no app or sign-up and can reply. Built for India: priced in INR, paid once with UPI, cards or netbanking (people abroad pay through Gumroad). Pages stay online for a limited time (30 days by default), can be public or locked with a PIN, and show the owner when and how they were opened. Six templates: birthday, proposal, anniversary, sorry, thank you, Christmas.`,
     `- [Birthday surprise page maker](${SITE_URL}/memories/birthday): A personalised birthday page for a partner, friend, parent or sibling, with balloons to pop, a cake to cut, gifts, a pinata, photos, video, voice and a wish they send back. Made in about 10 minutes, opened from a link with no app.`,
     `- [Live birthday page demo](${SITE_URL}/memories/preview/birthday): The real template with sample data.`,
     "",

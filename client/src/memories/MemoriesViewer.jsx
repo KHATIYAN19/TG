@@ -193,6 +193,28 @@ export default function MemoriesViewer() {
 
   useEffect(() => { setState({ kind: "loading" }); load(); }, [load]);
 
+  // photos/videos still being made fast: check again quietly until they are ready, so the page upgrades itself (no reload, no interruption)
+  const pendingMedia = state.kind === "ready" && (state.view.media || []).some((m) => m.processing === "pending");
+  useEffect(() => {
+    if (!pendingMedia) return undefined;
+    let stop = false;
+    let tries = 0;
+    const t = setInterval(async () => {
+      if (stop || document.hidden || ++tries > 90) return;
+      try {
+        const v = await viewPage(code, readToken(code));
+        if (stop) return;
+        setState((s) => {
+          if (s.kind !== "ready") return s;
+          const was = new Map((s.view.media || []).map((m) => [m.id, m.processing]));
+          const changed = (v.media || []).some((m) => was.get(m.id) !== m.processing);
+          return changed ? { kind: "ready", view: { ...s.view, media: v.media } } : s;
+        });
+      } catch { /* try again next time */ }
+    }, 20000);
+    return () => { stop = true; clearInterval(t); };
+  }, [pendingMedia, code]);
+
   // once the page is showing, start reporting what the receiver does (and say they opened it)
   const ready = state.kind === "ready";
   useEffect(() => {

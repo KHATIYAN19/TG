@@ -34,6 +34,7 @@ import {
   Trash2,
   Unlock,
   Users,
+  Wallet,
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
@@ -48,6 +49,7 @@ const Addons = lazy(() => import("./AdminMemoryCatalog.jsx").then((m) => ({ defa
 const Overview = lazy(() => import("./AdminMemoryOverview.jsx"));
 const Orders = lazy(() => import("./AdminMemoryOrders.jsx"));
 const Settings = lazy(() => import("./AdminMemorySettings.jsx"));
+const Referrals = lazy(() => import("./AdminMemoryReferrals.jsx"));
 const Inspector = lazy(() => import("./AdminMemoryInspector.jsx"));
 const TabLoading = () => <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16 text-slate-400"><Loader2 className="animate-spin" /></div>;
 
@@ -60,6 +62,7 @@ const TabLoading = () => <div className="grid place-items-center rounded-2xl bor
      Logins       sign-in history
      Codes        free-access codes
      Orders       payments
+     Referrals & payouts  refer-and-earn: who referred whom, and cash requests to pay by UPI
      Templates    what users can pick: visibility, price per template and per look, limits
      Add-ons      extras users can buy (more photos, longer videos, ...)
      Settings     default price + default limits
@@ -76,6 +79,7 @@ const TABS = [
   ["codes", "Codes", Ticket],
   ["gumroad", "Gumroad", Globe],
   ["orders", "Orders", Receipt],
+  ["referrals", "Referrals & payouts", Wallet],
   ["occasions", "Templates & pricing", Gift],
   ["addons", "Add-ons", PackagePlus],
   ["settings", "Settings", SettingsIcon],
@@ -148,6 +152,7 @@ export default function AdminMemoryPages() {
         <Suspense fallback={<TabLoading />}>
           {tab === "overview" && <Overview {...ctx} />}
           {tab === "orders" && <Orders {...ctx} />}
+          {tab === "referrals" && <Referrals {...ctx} />}
           {tab === "settings" && <Settings {...ctx} />}
           {tab === "users" && <UsersTab {...ctx} />}
           {tab === "tickets" && <Tickets {...ctx} />}

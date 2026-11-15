@@ -2,6 +2,7 @@ import MemoryOrder from "../../../models/memory/MemoryOrder.js";
 import MemoryCredit from "../../../models/memory/MemoryCredit.js";
 import MemoryPage from "../../../models/memory/MemoryPage.js";
 import { sendPurchase } from "../metaCapi.js";
+import { qualifyReferral } from "../referral.js";
 import { DAY_MS } from "../memoryService.js";
 import { ADDON_DEFS, extraFromLines } from "../catalog.js";
 
@@ -135,6 +136,7 @@ export const settleOrder = async (order, status) => {
   );
   if (won) await fulfillOrder(won);
   if (won) void sendPurchase(won); // Meta Conversions API; never awaited, never throws
+  if (won) await qualifyReferral(won).catch((e) => console.error(`[memory] referral for order ${won._id} failed:`, e.message)); // a paid friend counts for whoever referred them
   return "paid";
 };
 

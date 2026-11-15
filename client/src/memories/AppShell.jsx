@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { Cards, Lifebuoy, SignOut, Sparkle, SquaresFour, Ticket } from "@phosphor-icons/react";
+import { Cards, Gift, Lifebuoy, SignOut, Sparkle, SquaresFour, Ticket } from "@phosphor-icons/react";
 
 import { logout } from "../Redux/authSlice";
 import { signOutRequest } from "./api";
@@ -97,6 +97,9 @@ export default function AppShell({ title, credits, children }) {
                 <p className="caption-4 relative text-rose-100">Paid page{credits === 1 ? "" : "s"}. Pick a template.</p>
               </Link>
             )}
+            <NavLink to="/memories/app/refer" className={({ isActive }) => cx("ma-side-link title-4 flex items-center gap-2 rounded-xl px-3 py-2", isActive && "on")}>
+              <Gift size={18} weight="duotone" className="text-[#e11d48]" aria-hidden /> Refer and earn
+            </NavLink>
             <NavLink to="/memories/app/support" className={({ isActive }) => cx("ma-side-link title-4 flex items-center gap-2 rounded-xl px-3 py-2", isActive && "on")}>
               <Lifebuoy size={18} weight="duotone" className="text-[#e11d48]" aria-hidden /> Help and support
               {unread > 0 && <span className="ma-chip caption-3 ml-auto bg-[#e11d48] px-2 py-0.5 text-white" aria-label={`${unread} new repl${unread === 1 ? "y" : "ies"}`}>{unread}</span>}
@@ -116,6 +119,7 @@ export default function AppShell({ title, credits, children }) {
             <Logo />
             <div className="ml-auto flex items-center gap-2">
               {creditPill}
+              <Link to="/memories/app/refer" aria-label="Refer and earn" title="Refer and earn" className="ma-round"><Gift size={18} aria-hidden /></Link>
               <Link to="/memories/app/support" aria-label="Help and support" title="Help and support" className="ma-round relative"><Lifebuoy size={18} aria-hidden />{unread > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#e11d48] ring-2 ring-white" />}</Link>
               <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="ma-round"><SignOut size={18} aria-hidden /></button>
             </div>
@@ -127,6 +131,7 @@ export default function AppShell({ title, credits, children }) {
           {!full && (
             <p className="caption-5 mt-12 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[#a07890]">
               {LEGAL_LINKS.map(([label, to]) => <Link key={to} to={to} className="ml-link">{label}</Link>)}
+              <Link to="/memories/app/refer" className="ml-link">Refer and earn</Link>
               <Link to="/memories/app/support" className="ml-link">Help and support</Link>
               <a href={`mailto:${SUPPORT_EMAIL}`} className="ml-link break-all">{SUPPORT_EMAIL}</a>
             </p>

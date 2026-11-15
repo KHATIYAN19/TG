@@ -11,6 +11,7 @@ import * as A from "../../controllers/memory/memoryAdminController.js";
 import * as P from "../../controllers/memory/memoryPaymentController.js";
 import * as RS from "../../controllers/memory/memoryResponseController.js";
 import * as T from "../../controllers/memory/memoryTicketController.js";
+import * as R from "../../controllers/memory/memoryReferralController.js";
 
 /* ---------- limits ---------- */
 // Wrong-PIN guessing: per visitor per page (10 / 15 min) plus a per-page ceiling (60 / hour); fail closed if Redis is down.
@@ -37,6 +38,9 @@ const quoteLimit = budget({ name: "memory-quote", limit: () => envInt("MEMORY_QU
 // support tickets: a handful of new tickets and a steady trickle of replies per user
 const ticketCreateLimit = budget({ name: "memory-ticket-create", limit: () => envInt("MEMORY_TICKET_LIMIT", 8), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many tickets. Please wait a little." });
 const ticketReplyLimit = budget({ name: "memory-ticket-reply", limit: () => envInt("MEMORY_TICKET_REPLY_LIMIT", 40), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many messages. Please wait a little." });
+// refer & earn: claiming a link and spending credits are cheap, but cash requests move real money
+const referralLimit = budget({ name: "memory-referral", limit: () => envInt("MEMORY_REFERRAL_LIMIT", 40), windowSec: 10 * MINUTE, key: (req) => req.user?.id, message: "Too many requests." });
+const cashOutLimit = budget({ name: "memory-cashout", limit: () => envInt("MEMORY_CASHOUT_LIMIT", 5), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many cash-out requests. Please wait a little.", failClosed: true });
 const uploadLimit = budget({ name: "memory-upload", limit: () => envInt("MEMORY_UPLOAD_LIMIT", 100), windowSec: HOUR, key: (req) => req.user?.id, message: "Too many uploads." });
 
 /* =====================================================
@@ -84,6 +88,11 @@ userRouter.get("/tickets/:id", T.getMyTicket);
 userRouter.post("/tickets/:id/reply", ticketReplyLimit, T.replyMine);
 userRouter.post("/tickets/:id/close", T.closeMine);
 
+userRouter.get("/referral", referralLimit, R.mySummary);
+userRouter.post("/referral/claim", referralLimit, R.claim);
+userRouter.post("/referral/use", referralLimit, R.useAsPage);
+userRouter.post("/referral/cash-out", cashOutLimit, R.cashOut);
+
 userRouter.post("/pages", U.createPage);
 userRouter.get("/pages", U.listPages);
 userRouter.get("/pages/:id", U.getPage);
@@ -127,6 +136,10 @@ adminRouter.post("/pages/:id/regenerate-link", A.regenerateLink);
 adminRouter.post("/pages/:id/block", A.blockPage);
 adminRouter.delete("/pages/:id/media/:mediaId", A.removePageMedia);
 adminRouter.delete("/pages/:id", A.deletePage);
+
+adminRouter.get("/referrals", R.adminReferrers);
+adminRouter.get("/payouts", R.adminPayouts);
+adminRouter.post("/payouts/:id", R.adminSettlePayout);
 
 adminRouter.get("/tickets", T.adminList);
 adminRouter.get("/tickets/stats", T.adminStats);

@@ -57,6 +57,7 @@ import { healPaidMembers } from "./services/arena/activation.js";
 import { migrateLegacyArenaData } from "./services/arena/migrate.js";
 import { dropLegacyMemoryIndexes } from "./services/memory/migrate.js";
 import { startStorageSweeper } from "./services/memory/storageCleanup.js";
+import { startMediaProcessor } from "./services/memory/mediaProcessor.js";
 import { backfillExpiry, startExpirySweeper } from "./services/memory/expiry.js";
 
 
@@ -834,6 +835,7 @@ const startServer = async () => {
     startPackCodeSweeper();
     await backfillExpiry().catch((error) => console.error("[memory] expiry backfill failed:", error.message));
     startStorageSweeper();
+    startMediaProcessor();
     startExpirySweeper();
 
     // Background email: consumes the Amazon SQS email queue (no-op if SQS is not configured).

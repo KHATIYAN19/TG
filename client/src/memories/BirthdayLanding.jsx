@@ -11,6 +11,7 @@ import { THEME_LIST } from "./templates/birthday/themes";
 import { AUDIENCES } from "./templates/birthday/audiences";
 import MemoriesFooter from "./legal/MemoriesFooter";
 import { FONT_LINKS, Logo, cx } from "./ui";
+import "./refCapture";
 import { Btn, SIGNUP, SectionHead, useStickyFix } from "./landingUi";
 import { trackCtaClick } from "./metaTracking";
 import "./memories.css";

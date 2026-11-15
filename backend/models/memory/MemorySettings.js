@@ -32,6 +32,13 @@ const memorySettingsSchema = new Schema(
     emailEnabled: { type: Boolean, default: true },
     maxEmailsPerUserPerDay: { type: Number, default: 10, min: 1, max: 200 },
 
+    /* Refer & earn: a friend who signs up with a user's link and PAYS for a page counts as one referral */
+    referralEnabled: { type: Boolean, default: false },
+    referralsPerCredit: { type: Number, default: 5, min: 1, max: 1000 }, // paid friends needed for 1 page credit
+    referralCashEnabled: { type: Boolean, default: false }, // lets users take cash instead of a page
+    referralCashPerCredit: { type: Number, default: 75, min: 1, max: 100000 }, // rupees paid for 1 credit
+    referralMinPayoutCredits: { type: Number, default: 1, min: 1, max: 1000 },
+
     /* master switch: false stops new pages / purchases */
     enabled: { type: Boolean, default: true },
   },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { CalendarClock, CreditCard, Gauge, Loader2, Mail, Plus, Power, Save, ShieldOff, Trash2, Wallet } from "lucide-react";
+import { CalendarClock, CreditCard, Gauge, Gift, Loader2, Mail, Plus, Power, Save, ShieldOff, Trash2, Wallet } from "lucide-react";
 
 import { Btn, Field, inputCls, when } from "./AdminMemoryUi";
 
@@ -63,6 +63,8 @@ export default function Settings({ http, run, setDialog }) {
       maxPhotoMb: Number(s.maxPhotoMb), maxVideoMb: Number(s.maxVideoMb), maxAudioMb: Number(s.maxAudioMb ?? 10), maxMessageChars: Number(s.maxMessageChars), enabled: Boolean(s.enabled),
       maxVideoSec: Number(s.maxVideoSec ?? 60), maxAudioSec: Number(s.maxAudioSec ?? 120),
       pageLifetimeDays: Number(s.pageLifetimeDays), emailEnabled: s.emailEnabled !== false, maxEmailsPerUserPerDay: Number(s.maxEmailsPerUserPerDay),
+      referralEnabled: Boolean(s.referralEnabled), referralsPerCredit: Number(s.referralsPerCredit ?? 5), referralCashEnabled: Boolean(s.referralCashEnabled),
+      referralCashPerCredit: Number(s.referralCashPerCredit ?? 75), referralMinPayoutCredits: Number(s.referralMinPayoutCredits ?? 1),
       enabledGateways: [...gw.on], defaultGateway: gw.on.has(gw.def) ? gw.def : [...gw.on][0] || "",
     };
     if (body.price > 0 && body.enabledGateways.length === 0) { toast.error("Switch on at least one payment gateway, or set the price to 0."); setSaving(false); return; }
@@ -86,6 +88,18 @@ export default function Settings({ http, run, setDialog }) {
         <Section icon={Mail} title="Emailing a page" tone="from-sky-500 to-blue-500" hint="Owners can email their page link to the person it is for.">
           <Switch checked={s.emailEnabled !== false} onChange={(v) => setS({ ...s, emailEnabled: v })} label={s.emailEnabled !== false ? "Emailing is on" : "Emailing is off"} hint="Off hides the option from owners." />
           <div className="mt-3"><Field label="Emails per user per day" hint="Stops the option being used to spam. Counts pages made with an email in the last 24 hours."><input className={inputCls} type="number" min="1" max="200" step="1" value={s.maxEmailsPerUserPerDay} onChange={num("maxEmailsPerUserPerDay")} /></Field></div>
+        </Section>
+
+        <Section icon={Gift} title="Refer & earn" tone="from-fuchsia-500 to-pink-500" hint="Users share a link. A friend who signs up with it and then PAYS for a page counts as one referral.">
+          <Switch checked={Boolean(s.referralEnabled)} onChange={(v) => setS({ ...s, referralEnabled: v })} label={s.referralEnabled ? "Refer & earn is on" : "Refer & earn is off"} hint="Off hides it from users. Credits already earned are kept." />
+          <div className="mt-3"><Field label="Paid friends needed for 1 page credit" hint="Changing this never takes away credits already earned."><input className={inputCls} type="number" min="1" max="1000" step="1" value={s.referralsPerCredit ?? 5} onChange={num("referralsPerCredit")} /></Field></div>
+          <Switch checked={Boolean(s.referralCashEnabled)} onChange={(v) => setS({ ...s, referralCashEnabled: v })} label={s.referralCashEnabled ? "Cash payout is on" : "Cash payout is off"} hint="On: users can take cash instead of a page. Only referral credits can be cashed, and not once they were used for a page. You pay them by UPI from the Referrals & payouts tab." />
+          {s.referralCashEnabled && (
+            <div className="mt-3 grid gap-x-4 sm:grid-cols-2">
+              <Field label="Cash for 1 credit (₹)" hint="New requests only; each request keeps the rate it was made at."><input className={inputCls} type="number" min="1" step="1" value={s.referralCashPerCredit ?? 75} onChange={num("referralCashPerCredit")} /></Field>
+              <Field label="Least credits per request"><input className={inputCls} type="number" min="1" max="1000" step="1" value={s.referralMinPayoutCredits ?? 1} onChange={num("referralMinPayoutCredits")} /></Field>
+            </div>
+          )}
         </Section>
 
         <Section icon={Wallet} title="Payment methods" tone="from-emerald-500 to-teal-500" hint="People can pay with any gateway you switch on. A gateway needs its API keys on the server first. The default is pre-selected at checkout.">

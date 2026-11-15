@@ -138,6 +138,10 @@
       "destination": "/prerendered/about.html"
     },
     {
+      "source": "/memories",
+      "destination": "/prerendered/memories.html"
+    },
+    {
       "source": "/memories/birthday",
       "destination": "/prerendered/memories/birthday.html"
     },

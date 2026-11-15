@@ -12,6 +12,11 @@ export const getConfig = () => memoriesHttp.get("/config").then(data);
 export const redeemCode = (code) => memoriesHttp.post("/codes/redeem", { code }).then(data);
 /* right after sign-up / login: adds the free page that came with a Lifetime pack bought with this account's email. Safe to call on every visit. */
 export const claimMyCodes = () => memoriesHttp.post("/codes/claim-mine").then(data);
+/* refer & earn */
+export const getReferral = () => memoriesHttp.get("/referral").then(data);
+export const claimReferral = (code) => memoriesHttp.post("/referral/claim", { code }).then(data);
+export const spendReferralCredits = (count = 1) => memoriesHttp.post("/referral/use", { count }).then(data);
+export const cashOutReferral = (credits, upiId) => memoriesHttp.post("/referral/cash-out", { credits, upiId }).then(data);
 export const redeemGumroadOrder = (orderId, email) => memoriesHttp.post("/gumroad/redeem-order", { orderId, email }).then(data);
 /* a free look: the pass is made for the template + look the user picked */
 export const claimFreeCredit = (occasionId, theme) => memoriesHttp.post("/credits/free", { occasionId, ...(theme ? { theme } : {}) }).then(data);
@@ -63,6 +68,15 @@ export const removeMedia = (id, mediaId) => memoriesHttp.delete(`/pages/${pid(id
  * `onProgress(0..1)` is called while step 2 runs.
  */
 /** Width, height (and a video's length) read in the browser, so the page can lay a 16:9 and a 9:16 video out differently. Best effort: {} if it can't be read. */
+/* The real type of a file. Some browsers and phones leave file.type empty (or say image/jpg, video/x-m4v) so fall back to the extension. */
+const BY_EXT = { jpg: "image/jpeg", jpeg: "image/jpeg", jfif: "image/jpeg", png: "image/png", webp: "image/webp", mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", qt: "video/quicktime", webm: "video/webm", m4a: "audio/mp4", mp3: "audio/mpeg", wav: "audio/wav", aac: "audio/aac", ogg: "audio/ogg" };
+const ALIAS = { "image/jpg": "image/jpeg", "image/pjpeg": "image/jpeg", "video/x-m4v": "video/mp4", "video/x-quicktime": "video/quicktime", "audio/mp3": "audio/mpeg", "audio/x-mpeg": "audio/mpeg" };
+export const mimeOf = (file) => {
+  const t = String(file?.type || "").split(";")[0].trim().toLowerCase();
+  if (t && t !== "application/octet-stream") return ALIAS[t] || t;
+  return BY_EXT[String(file?.name || "").split(".").pop().toLowerCase()] || t;
+};
+
 export const measureMedia = (file, kind) =>
   new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -75,7 +89,7 @@ export const measureMedia = (file, kind) =>
       img.src = url;
     } else {
       const v = document.createElement("video");
-      v.preload = "metadata"; v.muted = true;
+      v.preload = "metadata"; v.muted = true; v.playsInline = true; v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", ""); /* iOS Safari will not read a video that is not inline */
       v.onloadedmetadata = () => finish({ width: v.videoWidth, height: v.videoHeight, durationSec: Number.isFinite(v.duration) ? Math.round(v.duration * 10) / 10 : undefined });
       v.onerror = () => finish({});
       v.src = url;
@@ -85,7 +99,7 @@ export const measureMedia = (file, kind) =>
 export async function uploadMedia(pageId, kind, file, onProgress, caption = "", knownDurationSec) {
   const dims = await measureMedia(file, kind);
   if (knownDurationSec > 0 && !dims.durationSec) dims.durationSec = Math.round(knownDurationSec * 10) / 10;
-  const t = await presignMedia(pageId, { kind, contentType: file.type, size: file.size, filename: file.name });
+  const t = await presignMedia(pageId, { kind, contentType: mimeOf(file), size: file.size, filename: file.name });
   const form = new FormData();
   Object.entries(t.fields || {}).forEach(([k, v]) => form.append(k, v));
   form.append("file", file); // the file must be the last field

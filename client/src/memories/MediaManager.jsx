@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Check, Film, ImagePlus, Loader2, Mic, RotateCw, Star, Trash2, UploadCloud, X } from "lucide-react";
 
 import { errMsg } from "../arena/api";
-import { captionMedia, removeMedia, setMainMedia, uploadMedia } from "./memApi";
+import { captionMedia, getPage, removeMedia, setMainMedia, uploadMedia } from "./memApi";
 import { ACCEPT, CAPTION_CHARS, CAPTION_IDEAS, checkFilesAsync, mbOf, tidyCaption } from "./mediaRules";
 import { secLabel } from "./pricing";
 import { mmss } from "./RoomMeter";
@@ -74,6 +74,19 @@ export default function MediaManager({ pageId, media: allMedia, limits, onChange
     started.current = true;
     addFiles(initialFiles);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // copies still being made on the server: look again every 15 s so the grid swaps to the fast ones by itself
+  const makingCopies = allMedia.some((m) => m.processing === "pending");
+  useEffect(() => {
+    if (!makingCopies) return undefined;
+    let stop = false;
+    let tries = 0;
+    const t = setInterval(async () => {
+      if (stop || document.hidden || ++tries > 120) return;
+      try { const p = await getPage(pageId); if (!stop && p?.media) onChange(p.media); } catch { /* next time */ }
+    }, 15000);
+    return () => { stop = true; clearInterval(t); };
+  }, [makingCopies, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // let the screen know while something is still uploading
   const uploading = queue.some((x) => x.status === "up");
@@ -147,7 +160,7 @@ export default function MediaManager({ pageId, media: allMedia, limits, onChange
             {media.map((m, i) => (
               <li key={m.id} className="overflow-hidden rounded-2xl bg-white ring-1 ring-rose-100">
                 <div className="relative aspect-square bg-rose-50">
-                  {m.kind === "photo" ? <img src={m.url} alt={m.caption || m.name || "Photo"} loading="lazy" className="h-full w-full object-cover" /> : <video src={m.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
+                  {m.kind === "photo" ? <img src={m.thumbUrl || m.url} alt={m.caption || m.name || "Photo"} loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <video src={m.url} poster={m.posterUrl || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
                   {m.kind === "video" && <span className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"><Film className="h-3.5 w-3.5" aria-hidden /></span>}
                   {savedId !== m.id && <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white">{m.kind === "video" && m.durationSec ? `${mmss(m.durationSec)} · ` : ""}{mbOf(m.size || 0)} MB</span>}
                   {m.isMain && <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950"><Check className="h-3 w-3" aria-hidden /> Main</span>}

@@ -65,10 +65,10 @@ export const toPayload = (templateId, data, themeId, { withNames = true } = {}) 
 
 /** The page's uploaded photos and videos, shaped like the gallery on the template pages expect them. */
 export const galleryFrom = (media = []) => {
-  const photos = media.filter((m) => m.kind === "photo" && m.url).map((m) => ({ id: m.id, url: m.url, caption: m.caption || "", w: m.width || null, h: m.height || null }));
+  const photos = media.filter((m) => m.kind === "photo" && m.url).map((m) => ({ id: m.id, url: m.url, thumb: m.thumbUrl || null, srcSet: m.srcSet ? m.srcSet.split(", ").slice(0, 2).join(", ") : null, /* 480w + 1080w for the grid; the 2400w copy is only for the full-screen view */ blur: m.blur || null, caption: m.caption || "", w: m.width || null, h: m.height || null }));
   const video = media.find((m) => m.kind === "video" && m.isMain && m.url) || media.find((m) => m.kind === "video" && m.url);
   const main = media.find((m) => m.kind === "photo" && m.isMain);
-  return photos.length || video ? { photos, video: video ? { id: video.id, url: video.url, caption: video.caption || "", w: video.width || null, h: video.height || null } : null, mainPhotoId: main?.id || photos[0]?.id } : null;
+  return photos.length || video ? { photos, video: video ? { id: video.id, url: video.url, lowUrl: video.lowUrl || null, preparing: video.processing === "pending",  poster: video.posterUrl || null, caption: video.caption || "", w: video.width || null, h: video.height || null } : null, mainPhotoId: main?.id || photos[0]?.id } : null;
 };
 
 /** The page's voice message (if any), as the fields the templates read. */

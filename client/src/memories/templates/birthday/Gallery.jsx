@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Preparing, pickVideo } from "../../mediaSrc.jsx";
 import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import { track } from "../../track";
 import { useMedia } from "../../chrome";
@@ -19,8 +20,9 @@ const orientOf = (r) => (!r ? null : r > 1.05 ? "landscape" : r < 0.95 ? "portra
 const clamp = (r, lo, hi) => Math.min(hi, Math.max(lo, r));
 
 function Art({ item, video, onDims }) {
-  if (item.url && video) return <video src={item.url} muted playsInline preload="metadata" onLoadedMetadata={(e) => onDims?.(item.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight)} />;
-  if (item.url) return <img src={item.url} alt={item.caption || ""} loading="lazy" draggable={false} onLoad={(e) => onDims?.(item.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} />;
+  if (item.url && video) return <video src={item.url} poster={item.poster || undefined} muted playsInline preload="metadata" onLoadedMetadata={(e) => onDims?.(item.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight)} />;
+  // the grid loads the 480 / 1080 px copies (srcSet) with a blurred preview behind them; the full-screen view below uses the big one
+  if (item.url) return <img src={item.thumb || item.url} srcSet={item.srcSet || undefined} sizes="(max-width: 640px) 50vw, 25vw" style={item.blur ? { background: `center / cover url(${item.blur})` } : undefined} alt={item.caption || ""} loading="lazy" decoding="async" draggable={false} onLoad={(e) => onDims?.(item.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} />;
   return video ? <span className="bd-pol-art" aria-hidden /> : <span className="bd-pol-art" aria-hidden>{item.emoji || "📷"}</span>;
 }
 
@@ -126,6 +128,7 @@ export default function Gallery({ photos, video, mainPhotoId, sound }) {
 let playingNow = null;
 function InlineVideo({ item, onDims, onPlay }) {
   const ref = useRef(null);
+  const [force, setForce] = useState(false);
   const wasPlaying = useRef(false);
   const [started, setStarted] = useState(false);
 
@@ -142,10 +145,11 @@ function InlineVideo({ item, onDims, onPlay }) {
   }, []);
 
   const begin = () => { ref.current?.play().catch(() => {}); };
+  if (item.preparing && !force) return <Preparing poster={item.poster} onTry={() => setForce(true)} />;
   return (
     <>
       <video
-        ref={ref} src={item.url} controls playsInline preload="metadata" controlsList="nodownload"
+        ref={ref} src={pickVideo(item)} poster={item.poster || undefined} controls playsInline preload="auto" controlsList="nodownload"
         onLoadedMetadata={(e) => onDims?.(item.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight)}
         onPlay={(e) => { if (playingNow && playingNow !== e.currentTarget) playingNow.pause(); playingNow = e.currentTarget; wasPlaying.current = false; if (!started) { setStarted(true); onPlay?.(); } }}
         onPause={(e) => { if (playingNow === e.currentTarget) playingNow = null; }}
@@ -178,7 +182,7 @@ function Lightbox({ items, index, dims, onDims, onClose, onGo }) {
       <button className="bd-lb-x" onClick={onClose} aria-label="Close"><X className="h-5 w-5" /></button>
       <div className="bd-lb-card" key={it.id} data-orient={orientOf(r) || undefined} style={r ? { "--lb-r": clamp(r, 0.4, 2.4) } : undefined}>
         <div className="bd-lb-stage" style={toneStyle(it.tone)}>
-          {it.url ? <img src={it.url} alt={it.caption || ""} draggable={false} onLoad={(e) => onDims?.(it.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} />
+          {it.url ? <img src={it.url} style={it.blur ? { background: `center / contain no-repeat url(${it.blur})` } : undefined} alt={it.caption || ""} draggable={false} onLoad={(e) => onDims?.(it.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} />
             : <span className="bd-pol-art" style={{ fontSize: "clamp(4rem, 22vw, 8rem)" }} aria-hidden>{it.emoji || "📷"}</span>}
           <button className="bd-lb-btn" style={{ left: 8 }} onClick={() => onGo(-1)} aria-label="Previous"><ChevronLeft className="h-5 w-5" /></button>
           <button className="bd-lb-btn" style={{ right: 8 }} onClick={() => onGo(1)} aria-label="Next"><ChevronRight className="h-5 w-5" /></button>
