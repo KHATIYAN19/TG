@@ -202,6 +202,18 @@ const PRIORITY_ROUTES = [
     priority: 6,
   },
   {
+    path: "/admin/resume-reviews",
+    name: "Resume Lab Reviews",
+    icon: Mail,
+    description:
+      "Review paid resume and LinkedIn submissions after the AI first look, write the human review, and set package prices and bundles.",
+    category: "Resume Lab",
+    keywords:
+      "resume linkedin review cv ats ai reviewer packages price bundle job description",
+    featured: true,
+    priority: 5,
+  },
+  {
     path: "/admin/arena",
     name: "Prep Buddy Arena",
     icon: Users,

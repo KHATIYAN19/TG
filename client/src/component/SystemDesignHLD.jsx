@@ -54,6 +54,7 @@ import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { gatewayLabel, preferredGateway } from "../payment/gatewayConfig";
 import HLD_PREVIEW_PDF from "../assest/master_hld_preview.pdf";
 import "./SystemDesignHLD.css";
+import ResumePromo from "../resume/ResumePromo.jsx";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -2904,6 +2905,13 @@ function SystemDesignHLD() {
                 </div>
               </div>
             </Reveal>
+          </div>
+        </section>
+
+        {/* ------------------------------ RESUME LAB ------------------------- */}
+        <section aria-label="Resume Lab" className="bg-base px-4 py-10 sm:py-14 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <ResumePromo variant="banner" isDark={isDarkMode} />
           </div>
         </section>
 

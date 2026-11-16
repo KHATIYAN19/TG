@@ -43,6 +43,7 @@ const ROUTES = {
   "/resources/apis": "src/api/APIResource.jsx",
   "/memories": "src/memories/MemoriesLanding.jsx",
   "/memories/birthday": "src/memories/BirthdayLanding.jsx",
+  "/resume-review": "src/resume/ResumeLanding.jsx",
 };
 
 // Keep the pristine SPA shell: dist/index.html is overwritten below with the

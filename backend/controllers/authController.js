@@ -31,6 +31,7 @@ import {
 
 import { ArenaError } from "../services/arena/errors.js";
 import { otpEmail, supportEmail } from "../services/mail/templates.js";
+import { resumeOtpEmail } from "../services/resume/otpMail.js";
 import { assertNotLocked, recordAttempt } from "../services/authLocks.js";
 
 import {
@@ -156,8 +157,10 @@ const eligible = user =>
   user.status === "active" &&
   !user.mustChangePassword;
 
-const sendLoginOtp = async (user, code) => {
-  const { subject, text, html } = otpEmail({
+const sendLoginOtp = async (user, code, source) => {
+  // `source: "resume"` comes from the Resume Lab login screen and gets the Resume Lab email.
+  const build = source === "resume" ? resumeOtpEmail : otpEmail;
+  const { subject, text, html } = build({
     purpose: "login",
     name: user.name,
     otp: code,
@@ -634,7 +637,7 @@ export const login = async (req, res) => {
     await session.save();
 
     try {
-      await sendLoginOtp(user, code);
+      await sendLoginOtp(user, code, req.body?.source === "resume" ? "resume" : undefined);
     } catch (error) {
       await UserSession.deleteOne({
         _id: session._id,
@@ -891,7 +894,7 @@ export const resendOtp = async (req, res) => {
       }
     );
 
-    await sendLoginOtp(user, code);
+    await sendLoginOtp(user, code, req.body?.source === "resume" ? "resume" : undefined);
 
     await logActivity({
       req,

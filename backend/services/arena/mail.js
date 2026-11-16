@@ -1,6 +1,7 @@
 import sendMail, { deliverMail } from "../../utils/MailSender.js";
 import { unsubscribeUrl } from "../campaign/render.js";
 import { memoriesOtpEmail } from "../memory/otpMail.js";
+import { resumeOtpEmail } from "../resume/otpMail.js";
 import { otpEmail, matchedEmail, unmatchedEmail, reminderEmail, supportEmail } from "../mail/templates.js";
 
 /*
@@ -27,8 +28,8 @@ const safeSend = async (to, mail, { direct = false } = {}) => {
   }
 };
 
-/* `source` is where the person is signing in: "memories" gets the Memories email, anything else the Prep Buddy Arena one. */
-const otpFor = (source, purpose, args) => (source === "memories" ? memoriesOtpEmail({ purpose, ...args }) : otpEmail({ purpose, ...args }));
+/* `source` is where the person is signing in: "memories" gets the Memories email, "resume" the Resume Lab one, anything else the Prep Buddy Arena one. */
+const otpFor = (source, purpose, args) => (source === "memories" ? memoriesOtpEmail({ purpose, ...args }) : source === "resume" ? resumeOtpEmail({ purpose, ...args }) : otpEmail({ purpose, ...args }));
 
 export const sendSignupOtp = (to, name, otp, minutes, source = "arena") =>
   safeSend(to, otpFor(source, "signup", { name, otp, minutes }), { direct: true });

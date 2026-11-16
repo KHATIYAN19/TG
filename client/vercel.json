@@ -146,6 +146,10 @@
       "destination": "/prerendered/memories/birthday.html"
     },
     {
+      "source": "/resume-review",
+      "destination": "/prerendered/resume-review.html"
+    },
+    {
       "source": "/contact",
       "destination": "/prerendered/contact.html"
     },

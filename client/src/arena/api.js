@@ -47,6 +47,23 @@ export const memoriesHttp = axios.create({
   timeout: 25000,
 });
 
+// Resume Lab: the buyer's reviews and payments, the reviewer/admin screens, and file uploads to S3.
+export const resumeHttp = axios.create({
+  baseURL: `${API_ROOT}/api/resume`,
+  withCredentials: true,
+  timeout: 30000,
+});
+export const resumeAdminHttp = axios.create({
+  baseURL: `${API_ROOT}/api/admin/resume`,
+  withCredentials: true,
+  timeout: 30000,
+});
+export const uploadsHttp = axios.create({
+  baseURL: `${API_ROOT}/api/uploads`,
+  withCredentials: true,
+  timeout: 20000,
+});
+
 const getToken = () => store.getState().auth.token || localStorage.getItem("token") || "";
 
 /*
@@ -89,7 +106,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp, memoriesHttp]) {
+for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, uploadsHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
@@ -118,7 +135,7 @@ for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp,
         } catch {
           store.dispatch(logout());
         }
-      } else if (status === 401 && getToken() && (instance !== memoriesHttp || SESSION_CODES.has(code))) {
+      } else if (status === 401 && getToken() && ((instance !== memoriesHttp && instance !== resumeHttp) || SESSION_CODES.has(code))) {
         // Memories: only a real "your session ended" answer signs the visitor out. A 401 relayed from a payment gateway must not.
         store.dispatch(logout());
       }

@@ -1,14 +1,19 @@
 // Usage: node scripts/addMockInterviewSlots.js [--dry] [--email=interviewer@example.com]
 // Creates two mock-interview slots (8-8:45 PM, 9-9:45 PM IST) for today and each of the next 7 days (8 days total).
 // Slots already in the past are skipped.
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+dotenv.config({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env"),
+});
 import mongoose from "mongoose";
 
 import User from "../models/User.js";
 import InterviewSlot from "../models/InterviewSlot.js";
 import connectDB from "../utils/dbConnection.js";
 
-const DAYS_AHEAD = 7; // today + next 7 days
+const DAYS_AHEAD = 30; // today + next 30 days
 const PRICE = 499;
 const MRP = 799;
 const MEETING_URL = "https://meet.google.com/wbx-zczm-rvt";

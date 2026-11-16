@@ -170,6 +170,12 @@ const MemoriesAuth = lazy(() =>
 const MemoriesApp = lazy(() =>
   import("./memories/MemoriesApp.jsx")
 );
+/* Resume Lab: paid resume + LinkedIn review (own colours, own header and footer) */
+const ResumeLanding = lazy(() => import("./resume/ResumeLanding.jsx"));
+const ResumeAuth = lazy(() => import("./resume/ResumeAuth.jsx"));
+const ResumeApp = lazy(() => import("./resume/ResumeApp.jsx"));
+const ResumePaymentResult = lazy(() => import("./resume/ResumePaymentResult.jsx"));
+const AdminResumeReviews = lazy(() => import("./Admin/AdminResumeReviews.jsx"));
 const BirthdayPreview = lazy(() =>
   import("./memories/templates/birthday/BirthdayPreview.jsx")
 );
@@ -600,10 +606,12 @@ function PublicLoginRoute({
 const NO_NAVBAR_ROUTES = [
   "/others/book/how-to-sell-ebook",
   "/memories/*",
+  "/admin/resume-reviews",
 ];
 const NO_FOOTER_ROUTES = [
   "/others/book/how-to-sell-ebook",
   "/memories/*",
+  "/admin/resume-reviews",
 ];
 function matchesLayoutRoute(pathname, routes) {
   return routes.some((route) => {
@@ -671,6 +679,17 @@ function App() {
           window.location.pathname +
             window.location.search
         );
+      }
+      if (window.location.pathname.startsWith("/resume-review")) {
+        if (window.location.pathname.startsWith("/resume-review/app")) {
+          sessionStorage.setItem(
+            "resume:returnTo",
+            window.location.pathname +
+              window.location.search
+          );
+        }
+        window.location.replace("/resume-review/login");
+        return;
       }
       if (onMemories) {
         // Memories visitors sign back in on the Memories login, and return to where they were.
@@ -1111,6 +1130,20 @@ function App() {
           <Route
             path="/prep-buddy/app/*"
             element={<ArenaApp />}
+          />
+          {/* ========================================
+              RESUME LAB — landing + login/signup are public;
+              /app needs an account and every call is
+              authorised on the server.
+          ======================================== */}
+          <Route path="/resume-review" element={<ResumeLanding />} />
+          <Route path="/resume-review/login" element={<ResumeAuth />} />
+          <Route path="/resume-review/signup" element={<ResumeAuth />} />
+          <Route path="/resume-review/payment-result" element={<ResumePaymentResult />} />
+          <Route path="/resume-review/app/*" element={<ResumeApp />} />
+          <Route
+            path="/admin/resume-reviews"
+            element={requireUser(<AdminResumeReviews />)}
           />
           <Route
             path="/admin/arena"

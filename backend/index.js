@@ -94,6 +94,13 @@ import {
   infoRouter as memoryInfoRoutes,
 } from "./routes/memory/memoryRoutes.js";
 import { gatewayWebhook as memoryGatewayWebhook } from "./controllers/memory/memoryPaymentController.js";
+import {
+  publicRouter as resumePublicRoutes,
+  userRouter as resumeUserRoutes,
+  adminRouter as resumeAdminRoutes,
+  paymentCallbackRouter as resumePaymentCallbackRoutes,
+} from "./routes/resume/resumeRoutes.js";
+import { gatewayWebhook as resumeGatewayWebhook } from "./controllers/resume/userController.js";
 import userRoutes from "./routes/userRoutes.js";
 
 /* =====================================================
@@ -301,6 +308,7 @@ const GATEWAY_RETURN_PATHS = [
   /^\/payment\/books\/return\/?$/,
   /^\/api\/arena\/payments\/return\/?$/,
   /^\/api\/memories\/payments\/callback\/[A-Za-z0-9_-]+\/?$/,
+  /^\/api\/resume\/payments\/callback\/[A-Za-z0-9_-]+\/?$/,
 ];
 
 const corsMiddleware = cors(corsOptions);
@@ -380,6 +388,13 @@ app.post(
   "/api/memories/payments/webhook/:gateway",
   express.raw({ type: "*/*", limit: "1mb" }),
   memoryGatewayWebhook
+);
+
+/* Resume-review payment webhooks (any gateway): raw body for signature checks, so it stays above express.json(). */
+app.post(
+  "/api/resume/payments/webhook/:gateway",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  resumeGatewayWebhook
 );
 
 /* Book payment webhooks (any gateway): raw body for signature checks, so it stays above express.json(). */
@@ -546,6 +561,12 @@ app.use("/api/memories/view", memoryPublicRoutes);
 app.use("/api/memories/payments/callback", memoryPaymentCallbackRoutes);
 app.use("/api/memories", memoryUserRoutes);
 app.use("/api/admin/memories", memoryAdminRoutes);
+
+/* RESUME + LINKEDIN REVIEW (paid; AI first look, then a person). Public routes first: they must not sit behind login. */
+app.use("/api/resume/public", resumePublicRoutes);
+app.use("/api/resume/payments/callback", resumePaymentCallbackRoutes);
+app.use("/api/resume", resumeUserRoutes);
+app.use("/api/admin/resume", resumeAdminRoutes);
 
 /* =====================================================
    EXISTING PAYMENT ROUTES

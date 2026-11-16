@@ -269,6 +269,16 @@ export const deleteObject = async (key) => {
   await s3.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
 };
 
+/** Reads a (small) object fully into memory, e.g. a resume to hand to the AI reviewer. Refuses anything over `maxBytes`. */
+export const getObjectBuffer = async (key, maxBytes = 15 * MB) => {
+  const { s3, cfg } = client();
+  const out = await s3.send(new GetObjectCommand({ Bucket: cfg.bucket, Key: key }));
+  if (Number(out.ContentLength) > maxBytes) throw new StorageError("File is too large to process.", 413, "FILE_TOO_LARGE");
+  const chunks = [];
+  for await (const chunk of out.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
+};
+
 /** Streams an object to a local file (for the media processor). */
 export const downloadToFile = async (key, filePath) => {
   const { s3, cfg } = client();

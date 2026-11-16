@@ -16,6 +16,8 @@ import {
 import JSZip from "jszip";
 import { Helmet } from "react-helmet-async";
 
+import ResumePromo from "../resume/ResumePromo.jsx";
+
 import {
   AlertCircle,
   AlertTriangle,
@@ -931,300 +933,6 @@ function DetailBox({
         {value}
       </strong>
     </div>
-  );
-}
-
-function MockFeature({
-  Icon,
-  title,
-  description,
-  isDark,
-}) {
-  return (
-    <div
-      className={`
-        flex gap-3
-        rounded-2xl border p-4
-        ${
-          isDark
-            ? "border-stone-700 bg-stone-900/70"
-            : "border-orange-100 bg-white/85"
-        }
-      `}
-    >
-      <div
-        className={`
-          flex h-11 w-11
-          shrink-0 items-center
-          justify-center
-          rounded-xl
-          ${
-            isDark
-              ? "bg-orange-500/15 text-orange-400"
-              : "bg-orange-100 text-orange-600"
-          }
-        `}
-      >
-        <Icon size={20} />
-      </div>
-
-      <div>
-        <h3 className="text-sm font-extrabold">
-          {title}
-        </h3>
-
-        <p className="mt-1 text-xs leading-6 opacity-65">
-          {description}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ==========================================================
-   MOCK INTERVIEW PROMOTION
-
-   Uses existing route:
-   /mock-interviews
-========================================================== */
-
-function MockInterviewCard({
-  isDark,
-}) {
-  const features = [
-    {
-      Icon: Code2,
-      title: "DSA & Coding",
-      description:
-        "Practice problem solving, optimal approaches, edge cases and complexity.",
-    },
-
-    {
-      Icon: Layers3,
-      title: "Low-Level Design",
-      description:
-        "Discuss OOP, design patterns, SOLID principles and concurrency.",
-    },
-
-    {
-      Icon: Network,
-      title: "System Design",
-      description:
-        "Learn to explain scalable architecture, APIs, databases and trade-offs.",
-    },
-
-    {
-      Icon: BrainCircuit,
-      title: "GenAI & Projects",
-      description:
-        "Practice RAG, AI agents, project explanations and technical decisions.",
-    },
-  ];
-
-  return (
-    <section
-      className={`
-        relative mt-7
-        overflow-hidden
-        rounded-[28px]
-        border
-        ${
-          isDark
-            ? "border-orange-900/60 bg-[#20150e]"
-            : "border-orange-200 bg-[#fff3e7]"
-        }
-      `}
-    >
-      <div
-        className="
-          pointer-events-none
-          absolute -right-20
-          -top-24 h-80 w-80
-          rounded-full
-          bg-orange-500/15
-          blur-3xl
-        "
-      />
-
-      <div
-        className="
-          relative grid
-          gap-8 p-6
-          sm:p-8 lg:grid-cols-[1.05fr_.95fr]
-          lg:items-center
-          lg:p-10
-        "
-      >
-        <div>
-          <div
-            className={`
-              inline-flex items-center
-              gap-2 rounded-full
-              px-3 py-2 text-[11px]
-              font-black uppercase
-              tracking-[0.12em]
-              ${
-                isDark
-                  ? "bg-orange-500/15 text-orange-300"
-                  : "bg-orange-100 text-orange-700"
-              }
-            `}
-          >
-            <Video size={15} />
-            Target Trek Mock Interviews
-          </div>
-
-          <h2
-            className="
-              mt-5 text-2xl
-              font-black leading-tight
-              tracking-tight
-              sm:text-3xl
-              lg:text-[35px]
-            "
-          >
-            You have the books.
-            <span className="mt-1 block text-orange-500">
-              Now practice the interview.
-            </span>
-          </h2>
-
-          <p className="mt-5 max-w-xl text-sm leading-8 opacity-75 sm:text-base">
-            Reading concepts is one part of
-            interview preparation. Explaining
-            your approach, answering follow-up
-            questions, and defending your
-            technical decisions is another.
-
-            Practice your knowledge through
-            a live, personalized technical
-            mock interview.
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            {[
-              "Live 1:1 session",
-              "Choose your topics",
-              "Interview-style questions",
-            ].map((feature) => (
-              <span
-                key={feature}
-                className={`
-                  inline-flex items-center
-                  gap-2 rounded-full
-                  border px-3 py-2
-                  text-xs font-bold
-                  ${
-                    isDark
-                      ? "border-orange-900 bg-orange-950/20"
-                      : "border-orange-200 bg-white/75"
-                  }
-                `}
-              >
-                <Check
-                  size={14}
-                  className="text-orange-500"
-                />
-
-                {feature}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              to={MOCK_INTERVIEW_URL}
-              className="
-                inline-flex min-h-12
-                items-center justify-center
-                gap-2 rounded-xl
-                bg-orange-600
-                px-6 py-3
-                text-sm font-extrabold
-                text-white
-                transition
-                hover:bg-orange-700
-              "
-            >
-              <CalendarDays size={18} />
-
-              Book a Mock Interview
-
-              <ArrowRight size={17} />
-            </Link>
-
-            <Link
-              to={MOCK_INTERVIEW_URL}
-              className={`
-                inline-flex min-h-12
-                items-center justify-center
-                gap-2 rounded-xl border
-                px-5 py-3 text-sm
-                font-bold transition
-                ${
-                  isDark
-                    ? "border-stone-700 bg-stone-900 hover:bg-stone-800"
-                    : "border-orange-200 bg-white hover:bg-orange-50"
-                }
-              `}
-            >
-              Explore Available Slots
-              <ExternalLink size={16} />
-            </Link>
-          </div>
-
-          <p className="mt-4 text-xs leading-6 opacity-60">
-            Select an available date, choose
-            your interview topics, and complete
-            the booking securely.
-          </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {features.map((feature) => (
-            <MockFeature
-              key={feature.title}
-              {...feature}
-              isDark={isDark}
-            />
-          ))}
-
-          <div
-            className={`
-              rounded-2xl border p-4
-              sm:col-span-2
-              ${
-                isDark
-                  ? "border-orange-900 bg-orange-950/20"
-                  : "border-orange-200 bg-white/80"
-              }
-            `}
-          >
-            <div className="flex items-start gap-3">
-              <MessageSquareText
-                size={21}
-                className="mt-1 shrink-0 text-orange-500"
-              />
-
-              <div>
-                <h3 className="text-sm font-extrabold">
-                  Prepare for real interview discussions
-                </h3>
-
-                <p className="mt-2 text-xs leading-6 opacity-70">
-                  Work on structured problem
-                  solving, design explanations,
-                  project walkthroughs, and
-                  interview communication
-                  instead of relying only on
-                  memorized answers.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -2187,138 +1895,147 @@ export default function PaymentSuccess() {
         <div className="mx-auto max-w-6xl">
 
           {/* ======================================
-              COMPACT PURCHASE CARD
-              (verified badge, book name, price, order id)
+              RESUME LAB (small, at the top)
+          ====================================== */}
+
+          <ResumePromo
+            variant="strip"
+            isDark={isDark}
+          />
+
+          {/* ======================================
+              SUCCESS HERO
           ====================================== */}
 
           <section
             className={`
-              rounded-2xl border
-              p-4 shadow-sm sm:p-5
+              relative overflow-hidden
+              rounded-[28px] border
+              px-5 py-8 sm:px-10 sm:py-11
               ${border}
-              ${cardBg}
+              ${
+                isDark
+                  ? "bg-gradient-to-br from-[#1d2a1f] via-[#231d17] to-[#211a15]"
+                  : "bg-gradient-to-br from-[#ecfdf3] via-[#fff8f0] to-white"
+              }
             `}
           >
-            <div
-              className="
-                flex flex-col gap-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-              "
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className="
-                    flex h-11 w-11
-                    shrink-0 items-center
-                    justify-center
-                    rounded-xl
-                    bg-emerald-500/15
-                    text-emerald-500
-                  "
-                >
-                  <CheckCircle2 size={24} />
-                </div>
+            <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 -left-24 h-64 w-64 rounded-full bg-orange-400/15 blur-3xl" />
 
-                <div className="min-w-0">
-                  <span
-                    className={`
-                      inline-flex items-center
-                      gap-1.5 rounded-full
-                      px-2.5 py-0.5
-                      text-[11px] font-extrabold
-                      ${
-                        isDark
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-emerald-100 text-emerald-700"
-                      }
-                    `}
-                  >
-                    <ShieldCheck size={13} />
-                    Purchase verified
-                  </span>
-
-                  <h1 className="mt-1 break-words text-base font-black leading-snug sm:text-lg">
-                    {productTitle}
-                    {isBundle && (
-                      <span
-                        className={`
-                          ml-2 text-xs
-                          font-bold
-                          ${secondaryText}
-                        `}
-                      >
-                        ({totalBooks} books)
-                      </span>
-                    )}
-                  </h1>
-
-                  {purchase.orderId && (
-                    <p
-                      className={`
-                        mt-1 break-all
-                        text-xs
-                        ${secondaryText}
-                      `}
-                    >
-                      Order ID:{" "}
-                      <span className="font-bold">
-                        {purchase.orderId}
-                      </span>
-                    </p>
-                  )}
-
-                  {purchase.emailDelivery?.enabled && (
-                    <p
-                      className={`
-                        mt-2 inline-flex items-start gap-1.5
-                        rounded-lg px-2.5 py-1.5
-                        text-xs font-semibold
-                        ${
-                          isDark
-                            ? "bg-orange-500/15 text-orange-300"
-                            : "bg-orange-50 text-orange-700"
-                        }
-                      `}
-                    >
-                      <Mail
-                        size={14}
-                        className="mt-0.5 shrink-0"
-                      />
-                      <span>
-                        You will also get an email with your
-                        {isBundle ? " PDFs" : " PDF"}
-                        {purchase.emailDelivery.maskedEmail
-                          ? ` at ${purchase.emailDelivery.maskedEmail}`
-                          : ""}
-                        . It can take a few minutes &ndash; check
-                        your spam folder too.
-                      </span>
-                    </p>
-                  )}
-                </div>
+            <div className="relative flex flex-col items-center text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 ring-8 ring-emerald-500/10">
+                <CheckCircle2
+                  size={44}
+                  className="text-emerald-500"
+                />
               </div>
 
-              {paymentAmount !== null && (
-                <div className="shrink-0 sm:text-right">
-                  <p
+              <span
+                className={`
+                  mt-6 inline-flex items-center gap-1.5
+                  rounded-full px-3 py-1
+                  text-[11px] font-extrabold
+                  ${
+                    isDark
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "bg-emerald-100 text-emerald-700"
+                  }
+                `}
+              >
+                <ShieldCheck size={13} />
+                Purchase verified
+              </span>
+
+              <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">
+                Payment successful
+              </h1>
+
+              <p
+                className={`
+                  mx-auto mt-3 max-w-xl
+                  break-words text-sm leading-7
+                  sm:text-base
+                  ${secondaryText}
+                `}
+              >
+                Thank you! Your ebook is ready to download:{" "}
+                <strong className={isDark ? "text-[#fff8f0]" : "text-[#29201a]"}>
+                  {productTitle}
+                </strong>
+                {isBundle && ` (${totalBooks} books)`}
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                {paymentAmount !== null && (
+                  <span
                     className={`
-                      text-[11px] font-bold
-                      uppercase tracking-widest
-                      ${secondaryText}
+                      inline-flex items-center gap-2
+                      rounded-full border px-4 py-2
+                      text-xs font-bold
+                      ${border} ${cardBg}
                     `}
                   >
-                    Amount paid
-                  </p>
+                    Paid
+                    <span className="text-sm font-black text-orange-500">
+                      {formatMoney(
+                        paymentAmount,
+                        currency
+                      )}
+                    </span>
+                  </span>
+                )}
 
-                  <p className="text-xl font-black text-orange-500">
-                    {formatMoney(
-                      paymentAmount,
-                      currency
-                    )}
-                  </p>
-                </div>
+                {purchase.orderId && (
+                  <span
+                    className={`
+                      inline-flex max-w-full items-center gap-2
+                      rounded-full border px-4 py-2
+                      text-xs font-bold
+                      ${border} ${cardBg}
+                    `}
+                  >
+                    <span className="truncate">
+                      Order {purchase.orderId}
+                    </span>
+                  </span>
+                )}
+              </div>
+
+              <a
+                href="#downloads"
+                className={`${primaryButton} mt-7`}
+              >
+                <Download size={18} />
+                Go to my downloads
+              </a>
+
+              {purchase.emailDelivery?.enabled && (
+                <p
+                  className={`
+                    mt-6 inline-flex max-w-xl items-start gap-2
+                    rounded-xl px-4 py-3 text-left
+                    text-xs font-semibold leading-5
+                    ${
+                      isDark
+                        ? "bg-orange-500/15 text-orange-300"
+                        : "bg-orange-50 text-orange-700"
+                    }
+                  `}
+                >
+                  <Mail
+                    size={15}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <span>
+                    We're also emailing your
+                    {isBundle ? " PDFs" : " PDF"}
+                    {purchase.emailDelivery.maskedEmail
+                      ? ` to ${purchase.emailDelivery.maskedEmail}`
+                      : ""}
+                    . It can take a few minutes, so check your spam folder too.
+                  </span>
+                </p>
               )}
             </div>
           </section>
@@ -2329,6 +2046,8 @@ export default function PaymentSuccess() {
           ====================================== */}
 
           <section
+            id="downloads"
+            style={{ scrollMarginTop: "100px" }}
             className={`
               mt-6 overflow-hidden
               rounded-3xl border
@@ -2804,12 +2523,15 @@ export default function PaymentSuccess() {
           </section>
 
           {/* ======================================
-              MOCK INTERVIEW PROMOTION
+              RESUME LAB PROMOTION
           ====================================== */}
 
-          <MockInterviewCard
-            isDark={isDark}
-          />
+          <div className="mt-8">
+            <ResumePromo
+              variant="card"
+              isDark={isDark}
+            />
+          </div>
 
           {/* ======================================
               PDF VIEWER

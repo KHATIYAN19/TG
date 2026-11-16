@@ -62,6 +62,7 @@ import BASE_URL from "../utils/Url";
 import { describeOffer } from "./bundleRules";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { usePacks } from "./PackSections";
+import ResumePromo from "../resume/ResumePromo.jsx";
 
 // =======================================================
 // EXISTING WEBSITE CONFIGURATION
@@ -3118,6 +3119,16 @@ export default function Books() {
                 />
               ))}
             </Stagger>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* RESUME LAB                            */}
+        {/* ===================================== */}
+
+        <section className="bk-section" style={{ paddingTop: 0 }} aria-label="Resume Lab">
+          <div className="bk-shell">
+            <ResumePromo variant="banner" isDark={isDark} />
           </div>
         </section>
 

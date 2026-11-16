@@ -2942,6 +2942,7 @@ const ROUTES = {
   books: "/books",
   interviews: "/interviews",
   mockInterviews: "/mock-interviews",
+  resumeReview: "/resume-review",
   memories: "/memories",
   resources: "/resources",
   blogs: "/blogs",
@@ -3283,7 +3284,7 @@ const ThemeToggle = memo(function ThemeToggle({
 });
 
 /* =====================================================
-   MOCK INTERVIEWS CTA
+   RESUME REVIEW CTA (the highlighted button)
 
    Prominent on desktop.
    Shown in the mobile top bar where space allows.
@@ -3322,12 +3323,12 @@ const MockInterviewCTA = memo(
             "ring-offset-[#16110f]"
         )}
       >
-        <Users
+        <FileText
           size={compact ? 16 : 17}
         />
 
         <span className="whitespace-nowrap">
-          Prep Buddy
+          Resume Review
         </span>
 
         {!compact && (
@@ -3772,6 +3773,11 @@ const DesktopNavigation = memo(
     const navItems = isLearn
       ? [
           {
+            title: "Prep Buddy",
+            path: "/prep-buddy",
+            selected: active("/prep-buddy"),
+          },
+          {
             title: "Books",
             path: ROUTES.books,
             selected: booksActive,
@@ -3831,9 +3837,9 @@ const DesktopNavigation = memo(
           {isLearn && (
             <MockInterviewCTA
               isDark={isDark}
-              active={active("/prep-buddy")}
+              active={active(ROUTES.resumeReview)}
               onClick={() =>
-                onNavigate("/prep-buddy")
+                onNavigate(ROUTES.resumeReview)
               }
             />
           )}
@@ -3870,12 +3876,22 @@ const DesktopNavigation = memo(
                 Learn
               </NavLink>
 
+              <NavLink
+                to="/prep-buddy"
+                className={linkStyle(
+                  isDark,
+                  active("/prep-buddy")
+                )}
+              >
+                Prep Buddy
+              </NavLink>
+
               <MockInterviewCTA
                 isDark={isDark}
-                active={active("/prep-buddy")}
+                active={active(ROUTES.resumeReview)}
                 compact
                 onClick={() =>
-                  onNavigate("/prep-buddy")
+                  onNavigate(ROUTES.resumeReview)
                 }
               />
             </>
@@ -4066,10 +4082,10 @@ const MobileHeader = memo(
               isDark={isDark}
               active={routeMatches(
                 pathname,
-                "/prep-buddy"
+                ROUTES.resumeReview
               )}
               onClick={() =>
-                onNavigate("/prep-buddy")
+                onNavigate(ROUTES.resumeReview)
               }
             />
           </div>
@@ -4259,7 +4275,7 @@ const MobileDrawer = memo(
             <button
               type="button"
               onClick={() =>
-                navigateAndClose("/prep-buddy")
+                navigateAndClose(ROUTES.resumeReview)
               }
               className={cx(
                 "mb-3 flex w-full items-center",
@@ -4279,16 +4295,16 @@ const MobileDrawer = memo(
                   "rounded-xl bg-white/15"
                 )}
               >
-                <Users size={21} />
+                <FileText size={21} />
               </span>
 
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-extrabold">
-                  Prep Buddy
+                  Resume Review
                 </span>
 
                 <span className="mt-1 block text-xs text-orange-100">
-                  Find a partner to prepare with
+                  Get more interview calls
                 </span>
               </span>
 
@@ -4341,6 +4357,16 @@ const MobileDrawer = memo(
                   onClick={onClose}
                 >
                   Mock Interviews
+                </DrawerLink>
+
+                <DrawerLink
+                  to="/prep-buddy"
+                  icon={Users}
+                  isDark={isDark}
+                  active={active("/prep-buddy")}
+                  onClick={onClose}
+                >
+                  Prep Buddy
                 </DrawerLink>
 
                 <DrawerLink

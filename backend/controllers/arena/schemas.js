@@ -20,7 +20,7 @@ const anonymousText = (max) =>
 
 /* Phone: a country code ("+91") and the national number. Clients that send only `mobile` get +91. */
 /** Which site the person is on, so the right email is sent. Unknown or missing = the Arena one. */
-export const sourceField = z.enum(["arena", "memories"]).catch("arena").default("arena");
+export const sourceField = z.enum(["arena", "memories", "resume"]).catch("arena").default("arena");
 export const countryCodeField = z
   .string()
   .trim()
