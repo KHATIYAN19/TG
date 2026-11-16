@@ -1723,7 +1723,7 @@ export default function Books() {
     setTag("");
     setSearch("");
 
-    requestAnimationFrame(() => scrollToId("library"));
+    requestAnimationFrame(() => scrollToId("bk-results"));
   };
 
   // =====================================================
@@ -2261,6 +2261,8 @@ export default function Books() {
         .bk-goal:hover .bk-goal-covers .bk-cover:nth-child(2) { transform: rotate(8deg) translateY(-16px); }
 
         /* ---------- toolbar ---------- */
+        .bk-count { scroll-margin-top: 230px; }
+        @media (max-width: 640px) { .bk-count { scroll-margin-top: 190px; } }
         .bk-toolbar {
           position: sticky; top: 70px; z-index: 30; margin-bottom: 24px; padding: 12px;
           border-radius: 16px; border: 1px solid var(--border); background: var(--bg);
@@ -2508,7 +2510,7 @@ export default function Books() {
                   id="bk-hero-search"
                   value={search}
                   onChange={setSearch}
-                  onSubmit={() => scrollToId("library")}
+                  onSubmit={() => scrollToId("bk-results")}
                   placeholder={`Try "${SEARCH_EXAMPLES[placeholderIndex]}"`}
                 />
               </motion.div>
@@ -2786,7 +2788,10 @@ export default function Books() {
                     hint
                     value={search}
                     onChange={setSearch}
-                    onSubmit={() => toolbarSearchRef.current?.blur()}
+                    onSubmit={() => {
+                      toolbarSearchRef.current?.blur();
+                      scrollToId("bk-results");
+                    }}
                     placeholder={`Search ${SEARCH_EXAMPLES[placeholderIndex]}`}
                   />
 
@@ -2860,7 +2865,10 @@ export default function Books() {
                     <Chip
                       key={item.name}
                       active={lower(category) === lower(item.name)}
-                      onClick={() => setCategory(item.name)}
+                      onClick={() => {
+                        setCategory(item.name);
+                        requestAnimationFrame(() => scrollToId("bk-results"));
+                      }}
                       count={item.count}
                       layoutId="bk-chip-pill"
                     >
@@ -2926,7 +2934,7 @@ export default function Books() {
 
               {/* RESULT COUNT */}
 
-              <div className="body-6 bk-count" aria-live="polite">
+              <div id="bk-results" className="body-6 bk-count" aria-live="polite">
                 {!loading && (
                   <p>
                     Showing <b>{filteredBooks.length}</b>{" "}
