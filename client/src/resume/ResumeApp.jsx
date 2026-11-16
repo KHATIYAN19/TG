@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { ArrowLeft, ArrowRight, Brain, CalendarBlank, CaretLeft, CaretRight, FilePdf, House, LinkedinLogo, Plus, Stack, UploadSimple, UserCircle } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
-import { PLAN_STATE, STATUS, dayFmt, daysLeft, fetchPackages, formatINR, myPlans, myRequestsPage } from "./api";
+import { PLAN_STATE, STATUS, dateFmt, dayFmt, daysLeft, fetchPackages, formatINR, myPlans, myRequestsPage } from "./api";
 import PlanPicker, { usePlanBuy } from "./PlanPicker";
 import ResumeBuy from "./ResumeBuy";
 import ResumeDetail from "./ResumeDetail";
@@ -147,8 +147,22 @@ function Pager({ page, pages, onGo }) {
 }
 
 /* ---------- one uploaded resume ---------- */
+const ago = (d) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 60000));
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  const days = Math.round(h / 24);
+  return days < 30 ? `${days} day${days === 1 ? "" : "s"} ago` : "";
+};
+const fileExt = (n) => (String(n || "").split(".").pop() || "").slice(0, 4).toUpperCase() || "FILE";
+const sizeFmt = (b) => (!b ? "" : b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
+
 function ResumeCard({ r }) {
   const st = r.humanRequested ? STATUS[r.status] || {} : r.aiStatus === "failed" ? { label: "AI report not generated", tone: "bad" } : { label: r.status === "completed" ? "AI report ready" : "AI is reading it", tone: r.status === "completed" ? "ok" : "" };
+  const when = ago(r.createdAt);
+  const ext = fileExt(r.filename);
   return (
     <Link to={`/resume-review/app/requests/${r.id}`} className="rv-rcard rv-hover">
       <div className="rv-rcard-top">
@@ -158,9 +172,15 @@ function ResumeCard({ r }) {
           <h3 className="rv-rcard-role">{r.targetRole || r.package?.name || "Resume"}</h3>
         </div>
       </div>
-      {r.filename && <p className="rv-rcard-file"><FilePdf size={16} weight="duotone" aria-hidden /><span>{r.filename}</span></p>}
+      <div className="rv-rcard-doc">
+        <span className="rv-rcard-ext" aria-hidden><FilePdf size={20} weight="duotone" /><b>{ext}</b></span>
+        <span className="rv-rcard-docinfo">
+          <b>{r.filename || "Resume"}</b>
+          <span>{[sizeFmt(r.fileSize), r.package?.name].filter(Boolean).join(" · ")}</span>
+        </span>
+      </div>
       <div className="rv-rcard-foot">
-        <span className="rv-xs rv-subtle">{r.package?.name} · {dayFmt(r.createdAt)}</span>
+        <span className="rv-rcard-time"><CalendarBlank size={15} weight="duotone" aria-hidden /><span><b>Uploaded {dateFmt(r.createdAt)}</b>{when && <i>{when}</i>}</span></span>
         <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>{r.humanRequested && <Pill className="dark">Human</Pill>}<ArrowRight size={16} weight="bold" className="rv-rcard-go" aria-hidden /></span>
       </div>
     </Link>
@@ -263,7 +283,7 @@ export default function ResumeApp() {
   return (
     <Page title="Resume Lab">
       <AppData.Provider value={{ data, error }}>
-        <div className="rv-shell rv-app">
+        <div className={`rv-shell rv-app${/\/requests\//.test(location.pathname) ? " rv-app-wide" : ""}`}>
           <Sidebar />
           <main className="rv-app-main">
             <Routes>

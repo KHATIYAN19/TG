@@ -281,7 +281,7 @@ export const requestHuman = handler(async (req, res) => {
 /* ---------- read ---------- */
 const listItem = (r) => {
   const o = requestOut(r);
-  return { id: o.id, status: o.status, humanRequested: o.humanRequested, createdAt: o.createdAt, package: o.package, targetRole: r.profile?.targetRole, profile: r.profile, linkedinUrl: r.linkedinUrl || "", filename: r.resume?.filename || "", score: r.status === "completed" && r.humanRequested ? r.human?.score ?? r.ai?.result?.overallScore ?? null : r.ai?.result?.overallScore ?? null, aiStatus: o.ai.status };
+  return { id: o.id, status: o.status, humanRequested: o.humanRequested, createdAt: o.createdAt, package: o.package, targetRole: r.profile?.targetRole, profile: r.profile, linkedinUrl: r.linkedinUrl || "", filename: r.resume?.filename || "", fileSize: r.resume?.size || 0, score: r.status === "completed" && r.humanRequested ? r.human?.score ?? r.ai?.result?.overallScore ?? null : r.ai?.result?.overallScore ?? null, aiStatus: o.ai.status };
 };
 
 /* Without ?page the whole list (up to 100) as an array, as before. With ?page=N&limit=M (default 20) one page: { items, total, page, pages, limit }. */

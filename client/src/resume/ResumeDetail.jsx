@@ -40,8 +40,8 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
   }
   const r = ai.result;
   return (
-    <div style={{ display: "grid", gap: 24 }}>
-      <section className="rv-card rv-card-pad">
+    <div style={{ display: "grid", gap: 24 }} className="rv-ai">
+      <section className="rv-card rv-card-pad rv-ai-hero">
         <div style={{ display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
           <ScoreRing value={r.overallScore} size={136} stroke={9} label="Overall" />
           <div style={{ flex: "1 1 280px", minWidth: 0 }}>
@@ -50,7 +50,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
             <p className="rv-muted" style={{ marginTop: 12, lineHeight: 1.65 }}>{r.summary}</p>
           </div>
         </div>
-        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--rv-border)" }}>
+        <div className="rv-ai-bars" style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--rv-border)" }}>
           <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>ATS readiness</b><span className="rv-mono">{r.atsScore}/100</span></div><Bar value={r.atsScore} tone={toneOf(r.atsScore)} /></div>
           {includes?.jobMatch && r.jobMatch && <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>Job match</b><span className="rv-mono">{r.jobMatch.score}/100</span></div><Bar value={r.jobMatch.score} tone={toneOf(r.jobMatch.score)} /></div>}
         </div>
@@ -58,24 +58,24 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
 
       {r.sections?.length > 0 && (
         <Section title="Section by section">
-          <div style={{ display: "grid", gap: 24 }}>
+          <div className="rv-sec-grid">
             {r.sections.map((s) => (
-              <div key={s.name}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>{s.name}</b><span className="rv-mono rv-muted">{s.score}</span></div><Bar value={s.score} tone={toneOf(s.score)} /><p className="rv-muted rv-sm" style={{ marginTop: 10 }}>{s.feedback}</p></div>
+              <div key={s.name} className="rv-sec-item"><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>{s.name}</b><span className="rv-mono rv-muted">{s.score}</span></div><Bar value={s.score} tone={toneOf(s.score)} /><p className="rv-muted rv-sm" style={{ marginTop: 10 }}>{s.feedback}</p></div>
             ))}
           </div>
         </Section>
       )}
 
-      <div style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+      <div className="rv-two" style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
         {r.strengths?.length > 0 && <Section title="What's working"><ul style={{ display: "grid", gap: 14 }}>{r.strengths.map((x) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 10 }}><Tick />{x}</li>)}</ul></Section>}
         {r.missingKeywords?.length > 0 && <Section title="Keywords to add"><p className="rv-muted rv-sm">Recruiters search for these, and they're missing.</p><div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>{r.missingKeywords.map((k) => <Pill key={k} className="warn">+ {k}</Pill>)}</div></Section>}
       </div>
 
       {r.improvements?.length > 0 && (
         <Section title="Fix these first">
-          <ol style={{ display: "grid", gap: 24 }}>
+          <ol className="rv-fix-grid">
             {r.improvements.map((i, n) => (
-              <li key={i.issue} style={{ display: "flex", gap: 16 }}>
+              <li key={i.issue} className="rv-fix-item" style={{ display: "flex", gap: 16 }}>
                 <span className="rv-mono" style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", fontSize: 13, fontWeight: 600, background: n === 0 ? "var(--rv-brand)" : "var(--rv-surface-2)", color: n === 0 ? "var(--rv-on-brand)" : "var(--rv-text)" }}>{n + 1}</span>
                 <div style={{ minWidth: 0 }}><p style={{ fontWeight: 600 }}>{i.issue}</p>{i.why && <p className="rv-muted rv-sm" style={{ marginTop: 4 }}>{i.why}</p>}{i.fix && <p className="rv-note" style={{ marginTop: 12 }}><b>Do this:</b> {i.fix}</p>}</div>
               </li>
@@ -225,19 +225,26 @@ export function ReviewView({ r, canAsk, pool, asking = false, onAsk, sent = fals
   const st = r.humanRequested ? STATUS[r.status] || {} : aiFailed ? { label: "AI report not generated", tone: "bad" } : { label: r.status === "completed" ? "AI report ready" : "AI is reading it", tone: r.status === "completed" ? "ok" : "" };
   const done = r.status === "completed";
   return (
-    <div>
+    <div className={preview ? "" : "rv-dx"}>
       {!preview && <Link to="/resume-review/app" className="rv-link" style={{ textDecoration: "none", marginBottom: 24 }}><ArrowLeft size={14} weight="bold" aria-hidden />My reviews</Link>}
-      <div style={{ marginBottom: 32 }}>
-        <Pill className={st.tone}>{st.label}</Pill>
-        <h1 className="rv-h2" style={{ marginTop: 12 }}>{r.profile.targetRole}</h1>
-        <p className="rv-muted rv-sm" style={{ marginTop: 6 }}>{r.package.name} · sent {dateFmt(r.createdAt)}</p>
+      <div className="rv-dx-head" style={{ marginBottom: 32 }}>
+        <div style={{ minWidth: 0 }}>
+          <Pill className={st.tone}>{st.label}</Pill>
+          <h1 className="rv-h2" style={{ marginTop: 12 }}>{r.profile.targetRole}</h1>
+          <p className="rv-muted rv-sm" style={{ marginTop: 6 }}>{r.package.name} · sent {dateFmt(r.createdAt)}</p>
+        </div>
+        {!preview && (
+          <div className="rv-dx-head-side">
+            {r.resume?.filename && <span className="rv-dx-chip"><FileText size={16} aria-hidden /><span>{r.resume.filename}</span></span>}
+            <Btn as={Link} to={`/resume-review/app/submit/${r.purchaseId}`} variant="ghost">Send another version <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
+          </div>
+        )}
       </div>
 
       {sent && !done && <div className="rv-note rv-in" style={{ marginBottom: 32 }}><b>Got it.</b> Your AI report appears below in a minute or two{r.humanRequested ? `, and your reviewer will add detailed notes within ${r.package.deliveryHours} hours` : ""}. We'll email you when it's ready.</div>}
 
       <div style={{ display: "grid", gap: 32, gridTemplateColumns: "minmax(0, 1fr)" }} className="rv-detail-grid">
-        <style>{`@media (min-width: 1380px) { .rv-detail-grid { grid-template-columns: minmax(0,1fr) 320px !important; } }`}</style>
-        <div style={{ minWidth: 0, display: "grid", gap: 32, alignContent: "start" }}>
+                <div style={{ minWidth: 0, display: "grid", gap: 32, alignContent: "start" }}>
           {done && r.humanRequested && r.human && <HumanReport id={r.id} human={r.human} includes={r.package.includes} preview={preview} />}
           {!done && r.humanRequested && r.ai.status !== "pending" && (
             <div className="rv-tile"><h3 className="rv-h3">{r.status === "in_review" ? `${r.human.reviewerName || "A reviewer"} is reviewing your resume` : "Waiting for a reviewer"}</h3><p className="rv-muted rv-sm" style={{ marginTop: 6 }}>Detailed notes arrive within {r.package.deliveryHours} hours. Meanwhile, the AI report is below.</p></div>
@@ -250,7 +257,7 @@ export function ReviewView({ r, canAsk, pool, asking = false, onAsk, sent = fals
           )}
           <AiReport ai={r.ai} includes={r.package.includes} purchaseId={r.purchaseId} humanRequested={r.humanRequested} />
         </div>
-        <aside style={{ display: "grid", gap: 24, alignContent: "start" }}>
+        <aside className="rv-dx-aside" style={{ display: "grid", gap: 24, alignContent: "start" }}>
           <div className="rv-card" style={{ padding: 24 }}><h2 className="rv-kicker" style={{ marginBottom: 20 }}>Progress</h2><Timeline r={r} preview={preview} /></div>
           <div className="rv-card" style={{ padding: 24, display: "grid", gap: 14 }}>
             <h2 className="rv-kicker">Your submission</h2>
@@ -259,7 +266,7 @@ export function ReviewView({ r, canAsk, pool, asking = false, onAsk, sent = fals
             {r.linkedinUrl && <p className="rv-sm" style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600 }}><LinkedinLogo size={16} weight="fill" aria-hidden /><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.linkedinUrl.replace(/^https?:\/\/(www\.)?/, "")}</span></p>}
             {r.jobDescription && <p className="rv-sm rv-muted">Job description added</p>}
           </div>
-          <Btn as={Link} to={`/resume-review/app/submit/${r.purchaseId}`} variant="ghost" onClick={preview ? (e) => e.preventDefault() : undefined}>Send another version <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
+          <Btn as={Link} to={`/resume-review/app/submit/${r.purchaseId}`} variant="ghost" className="rv-dx-again" onClick={preview ? (e) => e.preventDefault() : undefined}>Send another version <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
           <p className="rv-xs rv-subtle">Need help? Reply to any email from us, or write to supporttargettrek@gmail.com.</p>
         </aside>
       </div>

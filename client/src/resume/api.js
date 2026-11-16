@@ -7,10 +7,21 @@ const data = (r) => r.data?.data;
 export const formatINR = (n) => (n == null ? "" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: Number(n) % 1 ? 2 : 0 }).format(n));
 
 /* ---- public ---- */
-export const fetchPackages = async () => {
-  const r = await axios.get(`${API_ROOT}/api/resume/public`, { timeout: 15000 });
-  return r.data?.data?.packages || [];
+const PKG_KEY = "resume:packages:v1";
+let pkgPromise = null;
+export const cachedPackages = () => { try { const c = JSON.parse(localStorage.getItem(PKG_KEY) || "null"); return Array.isArray(c) ? c : null; } catch { return null; } };
+/* one shared request, started as soon as this file loads; the answer is also kept so the next visit shows plans at once */
+export const fetchPackages = () => {
+  if (!pkgPromise) {
+    pkgPromise = axios.get(`${API_ROOT}/api/resume/public`, { timeout: 15000 }).then((r) => {
+      const list = r.data?.data?.packages || [];
+      try { localStorage.setItem(PKG_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+      return list;
+    }).catch((e) => { pkgPromise = null; throw e; });
+  }
+  return pkgPromise;
 };
+if (typeof window !== "undefined" && window.location.pathname === "/resume-review") fetchPackages().catch(() => {});
 
 /* ---- buyer: 1) pay for a plan  2) send in a resume under it ---- */
 export const buyPlan = (body) => resumeHttp.post("/plans/buy", body).then(data);

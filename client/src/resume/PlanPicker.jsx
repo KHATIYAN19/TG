@@ -53,7 +53,7 @@ export default function PlanPicker({ packs, failed, type, setType, buyer, cta = 
       </div>
       <p className="rv-muted rv-sm" style={{ textAlign: center ? "center" : "left", marginTop: 16, minHeight: 22 }} aria-live="polite">{cur.blurb}</p>
 
-      <div className="rv-plans" style={{ marginTop: 28 }}>
+      <div className={`rv-plans${center ? "" : " left"}`} style={{ marginTop: 28 }}>
         {packs === null && !failed && [0, 1, 2].map((i) => <Skeleton key={i} h={460} style={{ borderRadius: 20 }} />)}
         {shown?.map((p) => (
           <PlanCard key={p.id} plan={p} featured={packs.indexOf(p) === featured} cta={cta(p)} busy={buyer.busy === p.id} disabled={Boolean(buyer.busy) && buyer.busy !== p.id} onSelect={() => buyer.buy(p)} />

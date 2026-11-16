@@ -670,3 +670,90 @@ html.dark .rv, [data-theme="dark"] .rv { --rv-brand: #f97316; --rv-brand-hover: 
 @media (max-width: 959px) { .rv-auth-main { padding-top: 44px; } }
 .rv-auth-trust { display: block; text-align: center; line-height: 1.6; }
 .rv-auth-trust svg { display: inline-block; vertical-align: -3px; margin-right: 6px; }
+
+/* =====================================================================
+   REVIEW PAGE, DESKTOP: wider canvas, side rail, multi-column report.
+   Phones and tablets keep the single-column flow above.
+===================================================================== */
+.rv-dx-head { display: block; }
+.rv-dx-head-side { display: none; }
+.rv-dx-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 260px; padding: 9px 14px; border-radius: 9999px; border: 1px solid var(--rv-border); background: var(--rv-surface); font-size: 13.5px; font-weight: 600; }
+.rv-dx-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 1024px) {
+  .rv-shell.rv-app-wide { max-width: 1680px; width: calc(100% - 64px); margin-inline: auto; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; }
+  .rv-dx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid var(--rv-border); margin-bottom: 36px !important; }
+  .rv-dx-head .rv-h2 { font-size: 40px; }
+  .rv-dx-head-side { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .rv-dx-again { display: none !important; }
+  .rv-dx .rv-detail-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; }
+  .rv-dx .rv-dx-aside { position: sticky; top: 100px; }
+
+  .rv-dx .rv-ai-hero { padding: 40px; }
+  .rv-dx .rv-ai-hero h2 { font-size: 32px !important; }
+  .rv-dx .rv-ai-hero p { font-size: 17px; max-width: 760px; }
+  .rv-dx .rv-card-pad { padding: 36px; }
+
+  .rv-sec-grid { display: grid; gap: 28px 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rv-dx .rv-sec-item { padding: 20px 22px; border-radius: 14px; background: var(--rv-surface-2); }
+  .rv-fix-grid { display: grid; gap: 28px 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rv-dx .rv-two { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; align-items: start; }
+}
+@media (min-width: 1500px) {
+  .rv-dx .rv-detail-grid { grid-template-columns: minmax(0, 1fr) 380px; gap: 48px; }
+  .rv-dx .rv-sec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1023px) {
+  .rv-sec-grid, .rv-fix-grid { display: grid; gap: 24px; }
+}
+
+/* uploaded resume cards */
+.rv-rcard { transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s; }
+.rv-rcard:hover { border-color: var(--rv-brand); box-shadow: 0 10px 30px -14px rgba(234, 88, 12, 0.35); transform: translateY(-2px); }
+.rv-rcard-doc { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--rv-surface-2); border: 1px dashed var(--rv-border-strong); min-width: 0; }
+.rv-rcard-ext { flex: 0 0 auto; width: 44px; height: 54px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--rv-surface); border: 1px solid var(--rv-border-strong); color: var(--rv-brand); }
+.rv-rcard-ext b { font-size: 9px; letter-spacing: 0.06em; color: var(--rv-muted); }
+.rv-rcard-docinfo { display: grid; gap: 2px; min-width: 0; }
+.rv-rcard-docinfo b { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-rcard-docinfo span { font-size: 12.5px; color: var(--rv-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-rcard-time { display: flex; align-items: flex-start; gap: 8px; min-width: 0; color: var(--rv-subtle); }
+.rv-rcard-time svg { flex: 0 0 auto; margin-top: 2px; color: var(--rv-brand); }
+.rv-rcard-time > span { display: grid; gap: 1px; font-size: 12.5px; line-height: 1.35; }
+.rv-rcard-time b { font-weight: 600; color: var(--rv-text); }
+.rv-rcard-time i { font-style: normal; }
+
+/* compact plan cards on every screen: tight spacing, long feature lists fold away */
+.rv-plan-more { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; margin-top: 10px; padding: 4px 0; background: none; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--rv-brand); cursor: pointer; }
+.rv-plan-more svg { transition: transform 0.25s; }
+.rv-plan.open .rv-plan-more svg { transform: rotate(180deg); }
+.rv-plan { padding: 18px; border-radius: 16px; }
+.rv-plan-top { gap: 10px; }
+.rv-plan-top .rv-ico { width: 36px; height: 36px; border-radius: 10px; }
+.rv-plan-top .rv-h3 { font-size: 16px; }
+.rv-plan .rv-plan-tag { margin-top: 10px !important; min-height: 0 !important; font-size: 13.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rv-plan-price { margin-top: 12px; gap: 4px 10px; }
+.rv-plan .rv-price { font-size: 28px; }
+.rv-plan .rv-plan-ai { margin-top: 4px !important; }
+.rv-plan .rv-sla { margin-top: 8px; padding: 6px 10px; font-size: 12px; }
+.rv-pts { margin-top: 12px; gap: 6px; }
+.rv-pt { padding: 8px 6px; }
+.rv-pt b { font-size: 19px; }
+.rv-plan-list { margin-top: 12px; gap: 8px; }
+.rv-plan-list li { font-size: 13.5px; }
+.rv-plan:not(.open) .rv-plan-list li:nth-child(n+4) { display: none; }
+.rv-plan > .rv-btn { margin-top: 14px !important; min-height: 46px; }
+@media (max-width: 699px) {
+  .rv-plans { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; overflow: visible; padding: 0; margin: 0; scroll-snap-type: none; }
+  .rv-plans > * { flex: none; max-width: none; }
+  .rv-swipe { display: none; }
+  .rv-plan:hover { transform: none; }
+}
+/* fixed card width, never stretched: cards wrap into as many 320px columns as fit, and each row is one height */
+.rv-plan .rv-plan-tag { min-height: 3em !important; }
+@media (min-width: 700px) {
+  .rv-plans { display: grid; grid-template-columns: repeat(auto-fill, 320px); justify-content: center; gap: 20px; overflow: visible; padding: 6px 0; margin: 0; align-items: stretch; }
+  .rv-plans.left { justify-content: start; }
+  .rv-plans > * { width: 320px; max-width: none; }
+}
+@media (max-width: 699px) {
+  .rv-plans > * { width: 100%; max-width: 420px; margin-inline: auto; }
+}

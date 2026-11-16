@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { ArrowLeft, ArrowRight, Brain, LinkedinLogo, Sparkle, UserCircle, Prohibit } from "@phosphor-icons/react";
 
-import { fetchPackages, myPlans } from "./api";
+import { cachedPackages, fetchPackages, myPlans } from "./api";
 import {
   AI_VS_HUMAN, ATS_ANSWER, ATS_DO, ATS_DONT, ATS_HOW, FAQ, INSIDE, INSIDE_TAGS, MISTAKES, PAGE_URL, PLAN_TYPES, REVIEWER_ANSWER, REVIEWER_POINTS,
   REVIEWER_PROCESS, SECTIONS, SEO, STEPS, UPDATED_ISO, WHICH_PLAN, WHO_FOR, planType,
@@ -314,11 +314,11 @@ export default function ResumeLanding() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const token = useSelector((s) => s.auth?.token);
-  const [packs, setPacks] = useState(null);
+  const [packs, setPacks] = useState(() => cachedPackages());
   const [failed, setFailed] = useState(false);
   const [type, setType] = useState("all");
   const [paid, setPaid] = useState(false);
-  useEffect(() => { fetchPackages().then(setPacks).catch(() => setFailed(true)); }, []);
+  useEffect(() => { fetchPackages().then(setPacks).catch(() => { if (!cachedPackages()) setFailed(true); }); }, []);
   // the "My reviews and plans" button is only for people who have paid for a plan
   useEffect(() => {
     if (!token) { setPaid(false); return undefined; }

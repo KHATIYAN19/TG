@@ -1,4 +1,5 @@
-import { ArrowRight, Brain, Clock, LinkedinLogo, Sparkle, UserCircle } from "@phosphor-icons/react";
+import { useState } from "react";
+import { ArrowRight, CaretDown, Brain, Clock, LinkedinLogo, Sparkle, UserCircle } from "@phosphor-icons/react";
 
 import { formatINR } from "./api";
 import { Btn, Pill, Tick, cx } from "./ui";
@@ -30,8 +31,10 @@ export default function PlanCard({ plan, featured = false, cta, busy = false, di
   const Icon = TYPE_ICON[type];
   const save = plan.compareAt > plan.price ? Math.round(((plan.compareAt - plan.price) / plan.compareAt) * 100) : 0;
   const unlimited = plan.ai.reviews === 0;
+  const [open, setOpen] = useState(false);
+  const facts = [...planFacts(plan), ...plan.features];
   return (
-    <article className={cx("rv-plan", featured && "featured", className)} style={style}>
+    <article className={cx("rv-plan", featured && "featured", open && "open", className)} style={style}>
       <div className="rv-plan-top">
         <span className="rv-ico"><Icon size={22} weight="duotone" aria-hidden /></span>
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -41,14 +44,14 @@ export default function PlanCard({ plan, featured = false, cta, busy = false, di
         {plan.badge && <Pill className="rv-badge">{plan.badge}</Pill>}
       </div>
 
-      <p className="rv-muted rv-sm" style={{ marginTop: 16, minHeight: "3.1em" }}>{plan.tagline}</p>
+      <p className="rv-muted rv-sm rv-plan-tag" style={{ marginTop: 16, minHeight: "3.1em" }}>{plan.tagline}</p>
 
       <div className="rv-plan-price">
         <span className="rv-price">{formatINR(plan.price)}</span>
         {plan.compareAt > 0 && <s className="rv-mono rv-subtle">{formatINR(plan.compareAt)}</s>}
         {save > 0 && <span className="rv-save">Save {save}%</span>}
       </div>
-      <p className="rv-xs rv-subtle" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}><Clock size={13} weight="bold" aria-hidden />AI report in minutes</p>
+      <p className="rv-xs rv-subtle rv-plan-ai" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}><Clock size={13} weight="bold" aria-hidden />AI report in minutes</p>
       {(plan.human.enabled || plan.linkedin.enabled) && <p className="rv-sla"><Clock size={14} weight="bold" aria-hidden />Human review within {plan.deliveryHours} hours{plan.deliveryHours < 48 ? " · priority" : ""}</p>}
 
       <div className="rv-pts" aria-label="Included reviews">
@@ -58,8 +61,9 @@ export default function PlanCard({ plan, featured = false, cta, busy = false, di
       </div>
 
       <ul className="rv-plan-list">
-        {[...planFacts(plan), ...plan.features].map((f) => <li key={f} className="rv-sm"><Tick />{f}</li>)}
+        {facts.map((f) => <li key={f} className="rv-sm"><Tick />{f}</li>)}
       </ul>
+      {facts.length > 3 && <button type="button" className="rv-plan-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{open ? "Show less" : `Show all ${facts.length} features`}<CaretDown size={13} weight="bold" aria-hidden /></button>}
       <Btn as={as} to={href} variant={featured ? "primary" : "ghost"} size="lg" block loading={busy} disabled={disabled} onClick={onSelect} className="" style={{ marginTop: 28 }}>
         {cta} <ArrowRight size={16} weight="bold" aria-hidden />
       </Btn>
