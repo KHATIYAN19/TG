@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowRight, DownloadSimple, FileText, LinkedinLogo, Target } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, DownloadSimple, FileText, LinkedinLogo, ListChecks, Target, Warning } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
 import { STATUS, dateFmt, getDeliverableUrl, getRequest, myPlans, requestHuman } from "./api";
@@ -48,19 +48,52 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
             <Pill>AI first look</Pill>
             <h2 className="rv-h2" style={{ fontSize: 26, marginTop: 12 }}>{r.headline}</h2>
             <p className="rv-muted" style={{ marginTop: 12, lineHeight: 1.65 }}>{r.summary}</p>
+            {r.recruiterFirstImpression && <p className="rv-note" style={{ marginTop: 16 }}><b>A recruiter's first 10 seconds:</b> {r.recruiterFirstImpression}</p>}
           </div>
         </div>
         <div className="rv-ai-bars" style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--rv-border)" }}>
           <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>ATS readiness</b><span className="rv-mono">{r.atsScore}/100</span></div><Bar value={r.atsScore} tone={toneOf(r.atsScore)} /></div>
+          {r.shortlistChance != null && <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>Shortlist chance today</b><span className="rv-mono">{r.shortlistChance}%</span></div><Bar value={r.shortlistChance} tone={toneOf(r.shortlistChance)} /></div>}
           {includes?.jobMatch && r.jobMatch && <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>Job match</b><span className="rv-mono">{r.jobMatch.score}/100</span></div><Bar value={r.jobMatch.score} tone={toneOf(r.jobMatch.score)} /></div>}
         </div>
       </section>
+
+      {r.experienceCheck && (
+        <Section title="Experience vs the role">
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <Pill className={r.experienceCheck.level === "below" ? "bad" : r.experienceCheck.level === "above" ? "" : "ok"}>{r.experienceCheck.level === "below" ? "Below what this role expects" : r.experienceCheck.level === "above" ? "Above what this role expects" : "In range for this role"}</Pill>
+            {r.experienceCheck.claimedYears != null && <span className="rv-sm rv-muted">You stated {r.experienceCheck.claimedYears} year{r.experienceCheck.claimedYears === 1 ? "" : "s"}</span>}
+          </div>
+          {r.experienceCheck.expectedForRole && <p className="rv-sm" style={{ marginTop: 14 }}><b>What the role usually expects:</b> {r.experienceCheck.expectedForRole}</p>}
+          <p className="rv-muted rv-sm" style={{ marginTop: 10, lineHeight: 1.7 }}>{r.experienceCheck.assessment}</p>
+          {r.experienceCheck.gaps?.length > 0 && <ul style={{ display: "grid", gap: 10, marginTop: 16 }}>{r.experienceCheck.gaps.map((g) => <li key={g} className="rv-sm" style={{ display: "flex", gap: 10 }}><Warning size={16} weight="fill" style={{ color: "var(--rv-bad)", flexShrink: 0, marginTop: 2 }} aria-hidden />{g}</li>)}</ul>}
+          {r.experienceCheck.howToBridge && <p className="rv-note" style={{ marginTop: 16 }}><b>How to close the gap:</b> {r.experienceCheck.howToBridge}</p>}
+        </Section>
+      )}
+
+      {r.criticalIssues?.length > 0 && (
+        <Section title="What's holding your resume back" icon={<Warning size={20} weight="fill" style={{ color: "var(--rv-bad)" }} aria-hidden />}>
+          <div style={{ display: "grid", gap: 20 }}>
+            {r.criticalIssues.map((c, n) => (
+              <div key={c.title} className="rv-issue" style={{ paddingLeft: 16, borderLeft: `3px solid ${c.severity === "critical" ? "var(--rv-bad)" : c.severity === "major" ? "var(--rv-warn, #d97706)" : "var(--rv-border-strong)"}` }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><Pill className={c.severity === "critical" ? "bad" : c.severity === "major" ? "warn" : ""}>{c.severity}</Pill><b>{n + 1}. {c.title}</b></div>
+                {c.where && <p className="rv-xs rv-subtle" style={{ marginTop: 6 }}>Where: {c.where}</p>}
+                <p className="rv-sm" style={{ marginTop: 10, lineHeight: 1.7 }}>{c.whatIsWrong}</p>
+                {c.impact && <p className="rv-muted rv-sm" style={{ marginTop: 8, lineHeight: 1.7 }}><b>Why it hurts:</b> {c.impact}</p>}
+                {c.howToFix && <p className="rv-note" style={{ marginTop: 12 }}><b>Do this:</b> {c.howToFix}</p>}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {r.sections?.length > 0 && (
         <Section title="Section by section">
           <div className="rv-sec-grid">
             {r.sections.map((s) => (
-              <div key={s.name} className="rv-sec-item"><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>{s.name}</b><span className="rv-mono rv-muted">{s.score}</span></div><Bar value={s.score} tone={toneOf(s.score)} /><p className="rv-muted rv-sm" style={{ marginTop: 10 }}>{s.feedback}</p></div>
+              <div key={s.name} className="rv-sec-item"><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>{s.name}</b><span className="rv-mono rv-muted">{s.score}</span></div><Bar value={s.score} tone={toneOf(s.score)} /><p className="rv-muted rv-sm" style={{ marginTop: 10, lineHeight: 1.7 }}>{s.feedback}</p>
+                {s.problems?.length > 0 && <ul style={{ display: "grid", gap: 6, marginTop: 10 }}>{s.problems.map((x) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 8 }}><Warning size={14} weight="fill" style={{ color: "var(--rv-bad)", flexShrink: 0, marginTop: 3 }} aria-hidden />{x}</li>)}</ul>}
+                {s.fixes?.length > 0 && <ul style={{ display: "grid", gap: 6, marginTop: 8 }}>{s.fixes.map((x) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 8 }}><Tick />{x}</li>)}</ul>}</div>
             ))}
           </div>
         </Section>
@@ -116,6 +149,31 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
             {r.linkedin.tips?.length > 0 && <ul style={{ display: "grid", gap: 10 }}>{r.linkedin.tips.map((t) => <li key={t} style={{ display: "flex", gap: 10 }}><Tick />{t}</li>)}</ul>}
             <p className="rv-hint">The AI can't open LinkedIn. Your reviewer checks your live profile for the real feedback.</p>
           </div>
+        </Section>
+      )}
+
+      {r.interviewRisks?.length > 0 && (
+        <Section title="Questions this resume will invite">
+          <div style={{ display: "grid", gap: 18 }}>
+            {r.interviewRisks.map((q) => (
+              <div key={q.question}><p style={{ fontWeight: 600 }}>"{q.question}"</p>{q.whyTheyAsk && <p className="rv-muted rv-sm" style={{ marginTop: 4 }}>{q.whyTheyAsk}</p>}<p className="rv-note" style={{ marginTop: 8 }}><b>Prepare:</b> {q.prepare}</p></div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {r.marketInsight && <Section title="How this profile looks in the market"><p className="rv-muted rv-sm" style={{ lineHeight: 1.75 }}>{r.marketInsight}</p></Section>}
+
+      {r.actionPlan?.length > 0 && (
+        <Section title="Your plan for this week" icon={<ListChecks size={20} aria-hidden />}>
+          <ol style={{ display: "grid", gap: 16 }}>
+            {r.actionPlan.map((a, n) => (
+              <li key={a.step} style={{ display: "flex", gap: 14 }}>
+                <span className="rv-mono" style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", fontSize: 12, fontWeight: 600, background: "var(--rv-surface-2)" }}>{n + 1}</span>
+                <div style={{ minWidth: 0 }}><p className="rv-sm" style={{ fontWeight: 600 }}>{a.step}</p>{(a.effort || a.payoff) && <p className="rv-xs rv-subtle" style={{ marginTop: 3 }}>{[a.effort, a.payoff].filter(Boolean).join(" · ")}</p>}</div>
+              </li>
+            ))}
+          </ol>
         </Section>
       )}
     </div>

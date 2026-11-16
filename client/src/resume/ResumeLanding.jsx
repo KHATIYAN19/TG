@@ -129,7 +129,7 @@ function Sample() {
   const [tab, setTab] = useState("ai");
   const r = SHOW_HUMAN_SAMPLE && tab === "human" ? SAMPLE_HUMAN : SAMPLE_AI;
   return (
-    <Section id="sample" kicker="Sample result" title="This is exactly what you see after you upload" lead="The real review page, with a made-up resume: scores, section grades, fixes, rewritten bullets and more." alt>
+    <Section id="sample" kicker="Sample result" title="This is exactly what you see after you upload" lead="The real review page, with a made-up resume: scores, your chance of being shortlisted, experience vs the role, every weakness explained, rewritten bullets, interview questions and a plan for the week." alt>
       {SHOW_HUMAN_SAMPLE && <div className="rv-tabs rv-reveal" role="tablist" aria-label="Sample result" style={{ marginBottom: 18 }}>
         {[["ai", "AI report ready"], ["human", "Human review delivered"]].map(([id, l]) => <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)}>{l}</button>)}
       </div>}

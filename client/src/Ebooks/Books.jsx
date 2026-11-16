@@ -2715,6 +2715,16 @@ export default function Books() {
         )}
 
         {/* ===================================== */}
+        {/* RESUME LAB, right after the packs     */}
+        {/* ===================================== */}
+
+        <section className="bk-section" style={{ paddingTop: 0 }} aria-label="Resume Lab">
+          <div className="bk-shell">
+            <ResumePromo variant="card" pain lead="Reading the books but not getting interview calls?" accent="Fix the resume that is stopping them." isDark={isDark} />
+          </div>
+        </section>
+
+        {/* ===================================== */}
         {/* SEARCHABLE CATALOG                    */}
         {/* ===================================== */}
 
@@ -3119,16 +3129,6 @@ export default function Books() {
                 />
               ))}
             </Stagger>
-          </div>
-        </section>
-
-        {/* ===================================== */}
-        {/* RESUME LAB                            */}
-        {/* ===================================== */}
-
-        <section className="bk-section" style={{ paddingTop: 0 }} aria-label="Resume Lab">
-          <div className="bk-shell">
-            <ResumePromo variant="banner" isDark={isDark} />
           </div>
         </section>
 

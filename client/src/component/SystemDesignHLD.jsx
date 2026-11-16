@@ -2911,7 +2911,7 @@ function SystemDesignHLD() {
         {/* ------------------------------ RESUME LAB ------------------------- */}
         <section aria-label="Resume Lab" className="bg-base px-4 py-10 sm:py-14 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <ResumePromo variant="banner" isDark={isDarkMode} />
+            <ResumePromo variant="card" pain lead="Prepared for system design but not getting interview calls?" accent="Your resume may be the problem." isDark={isDarkMode} />
           </div>
         </section>
 

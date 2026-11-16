@@ -66,7 +66,7 @@ function MiniReport() {
   );
 }
 
-export default function ResumePromo({ variant = "card", isDark, className = "" }) {
+export default function ResumePromo({ variant = "card", isDark, className = "", lead = "You studied the book.", accent = "Now get the interview call.", pain = false }) {
   const theme = useSiteTheme(isDark);
 
   if (variant === "strip") {
@@ -103,8 +103,9 @@ export default function ResumePromo({ variant = "card", isDark, className = "" }
     <section className={`rvp rvp-card ${className}`} data-theme={theme} aria-label="Resume Lab by Target Trek">
       <style>{CSS}</style>
       <div className="rvp-card-main">
+        {pain && <span className="rvp-alert"><i aria-hidden="true" />Applied to 50+ jobs and heard nothing?</span>}
         <span className="rvp-kicker rvp-kicker-on">Resume Lab by Target Trek</span>
-        <h2 className="rvp-h rvp-h-xl">You studied the book. <span>Now get the interview call.</span></h2>
+        <h2 className="rvp-h rvp-h-xl">{lead} <span>{accent}</span></h2>
         <p className="rvp-p">Most resumes are rejected by software or skimmed in ten seconds. Find out exactly what is costing you shortlists, and how to fix it.</p>
         <ul className="rvp-list">
           <li><span><Check /></span><div><b>AI report in minutes</b><small>Overall and ATS score, section grades, missing keywords, rewritten bullets.</small></div></li>
@@ -123,6 +124,9 @@ export default function ResumePromo({ variant = "card", isDark, className = "" }
 }
 
 const CSS = `
+.rvp-alert{display:-webkit-inline-flex;display:inline-flex;-webkit-align-items:center;align-items:center;gap:8px;margin-bottom:14px;padding:6px 14px;border-radius:9999px;font-size:13px;font-weight:700;color:#fecaca;background:rgba(220,38,38,.18);border:1px solid rgba(248,113,113,.4)}
+.rvp-alert i{width:8px;height:8px;border-radius:50%;background:#f87171;display:inline-block}
+.rvp-card .rvp-kicker{display:block}
 .rvp{--rvp-bg:#fff7ed;--rvp-card:#ffffff;--rvp-ink:#1c1410;--rvp-muted:#6b5a4e;--rvp-line:#f0e4d8;--rvp-brand:#ea580c;--rvp-brand2:#c2410c;--rvp-soft:#ffedd5;box-sizing:border-box;font-family:inherit;color:var(--rvp-ink);text-align:left}
 .rvp[data-theme="dark"]{--rvp-bg:#1f1814;--rvp-card:#29201b;--rvp-ink:#fff7ed;--rvp-muted:#b9a79c;--rvp-line:#3b2a20;--rvp-brand:#f97316;--rvp-brand2:#fb923c;--rvp-soft:#3a2012}
 .rvp *,.rvp *::before,.rvp *::after{box-sizing:border-box}

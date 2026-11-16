@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import ResumePromo from "../resume/ResumePromo.jsx";
 
 import {
   AnimatePresence,
@@ -2252,6 +2253,16 @@ export default function LearnHome() {
                 );
               })}
             </Stagger>
+          </div>
+        </section>
+
+        {/* ================================================= */}
+        {/* RESUME LAB                                        */}
+        {/* ================================================= */}
+
+        <section className="lh-section" aria-label="Resume Lab">
+          <div className="lh-shell">
+            <ResumePromo variant="card" pain lead="Learning every day but not getting interview calls?" accent="Get your resume reviewed." isDark={isDark} />
           </div>
         </section>
 
