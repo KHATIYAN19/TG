@@ -100,7 +100,7 @@ export function useReveal(deps = []) {
     document.querySelector(".rv")?.classList.add("rv-js");
     const nodes = [...document.querySelectorAll(".rv-reveal:not(.in)")];
     if (typeof IntersectionObserver === "undefined") { nodes.forEach((n) => n.classList.add("in")); return undefined; }
-    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.1, rootMargin: "0px 0px -40px 0px" });
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0, rootMargin: "0px 0px -40px 0px" });
     nodes.forEach((n) => io.observe(n));
     return () => io.disconnect();
   }, deps); // eslint-disable-line react-hooks/exhaustive-deps

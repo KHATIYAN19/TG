@@ -127,17 +127,30 @@ const SHOW_HUMAN_SAMPLE = false;
 
 function Sample() {
   const [tab, setTab] = useState("ai");
-  const r = SHOW_HUMAN_SAMPLE && tab === "human" ? SAMPLE_HUMAN : SAMPLE_AI;
+  const [open, setOpen] = useState(false);
+  const [small, setSmall] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const on = () => setSmall(window.innerWidth < 768);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  const full = SHOW_HUMAN_SAMPLE && tab === "human" ? SAMPLE_HUMAN : SAMPLE_AI;
+  // phones: render only the top of the report until they ask for the rest, so the page never builds one giant, many-thousand-pixel box (iOS Safari paints those blank)
+  const folded = small && !open;
+  const r = folded && full.ai?.result
+    ? { ...full, ai: { ...full.ai, result: (({ overallScore, atsScore, shortlistChance, headline, summary, recruiterFirstImpression }) => ({ overallScore, atsScore, shortlistChance, headline, summary, recruiterFirstImpression }))(full.ai.result) } }
+    : full;
   return (
     <Section id="sample" kicker="Sample result" title="This is exactly what you see after you upload" lead="The real review page, with a made-up resume: scores, your chance of being shortlisted, experience vs the role, every weakness explained, rewritten bullets, interview questions and a plan for the week." alt>
       {SHOW_HUMAN_SAMPLE && <div className="rv-tabs rv-reveal" role="tablist" aria-label="Sample result" style={{ marginBottom: 18 }}>
         {[["ai", "AI report ready"], ["human", "Human review delivered"]].map(([id, l]) => <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)}>{l}</button>)}
       </div>}
-      <div className="rv-mac rv-reveal">
+      <div className={cx("rv-mac rv-reveal", folded && "rv-mac-fold")}>
         <div className="rv-mac-bar" aria-hidden><i /><i /><i /><span>targettrek.in / resume-review / app / requests</span></div>
         <div className="rv-mac-body rv-sample">
           <ReviewView r={r} canAsk={SHOW_HUMAN_SAMPLE && tab === "ai"} pool={SAMPLE_POOL} sent={false} preview />
         </div>
+        <div className="rv-mac-more"><Btn variant="ghost" onClick={() => setOpen(true)}>Show full sample review</Btn></div>
       </div>
       <div className="rv-row" style={{ justifyContent: "center", marginTop: 32 }}><Btn as="a" href="#pricing" size="lg">Get my own review <ArrowRight size={17} weight="bold" aria-hidden /></Btn></div>
     </Section>

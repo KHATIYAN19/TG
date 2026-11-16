@@ -51,7 +51,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
             {r.recruiterFirstImpression && <p className="rv-note" style={{ marginTop: 16 }}><b>A recruiter's first 10 seconds:</b> {r.recruiterFirstImpression}</p>}
           </div>
         </div>
-        <div className="rv-ai-bars" style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--rv-border)" }}>
+        <div className="rv-ai-bars" style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--rv-border)" }}>
           <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>ATS readiness</b><span className="rv-mono">{r.atsScore}/100</span></div><Bar value={r.atsScore} tone={toneOf(r.atsScore)} /></div>
           {r.shortlistChance != null && <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>Shortlist chance today</b><span className="rv-mono">{r.shortlistChance}%</span></div><Bar value={r.shortlistChance} tone={toneOf(r.shortlistChance)} /></div>}
           {includes?.jobMatch && r.jobMatch && <div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }} className="rv-sm"><b>Job match</b><span className="rv-mono">{r.jobMatch.score}/100</span></div><Bar value={r.jobMatch.score} tone={toneOf(r.jobMatch.score)} /></div>}
@@ -99,7 +99,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
         </Section>
       )}
 
-      <div className="rv-two" style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+      <div className="rv-two" style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))" }}>
         {r.strengths?.length > 0 && <Section title="What's working"><ul style={{ display: "grid", gap: 14 }}>{r.strengths.map((x) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 10 }}><Tick />{x}</li>)}</ul></Section>}
         {r.missingKeywords?.length > 0 && <Section title="Keywords to add"><p className="rv-muted rv-sm">Recruiters search for these, and they're missing.</p><div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>{r.missingKeywords.map((k) => <Pill key={k} className="warn">+ {k}</Pill>)}</div></Section>}
       </div>
@@ -122,7 +122,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
           <p className="rv-muted rv-sm" style={{ marginTop: -8, marginBottom: 20 }}>Replace the numbers in brackets with your real figures.</p>
           <div style={{ display: "grid", gap: 16 }}>
             {r.rewrittenBullets.map((b) => (
-              <div key={b.before} style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+              <div key={b.before} style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))" }}>
                 <div className="rv-before"><span className="rv-xs" style={{ display: "block", fontWeight: 700, color: "var(--rv-bad)", marginBottom: 4 }}>BEFORE</span>{b.before}</div>
                 <div className="rv-after"><span className="rv-xs" style={{ display: "block", fontWeight: 700, color: "var(--rv-ok)", marginBottom: 4 }}>AFTER</span>{b.after}</div>
               </div>
@@ -134,7 +134,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
       {includes?.jobMatch && r.jobMatch && (
         <Section title="Match with your job" icon={<Target size={20} aria-hidden />}>
           <p className="rv-muted rv-sm">{r.jobMatch.advice}</p>
-          <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 20 }}>
+          <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", marginTop: 20 }}>
             <div><p className="rv-xs" style={{ fontWeight: 700, color: "var(--rv-ok)", marginBottom: 8 }}>YOU ALREADY SHOW</p><div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{r.jobMatch.matched.map((k) => <Pill key={k} className="ok">{k}</Pill>)}</div></div>
             <div><p className="rv-xs" style={{ fontWeight: 700, color: "var(--rv-bad)", marginBottom: 8 }}>MISSING</p><div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{r.jobMatch.missing.map((k) => <Pill key={k} className="bad">{k}</Pill>)}</div></div>
           </div>
@@ -207,7 +207,7 @@ export function HumanReport({ id, human, includes, preview = false }) {
         )}
         {human.summary && <FormattedText text={human.summary} />}
         {human.detailedFeedback && <div><h3 className="rv-h3" style={{ marginBottom: 12 }}>Detailed feedback</h3><FormattedText text={human.detailedFeedback} /></div>}
-        <div style={{ display: "grid", gap: 32, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+        <div style={{ display: "grid", gap: 32, gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))" }}>
           {human.strengths?.length > 0 && <div><h3 className="rv-h3">Strengths</h3><ul style={{ display: "grid", gap: 12, marginTop: 16 }}>{human.strengths.map((x) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 10 }}><Tick />{x}</li>)}</ul></div>}
           {human.improvements?.length > 0 && <div><h3 className="rv-h3">What to change</h3><ol style={{ display: "grid", gap: 12, marginTop: 16 }}>{human.improvements.map((x, i) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 10 }}><span className="rv-mono rv-subtle" style={{ width: 18, flexShrink: 0 }}>{i + 1}.</span>{x}</li>)}</ol></div>}
         </div>

@@ -111,7 +111,8 @@ function Sidebar() {
       </div>
       <nav className="rv-sidenav" aria-label="Resume Lab">
         <NavLink end to="/resume-review/app"><House size={18} weight="duotone" aria-hidden /><span>My space</span></NavLink>
-        <NavLink to="/resume-review/app/plans"><Stack size={18} weight="duotone" aria-hidden /><span>Plans</span></NavLink>
+        <NavLink end to="/resume-review/app" onClick={() => setTimeout(() => document.getElementById("resumes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)} className={() => ""}><FilePdf size={18} weight="duotone" aria-hidden /><span>My reviews</span></NavLink>
+        <NavLink to="/resume-review/app/plans"><Stack size={18} weight="duotone" aria-hidden /><span>My plans</span></NavLink>
         <Link to="/resume-review" className="rv-sidenav-back"><ArrowLeft size={18} weight="bold" aria-hidden /><span>Resume Review</span></Link>
       </nav>
       {s && s.plans > 0 && (

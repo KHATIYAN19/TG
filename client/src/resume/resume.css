@@ -223,7 +223,7 @@ select.rv-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http:/
 /* ---------- motion ---------- */
 .rv-in { animation: rv-in 0.6s var(--rv-ease) both; animation-delay: calc(var(--i, 0) * 60ms); }
 @keyframes rv-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.rv-js .rv-reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.7s var(--rv-ease), transform 0.7s var(--rv-ease); transition-delay: calc(var(--i, 0) * 70ms); }
+@media (min-width: 768px) { .rv-js .rv-reveal:not(.rv-mac) { opacity: 0; transform: translateY(16px); transition: opacity 0.7s var(--rv-ease), transform 0.7s var(--rv-ease); transition-delay: calc(var(--i, 0) * 70ms); } }
 .rv-js .rv-reveal.in { opacity: 1; transform: none; }
 .rv-skel { position: relative; overflow: hidden; background: var(--rv-surface-2); border-radius: 8px; }
 .rv-skel::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 40%; background: var(--rv-surface); opacity: 0.7; filter: blur(14px); animation: rv-shimmer 1.4s var(--rv-ease) infinite; }
@@ -481,7 +481,9 @@ select.rv-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http:/
 .rv-sendbar { position: sticky; bottom: 12px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 24px; padding: 14px 16px; border-radius: 16px; background: var(--rv-surface); border: 1px solid var(--rv-border-strong); box-shadow: var(--rv-shadow); }
 @media (max-width: 520px) { .rv-sendbar .rv-btn { width: 100%; } }
 .rv-star { color: var(--rv-bad); font-weight: 700; }
-.rv-sample { padding: 18px; background: var(--rv-bg); }
+.rv-sample { padding: 14px; background: var(--rv-bg); min-width: 0; overflow-x: hidden; }
+.rv-sample .rv-card-pad { padding: 18px; }
+.rv-mac { max-width: 100%; }
 @media (min-width: 768px) { .rv-sample { padding: 32px; } }
 .rv-sample .rv-subnav a { pointer-events: none; }
 
@@ -756,4 +758,28 @@ html.dark .rv, [data-theme="dark"] .rv { --rv-brand: #f97316; --rv-brand-hover: 
 }
 @media (max-width: 699px) {
   .rv-plans > * { width: 100%; max-width: 420px; margin-inline: auto; }
+}
+
+/* phones: the sample is very long, so show the top and let people open the rest */
+.rv-mac-more { display: none; }
+@media (max-width: 767px) {
+  .rv-mac { position: relative; }
+  .rv-mac.rv-mac-fold .rv-mac-body { max-height: 720px; overflow: hidden; }
+  .rv-mac.rv-mac-fold .rv-mac-more { display: flex; justify-content: center; align-items: flex-end; position: absolute; left: 0; right: 0; bottom: 0; height: 160px; padding-bottom: 20px; background: linear-gradient(to bottom, transparent, var(--rv-bg) 70%); }
+}
+
+/* sample on small screens: nothing may be wider than the window */
+.rv-sample, .rv-sample * { min-width: 0; }
+.rv-sample { overflow-wrap: anywhere; word-break: normal; }
+.rv-sample img, .rv-sample svg { max-width: 100%; }
+.rv-sample .rv-pill, .rv-sample .rv-note, .rv-sample .rv-before, .rv-sample .rv-after { white-space: normal; max-width: 100%; }
+.rv-sample [style*="repeat(auto-fit"] { grid-template-columns: minmax(0, 1fr) !important; }
+@media (min-width: 768px) { .rv-sample [style*="repeat(auto-fit"] { grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)) !important; } }
+
+/* phones, whole sample open: do not clip a very tall box (iOS Safari paints those blank) */
+@media (max-width: 767px) {
+  .rv-mac { overflow: visible; box-shadow: none; }
+  .rv-mac-bar { border-radius: 16px 16px 0 0; }
+  .rv-mac-body { border-radius: 0 0 16px 16px; }
+  .rv-mac.rv-mac-fold .rv-mac-body { max-height: none; overflow: visible; padding-bottom: 90px; }
 }
