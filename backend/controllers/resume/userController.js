@@ -317,7 +317,7 @@ export const getRequest = handler(async (req, res) => {
 export const downloadDeliverable = handler(async (req, res) => {
   const r = await ownRequest(req);
   if (r.status !== "completed" || !r.human?.deliverable?.key) throw new ResumeError(404, "There is no file to download yet.", "NO_FILE");
-  const link = await createDownloadUrl(r.human.deliverable.key, { filename: r.human.deliverable.filename || "resume", inline: false });
+  const link = await createDownloadUrl(r.human.deliverable.key, { filename: r.human.deliverable.filename || "resume", inline: false, sensitive: true });
   ok(res, { url: link.url });
 });
 

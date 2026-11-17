@@ -33,11 +33,9 @@ export const stats = handler(async (req, res) => {
     ResumeBlock.countDocuments(),
   ]);
   const by = Object.fromEntries(byStatus.map((r) => [r._id, r.n]));
-  ok(res, {
-    awaiting: by.awaiting_review || 0, inReview: by.in_review || 0, aiRunning: by.ai_reviewing || 0, completed: by.completed || 0,
-    totalReviews: byStatus.reduce((n, r) => n + r.n, 0),
-    paidPlans: money[0]?.n || 0, revenue: toRupees(money[0]?.revenue || 0), members: members.length, blocked,
-  });
+  const counts = { awaiting: by.awaiting_review || 0, inReview: by.in_review || 0, aiRunning: by.ai_reviewing || 0, completed: by.completed || 0, totalReviews: byStatus.reduce((n, r) => n + r.n, 0) };
+  // money and member numbers are for admins only: a reviewer account never gets them
+  ok(res, isAdminUser(req) ? { ...counts, paidPlans: money[0]?.n || 0, revenue: toRupees(money[0]?.revenue || 0), members: members.length, blocked } : counts);
 });
 
 /* =====================================================
@@ -51,6 +49,7 @@ export const listRequests = handler(async (req, res) => {
     page: z.coerce.number().int().min(1).max(500).optional().default(1),
   }), req.query);
   const filter = {};
+  if (!isAdminUser(req)) filter.humanRequested = true; // a reviewer only sees resumes whose owner asked for a human review
   if (q.status !== "all") filter.status = q.status;
   if (q.mine === "1") filter["human.reviewer"] = uid(req);
   if (q.search) {
@@ -76,11 +75,11 @@ export const listRequests = handler(async (req, res) => {
 export const getRequest = handler(async (req, res) => {
   assertId(req.params.id, "review");
   const r = await ResumeRequest.findById(req.params.id).populate("user", "name email mobile").lean();
-  if (!r) throw new ResumeError(404, "Review not found.", "NOT_FOUND");
+  if (!r || (!isAdminUser(req) && !r.humanRequested)) throw new ResumeError(404, "Review not found.", "NOT_FOUND");
   let resumeUrl = "";
   let deliverableUrl = "";
-  try { if (r.resume?.key) resumeUrl = (await createDownloadUrl(r.resume.key, { filename: r.resume.filename || "resume.pdf", inline: true })).url; } catch { /* storage hiccup: the page still opens */ }
-  try { if (r.human?.deliverable?.key) deliverableUrl = (await createDownloadUrl(r.human.deliverable.key, { filename: r.human.deliverable.filename || "resume", inline: false })).url; } catch { /* same */ }
+  try { if (r.resume?.key) resumeUrl = (await createDownloadUrl(r.resume.key, { filename: r.resume.filename || "resume.pdf", inline: true, sensitive: true })).url; } catch { /* storage hiccup: the page still opens */ }
+  try { if (r.human?.deliverable?.key) deliverableUrl = (await createDownloadUrl(r.human.deliverable.key, { filename: r.human.deliverable.filename || "resume", inline: false, sensitive: true })).url; } catch { /* same */ }
   const purchase = await ResumePurchase.findById(r.purchase).lean();
   ok(res, {
     ...requestOut(r, { admin: true }),

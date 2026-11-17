@@ -241,7 +241,7 @@ export const headObject = async (key) => {
  * (a fresh signature on every request means the browser can never reuse a photo/video it already downloaded). An extra hour is added to
  * the expiry, so the link still lives at least `ttl` seconds.
  */
-export const createDownloadUrl = async (key, { filename, inline = false, ttl, stable = false } = {}) => {
+export const createDownloadUrl = async (key, { filename, inline = false, ttl, stable = false, sensitive = false } = {}) => {
   const { s3, cfg } = client();
   const life = ttl || cfg.downloadTtl;
   const HOUR = 3600_000;
@@ -256,7 +256,7 @@ export const createDownloadUrl = async (key, { filename, inline = false, ttl, st
     new GetObjectCommand({
       Bucket: cfg.bucket,
       Key: key,
-      ResponseCacheControl: CACHE_CONTROL,
+      ResponseCacheControl: sensitive ? "private, no-store" : CACHE_CONTROL, // personal documents (resumes) are never kept by shared caches
       ...(safeName ? { ResponseContentDisposition: `${inline ? "inline" : "attachment"}; filename="${safeName}"` } : {}),
     }),
     { expiresIn, ...(signingDate ? { signingDate } : {}) }
