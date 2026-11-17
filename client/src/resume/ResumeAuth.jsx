@@ -265,7 +265,7 @@ export default function ResumeAuth() {
         <aside className="rv-auth-aside" aria-hidden={false}>
           <div className="rv-auth-glow" aria-hidden />
           <div className="rv-auth-in">
-          <span className="rv-kicker" style={{ color: "#fdba74" }}>Resume Lab by Target Trek</span>
+          <span className="rv-kicker rl-auth-kicker">Resume Lab by Target Trek</span>
           <h2 className="rv-auth-h">Get the interview calls your resume deserves.</h2>
           <ul className="rv-auth-list">
             {[[Brain, "AI report in minutes", "Score, ATS check, missing keywords and rewritten bullets."], [UserCircle, "A working professional reviews it", "Plain-language notes on your story, level and fit."], [LinkedinLogo, "LinkedIn review too", "One consistent story across resume and profile."]].map(([Icon, t, d]) => (

@@ -2,13 +2,14 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
+import { Check, Minus, SquaresFour, LockKey, Receipt, Stack, Prohibit } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
 import { formatINR } from "./api";
 import { payForPlan } from "./checkout";
-import PlanCard from "./Plans";
-import { PLAN_TYPES, planType } from "./landingContent";
-import { Btn, Skeleton } from "./ui";
+import PlanCard, { TYPE_ICON } from "./Plans";
+import { COMPARE_COLS, COMPARE_ROWS, PLAN_ASSURANCE, PLAN_TYPES, planType } from "./landingContent";
+import { Btn, Skeleton, cx } from "./ui";
 
 /*
   Buying, in place: the button shows its own spinner and the payment opens right there.
@@ -35,8 +36,10 @@ export function usePlanBuy({ onNeedLogin } = {}) {
   return { buy, busy };
 }
 
-/* Type tabs + a grid that is a swipeable row on phones, 2 columns on tablets, 3 or more on desktops. */
-export default function PlanPicker({ packs, failed, type, setType, buyer, cta = (p) => `Choose plan · ${formatINR(p.price)}`, highlight = "", center = true }) {
+const SHORT = { all: "Every plan", ai: "Instant AI reports", human: "A person reads it", linkedin: "Profile + resume", mix: "The full package" };
+
+/* Type cards (a scrollable row on phones) + the plan grid. */
+export default function PlanPicker({ packs, failed, type, setType, buyer, cta = (p) => `Choose plan · ${formatINR(p.price)}`, highlight = "" }) {
   const [own, setOwn] = useState("all");
   const t = type ?? own;
   const set = setType ?? setOwn;
@@ -45,30 +48,89 @@ export default function PlanPicker({ packs, failed, type, setType, buyer, cta = 
   const cur = PLAN_TYPES.find((x) => x.id === t) || PLAN_TYPES[0];
   const counts = (id) => (packs ? packs.filter((p) => id === "all" || planType(p) === id).length : 0);
   return (
-    <div>
-      <div className="rv-ptabs" role="tablist" aria-label="Plan type" style={center ? undefined : { marginLeft: 0 }}>
-        {PLAN_TYPES.map((x) => (
-          <button key={x.id} role="tab" type="button" aria-selected={t === x.id} onClick={() => set(x.id)}>{x.label}{packs && <span className="rv-mono">{counts(x.id)}</span>}</button>
-        ))}
+    <div className="rl-picker">
+      <div className="rl-types" role="tablist" aria-label="Plan type">
+        {PLAN_TYPES.filter((x) => !packs?.length || x.id === "all" || x.id === t || counts(x.id) > 0).map((x) => {
+          const Icon = x.id === "all" ? SquaresFour : TYPE_ICON[x.id];
+          const n = counts(x.id);
+          return (
+            <button key={x.id} role="tab" type="button" aria-selected={t === x.id} className="rl-type" onClick={() => set(x.id)}>
+              <span className="rl-type-ico"><Icon size={20} weight="duotone" aria-hidden /></span>
+              <span className="rl-type-txt"><b>{x.label}</b><small>{SHORT[x.id]}</small></span>
+              {packs && <span className="rl-type-n rv-mono" aria-label={`${n} plans`}>{n}</span>}
+            </button>
+          );
+        })}
       </div>
-      <p className="rv-muted rv-sm" style={{ textAlign: center ? "center" : "left", marginTop: 16, minHeight: 22 }} aria-live="polite">{cur.blurb}</p>
+      <p className="rl-type-blurb" aria-live="polite">{cur.blurb}</p>
 
-      <div className={`rv-plans${center ? "" : " left"}`} style={{ marginTop: 28 }}>
-        {packs === null && !failed && [0, 1, 2].map((i) => <Skeleton key={i} h={460} style={{ borderRadius: 20 }} />)}
+      <div className="rl-plans">
+        {packs === null && !failed && [0, 1, 2].map((i) => <Skeleton key={i} h={480} style={{ borderRadius: 20 }} />)}
         {shown?.map((p) => (
           <PlanCard key={p.id} plan={p} featured={packs.indexOf(p) === featured} cta={cta(p)} busy={buyer.busy === p.id} disabled={Boolean(buyer.busy) && buyer.busy !== p.id} onSelect={() => buyer.buy(p)} />
         ))}
       </div>
-      {packs?.length > 1 && shown?.length > 1 && <p className="rv-xs rv-subtle rv-swipe">Swipe to see more plans →</p>}
-      {failed && <p role="alert" className="rv-muted" style={{ marginTop: 28, textAlign: "center" }}>Plans couldn't load. Please refresh the page.</p>}
-      {packs?.length === 0 && <p className="rv-muted" style={{ marginTop: 28, textAlign: "center" }}>Reviews are not open right now. Please check back soon.</p>}
+      {failed && <p role="alert" className="rl-empty">Plans couldn't load. Check your connection and refresh the page.</p>}
+      {packs?.length === 0 && <p className="rl-empty">Reviews are not open right now. Please check back soon.</p>}
       {packs?.length > 0 && shown.length === 0 && (
-        <div className="rv-tile" style={{ textAlign: "center" }}>
-          <p style={{ fontWeight: 600 }}>No plan in this category right now.</p>
+        <div className="rl-empty">
+          <p style={{ fontWeight: 700 }}>No plan of this type right now.</p>
           <p className="rv-muted rv-sm" style={{ marginTop: 6 }}>See every plan, or pick another type.</p>
           <Btn variant="ghost" style={{ marginTop: 16 }} onClick={() => set("all")}>Show all plans</Btn>
         </div>
       )}
     </div>
+  );
+}
+
+/* the "I want…" shortcuts, without the ones that would show no plans */
+export const needsFor = (needs, packs) => needs.filter(([, id]) => !packs?.length || packs.some((p) => planType(p) === id));
+
+/* What each kind of plan includes, side by side. Scrolls sideways inside its own box on narrow screens. */
+export function PlanCompare({ onPick }) {
+  const cell = (v) => (v === true
+    ? <span className="rl-yes"><Check size={14} weight="bold" aria-hidden /><span className="rl-sr">Yes</span></span>
+    : v === false ? <span className="rl-no"><Minus size={14} weight="bold" aria-hidden /><span className="rl-sr">No</span></span>
+    : <span className="rl-note">{v}</span>);
+  return (
+    <div className="rl-compare">
+      <table>
+        <caption className="rl-sr">What each kind of plan includes</caption>
+        <thead>
+          <tr>
+            <th scope="col">What you get</th>
+            {COMPARE_COLS.map(([id, label]) => {
+              const Icon = TYPE_ICON[id];
+              return (
+                <th key={id} scope="col">
+                  <span className="rl-compare-col"><Icon size={18} weight="duotone" aria-hidden />{label}</span>
+                  {onPick && <button type="button" className="rl-compare-pick" onClick={() => onPick(id)}>See plans</button>}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {COMPARE_ROWS.map(([label, vals]) => (
+            <tr key={label}>
+              <th scope="row">{label}</th>
+              {COMPARE_COLS.map(([id]) => <td key={id}>{cell(vals[id])}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const ASSURE_ICON = [LockKey, Receipt, Stack, Prohibit];
+export function PlanAssurance({ className = "" }) {
+  return (
+    <ul className={cx("rl-assure", className)}>
+      {PLAN_ASSURANCE.map(([t, d], i) => {
+        const Icon = ASSURE_ICON[i];
+        return <li key={t}><Icon size={22} weight="duotone" aria-hidden /><div><b>{t}</b><p>{d}</p></div></li>;
+      })}
+    </ul>
   );
 }

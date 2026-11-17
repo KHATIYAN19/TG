@@ -4,10 +4,11 @@ import { Link, NavLink } from "react-router-dom";
 import { ArrowLeft, Check, Warning, X } from "@phosphor-icons/react";
 
 import "./resume.css";
+import "./lab.css";
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
 
-const FONTS = "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap";
+const FONTS = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap";
 
 /* Page frame: loads the fonts (same as the Books page) and sets the title. `top` leaves room for the site's fixed navbar. */
 export function Page({ title, description, children, top = true, className = "" }) {

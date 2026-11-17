@@ -213,8 +213,9 @@ export default function ResumePaymentResult() {
 
   return (
     <Page title="Payment | Resume Lab">
-      <main className="rv-shell" style={{ padding: "56px 0 120px" }}>
-        <div className={cx("rv-card rv-in rv-pay", body.tone)} style={{ maxWidth: 520, margin: "0 auto", padding: "40px 32px 32px", textAlign: "center" }} role="status" aria-live="polite">
+      <main className="rv-shell rlpay">
+        <p className="rlpay-brand"><span className="rla-logo" aria-hidden>R</span>Resume Lab · Payment</p>
+        <div className={cx("rv-card rv-in rv-pay rlpay-card", body.tone)} role="status" aria-live="polite">
           <span className={cx("rv-pay-icon", body.tone, body.spin && "pulse", view === "paid" && "pop")}><Icon size={44} weight="duotone" aria-hidden /></span>
           <h1 className="rv-h3" style={{ marginTop: 22 }}>{body.title}</h1>
 
@@ -236,7 +237,7 @@ export default function ResumePaymentResult() {
             </div>
           )}
         </div>
-        <p className="rv-xs rv-subtle" style={{ textAlign: "center", marginTop: 20 }}>Payments are handled by your bank and our payment partner. We never see your card or UPI details.</p>
+        <p className="rlpay-fine">Payments are handled by your bank and our payment partner. We never see your card or UPI details.</p>
       </main>
     </Page>
   );
