@@ -3,20 +3,24 @@ import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowRight, Brain, LinkedinLogo, Sparkle, UserCircle, Prohibit } from "@phosphor-icons/react";
+import {
+  ArrowRight, Brain, Check, FileText, Gauge, LinkedinLogo, MagicWand, Target, UserCircle, Sparkle, SquaresFour, X, FilePdf, Briefcase, PencilSimpleLine,
+} from "@phosphor-icons/react";
 
 import { cachedPackages, fetchPackages, formatINR, myPlans } from "./api";
 import {
-  AI_VS_HUMAN, ATS_ANSWER, ATS_DO, ATS_DONT, ATS_HOW, FAQ, INSIDE, INSIDE_TAGS, MISTAKES, PAGE_URL, PLAN_TYPES, REVIEWER_ANSWER, REVIEWER_POINTS,
-  REVIEWER_PROCESS, SECTIONS, SEO, STEPS, UPDATED_ISO, WHICH_PLAN, WHO_FOR, planType,
+  AI_VS_HUMAN, ATS_ANSWER, ATS_DO, ATS_DONT, ATS_HOW, FAQ, FEATURES, HERO_FACTS, MISTAKES, NEEDS, PAGE_NAV, PAGE_URL, REVIEWER_ANSWER,
+  REVIEWER_PROCESS, SEO, STEPS, UPDATED_ISO, WHO_FOR,
 } from "./landingContent";
-import PlanPicker, { usePlanBuy } from "./PlanPicker";
+import PlanPicker, { PlanAssurance, PlanCompare, needsFor, usePlanBuy } from "./PlanPicker";
 import { ReviewView } from "./ResumeDetail";
-import { SAMPLE_AI, SAMPLE_HUMAN, SAMPLE_POOL } from "./sampleReview";
+import { SAMPLE_AI, SAMPLE_POOL } from "./sampleReview";
 import { schemaJson } from "./seo";
-import { Bar, Btn, Kicker, Page, Pill, ScoreRing, Skeleton, Tick, cx, toneOf, useReveal } from "./ui";
+import { Btn, Page, cx } from "./ui";
 
 const OG_IMAGE = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+const RETURN_KEY = "resume:returnTo";
+const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 /* ============================ head: SEO, AEO and GEO ============================ */
 function Head({ plans }) {
@@ -48,183 +52,258 @@ function Head({ plans }) {
   );
 }
 
-/* a section: one h2, an optional kicker and lead, then the content */
-function Section({ id, kicker, title, lead, alt = false, center = false, children, answer }) {
+/* one section: eyebrow, h2, optional lead, then content */
+function Section({ id, eyebrow, title, lead, tone = "", children, head = true }) {
   return (
-    <section id={id} className={cx("rv-section", alt && "rv-alt")} aria-labelledby={`${id}-h`} style={{ scrollMarginTop: 80 }}>
+    <section id={id} className={cx("rl-sec", tone && `rl-sec-${tone}`)} aria-labelledby={`${id}-h`}>
       <div className="rv-shell">
-        <header className={cx("rv-head rv-reveal", center && "rv-center")}>
-          {kicker && <Kicker>{kicker}</Kicker>}
-          <h2 id={`${id}-h`} className="rv-h2">{title}</h2>
-          {lead && <p className="rv-lead">{lead}</p>}
-        </header>
-        {answer && <p className="rv-answer rv-reveal" style={{ marginTop: 28, maxWidth: 820 }}>{answer}</p>}
-        <div style={{ marginTop: 40 }}>{children}</div>
+        {head && (
+          <header className="rl-sec-head">
+            {eyebrow && <span className="rl-eyebrow">{eyebrow}</span>}
+            <h2 id={`${id}-h`} className="rl-h2">{title}</h2>
+            {lead && <p className="rl-lead">{lead}</p>}
+          </header>
+        )}
+        {children}
       </div>
     </section>
   );
 }
 
-const TYPE_ICON = { ai: Brain, human: UserCircle, linkedin: LinkedinLogo, mix: Sparkle };
-const RETURN_KEY = "resume:returnTo";
-
 /* ============================ hero ============================ */
-function Hero({ onPick, paid, signedIn, onLogin }) {
+/* the hero's picture: a resume line marked up the way a reviewer would, with the report strip under it */
+function MarkedResume() {
   return (
-    <header className="rv-section rv-hero">
-      <div className="rv-shell rv-center-col">
-        <Pill className="rv-in"><span className="rv-dot" style={{ color: "var(--rv-bad)" }} />Applied to 50 jobs and heard nothing?</Pill>
-        <h1 className="rv-h1 rv-in" style={{ marginTop: 24, "--i": 1, maxWidth: 940 }}>Not getting interview calls? <span className="rv-strike">Your resume</span> is probably the reason.</h1>
-        <p className="rv-lead rv-in" style={{ marginTop: 24, maxWidth: 680, "--i": 2 }}>Most resumes are rejected by software or skimmed in ten seconds, long before anyone judges your skills. Pick a review, upload your resume and find out exactly what is costing you shortlists.</p>
-
-        <div className="rv-heropick rv-in" style={{ "--i": 3 }} role="group" aria-label="Choose the kind of review">
-          {PLAN_TYPES.filter((t) => t.id !== "all").map((t) => {
-            const Icon = TYPE_ICON[t.id];
-            return (
-              <button key={t.id} type="button" onClick={() => onPick(t.id)} className="rv-card rv-hover">
-                <Icon size={24} weight="duotone" aria-hidden />
-                <b>{t.label}</b>
-                <span className="rv-xs rv-muted">{t.blurb}</span>
-                <span className="rv-xs" style={{ fontWeight: 700, display: "inline-flex", gap: 6, alignItems: "center", marginTop: "auto" }}>See plans <ArrowRight size={12} weight="bold" aria-hidden /></span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="rv-row rv-hero-btns rv-in" style={{ marginTop: 32, justifyContent: "center", "--i": 4 }}>
-          <Btn as="a" href="#pricing" size="lg">Choose a plan <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
-          <Btn as="a" href="#sample" variant="ghost" size="lg">See a sample review</Btn>
-          {paid && <Btn as={Link} to="/resume-review/app" variant="ghost" size="lg"><UserCircle size={18} weight="duotone" aria-hidden />My reviews and plans</Btn>}
-          {!signedIn && <Btn as={Link} to="/resume-review/login" variant="ghost" size="lg" onClick={onLogin}><UserCircle size={18} weight="duotone" aria-hidden />Log in</Btn>}
-        </div>
-        <p className="rv-updated rv-in" style={{ marginTop: 20, "--i": 5 }}>One-time payment · No subscription{!signedIn && <> · Already bought a plan? <Link to="/resume-review/login" className="rv-link" onClick={onLogin}>Log in</Link></>}</p>
+    <figure className="rl-paper" aria-label="Example: a resume line marked up by a reviewer, with its AI scores">
+      <div className="rl-paper-bar"><FilePdf size={16} weight="duotone" aria-hidden /><span>asha-rao-backend.pdf</span><span className="rl-paper-pg rv-mono">p. 1 / 1</span></div>
+      <div className="rl-paper-body">
+        <p className="rl-paper-name">Asha Rao</p>
+        <p className="rl-paper-sub">Backend Engineer · Bengaluru · 3 yrs</p>
+        <p className="rl-paper-h">Experience</p>
+        <p className="rl-paper-line"><span className="rl-strike">Responsible for maintaining APIs and fixing bugs.</span></p>
+        <p className="rl-paper-line rl-paper-fix"><span className="rl-mark">Maintained 40+ REST APIs and cut production bugs by 35%</span> by adding automated tests.</p>
+        <span className="rl-pen rl-pen-1">Duty, not a result. Add a number.</span>
+        <p className="rl-paper-line rl-ghost" aria-hidden />
+        <p className="rl-paper-line rl-ghost short" aria-hidden />
+        <p className="rl-paper-h">Skills</p>
+        <p className="rl-paper-line">Java, Spring Boot, PostgreSQL, Redis <span className="rl-gap">+ Kafka?</span></p>
+        <span className="rl-pen rl-pen-2">The job asks for Kafka.</span>
       </div>
+      <figcaption className="rl-paper-strip">
+        <div><span className="rl-strip-k">Overall</span><b className="rv-mono">62<small>/100</small></b></div>
+        <div><span className="rl-strip-k">ATS</span><b className="rv-mono">71<small>/100</small></b></div>
+        <div className="rl-strip-wide"><span className="rl-strip-k">Missing keywords</span><span className="rl-strip-chips"><i>Kafka</i><i>Docker</i><i>CI/CD</i></span></div>
+      </figcaption>
+    </figure>
+  );
+}
+
+function Hero({ paid, signedIn, onLogin, cheapest }) {
+  return (
+    <header className="rl-hero">
+      <div className="rv-shell rl-hero-grid">
+        <div className="rl-hero-copy">
+          <span className="rl-pill"><span className="rl-dot" />Resume Lab by Target Trek</span>
+          <h1 className="rl-h1">Fifty applications, <span className="rl-mark">zero calls?</span> Fix the resume first.</h1>
+          <p className="rl-lead">Get an AI report in about two minutes, then a working professional's notes. See exactly what is costing you shortlists and how to fix each line.</p>
+          <div className="rl-hero-btns">
+            <Btn size="lg" onClick={() => scrollTo("pricing")}>See plans{cheapest ? ` from ${formatINR(cheapest)}` : ""} <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
+            <Btn size="lg" variant="ghost" onClick={() => scrollTo("features")}>Explore features</Btn>
+          </div>
+          <p className="rl-hero-alt">
+            {paid ? <Link to="/resume-review/app" className="rl-textlink">Go to my reviews and plans <ArrowRight size={14} weight="bold" aria-hidden /></Link>
+              : !signedIn ? <>Already bought a plan? <Link to="/resume-review/login" className="rl-textlink" onClick={onLogin}>Log in</Link></>
+              : <Link to="/resume-review/app/plans" className="rl-textlink">Choose a plan to get started <ArrowRight size={14} weight="bold" aria-hidden /></Link>}
+          </p>
+          <dl className="rl-facts">
+            {HERO_FACTS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+          </dl>
+        </div>
+        <div className="rl-hero-art"><MarkedResume /></div>
+      </div>
+      <nav className="rv-shell rl-jump" aria-label="On this page">
+        <span>On this page</span>
+        <div>{PAGE_NAV.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</div>
+      </nav>
     </header>
   );
 }
 
-/* ============================ plans ============================ */
-function Plans({ packs, failed, type, setType, buyer }) {
+/* ============================ feature explorer ============================ */
+const F_ICON = { ai: Brain, human: UserCircle, linkedin: LinkedinLogo, jd: Target, builder: FileText, tailor: MagicWand, rewrite: PencilSimpleLine, space: SquaresFour };
+const TYPE_NAME = { ai: "AI", human: "Human", linkedin: "LinkedIn", mix: "Mix" };
+const COUNT_WORD = { 4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten" };
+
+/* a small picture for each feature, drawn with the page's own pieces */
+function FeatureArt({ id }) {
+  if (id === "ai") return (
+    <div className="rl-art">
+      <div className="rl-art-scores">
+        {[["Overall", 62, "warn"], ["ATS", 71, "warn"], ["Shortlist", 38, "bad"]].map(([k, v, t]) => (
+          <div key={k} className="rl-art-score"><span>{k}</span><b className="rv-mono">{v}</b><i className={`rl-meter ${t}`}><em style={{ width: `${v}%` }} /></i></div>
+        ))}
+      </div>
+      <div className="rl-art-ba"><p className="b"><small>Before</small>Improved the performance of the search feature.</p><p className="a"><small>After</small>Cut search time from 1.8s to 400ms by adding an index and caching the top 1,000 queries.</p></div>
+    </div>
+  );
+  if (id === "human") return (
+    <div className="rl-art">
+      <div className="rl-art-note">
+        <div className="rl-art-who"><span className="rl-avatar">R</span><div><b>Rahul</b><small>Senior Software Engineer · delivered in 31 h</small></div></div>
+        <p>You are a stronger engineer than this resume shows. Lead with the payments platform, cut the first role to three bullets and be specific about scale.</p>
+        <ul><li>Move payments work to the top</li><li>Aim for mid-level backend roles</li><li>Link your two best repositories</li></ul>
+      </div>
+    </div>
+  );
+  if (id === "linkedin") return (
+    <div className="rl-art">
+      <div className="rl-art-li">
+        <span className="rl-art-k">Headline</span>
+        <p className="rl-strike">Software Engineer</p>
+        <p className="rl-mark">Backend Engineer · Java, Spring Boot, AWS</p>
+        <span className="rl-art-k">About</span>
+        <p className="rl-muted">Repeats the resume. Use it to tell the payments story in three lines.</p>
+      </div>
+    </div>
+  );
+  if (id === "jd") return (
+    <div className="rl-art">
+      <span className="rl-art-k">You match</span>
+      <div className="rl-chips ok">{["Java", "Spring Boot", "PostgreSQL", "REST APIs", "Git"].map((x) => <i key={x}>{x}</i>)}</div>
+      <span className="rl-art-k">Missing</span>
+      <div className="rl-chips bad">{[["Kafka", "must"], ["Docker", "must"], ["CI/CD", "nice"]].map(([x, w]) => <i key={x}>{x}<small>{w}</small></i>)}</div>
+    </div>
+  );
+  if (id === "builder") return (
+    <div className="rl-art">
+      <ol className="rl-art-steps">{["About you", "Links", "Summary", "Education", "Experience", "Projects", "Skills", "Finish"].map((s, i) => <li key={s} className={i < 4 ? "done" : i === 4 ? "now" : ""}>{s}</li>)}</ol>
+      <div className="rl-art-tpls">{["Classic", "Modern", "Compact"].map((t, i) => <span key={t} className={i === 1 ? "on" : ""}><i /><i /><i />{t}</span>)}</div>
+    </div>
+  );
+  if (id === "tailor") return (
+    <div className="rl-art">
+      <div className="rl-art-q">
+        <span className="rl-art-k">The job asks for Docker</span>
+        <p>Have you used it, for example in a project or internship? If yes, tell us where.</p>
+        <div className="rl-art-qa"><span className="on">Yes, in my booking API project</span><span>No</span></div>
+      </div>
+      <p className="rl-art-foot"><Check size={14} weight="bold" aria-hidden />Only skills you confirm go into the new version.</p>
+    </div>
+  );
+  if (id === "rewrite") return (
+    <div className="rl-art">
+      <div className="rl-art-file"><FilePdf size={34} weight="duotone" aria-hidden /><div><b>Asha-Rao-Backend-Engineer.pdf</b><small>Rewritten by your reviewer · PDF or Word</small></div></div>
+    </div>
+  );
   return (
-    <Section id="pricing" kicker="Plans" title="Pick the review that fits. Pay once." lead="Choose AI reviews, a working professional, a LinkedIn review, or a mix. Credits from several plans add up." center>
-      <div className="rv-reveal"><PlanPicker packs={packs} failed={failed} type={type} setType={setType} buyer={buyer} /></div>
-
-      <div className="rv-nocancel rv-reveal">
-        <Prohibit size={22} weight="duotone" aria-hidden />
-        <p><b>No plan can be cancelled once bought.</b> Every plan is a single payment: no subscription, nothing renews, you are never charged again. Your reviews stay in your account until the plan's validity ends.</p>
+    <div className="rl-art">
+      <div className="rl-art-space">
+        {[["AI reviews", "18 of 30 left", 60], ["Human reviews", "1 of 2 left", 50], ["Days left", "21 days", 70]].map(([k, v, w]) => (
+          <div key={k}><span>{k}</span><b>{v}</b><i className="rl-meter ok"><em style={{ width: `${w}%` }} /></i></div>
+        ))}
       </div>
-
-      <h3 className="rv-h3 rv-reveal" style={{ margin: "56px 0 8px" }}>Which plan is right for me?</h3>
-      <div className="rv-auto" style={{ "--min": "260px", marginTop: 20 }}>
-        {WHICH_PLAN.map(([a, b], i) => <div key={a} className="rv-card rv-reveal" style={{ padding: 22, "--i": i % 4 }}><p style={{ fontWeight: 700 }}>{a}</p><p className="rv-muted" style={{ marginTop: 8, fontSize: 15, lineHeight: 1.65 }}>{b}</p></div>)}
-      </div>
-    </Section>
+    </div>
   );
 }
 
-/* ============================ sample result: the real review page, with made-up data ============================ */
-/* Flip to true to show the human-review sample again (a second tab, and the "get a human review" box). */
-const SHOW_HUMAN_SAMPLE = false;
-
-function Sample() {
-  const [tab, setTab] = useState("ai");
-  const [open, setOpen] = useState(false);
-  const [small, setSmall] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
-  useEffect(() => {
-    const on = () => setSmall(window.innerWidth < 768);
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  const full = SHOW_HUMAN_SAMPLE && tab === "human" ? SAMPLE_HUMAN : SAMPLE_AI;
-  // phones: render only the top of the report until they ask for the rest, so the page never builds one giant, many-thousand-pixel box (iOS Safari paints those blank)
-  const folded = small && !open;
-  const r = folded && full.ai?.result
-    ? { ...full, ai: { ...full.ai, result: (({ overallScore, atsScore, shortlistChance, headline, summary, recruiterFirstImpression }) => ({ overallScore, atsScore, shortlistChance, headline, summary, recruiterFirstImpression }))(full.ai.result) } }
-    : full;
-  return (
-    <Section id="sample" kicker="Sample result" title="This is exactly what you see after you upload" lead="The real review page, with a made-up resume: scores, your chance of being shortlisted, experience vs the role, every weakness explained, rewritten bullets, interview questions and a plan for the week." alt>
-      {SHOW_HUMAN_SAMPLE && <div className="rv-tabs rv-reveal" role="tablist" aria-label="Sample result" style={{ marginBottom: 18 }}>
-        {[["ai", "AI report ready"], ["human", "Human review delivered"]].map(([id, l]) => <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)}>{l}</button>)}
-      </div>}
-      <div className={cx("rv-mac rv-reveal", folded && "rv-mac-fold")}>
-        <div className="rv-mac-bar" aria-hidden><i /><i /><i /><span>targettrek.in / resume-review / app / requests</span></div>
-        <div className="rv-mac-body rv-sample">
-          <ReviewView r={r} canAsk={SHOW_HUMAN_SAMPLE && tab === "ai"} pool={SAMPLE_POOL} sent={false} preview />
-        </div>
-        <div className="rv-mac-more"><Btn variant="ghost" onClick={() => setOpen(true)}>Show full sample review</Btn></div>
-      </div>
-      <div className="rv-row" style={{ justifyContent: "center", marginTop: 32 }}><Btn as="a" href="#pricing" size="lg">Get my own review <ArrowRight size={17} weight="bold" aria-hidden /></Btn></div>
-    </Section>
-  );
-}
-
-/* ============================ 12 mistakes: one big screen, list on the left, detail on the right ============================ */
-function Mistakes() {
+function Features({ onPickType }) {
   const [i, setI] = useState(0);
+  const f = FEATURES[i];
+  const Icon = F_ICON[f.id];
   return (
-    <section id="mistakes" className="rv-section rv-mist" aria-labelledby="mistakes-h" style={{ scrollMarginTop: 80 }}>
-      <div className="rv-shell">
-        <header className="rv-head rv-reveal">
-          <Kicker>Fix your resume</Kicker>
-          <h2 id="mistakes-h" className="rv-h2">12 resume mistakes that stop interview calls, and how to fix each one</h2>
-          <p className="rv-lead">Pick a mistake to see why it costs you shortlists, how to fix it, and a before and after.</p>
-        </header>
-        <div className="rv-mm rv-reveal">
-          <div className="rv-mm-list" role="tablist" aria-label="Resume mistakes" aria-orientation="vertical">
-            {MISTAKES.map((m, n) => (
-              <button key={m.title} id={`mm-t-${n}`} role="tab" type="button" aria-selected={i === n} aria-controls={`mm-p-${n}`} onClick={() => setI(n)}>
-                <span className="rv-mnum">{n + 1}</span><span>{m.title}</span>
+    <Section id="features" eyebrow="Everything inside" title={`${COUNT_WORD[FEATURES.length] || FEATURES.length} tools to take your resume from ignored to shortlisted`} lead="Pick a feature to see what it does, how long it takes and which plans include it.">
+      <div className="rl-explorer">
+        <div className="rl-flist" role="tablist" aria-label="Features" aria-orientation="vertical">
+          {FEATURES.map((x, n) => {
+            const I = F_ICON[x.id];
+            return (
+              <button key={x.id} id={`ft-${x.id}`} role="tab" type="button" aria-selected={i === n} aria-controls="fpanel" className="rl-ftab" onClick={() => setI(n)}>
+                <I size={20} weight="duotone" aria-hidden />
+                <span>{x.name}</span>
+                <small className={x.where === "account" ? "free" : ""}>{x.where === "account" ? "Free" : "Paid"}</small>
               </button>
-            ))}
-          </div>
-          <div className="rv-mm-pane">
-            {MISTAKES.map((m, n) => (
-              <article key={m.title} id={`mm-p-${n}`} role="tabpanel" aria-labelledby={`mm-t-${n}`} hidden={i !== n}>
-                <p className="rv-mono rv-subtle" style={{ fontSize: 13, fontWeight: 600 }}>MISTAKE {String(n + 1).padStart(2, "0")} / 12</p>
-                <h3 className="rv-h2" style={{ fontSize: "clamp(24px, 3vw, 36px)", marginTop: 12 }}>{m.title}</h3>
-                <p className="rv-muted" style={{ lineHeight: 1.75, marginTop: 18, fontSize: 16.5 }}><b style={{ color: "var(--rv-text)" }}>Why it costs you calls. </b>{m.why}</p>
-                <p style={{ fontWeight: 700, margin: "26px 0 12px" }}>How to fix it</p>
-                <ul className="rv-fixlist">{m.fix.map((f) => <li key={f}>{f}</li>)}</ul>
-                <div className="rv-ba"><div className="b"><small>BEFORE</small>{m.before}</div><div className="a"><small>AFTER</small>{m.after}</div></div>
-                <div className="rv-mm-nav">
-                  <Btn variant="ghost" size="sm" disabled={n === 0} onClick={() => setI(n - 1)}>Previous</Btn>
-                  <Btn size="sm" disabled={n === MISTAKES.length - 1} onClick={() => setI(n + 1)}>Next mistake <ArrowRight size={14} weight="bold" aria-hidden /></Btn>
-                </div>
-              </article>
-            ))}
-          </div>
+            );
+          })}
         </div>
+        <article id="fpanel" role="tabpanel" aria-labelledby={`ft-${f.id}`} className="rl-fpanel" key={f.id}>
+          <div className="rl-fpanel-copy">
+            <div className="rl-fpanel-top"><span className="rl-fico"><Icon size={24} weight="duotone" aria-hidden /></span><span className="rl-fmeta">{f.time}</span></div>
+            <h3 className="rl-h3">{f.name}</h3>
+            <p className="rl-fpitch">{f.pitch}</p>
+            <ul className="rl-checks">{f.points.map((p) => <li key={p}><Check size={15} weight="bold" aria-hidden />{p}</li>)}</ul>
+            <div className="rl-fwhere">
+              {f.where === "account"
+                ? <p><b>Free with any account.</b> Find it in your space after you log in.</p>
+                : <p><b>{f.some ? "On some plans of type:" : "Included in:"}</b> {f.plans.map((p) => <button key={p} type="button" className="rl-tag" onClick={() => onPickType(p)}>{TYPE_NAME[p]}</button>)}</p>}
+            </div>
+          </div>
+          <div className="rl-fpanel-art"><FeatureArt id={f.id} /></div>
+        </article>
       </div>
-    </section>
+    </Section>
   );
 }
 
 /* ============================ how it works ============================ */
 function How() {
   return (
-    <Section id="how-it-works" kicker="How it works" title="How Resume Lab works, step by step" lead="Six steps from choosing a plan to a better resume. Payment comes first, so everything after it is simple.">
-      <div className="rv-split even">
-        <ol className="rv-steps-l">
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="rv-reveal" style={{ "--i": i % 3 }}>
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 12px" }}><h3 className="rv-h3">{s.title}</h3><Pill>{s.time}</Pill></div>
-              <p className="rv-muted" style={{ marginTop: 8, lineHeight: 1.7, maxWidth: 560 }}>{s.text}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="rv-card rv-card-pad rv-reveal" style={{ position: "sticky", top: 100 }}>
-          <p className="rv-kicker">Four kinds of plan</p>
-          <div style={{ display: "grid", gap: 18, marginTop: 22 }}>
-            {[["ai", "AI reviews", "Instant report with score, ATS check, keyword gaps and rewritten bullets. Ready in minutes."],
-              ["human", "Human review", "A working professional reads your resume and writes detailed, personal feedback."],
-              ["linkedin", "LinkedIn review", "Your live profile checked against your resume by a person."],
-              ["mix", "Mix", "AI report, human resume review and LinkedIn review together."]].map(([id, t, d]) => {
-              const Icon = TYPE_ICON[id];
-              return <div key={id} style={{ display: "flex", gap: 14 }}><span className="rv-ico"><Icon size={20} weight="duotone" aria-hidden /></span><div><b>{t}</b><p className="rv-muted rv-sm" style={{ marginTop: 2 }}>{d}</p></div></div>;
-            })}
-          </div>
-          <p className="rv-hint" style={{ marginTop: 22 }}>You can buy more than one plan. Credits add up and each plan keeps its own validity.</p>
+    <Section id="how-it-works" eyebrow="How it works" title="From plan to better resume in six steps" lead="Payment comes first, so everything after it is simple." tone="tint">
+      <ol className="rl-steps">
+        {STEPS.map((s, i) => (
+          <li key={s.title}>
+            <span className="rl-step-n rv-mono">{String(i + 1).padStart(2, "0")}</span>
+            <h3>{s.title}</h3>
+            <span className="rl-step-t">{s.time}</span>
+            <p>{s.text}</p>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
+/* ============================ sample result: the real review page, with made-up data ============================ */
+function Sample() {
+  const [open, setOpen] = useState(false);
+  const [small, setSmall] = useState(false);
+  useEffect(() => {
+    const on = () => setSmall(window.innerWidth < 768);
+    on();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  // folded until they ask for the rest. Phones also render only the top of the data (iOS Safari paints very tall boxes blank)
+  const folded = !open;
+  const r = folded && small && SAMPLE_AI.ai?.result
+    ? { ...SAMPLE_AI, ai: { ...SAMPLE_AI.ai, result: (({ overallScore, atsScore, shortlistChance, headline, summary, recruiterFirstImpression }) => ({ overallScore, atsScore, shortlistChance, headline, summary, recruiterFirstImpression }))(SAMPLE_AI.ai.result) } }
+    : SAMPLE_AI;
+  return (
+    <Section id="sample" eyebrow="Sample report" title="This is the page you get after you upload" lead="The real review page with a made-up resume: scores, your chance of a shortlist, every weakness explained, rewritten bullets, interview questions and a plan for the week.">
+      <div className={cx("rv-mac", folded && "rv-mac-fold")}>
+        <div className="rv-mac-bar" aria-hidden><i /><i /><i /><span>targettrek.in / resume-review / app / requests</span></div>
+        <div className="rv-mac-body rv-sample">
+          <ReviewView r={r} canAsk={false} pool={SAMPLE_POOL} sent={false} preview />
         </div>
+        <div className="rv-mac-more"><Btn variant="ghost" onClick={() => setOpen(true)}>Show the full sample report</Btn></div>
+      </div>
+      <div className="rl-center-row"><Btn size="lg" onClick={() => scrollTo("pricing")}>Get my own report <ArrowRight size={17} weight="bold" aria-hidden /></Btn></div>
+    </Section>
+  );
+}
+
+/* ============================ plans ============================ */
+function Pricing({ packs, failed, type, setType, buyer }) {
+  return (
+    <Section id="pricing" eyebrow="Plans" title="Pick the review you need. Pay once." lead="Every plan starts with the AI report. Add a working professional, a LinkedIn review, or both." tone="tint">
+      <div className="rl-needs" aria-label="Quick pick">
+        <span>I want</span>
+        {needsFor(NEEDS, packs).map(([label, id]) => <button key={label} type="button" className={type === id ? "is-on" : ""} onClick={() => setType(id)}>{label}</button>)}
+      </div>
+      <PlanPicker packs={packs} failed={failed} type={type} setType={setType} buyer={buyer} />
+      <PlanAssurance />
+      <div className="rl-sub-block">
+        <h3 className="rl-h3">Compare the kinds of plan</h3>
+        <PlanCompare onPick={(id) => { setType(id); scrollTo("pricing"); }} />
       </div>
     </Section>
   );
@@ -233,58 +312,50 @@ function How() {
 /* ============================ who reviews ============================ */
 function Reviewers() {
   return (
-    <Section id="reviewers" kicker="Who reviews your resume" title="A working professional reviews your resume, not just a bot" alt answer={REVIEWER_ANSWER}>
-      <div className="rv-auto" style={{ "--min": "250px" }}>
-        {REVIEWER_POINTS.map(([t, d], i) => (
-          <div key={t} className="rv-tile rv-reveal" style={{ "--i": i % 4 }}><h3 className="rv-h3">{t}</h3><p className="rv-muted rv-sm" style={{ marginTop: 10, fontSize: 15 }}>{d}</p></div>
-        ))}
-      </div>
-
-      <h3 className="rv-h3 rv-reveal" style={{ margin: "56px 0 8px" }}>What the reviewer does with your resume, in order</h3>
-      <p className="rv-muted rv-reveal" style={{ maxWidth: 680 }}>Not a template and not a checklist. A real person spends real time on your resume.</p>
-      <ol className="rv-auto" style={{ "--min": "300px", marginTop: 24 }}>
-        {REVIEWER_PROCESS.map(([t, d], i) => (
-          <li key={t} className="rv-card rv-reveal" style={{ padding: 22, "--i": i % 3 }}><span className="rv-mono rv-subtle" style={{ fontSize: 13, fontWeight: 600 }}>0{i + 1}</span><h4 className="rv-h3" style={{ marginTop: 12 }}>{t}</h4><p className="rv-muted" style={{ marginTop: 8, fontSize: 15, lineHeight: 1.65 }}>{d}</p></li>
-        ))}
-      </ol>
-
-      <h3 className="rv-h3 rv-reveal" style={{ margin: "56px 0 8px" }}>What the AI does, and what the person does</h3>
-      <p className="rv-muted rv-reveal" style={{ maxWidth: 680 }}>Each does the part it is best at, so you get speed and judgement together.</p>
-      <div className="rv-auto" style={{ "--min": "300px", marginTop: 24 }}>
+    <Section id="reviewers" eyebrow="Human review" title="A working professional reads your resume, not just a bot">
+      <p className="rl-answer">{REVIEWER_ANSWER}</p>
+      <div className="rl-vs">
         {AI_VS_HUMAN.map((c, i) => (
-          <article key={c.who} className="rv-card rv-card-pad rv-reveal" style={{ "--i": i, ...(i === 1 ? { borderColor: "var(--rv-brand)", borderWidth: 2 } : {}) }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}><h4 className="rv-h3">{c.who}</h4><Pill className={i === 1 ? "dark" : ""}>{c.when}</Pill></div>
-            <ul className="rv-fixlist" style={{ marginTop: 20 }}>{c.items.map((x) => <li key={x}>{x}</li>)}</ul>
+          <article key={c.who} className={cx("rl-vs-card", i === 1 && "is-human")}>
+            <div className="rl-vs-top">{i === 0 ? <Brain size={22} weight="duotone" aria-hidden /> : <UserCircle size={22} weight="duotone" aria-hidden />}<h3>{c.who}</h3><span>{c.when}</span></div>
+            <ul className="rl-checks">{c.items.map((x) => <li key={x}><Check size={15} weight="bold" aria-hidden />{x}</li>)}</ul>
           </article>
         ))}
       </div>
+      <h3 className="rl-h3 rl-sub-title">What the reviewer does, in order</h3>
+      <ol className="rl-process">
+        {REVIEWER_PROCESS.map(([t, d], i) => <li key={t}><span className="rv-mono">{i + 1}</span><div><b>{t}</b><p>{d}</p></div></li>)}
+      </ol>
     </Section>
   );
 }
 
-/* ============================ what you get / who it's for ============================ */
-function Inside() {
+/* ============================ 12 mistakes ============================ */
+function Mistakes() {
+  const [i, setI] = useState(0);
+  const m = MISTAKES[i];
   return (
-    <Section id="inside" kicker="What you get" title="More than a score: a clear plan to fix your resume" lead="Every plan starts with the AI report. Depending on your plan you also get the items tagged Human or LinkedIn.">
-      <div className="rv-auto" style={{ "--min": "280px" }}>
-        {INSIDE.map(([t, d], i) => (
-          <div key={t} className="rv-tile rv-reveal" style={{ "--i": i % 3 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span className="rv-mono rv-subtle" style={{ fontSize: 13, fontWeight: 600 }}>{String(i + 1).padStart(2, "0")}</span><Pill className={INSIDE_TAGS[i] === "AI" ? "" : "dark"}>{INSIDE_TAGS[i]}</Pill></div>
-            <h3 className="rv-h3" style={{ marginTop: 14 }}>{t}</h3><p className="rv-muted" style={{ marginTop: 10, fontSize: 15, lineHeight: 1.65 }}>{d}</p>
+    <Section id="mistakes" eyebrow="Free guide" title="12 resume mistakes that stop interview calls" lead="Pick a mistake to see why it costs you shortlists, how to fix it, and a before and after." tone="tint">
+      <div className="rl-mm">
+        <div className="rl-mm-list" role="tablist" aria-label="Resume mistakes">
+          {MISTAKES.map((x, n) => (
+            <button key={x.title} id={`mm-t-${n}`} role="tab" type="button" aria-selected={i === n} aria-controls="mm-panel" onClick={() => setI(n)}>
+              <span className="rv-mono">{String(n + 1).padStart(2, "0")}</span><span className="rl-mm-label">{x.title}</span>
+            </button>
+          ))}
+        </div>
+        <article id="mm-panel" role="tabpanel" aria-labelledby={`mm-t-${i}`} className="rl-mm-pane" key={i}>
+          <p className="rl-mm-count rv-mono">Mistake {i + 1} of {MISTAKES.length}</p>
+          <h3 className="rl-h3">{m.title}</h3>
+          <p className="rl-mm-why"><b>Why it costs you calls.</b> {m.why}</p>
+          <p className="rl-mm-k">How to fix it</p>
+          <ul className="rl-checks">{m.fix.map((f) => <li key={f}><Check size={15} weight="bold" aria-hidden />{f}</li>)}</ul>
+          <div className="rl-ba"><p className="b"><small>Before</small>{m.before}</p><p className="a"><small>After</small>{m.after}</p></div>
+          <div className="rl-mm-nav">
+            <Btn variant="ghost" size="sm" disabled={i === 0} onClick={() => setI(i - 1)}>Previous</Btn>
+            <Btn size="sm" disabled={i === MISTAKES.length - 1} onClick={() => setI(i + 1)}>Next mistake <ArrowRight size={14} weight="bold" aria-hidden /></Btn>
           </div>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function WhoFor() {
-  return (
-    <Section id="who-for" kicker="Who it's for" title="Resume review for students, freshers and working professionals" alt>
-      <div className="rv-auto" style={{ "--min": "280px" }}>
-        {WHO_FOR.map(([t, d], i) => (
-          <div key={t} className="rv-card rv-who rv-reveal rv-hover" style={{ "--i": i % 3 }}><h3 className="rv-h3">{t}</h3><p className="rv-muted" style={{ fontSize: 15, lineHeight: 1.65 }}>{d}</p></div>
-        ))}
+        </article>
       </div>
     </Section>
   );
@@ -293,16 +364,29 @@ function WhoFor() {
 /* ============================ ATS ============================ */
 function Ats() {
   return (
-    <Section id="ats" kicker="ATS explained" title="What is an ATS, and how do you get past it?" answer={ATS_ANSWER}>
-      <h3 className="rv-h3 rv-reveal" style={{ marginBottom: 20 }}>How an ATS reads your resume</h3>
-      <ol className="rv-auto" style={{ "--min": "240px" }}>
-        {ATS_HOW.map(([t, d], i) => (
-          <li key={t} className="rv-card rv-reveal" style={{ padding: 22, "--i": i % 4 }}><span className="rv-mono rv-subtle" style={{ fontSize: 13, fontWeight: 600 }}>0{i + 1}</span><h4 className="rv-h3" style={{ marginTop: 14 }}>{t}</h4><p className="rv-muted" style={{ marginTop: 8, fontSize: 15, lineHeight: 1.65 }}>{d}</p></li>
-        ))}
+    <Section id="ats" eyebrow="ATS guide" title="What is an ATS, and how do you get past it?">
+      <p className="rl-answer">{ATS_ANSWER}</p>
+      <ol className="rl-pipe">
+        {ATS_HOW.map(([t, d], i) => <li key={t}><span className="rv-mono">{i + 1}</span><b>{t}</b><p>{d}</p></li>)}
       </ol>
-      <div className="rv-auto" style={{ "--min": "300px", marginTop: 40 }}>
-        <div className="rv-do rv-reveal"><h3 className="rv-h3">Do</h3><ul>{ATS_DO.map((x) => <li key={x}>{x}</li>)}</ul></div>
-        <div className="rv-dont rv-reveal" style={{ "--i": 1 }}><h3 className="rv-h3">Don't</h3><ul>{ATS_DONT.map((x) => <li key={x}>{x}</li>)}</ul></div>
+      <div className="rl-dodont">
+        <div className="do"><h3><Check size={18} weight="bold" aria-hidden />Do</h3><ul>{ATS_DO.map((x) => <li key={x}>{x}</li>)}</ul></div>
+        <div className="dont"><h3><X size={18} weight="bold" aria-hidden />Don't</h3><ul>{ATS_DONT.map((x) => <li key={x}>{x}</li>)}</ul></div>
+      </div>
+    </Section>
+  );
+}
+
+/* ============================ who it's for ============================ */
+const WHO_ICON = [Sparkle, Briefcase, ArrowRight, Gauge, Target, FileText];
+function WhoFor() {
+  return (
+    <Section id="who-for" eyebrow="Who it's for" title="For students, freshers and working professionals" tone="tint">
+      <div className="rl-who">
+        {WHO_FOR.map(([t, d], i) => {
+          const I = WHO_ICON[i];
+          return <div key={t}><I size={22} weight="duotone" aria-hidden /><h3>{t}</h3><p>{d}</p></div>;
+        })}
       </div>
     </Section>
   );
@@ -311,41 +395,45 @@ function Ats() {
 /* ============================ FAQ ============================ */
 function Faq() {
   return (
-    <Section id="faq" kicker="Questions" title="Resume review questions, answered" lead="Short answers to what people ask most before they start, including cancellation.">
-      <div style={{ display: "grid", gap: 12, maxWidth: 860 }}>
-        {FAQ.map((f, i) => (
-          <details key={f.q} className="rv-det rv-reveal" open={i === 0}>
-            <summary><h3>{f.q}</h3></summary>
-            <div className="rv-det-body"><p className="rv-muted" style={{ fontSize: 15.5, lineHeight: 1.75 }}>{f.a}</p></div>
-          </details>
-        ))}
+    <section id="faq" className="rl-sec" aria-labelledby="faq-h">
+      <div className="rv-shell rl-faq-grid">
+        <header className="rl-faq-side">
+          <span className="rl-eyebrow">Questions</span>
+          <h2 id="faq-h" className="rl-h2">Resume review questions, answered</h2>
+          <p className="rl-lead">Still unsure? Write to <b className="rl-select">supporttargettrek@gmail.com</b> and a person replies.</p>
+        </header>
+        <div className="rl-faq-list">
+          {FAQ.map((f, i) => (
+            <details key={f.q} className="rl-faq" open={i === 0}>
+              <summary><h3>{f.q}</h3></summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 /*
-  The sticky bar, same idea as the System Design book page: docked at the bottom with the two things a visitor needs next.
+  The sticky bar: docked at the bottom with the two things a visitor needs next.
     signed out        Log in  +  Choose a plan
     signed in, plan   My reviews and plans
     signed in, none   Choose a plan
-  Always visible, on every screen size, so a visitor can log in or pick a plan from anywhere on the page.
 */
-function StickyBar({ token, hasPlan, packs, onLogin }) {
-  const cheapest = packs?.length ? Math.min(...packs.map((p) => Number(p.price)).filter((n) => n > 0)) : null;
-  const goPlans = () => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+function StickyBar({ token, hasPlan, cheapest, onLogin }) {
   return (
     <div className="rv-stick" role="region" aria-label="Quick actions">
       <div className="rv-stick-in">
         <div className="rv-stick-txt">
-          <b>{token ? (hasPlan ? "Welcome back" : "Resume Review") : "Resume Review"}</b>
-          <span>{token && hasPlan ? "Your reports and credits are in your space." : Number.isFinite(cheapest) && cheapest > 0 ? `Plans from ${formatINR(cheapest)} · pay once, no subscription` : "Pay once, no subscription"}</span>
+          <b>{token && hasPlan ? "Welcome back" : "Resume Lab"}</b>
+          <span>{token && hasPlan ? "Your reports and credits are in your space." : cheapest ? `Plans from ${formatINR(cheapest)} · pay once, no subscription` : "Pay once, no subscription"}</span>
         </div>
         <div className="rv-stick-btns">
           {!token && <Btn as={Link} to="/resume-review/login" variant="ghost" onClick={onLogin}>Log in</Btn>}
           {token && hasPlan
-            ? <Btn as={Link} to="/resume-review/app">My reviews and plans <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
-            : <Btn onClick={goPlans}>Choose a plan <ArrowRight size={16} weight="bold" aria-hidden /></Btn>}
+            ? <Btn as={Link} to="/resume-review/app">My reviews <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
+            : <Btn onClick={() => scrollTo("pricing")}>Choose a plan <ArrowRight size={16} weight="bold" aria-hidden /></Btn>}
         </div>
       </div>
     </div>
@@ -361,15 +449,17 @@ export default function ResumeLanding() {
   const [type, setType] = useState("all");
   const [paid, setPaid] = useState(false);
   useEffect(() => { fetchPackages().then(setPacks).catch(() => { if (!cachedPackages()) setFailed(true); }); }, []);
-  // the "My reviews and plans" button is only for people who have paid for a plan
   useEffect(() => {
     if (!token) { setPaid(false); return undefined; }
     let live = true;
     myPlans().then((d) => { if (live) setPaid((d?.plans?.length || 0) > 0); }).catch(() => {});
     return () => { live = false; };
   }, [token]);
-  useReveal([packs, type]);
   const plans = useMemo(() => packs || undefined, [packs]);
+  const cheapest = useMemo(() => {
+    const prices = (packs || []).map((p) => Number(p.price)).filter((n) => n > 0);
+    return prices.length ? Math.min(...prices) : null;
+  }, [packs]);
 
   // signed out: remember which plan, sign up or log in, and come straight back to pay for it here
   const needLogin = useCallback((plan) => {
@@ -379,7 +469,6 @@ export default function ResumeLanding() {
     navigate("/resume-review/signup", { state: { from: { pathname: "/resume-review", search } } });
     return true;
   }, [token, navigate]);
-  // a plain "Log in" (not tied to a plan) lands in their own space afterwards
   const rememberApp = useCallback(() => { try { sessionStorage.setItem(RETURN_KEY, "/resume-review/app"); } catch { /* ignore */ } }, []);
   const buyer = usePlanBuy({ onNeedLogin: needLogin });
 
@@ -394,36 +483,32 @@ export default function ResumeLanding() {
     if (plan) { toast(`Opening secure payment for ${plan.name}…`, { id: "resume-auto-pay", duration: 4000 }); buyer.buy(plan); }
   }, [want, token, packs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pick = (id) => { setType(id); document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const pickType = (id) => { setType(id); scrollTo("pricing"); };
 
   return (
-    <Page title={SEO.title} description={SEO.description} className="rv-landing">
+    <Page title={SEO.title} description={SEO.description} className="rv-landing rl">
       <Head plans={plans} />
-      {!token && (
-        <div className="rv-loginbar" role="navigation" aria-label="Account">
-          <span>Already have an account or a plan?</span>
-          <Link to="/resume-review/login" className="rv-link" onClick={rememberApp}>Log in to your space <ArrowRight size={14} weight="bold" aria-hidden /></Link>
-        </div>
-      )}
-      <Hero onPick={pick} paid={paid} signedIn={Boolean(token)} onLogin={rememberApp} />
-      <StickyBar token={token} hasPlan={paid} packs={packs} onLogin={rememberApp} />
+      <Hero paid={paid} signedIn={Boolean(token)} onLogin={rememberApp} cheapest={cheapest} />
+      <StickyBar token={token} hasPlan={paid} cheapest={cheapest} onLogin={rememberApp} />
       <main>
-        <Plans packs={packs} failed={failed} type={type} setType={setType} buyer={buyer} />
-        <Sample />
-        <Mistakes />
+        <Features onPickType={pickType} />
         <How />
+        <Sample />
+        <Pricing packs={packs} failed={failed} type={type} setType={setType} buyer={buyer} />
         <Reviewers />
-        <Inside />
-        <WhoFor />
+        <Mistakes />
         <Ats />
+        <WhoFor />
         <Faq />
-
-        <section className="rv-section" aria-label="Get started">
+        <section className="rl-sec" aria-label="Get started">
           <div className="rv-shell">
-            <div className="rv-panel rv-cta-panel rv-reveal">
-              <h2 className="rv-h2" style={{ maxWidth: 680, margin: "0 auto" }}>Your next interview starts with a better resume.</h2>
-              <p style={{ color: "var(--rv-panel-muted)", marginTop: 16, maxWidth: 520, marginInline: "auto" }}>Choose a plan, send in your resume, and see your AI report in minutes, with a working professional's notes to follow.</p>
-              <a href="#pricing" className="rv-btn rv-btn-lg rv-btn-invert" style={{ marginTop: 32 }}>See plans <ArrowRight size={17} weight="bold" aria-hidden /></a>
+            <div className="rl-final">
+              <h2 className="rl-h2">Your next interview starts with <span className="rl-mark">a better resume.</span></h2>
+              <p>Choose a plan, upload your resume, and read your AI report in minutes, with a working professional's notes to follow.</p>
+              <div className="rl-hero-btns">
+                <Btn size="lg" onClick={() => scrollTo("pricing")}>See plans <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
+                <Btn as={Link} to={token ? "/resume-review/app" : "/resume-review/login"} size="lg" variant="ghost" onClick={token ? undefined : rememberApp}>{token ? "Go to my space" : "Log in"}</Btn>
+              </div>
             </div>
           </div>
         </section>

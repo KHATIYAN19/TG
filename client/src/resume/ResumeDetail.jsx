@@ -280,7 +280,7 @@ export default function ResumeDetail() {
   }, [r?.status, load]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (r && params.get("sent") && !scrolled.current) { scrolled.current = true; window.scrollTo({ top: 0 }); } }, [r, params]);
 
-  if (error) return <div style={{ padding: "64px 0", textAlign: "center" }}><p role="alert" className="rv-err" style={{ justifyContent: "center" }}>{error}</p><Btn as={Link} to="/resume-review/app" variant="ghost" style={{ marginTop: 24 }}>Back to my space</Btn></div>;
+  if (error) return <div className="rls-state" role="alert"><h1 className="rls-h2">We couldn't open this review</h1><p>{error}</p><Btn as={Link} to="/resume-review/app" variant="ghost">Back to my space</Btn></div>;
   if (!r) return <div style={{ display: "grid", gap: 16 }}><Skeleton h={34} style={{ width: "50%" }} /><Skeleton h={260} /><Skeleton h={200} /></div>;
 
   const canAsk = !r.humanRequested && pool && pool.humanLeft > 0;
@@ -294,8 +294,8 @@ export function ReviewView({ r, canAsk, pool, asking = false, onAsk, sent = fals
   const done = r.status === "completed";
   return (
     <div className={preview ? "" : "rv-dx"}>
-      {!preview && <Link to="/resume-review/app" className="rv-link" style={{ textDecoration: "none", marginBottom: 24 }}><ArrowLeft size={14} weight="bold" aria-hidden />My reviews</Link>}
-      <div className="rv-dx-head" style={{ marginBottom: 32 }}>
+      {!preview && <Link to="/resume-review/app" className="rls-back"><ArrowLeft size={14} weight="bold" aria-hidden />My reviews</Link>}
+      <div className="rv-dx-head rld-head" style={{ marginBottom: 32 }}>
         <div style={{ minWidth: 0 }}>
           <Pill className={st.tone}>{st.label}</Pill>
           <h1 className="rv-h2" style={{ marginTop: 12 }}>{r.profile.targetRole}</h1>

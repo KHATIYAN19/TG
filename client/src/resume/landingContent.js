@@ -534,3 +534,184 @@ export const REVIEWER_PROCESS = [
 ];
 
 export const INSIDE_TAGS = ["AI", "AI", "AI", "AI", "AI", "Human", "LinkedIn", "AI", "Human"];
+
+/* ------------------------------------------------------------------ REDESIGN: page sections, feature explorer, plan comparison */
+export const PAGE_NAV = [
+  ["features", "Features"],
+  ["how-it-works", "How it works"],
+  ["sample", "Sample report"],
+  ["pricing", "Plans"],
+  ["reviewers", "Human review"],
+  ["mistakes", "12 mistakes"],
+  ["ats", "ATS guide"],
+  ["faq", "FAQ"],
+];
+
+export const HERO_FACTS = [
+  ["~2 min", "for your AI report"],
+  ["Real people", "working professionals review"],
+  ["PDF", "upload, up to 10 MB"],
+  ["Pay once", "no subscription"],
+];
+
+/*
+  Every feature, in the order a visitor meets them. `where` says how you get it:
+    plan    = paid: comes with the plans named in `plans`
+    account = free in your space once you have an account
+*/
+/* The resume builder and job tailoring are not live yet. Flip to true when they ship: every link and mention appears again. */
+export const BUILDER_LIVE = false;
+const BUILDER_IDS = ["builder", "tailor"];
+
+const ALL_FEATURES = [
+  {
+    id: "ai",
+    name: "AI resume report",
+    where: "plan",
+    plans: ["ai", "human", "linkedin", "mix"],
+    time: "About 2 minutes",
+    pitch: "Upload a PDF and get a full report before your tea gets cold: what works, what is costing you calls, and what to fix first.",
+    points: [
+      "Overall score and a separate ATS readiness score",
+      "Your chance of being shortlisted for the role you named",
+      "Grades for summary, experience, projects, skills, education and formatting",
+      "Missing keywords for your target role",
+      "Your weakest bullets rewritten, before and after",
+      "Likely interview questions and a plan for the week",
+    ],
+  },
+  {
+    id: "human",
+    name: "Review by a working professional",
+    where: "plan",
+    plans: ["human", "mix"],
+    time: "Within the time on your plan",
+    pitch: "A person who works in the industry reads your resume line by line and writes notes for you, not a template.",
+    points: [
+      "Whether your story is believable and well ordered",
+      "What to cut, what to lead with, and what level to aim for",
+      "Judgement on projects, roles and gaps",
+      "Plain-language notes with headings and next steps",
+      "Email the moment it is ready",
+    ],
+  },
+  {
+    id: "linkedin",
+    name: "LinkedIn profile review",
+    where: "plan",
+    plans: ["linkedin", "mix"],
+    time: "Within the time on your plan",
+    pitch: "A reviewer opens your live profile and checks it against your resume, so a recruiter finds one consistent story.",
+    points: [
+      "Headline rewritten for the role you want",
+      "About section that tells your best story in three lines",
+      "Experience that matches your resume, without repeating it",
+      "AI ideas first, then a person's real feedback",
+    ],
+  },
+  {
+    id: "jd",
+    name: "Job description match",
+    where: "plan",
+    plans: ["ai", "human", "linkedin", "mix"],
+    some: true,
+    time: "With your AI report",
+    pitch: "Paste the posting you are applying to. See what you match, what is missing, and how to tailor your resume to it.",
+    points: [
+      "Matched and missing skills, side by side",
+      "Which gaps are must-haves and which are nice-to-haves",
+      "Where in your resume to add each true match",
+    ],
+  },
+  {
+    id: "builder",
+    name: "Resume builder",
+    where: "plan",
+    plans: ["ai", "human", "linkedin", "mix"],
+    time: "15 to 30 minutes",
+    pitch: "No resume yet, or tired of fighting Word? Answer one section at a time and download a clean, ATS-friendly PDF.",
+    points: [
+      "Guided questions: about you, links, education, experience, projects, skills",
+      "Three templates: Classic, Modern and Compact",
+      "Live preview as you type, saved automatically",
+      "Single-column PDF that software can read",
+    ],
+  },
+  {
+    id: "tailor",
+    name: "Tailor a resume to a job",
+    where: "plan",
+    plans: ["ai", "human", "linkedin", "mix"],
+    time: "A few minutes",
+    pitch: "Give it your resume and a job post. It asks you about each gap instead of inventing skills, then writes a version for that job.",
+    points: [
+      "Finds what the job asks for that your resume does not show",
+      "Asks you a short question for each gap",
+      "Only adds skills you confirmed, never made-up experience",
+      "Opens in the builder so you can edit and download",
+    ],
+  },
+  {
+    id: "rewrite",
+    name: "Complete rewritten resume",
+    where: "plan",
+    plans: ["human", "mix"],
+    some: true,
+    time: "Within the time on your plan",
+    pitch: "On rewrite plans, the reviewer sends you a finished resume as a file, ready to apply with.",
+    points: [
+      "Written by the reviewer from what you sent in",
+      "Delivered as a PDF or Word file",
+      "Keeps your facts, sharpens the words",
+    ],
+  },
+  {
+    id: "space",
+    name: "Your space",
+    where: "account",
+    time: "Always on",
+    pitch: "Every report, every version and every credit in one place. Send a new version for each job and compare.",
+    points: [
+      "All your reviews, newest first",
+      "Credits left and days left on each plan",
+      "Add a human review to any resume you already sent in",
+      "Finish an unfinished payment in one tap",
+    ],
+  },
+];
+
+export const FEATURES = ALL_FEATURES.filter((f) => BUILDER_LIVE || !BUILDER_IDS.includes(f.id));
+
+/* "I want…" shortcuts that pick a plan type */
+export const NEEDS = [
+  ["A quick, low-cost check", "ai"],
+  ["A person to read my resume", "human"],
+  ["My LinkedIn checked too", "linkedin"],
+  ["Everything together", "mix"],
+  ["A new version for every job", "ai"],
+];
+
+/* the comparison table: each row is a feature, each cell a plan type. true = yes, false = no, a string = a note */
+export const COMPARE_COLS = [
+  ["ai", "AI reviews"],
+  ["human", "Human review"],
+  ["linkedin", "LinkedIn review"],
+  ["mix", "Mix"],
+];
+const ALL_COMPARE_ROWS = [
+  ["AI report with scores, keywords and rewritten bullets", { ai: true, human: true, linkedin: true, mix: true }],
+  ["Written review by a working professional", { ai: false, human: true, linkedin: false, mix: true }],
+  ["Live LinkedIn profile review by a person", { ai: false, human: false, linkedin: true, mix: true }],
+  ["Job description match", { ai: "Some plans", human: "Some plans", linkedin: "Some plans", mix: "Some plans" }],
+  ["Complete rewritten resume", { ai: false, human: "Rewrite plans", linkedin: false, mix: "Rewrite plans" }],
+  ["Resume builder and job tailoring", { ai: true, human: true, linkedin: true, mix: true }],
+  ["Credits add up across plans", { ai: true, human: true, linkedin: true, mix: true }],
+];
+export const COMPARE_ROWS = ALL_COMPARE_ROWS.filter(([label]) => BUILDER_LIVE || !/builder/i.test(label));
+
+export const PLAN_ASSURANCE = [
+  ["Secure payment", "UPI, card or netbanking. We never see your card details."],
+  ["Pay once", "No subscription. Nothing renews and you are never charged again."],
+  ["Credits add up", "Buy more than one plan and your reviews stack. Each plan keeps its own validity."],
+  ["No cancellations", "Plans cannot be cancelled once bought, so start small if you are unsure."],
+];
