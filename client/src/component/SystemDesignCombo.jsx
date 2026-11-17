@@ -3,10 +3,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+} from "framer-motion";
+import {
   ArrowRight,
-  ArrowUpRight,
   ArrowsClockwise,
   BookOpen,
+  CaretRight,
   Check,
   CheckCircle,
   Code,
@@ -19,6 +28,7 @@ import {
   Lightning,
   Lock,
   LockKey,
+  Minus,
   Package,
   Plus,
   Rocket,
@@ -35,38 +45,14 @@ import { trackViewContent } from "../lib/metaPixel.js";
 import BASE_URL from "../utils/Url";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { gatewayLabel, preferredGateway } from "../payment/gatewayConfig";
-import {
-  AnimatePresence,
-  BookOfferCard,
-  Breadcrumb,
-  BuyBar,
-  EASE,
-  FLOAT_EASE,
-  FONT_HREF,
-  FaqList,
-  FinalCta,
-  FloatChip,
-  FloatNav,
-  Marquee,
-  PillTabs,
-  PriceSkeleton,
-  Reveal,
-  ScrollProgress,
-  Section,
-  SectionHeader,
-  SkipLink,
-  StatsStrip,
-  TaglineReveal,
-  Tilt,
-  cx,
-  motion,
-  twoDigits,
-  useGoToSection,
-  useInViewport,
-  useNavOffset,
-  useReducedMotion,
-  useSiteTheme,
-} from "./systemDesign/ui.jsx";
+import { useSiteTheme } from "./systemDesign/ui.jsx";
+
+import "./systemDesignCombo.css";
+
+const FONT_HREF =
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap";
+
+const EASE = [0.22, 1, 0.36, 1];
 
 // ======================================================
 // CONFIGURATION
@@ -897,112 +883,164 @@ const INCLUDES_MATRIX = [
   ["Two ebooks", false, false, true],
 ];
 
+
 /* ------------------------------------------------------------------ */
-/*  Components                                                         */
+/*  Small pieces                                                       */
 /* ------------------------------------------------------------------ */
 
-function YesNo({ yes }) {
-  return yes ? (
-    <CheckCircle className="tok" size={20} weight="fill" aria-label="Included" />
-  ) : (
-    <span className="t3" aria-label="Not included">
-      –
+const cx = (...classes) => classes.filter(Boolean).join(" ");
+const twoDigits = (n) => String(n).padStart(2, "0");
+
+const scrollToId = (id) => {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+function Reveal({ children, delay = 0, className, as = "div", ...rest }) {
+  const Tag = motion[as] || motion.div;
+  return (
+    <Tag
+      className={className}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.6, delay, ease: EASE }}
+      {...rest}
+    >
+      {children}
+    </Tag>
+  );
+}
+
+function Head({ id, eyebrow, title, text, center = false }) {
+  return (
+    <div className={cx("cb-head", center && "is-center")}>
+      <Reveal>
+        <span className="cb-eyebrow">{eyebrow}</span>
+      </Reveal>
+      <Reveal delay={0.06}>
+        <h2 id={id} className="cb-h2">
+          {title}
+        </h2>
+      </Reveal>
+      {text && (
+        <Reveal delay={0.12}>
+          <p className="cb-lead">{text}</p>
+        </Reveal>
+      )}
+    </div>
+  );
+}
+
+function Cover({ book, label, priority = false }) {
+  const [failed, setFailed] = useState(false);
+  const src = book?.coverPageUrl;
+
+  return (
+    <div className="cb-cover">
+      {src && !failed ? (
+        <img
+          src={src}
+          alt={`${label} ebook cover`}
+          width="300"
+          height="400"
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="cb-cover-fallback">
+          <span>TARGET TREK</span>
+          <strong>
+            Mastering System Design
+            <br />
+            {label}
+          </strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PriceTag({ book, loading, large = false }) {
+  if (loading) {
+    return <span className="cb-skel" style={{ width: large ? 120 : 70, height: large ? 30 : 18 }} />;
+  }
+  if (!purchasable(book)) return <span className="cb-muted">Unavailable</span>;
+
+  const off = discount(book);
+  return (
+    <span className="cb-price-row">
+      <span className="cb-price-now" style={large ? undefined : { fontSize: "inherit" }}>
+        {money(book.price, book.currency)}
+      </span>
+      {Number(book.mrp) > Number(book.price) && (
+        <s className="cb-price-mrp">{money(book.mrp, book.currency)}</s>
+      )}
+      {large && off > 0 && <span className="cb-off">{off}% off</span>}
     </span>
   );
 }
 
-// Two overlapping covers that float and tilt. Covers come from the books API.
-function TwoBooks({ hld, lld }) {
-  const reduce = useReducedMotion();
-
-  const covers = [
-    { key: "lld", src: lld?.coverPageUrl, label: "LLD (Java)", pos: "right-4 top-0 z-10 rotate-6", y: [0, -8, 0], delay: 0.6 },
-    { key: "hld", src: hld?.coverPageUrl, label: "HLD", pos: "left-4 top-6 z-20 -rotate-6", y: [0, 8, 0], delay: 0 },
-  ];
-
-  return (
-    <Tilt className="relative mx-auto h-64 w-full max-w-xs" float={false}>
-      <div className="relative h-64">
-        {covers.map((cover) => (
-          <motion.div
-            key={cover.key}
-            className={cx(
-              "absolute aspect-[0.72] w-36 overflow-hidden rounded-xl bg-[#181818] shadow-[0_24px_48px_rgba(0,0,0,0.3)] sm:w-40",
-              cover.pos
-            )}
-            animate={reduce ? undefined : { y: cover.y }}
-            transition={{ duration: 5.5, repeat: Infinity, ease: FLOAT_EASE, delay: cover.delay }}
-          >
-            {cover.src ? (
-              <img src={cover.src} alt={`${cover.label} ebook cover`} className="h-full w-full bg-white object-contain" loading="eager" decoding="async" />
-            ) : (
-              <div className="flex h-full flex-col justify-between p-4 text-white">
-                <span className="caption-3 uppercase tracking-wider text-[#fb923c]">Target Trek</span>
-                <div>
-                  <p className="caption-4 text-[#b4b4b4]">Mastering System Design</p>
-                  <p className="heading-6 mt-1">{cover.label}</p>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
-    </Tilt>
+function YesNo({ yes }) {
+  return yes ? (
+    <CheckCircle className="cb-yes" size={20} weight="fill" aria-label="Included" />
+  ) : (
+    <Minus className="cb-no" size={18} weight="bold" aria-label="Not included" />
   );
 }
 
-// Accordion: module topics stay in the DOM (crawlable).
+/* ------------------------------------------------------------------ */
+/*  Interactive blocks                                                 */
+/* ------------------------------------------------------------------ */
+
+// Accordion: topics stay in the DOM for crawlers (hidden attribute only).
 function ModuleList({ modules, prefix }) {
   const [open, setOpen] = useState(0);
 
   return (
-    <div className="space-y-3">
+    <div className="cb-modules">
       {modules.map((module, index) => {
         const expanded = open === index;
         const panelId = `${prefix}-panel-${index}`;
 
         return (
-          <Reveal key={`${prefix}-${index}`} y={16} delay={Math.min(index, 5) * 0.04}>
-            <article className={cx("card rounded-2xl", expanded && "featured")}>
-              <h3>
-                <button
-                  type="button"
-                  aria-expanded={expanded}
-                  aria-controls={panelId}
-                  onClick={() => setOpen(expanded ? -1 : index)}
-                  className="focusable flex w-full items-start justify-between gap-4 rounded-2xl p-4 text-left sm:p-6"
-                >
-                  <span className="flex gap-4">
-                    <span className="num body-4 mono">{twoDigits(index + 1)}</span>
-                    <span>
-                      <span className="title-3 t1 block">{module.title}</span>
-                      <span className="body-6 t2 mt-1 block">{module.description}</span>
-                      <span className="caption-3 ta mt-2 block">{module.topics.length} topics</span>
-                    </span>
-                  </span>
-                  <Plus size={20} weight="bold" className={cx("spin ta shrink-0", expanded && "rotate-45")} />
-                </button>
-              </h3>
+          <article key={`${prefix}-${index}`} className={cx("cb-module", expanded && "is-open")}>
+            <h3>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                onClick={() => setOpen(expanded ? -1 : index)}
+              >
+                <span className="cb-module-n">{twoDigits(index + 1)}</span>
+                <span className="cb-module-t">
+                  <b>{module.title}</b>
+                  <span>{module.description}</span>
+                  <small>{module.topics.length} topics</small>
+                </span>
+                <span className="cb-module-icon" aria-hidden="true">
+                  <Plus size={14} weight="bold" />
+                </span>
+              </button>
+            </h3>
 
-              <div id={panelId} role="region" hidden={!expanded} className="fade-up">
-                <ul className="grid gap-3 px-4 pb-4 sm:grid-cols-2 sm:px-6 sm:pb-6">
-                  {module.topics.map((topic) => (
-                    <li key={topic} className="flex items-start gap-2">
-                      <Check className="ta mt-0.5 shrink-0" size={16} weight="bold" />
-                      <span className="body-6 t1">{topic}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </article>
-          </Reveal>
+            <ul id={panelId} hidden={!expanded}>
+              {module.topics.map((topic) => (
+                <li key={topic}>
+                  <Check size={14} weight="bold" />
+                  <span>{topic}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
         );
       })}
     </div>
   );
 }
 
-// "Is it HLD or LLD?" mini game
+// "Is it HLD or LLD?" quick game
 function ClassifyGame() {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
@@ -1036,211 +1074,187 @@ function ClassifyGame() {
   };
 
   return (
-    <Reveal className="mx-auto mt-10 max-w-3xl">
-      <div className="card rounded-3xl p-6 sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="eyebrow caption-3">Quick game · Is it HLD or LLD?</span>
-          <span className="caption-1 mono t3">
-            {done ? "Finished" : `Question ${index + 1} of ${CLASSIFY_QUIZ.length}`} · Score {score}
-          </span>
-        </div>
-
-        <div className="mt-4 flex gap-1" aria-hidden="true">
-          {CLASSIFY_QUIZ.map((q, i) => (
-            <span key={q.prompt} className="seg h-1 flex-1 rounded-full" data-on={i <= index || done ? "true" : "false"} />
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait" initial={false}>
-          {done ? (
-            <motion.div
-              key="done"
-              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: EASE }}
-              className="py-8 text-center"
-            >
-              <span className="tile h-12 w-12 rounded-xl">
-                <Trophy size={24} weight="duotone" />
-              </span>
-              <h3 className="heading-5 t1 mt-4">
-                You scored <span className="mono">{score} / {CLASSIFY_QUIZ.length}</span>
-              </h3>
-              <p className="body-6 t2 mx-auto mt-2 max-w-md">
-                Real interviews mix both skills. The combo trains the architecture and the class level design in one plan.
-              </p>
-              <button type="button" onClick={restart} className="btn btn-secondary button-sm mt-6">
-                <ArrowsClockwise size={16} weight="bold" />
-                Play again
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key={index}
-              initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={reduce ? { opacity: 0 } : { opacity: 0, x: -24 }}
-              transition={{ duration: 0.4, ease: EASE }}
-            >
-              <p className="heading-6 t1 mt-6">{item.prompt}</p>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {[
-                  ["hld", "HLD", "Architecture", HardDrives],
-                  ["lld", "LLD", "Class design", Code],
-                ].map(([id, label, hint, Icon]) => {
-                  const isRight = id === item.answer;
-                  const isPicked = id === picked;
-                  const state = !answered ? "idle" : isRight ? "right" : isPicked ? "wrong" : "dim";
-
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => choose(id)}
-                      disabled={answered}
-                      data-state={state}
-                      className="choice focusable flex items-center gap-3 rounded-xl p-4 text-left"
-                    >
-                      <span className="tile h-10 w-10 rounded-lg">
-                        <Icon size={20} weight="duotone" />
-                      </span>
-                      <span>
-                        <span className="body-1 t1 block">{label}</span>
-                        <span className="caption-2 t2 block">{hint}</span>
-                      </span>
-                      {state === "right" && <CheckCircle className="tok ml-auto" size={20} weight="fill" />}
-                      {state === "wrong" && <XCircle className="tbad ml-auto" size={20} weight="fill" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {answered && (
-                <div className="fade-up">
-                  <div className="note mt-6 rounded-xl p-4">
-                    <p className="caption-3 uppercase tracking-wider">{picked === item.answer ? "Correct" : "Not quite"}</p>
-                    <p className="body-6 t1 mt-2">{item.explain}</p>
-                  </div>
-                  <button type="button" onClick={next} className="btn btn-primary button-md mt-4">
-                    {index + 1 >= CLASSIFY_QUIZ.length ? "See my score" : "Next question"}
-                    <ArrowRight className="arrow" size={18} weight="bold" />
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <Reveal className="cb-game">
+      <div className="cb-game-top">
+        <span className="cb-eyebrow">Quick game · Is it HLD or LLD?</span>
+        <small>
+          {done ? "Finished" : `Question ${index + 1} of ${CLASSIFY_QUIZ.length}`} · Score {score}
+        </small>
       </div>
+
+      <div className="cb-game-bar" aria-hidden="true">
+        {CLASSIFY_QUIZ.map((q, i) => (
+          <i key={q.prompt} className={cx((i <= index || done) && "is-on")} />
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        {done ? (
+          <motion.div
+            key="done"
+            className="cb-game-done"
+            initial={{ opacity: 0, scale: reduce ? 1 : 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+          >
+            <span className="cb-tile">
+              <Trophy size={24} weight="duotone" />
+            </span>
+            <h3>
+              You scored <span className="cb-mono">{score} / {CLASSIFY_QUIZ.length}</span>
+            </h3>
+            <p>Real interviews mix both skills. The combo trains the architecture and the class level design in one plan.</p>
+            <button type="button" onClick={restart} className="cb-btn cb-btn-ghost cb-btn-sm">
+              <ArrowsClockwise size={16} weight="bold" />
+              Play again
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: reduce ? 0 : 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: reduce ? 0 : -20 }}
+            transition={{ duration: 0.35, ease: EASE }}
+          >
+            <p className="cb-game-q">{item.prompt}</p>
+
+            <div className="cb-choices">
+              {[
+                ["hld", "HLD", "Architecture", HardDrives],
+                ["lld", "LLD", "Class design", Code],
+              ].map(([id, label, hint, Icon]) => {
+                const isRight = id === item.answer;
+                const isPicked = id === picked;
+                const state = !answered ? "idle" : isRight ? "right" : isPicked ? "wrong" : "dim";
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className="cb-choice"
+                    data-state={state}
+                    disabled={answered}
+                    onClick={() => choose(id)}
+                  >
+                    <span className="cb-tile" style={{ width: 40, height: 40, borderRadius: 12 }}>
+                      <Icon size={20} weight="duotone" />
+                    </span>
+                    <span>
+                      <b>{label}</b>
+                      <small>{hint}</small>
+                    </span>
+                    {state === "right" && <CheckCircle className="cb-mark cb-yes" size={22} weight="fill" />}
+                    {state === "wrong" && <XCircle className="cb-mark" size={22} weight="fill" style={{ color: "var(--pen)" }} />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {answered && (
+              <div>
+                <div className="cb-explain">
+                  <b>{picked === item.answer ? "Correct" : "Not quite"}</b>
+                  <p>{item.explain}</p>
+                </div>
+                <button type="button" onClick={next} className="cb-btn cb-btn-primary cb-btn-sm" style={{ marginTop: 14 }}>
+                  {index + 1 >= CLASSIFY_QUIZ.length ? "See my score" : "Next question"}
+                  <ArrowRight size={16} weight="bold" />
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Reveal>
   );
 }
 
-// Study plan builder
 function PlanBuilder() {
   const reduce = useReducedMotion();
   const [planId, setPlanId] = useState("14");
   const plan = STUDY_PLANS.find((item) => item.id === planId) || STUDY_PLANS[1];
 
   return (
-    <div className="mt-8">
+    <>
       <Reveal>
-        <PillTabs
-          label="Choose how much time you have"
-          value={planId}
-          onChange={setPlanId}
-          items={STUDY_PLANS.map((item) => ({ id: item.id, label: item.label }))}
-        />
+        <div className="cb-switch" role="tablist" aria-label="Choose how much time you have">
+          {STUDY_PLANS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={item.id === planId}
+              onClick={() => setPlanId(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </Reveal>
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={plan.id}
           role="tabpanel"
-          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          className="cb-plan"
+          initial={{ opacity: 0, y: reduce ? 0 : 14 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="card mt-6 rounded-3xl p-6 sm:p-8"
+          exit={{ opacity: 0, y: reduce ? 0 : -10 }}
+          transition={{ duration: 0.35, ease: EASE }}
         >
-          <p className="eyebrow caption-3 flex items-center gap-2">
+          <span className="cb-eyebrow">
             <Rocket size={16} weight="bold" />
             {plan.tag}
-          </p>
-          <ol className="mt-6 space-y-3">
-            {plan.steps.map(([when, what], stepIndex) => (
-              <motion.li
-                key={when}
-                initial={reduce ? { opacity: 0 } : { opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.08 + stepIndex * 0.08, duration: 0.5, ease: EASE }}
-                className="bg-s2 row-hover flex flex-col gap-2 rounded-xl p-4 sm:flex-row sm:items-start sm:gap-6"
-              >
-                <span className="caption-3 mono ta shrink-0 uppercase tracking-wider sm:w-28 sm:pt-0.5">{when}</span>
-                <span className="body-6 t1">{what}</span>
-              </motion.li>
+          </span>
+          <ol>
+            {plan.steps.map(([when, what]) => (
+              <li key={when}>
+                <b>{when}</b>
+                <span>{what}</span>
+              </li>
             ))}
           </ol>
         </motion.div>
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
-// Filterable case study explorer
 function ProblemExplorer() {
-  const reduce = useReducedMotion();
   const [filter, setFilter] = useState("All");
   const filters = ["All", "HLD", "LLD", "HLD + LLD"];
   const visible = filter === "All" ? PROBLEMS : PROBLEMS.filter((problem) => problem.category === filter);
 
   return (
     <>
-      <Reveal className="mt-8">
-        <PillTabs
-          role="group"
-          label="Filter case studies"
-          value={filter}
-          onChange={setFilter}
-          items={filters.map((name) => ({
-            id: name,
-            label: name,
-            count: name === "All" ? PROBLEMS.length : PROBLEMS.filter((problem) => problem.category === name).length,
-          }))}
-        />
+      <Reveal>
+        <div className="cb-switch" role="group" aria-label="Filter case studies">
+          {filters.map((name) => (
+            <button key={name} type="button" aria-pressed={filter === name} onClick={() => setFilter(name)}>
+              {name}
+              <span className="cb-mono">
+                {name === "All" ? PROBLEMS.length : PROBLEMS.filter((problem) => problem.category === name).length}
+              </span>
+            </button>
+          ))}
+        </div>
       </Reveal>
 
-      <motion.div layout={!reduce} className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <AnimatePresence mode="popLayout">
-          {visible.map((problem) => (
-            <motion.div
-              key={problem.title}
-              layout={!reduce}
-              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
-              transition={{ duration: 0.5, ease: EASE }}
-            >
-              <article className="card lift h-full rounded-2xl p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <span className={cx("chip caption-3", problem.category === "HLD + LLD" && "chip-accent")}>
-                    {problem.category}
-                  </span>
-                  <ArrowUpRight className="peek" size={18} weight="bold" aria-hidden="true" />
-                </div>
-                <h3 className="title-2 t1 mt-4">{problem.title}</h3>
-                <p className="body-6 t2 mt-2">{problem.focus}</p>
-              </article>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      <div className="cb-problems">
+        {visible.map((problem) => (
+          <article key={problem.title} className={cx("cb-problem", problem.category === "HLD + LLD" && "is-both")}>
+            <span className="cb-chip">{problem.category}</span>
+            <h3>{problem.title}</h3>
+            <p>{problem.focus}</p>
+          </article>
+        ))}
+      </div>
     </>
   );
 }
 
-// Animated price comparison: separate vs combo
 function SavingsBars({ hld, lld, combo, currency, savings }) {
   const reduce = useReducedMotion();
   const sepTotal = purchasable(hld) && purchasable(lld) ? Number(hld.price) + Number(lld.price) : null;
@@ -1249,44 +1263,65 @@ function SavingsBars({ hld, lld, combo, currency, savings }) {
   if (sepTotal === null || comboPrice === null || sepTotal <= 0) return null;
 
   const rows = [
-    { label: "HLD and LLD bought separately", value: sepTotal, accent: false },
-    { label: "HLD + LLD combo", value: comboPrice, accent: true },
+    { label: "HLD and LLD bought separately", value: sepTotal, combo: false },
+    { label: "HLD + LLD combo", value: comboPrice, combo: true },
   ];
   const max = Math.max(...rows.map((row) => row.value));
 
   return (
-    <Reveal className="mt-8">
-      <div className="card rounded-3xl p-6 sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="heading-6 t1">See what you save</h3>
-          {savings > 0 && <span className="chip chip-accent caption-3 mono">You save {money(savings, currency)}</span>}
-        </div>
-
-        <div className="mt-6 space-y-4">
-          {rows.map((row, index) => (
-            <div key={row.label}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="body-5 t2">{row.label}</span>
-                <span className="body-4 mono t1">{money(row.value, currency)}</span>
-              </div>
-              <div className="bar-track mt-2 h-3 overflow-hidden rounded-full">
-                <div className="h-full" style={{ width: `${(row.value / max) * 100}%` }}>
-                  <motion.div
-                    initial={reduce ? false : { scaleX: 0 }}
-                    whileInView={{ scaleX: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.9, delay: 0.1 + index * 0.15, ease: EASE }}
-                    className={cx("bar-fill h-full rounded-full", row.accent && "accent")}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+    <Reveal className="cb-bars">
+      <div className="cb-bars-top">
+        <h3>See what you save</h3>
+        {savings > 0 && <span className="cb-chip is-mark cb-mono">You save {money(savings, currency)}</span>}
       </div>
+
+      {rows.map((row, index) => (
+        <div key={row.label} className="cb-bar">
+          <div className="cb-bar-label">
+            <span>{row.label}</span>
+            <b>{money(row.value, currency)}</b>
+          </div>
+          <div className="cb-bar-track">
+            <div style={{ width: `${(row.value / max) * 100}%`, height: "100%" }}>
+              <motion.div
+                className={cx("cb-bar-fill", row.combo && "is-combo")}
+                initial={reduce ? false : { scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.9, delay: 0.1 + index * 0.15, ease: EASE }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
     </Reveal>
   );
 }
+
+function FaqItem({ item, index, open, onToggle }) {
+  const panelId = `combo-faq-${index}`;
+
+  return (
+    <div className={cx("cb-faq-item", open && "is-open")}>
+      <button type="button" aria-expanded={open} aria-controls={panelId} onClick={onToggle}>
+        <span>{item.q}</span>
+        <span className="cb-module-icon" aria-hidden="true">
+          <Plus size={14} weight="bold" />
+        </span>
+      </button>
+      <p id={panelId} hidden={!open}>
+        {item.a}
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
+const TABS = NAV_LINKS.map((link) => ({ id: link.href.slice(1), label: link.label }));
+
 export default function SystemDesignCombo() {
   const theme = useSiteTheme();
   const [books, setBooks] = useState([]);
@@ -1296,15 +1331,19 @@ export default function SystemDesignCombo() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutProduct, setCheckoutProduct] = useState(null);
   const [activeCurriculum, setActiveCurriculum] = useState("hld");
+  const [openFaq, setOpenFaq] = useState(0);
+
+  const [pinned, setPinned] = useState(false);
+  const [activeTab, setActiveTab] = useState("");
+  const [heroGone, setHeroGone] = useState(false);
 
   const trackedComboRef = useRef(null);
-
-  // Sticky buy bar: on tablet and up it appears once the hero scrolls away.
+  const rootRef = useRef(null);
   const heroRef = useRef(null);
-  const heroVisible = useInViewport(heroRef);
+  const tabsSlotRef = useRef(null);
 
   // ====================================================
-  // FETCH PRODUCTS
+  // FETCH PRODUCTS (the page's single API request)
   // ====================================================
 
   const fetchProducts = useCallback(async (signal) => {
@@ -1322,9 +1361,7 @@ export default function SystemDesignCombo() {
       const result = await response.json().catch(() => null);
 
       if (!response.ok || result?.success === false) {
-        throw new Error(
-          result?.message || `Unable to load books (HTTP ${response.status}).`
-        );
+        throw new Error(result?.message || `Unable to load books (HTTP ${response.status}).`);
       }
 
       const normalized = parseBooks(result).map(normalizeBook).filter(Boolean);
@@ -1416,17 +1453,7 @@ export default function SystemDesignCombo() {
   const combinedDiscount = discount(combo);
 
   const totalModules = HLD_MODULES.length + LLD_MODULES.length;
-
-  const totalTopics = [...HLD_MODULES, ...LLD_MODULES].reduce(
-    (sum, module) => sum + module.topics.length,
-    0
-  );
-
-  const priceText = loading
-    ? "…"
-    : canBuy
-      ? money(combo.price, currency)
-      : "Unavailable";
+  const totalTopics = [...HLD_MODULES, ...LLD_MODULES].reduce((sum, module) => sum + module.topics.length, 0);
 
   // ====================================================
   // CHECKOUT
@@ -1445,8 +1472,69 @@ export default function SystemDesignCombo() {
   };
 
   // ====================================================
+  // LAYOUT: header height, pinned tabs, scrollspy, buy bar
+  // ====================================================
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const header = document.querySelector("nav.fixed");
+    if (!root || !header) return undefined;
+
+    const sync = () => {
+      const height = Math.round(header.getBoundingClientRect().height);
+      if (height > 0) root.style.setProperty("--nav-h", `${height}px`);
+    };
+
+    sync();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", sync);
+      return () => window.removeEventListener("resize", sync);
+    }
+    const observer = new ResizeObserver(sync);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  const { scrollY, scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 28 });
+
+  useMotionValueEvent(scrollY, "change", () => {
+    const root = rootRef.current;
+    const slot = tabsSlotRef.current;
+    const hero = heroRef.current;
+    if (!root || !slot) return;
+
+    const navH = parseFloat(getComputedStyle(root).getPropertyValue("--nav-h")) || 64;
+    const pin = slot.getBoundingClientRect().top <= navH;
+    setPinned((current) => (current === pin ? current : pin));
+    if (!pin) setActiveTab((current) => (current ? "" : current));
+
+    const gone = hero ? hero.getBoundingClientRect().bottom < navH : false;
+    setHeroGone((current) => (current === gone ? current : gone));
+  });
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+
+    const nodes = TABS.map((tab) => document.getElementById(tab.id)).filter(Boolean);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveTab(visible[0].target.id);
+      },
+      { rootMargin: "-35% 0px -55% 0px", threshold: 0 }
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
+  // ====================================================
   // SEO
   // ====================================================
+
   const canonical = `${SITE_URL}${ROUTES.combo}`;
   const allFaqs = useMemo(() => [...FAQS, ...EXTRA_FAQS], []);
   const comboName = combo?.title || "Mastering System Design — HLD + LLD Combo";
@@ -1553,32 +1641,26 @@ export default function SystemDesignCombo() {
     };
   }, [allFaqs, canBuy, canonical, combo?._id, combo?.price, comboCover, comboName, currency, hld?.title, lld?.title]);
 
-  /* ---------------------------------------------------------------- */
-  /*  Presentation                                                     */
-  /* ---------------------------------------------------------------- */
+  const isDark = theme === "dark";
+  const hldTitle = hld?.title && hld.title !== "Untitled" ? hld.title : "Mastering System Design: HLD";
+  const lldTitle = lld?.title && lld.title !== "Untitled" ? lld.title : "Mastering System Design: LLD (Java)";
+  const showBar = heroGone && !checkoutOpen && canBuy && !loadError;
 
-  const reduce = useReducedMotion();
-  const goTo = useGoToSection();
-  const rootRef = useRef(null);
-  useNavOffset(rootRef);
+  const buyLabel = loading ? "Get the combo" : canBuy ? `Get the combo · ${money(combo.price, currency)}` : "Currently unavailable";
 
-  const priceNode = loading ? <PriceSkeleton /> : priceText;
-  const hasMrp = canBuy && Number(combo.mrp) > Number(combo.price);
-  const mrpNode = hasMrp ? money(combo.mrp, currency) : null;
-  const bookStatus = (book) => (loading ? "loading" : purchasable(book) ? "ready" : "error");
+  /* ---------------------------------------------------------------- */
+  /*  Render                                                           */
+  /* ---------------------------------------------------------------- */
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <Helmet htmlAttributes={{ lang: "en" }}>
         <title>{SEO_TITLE}</title>
         <meta name="description" content={SEO_DESCRIPTION} />
         <meta name="keywords" content={SEO_KEYWORDS} />
         <meta name="author" content={SITE_NAME} />
-        <meta
-          name="robots"
-          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-        />
-        <meta name="theme-color" content={theme === "dark" ? "#000000" : "#ffffff"} />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="theme-color" content={isDark ? "#0a1312" : "#f6f8f7"} />
         <link rel="canonical" href={canonical} />
         <link rel="alternate" hrefLang="en-IN" href={canonical} />
         <link rel="alternate" hrefLang="x-default" href={canonical} />
@@ -1605,494 +1687,570 @@ export default function SystemDesignCombo() {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      <div ref={rootRef} className="hld min-h-screen overflow-x-hidden pb-28" data-theme={theme}>
-        <SkipLink />
-        <ScrollProgress />
-        <FloatNav
-          links={NAV_LINKS}
-          show={!heroVisible && !checkoutOpen}
-          onBuy={buyCombo}
-          canBuy={canBuy}
-          buyLabel="Get the combo"
-        />
-        <Breadcrumb current="HLD + LLD Combo" />
+      <motion.div className="cb-progress" style={{ scaleX: progress }} aria-hidden="true" />
+
+      <div ref={rootRef} className="cb" data-theme={isDark ? "dark" : "light"}>
+        <a href="#page-main" className="cb-skip">
+          Skip to content
+        </a>
 
         <main id="page-main">
-          {loadError && (
-            <div className="bg-base">
-              <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                <div role="alert" className="alert flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
-                  <span className="body-6">
-                    <strong className="font-semibold">Book details could not be loaded. </strong>
-                    {loadError}
-                  </span>
-                  <button type="button" onClick={() => fetchProducts()} className="btn btn-secondary button-sm">
+          {/* ------------------------------ HERO ------------------------------ */}
+          <section ref={heroRef} className="cb-hero" aria-labelledby="combo-hero-title">
+            <div className="cb-hero-bg" aria-hidden="true">
+              <i />
+            </div>
+
+            <div className="cb-shell">
+              <nav className="cb-crumbs" aria-label="Breadcrumb">
+                <Link to="/">Home</Link>
+                <CaretRight size={12} weight="bold" aria-hidden="true" />
+                <Link to="/books">Books</Link>
+                <CaretRight size={12} weight="bold" aria-hidden="true" />
+                <span aria-current="page">HLD + LLD Combo</span>
+              </nav>
+
+              {loadError && (
+                <div className="cb-card" role="alert" style={{ marginBottom: 24, borderColor: "var(--pen)", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <p>
+                    <b style={{ color: "var(--text)" }}>Book details could not be loaded.</b> {loadError}
+                  </p>
+                  <button type="button" onClick={() => fetchProducts()} className="cb-btn cb-btn-ghost cb-btn-sm">
                     <ArrowsClockwise size={16} weight="bold" />
                     Try again
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* ------------------------------ HERO ------------------------------ */}
-          <section ref={heroRef} aria-labelledby="combo-hero-title" className="bg-base relative">
-            <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center lg:px-8 lg:pb-24 lg:pt-12">
-              <div className="min-w-0">
-                <Reveal y={16}>
-                  <span className="chip chip-accent caption-3">
+              <div className="cb-hero-grid">
+                <div>
+                  <motion.span
+                    className="cb-chip is-mark"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: EASE }}
+                  >
                     <Package size={14} weight="bold" />
                     The complete system design collection
-                  </span>
-                </Reveal>
+                  </motion.span>
 
-                <Reveal as="h1" delay={0.06} id="combo-hero-title" className="hero-title heading-1 mt-4 max-w-[680px] pb-1">
-                  <span className="block">System design</span>
-                  <span className="block">HLD + LLD combo.</span>
-                  <span className="block">35 case studies.</span>
-                </Reveal>
+                  <motion.h1
+                    id="combo-hero-title"
+                    className="cb-h1"
+                    initial={{ opacity: 0, y: 22 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.75, delay: 0.06, ease: EASE }}
+                  >
+                    HLD + LLD. <span className="cb-hl">Both halves</span> of the system design round.
+                  </motion.h1>
 
-                <Reveal as="p" delay={0.12} className="body-3 t2 mt-6 max-w-[680px] sm:text-lg sm:leading-7">
-                  From large scale architecture to production minded Java class design. Learn how
-                  systems are structured, how their components work together, and how to discuss
-                  engineering tradeoffs in system design interviews.
-                </Reveal>
+                  <motion.p
+                    className="cb-lead cb-hero-lead"
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, delay: 0.16, ease: EASE }}
+                  >
+                    From large scale architecture to production minded Java class design.
+                    Two complete ebooks and 35 worked case studies, so you can draw the
+                    system and then build the component the interviewer zooms into.
+                  </motion.p>
 
-                <Reveal delay={0.18} className="mt-8 flex flex-wrap items-center gap-3">
-                  <button type="button" onClick={buyCombo} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
-                    Get the combo {priceNode !== "Unavailable" && priceNode}
-                    <ArrowRight className="arrow" size={20} weight="bold" />
-                  </button>
-                  <a href="#curriculum" onClick={(event) => goTo(event, "#curriculum")} className="btn btn-ghost btn-lg button-md">
-                    <BookOpen size={20} weight="bold" />
-                    Explore the curriculum
-                  </a>
-                </Reveal>
-
-                <Reveal delay={0.24} className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
-                  {[
-                    [FileText, "Two separate PDF downloads"],
-                    [Lock, `Secure checkout via ${PROVIDER_NAME}`],
-                    [DownloadSimple, "Access after payment verification"],
-                  ].map(([Icon, text]) => (
-                    <span key={text} className="caption-1 t2 inline-flex items-center gap-2">
-                      <Icon className="ta" size={16} weight="bold" />
-                      {text}
-                    </span>
-                  ))}
-                </Reveal>
-              </div>
-
-              {/* Books + price */}
-              <Reveal delay={0.15} className="mx-auto w-full max-w-sm lg:max-w-none">
-                <div className="bg-s2 bd relative rounded-3xl p-6 sm:p-8">
-                  <FloatChip className="right-3 top-4 sm:right-4" delay={0.8}>
-                    <p className="heading-6 mono ta">2 books</p>
-                    <p className="caption-4 t2">one checkout</p>
-                  </FloatChip>
-
-                  <TwoBooks hld={hld} lld={lld} />
-
-                  <div className="card mt-6 rounded-2xl p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="eyebrow caption-3">HLD + LLD (Java) · 2 PDFs</p>
-                        <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                          <span className="heading-4 mono t1">{priceNode}</span>
-                          {mrpNode && <span className="body-5 mono t3 strike">{mrpNode}</span>}
-                        </div>
-                      </div>
-                      {combinedDiscount > 0 && (
-                        <span className="chip chip-accent caption-3 mono">{combinedDiscount}% off</span>
+                  <motion.div
+                    className="cb-buybox"
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, delay: 0.26, ease: EASE }}
+                  >
+                    <div className="cb-price">
+                      <PriceTag book={combo} loading={loading} large />
+                      {savings !== null && savings > 0 && (
+                        <span className="cb-save">
+                          Save {money(savings, currency)} vs buying both separately
+                        </span>
                       )}
                     </div>
-                    {savings !== null && savings > 0 && (
-                      <p className="caption-3 tok mt-2">
-                        Save {money(savings, currency)} compared with buying both separately
-                      </p>
-                    )}
-                    <ul className="mt-4 space-y-2">
-                      {["High Level Design PDF", "Low Level Design (Java) PDF", "Digital access after verification"].map((item) => (
-                        <li key={item} className="caption-1 t2 flex items-center gap-2">
-                          <Check className="ta shrink-0" size={14} weight="bold" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+
+                    <button
+                      type="button"
+                      onClick={buyCombo}
+                      disabled={!canBuy}
+                      className="cb-btn cb-btn-primary cb-btn-lg"
+                    >
+                      {canBuy || loading ? "Get the combo" : "Currently unavailable"}
+                      <ArrowRight size={18} weight="bold" />
+                    </button>
+                  </motion.div>
+
+                  <motion.div
+                    className="cb-hero-links"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.36 }}
+                  >
+                    <button type="button" className="cb-link" style={{ border: 0, background: "none", padding: 0 }} onClick={() => scrollToId("curriculum")}>
+                      <BookOpen size={16} weight="bold" />
+                      Explore the curriculum
+                    </button>
+                    <button type="button" className="cb-link" style={{ border: 0, background: "none", padding: 0 }} onClick={() => scrollToId("practice")}>
+                      See all 35 case studies
+                    </button>
+                  </motion.div>
+
+                  <div className="cb-trust">
+                    {[
+                      [FileText, "Two separate PDF downloads"],
+                      [Lock, `Secure checkout via ${PROVIDER_NAME}`],
+                      [DownloadSimple, "Access after payment verification"],
+                    ].map(([Icon, text]) => (
+                      <span key={text}>
+                        <Icon size={16} weight="bold" />
+                        {text}
+                      </span>
+                    ))}
                   </div>
                 </div>
+
+                <motion.aside
+                  className="cb-stage"
+                  aria-label="The two books in the combo"
+                  initial={{ opacity: 0, y: 36 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.85, delay: 0.18, ease: EASE }}
+                >
+                  <div className="cb-sticker">
+                    <b>35</b>
+                    <span>case studies</span>
+                  </div>
+
+                  <div className="cb-fan">
+                    <div className="cb-fan-book is-lld">
+                      <Cover book={lld} label="LLD (Java)" priority />
+                    </div>
+                    <div className="cb-fan-book is-hld">
+                      <Cover book={hld} label="HLD" priority />
+                    </div>
+                    <span className="cb-plus" aria-hidden="true">
+                      <Plus size={18} weight="bold" />
+                    </span>
+                  </div>
+
+                  <ul className="cb-stage-list">
+                    <li>
+                      <HardDrives size={18} weight="duotone" />
+                      High Level Design
+                      <small>19 case studies</small>
+                    </li>
+                    <li>
+                      <Code size={18} weight="duotone" />
+                      Low Level Design (Java)
+                      <small>16 case studies</small>
+                    </li>
+                  </ul>
+                </motion.aside>
+              </div>
+            </div>
+          </section>
+
+          {/* ------------------------------ AT A GLANCE ------------------------------ */}
+          <section className="cb-shell" aria-label="Combo at a glance" style={{ paddingBottom: 48 }}>
+            <Reveal className="cb-stats">
+              {GLANCE_STATS.map((item) => (
+                <div key={item.label} className="cb-stat">
+                  <b>{item.value}</b>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </Reveal>
+            <ul className="cb-terms" aria-label="Topics covered in both books">
+              {MARQUEE_TERMS.map((term) => (
+                <li key={term}>{term}</li>
+              ))}
+            </ul>
+          </section>
+
+          {/* ------------------------------ TABS ------------------------------ */}
+          <div className="cb-tabs-slot" ref={tabsSlotRef}>
+            <nav className={cx("cb-tabs", pinned && "is-pinned")} aria-label="On this page">
+              <div className="cb-shell cb-tabs-in">
+                <div className="cb-tabs-list">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={cx("cb-tab", activeTab === tab.id && "is-on")}
+                      aria-current={activeTab === tab.id ? "location" : undefined}
+                      onClick={() => scrollToId(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="cb-btn cb-btn-primary cb-btn-sm cb-tabs-buy" disabled={!canBuy} onClick={buyCombo}>
+                  {canBuy ? `Get the combo · ${money(combo.price, currency)}` : "Get the combo"}
+                </button>
+              </div>
+            </nav>
+          </div>
+
+          {/* ------------------------------ INCLUDED BOOKS ------------------------------ */}
+          <section id="included-books" className="cb-sec cb-tint" aria-labelledby="included-title">
+            <div className="cb-shell">
+              <Head
+                id="included-title"
+                eyebrow="Inside your combo"
+                title={
+                  <>
+                    Two complete books. <span className="cb-hl">One purchase.</span>
+                  </>
+                }
+                text="The combo brings together system architecture and Java object design. You can also open either book on its own page."
+              />
+
+              <div className="cb-books">
+                {[
+                  {
+                    key: "hld",
+                    book: hld,
+                    label: "HLD",
+                    eyebrow: "Book 01 · High level design",
+                    title: hldTitle,
+                    sub: "Architecture and scale",
+                    desc: "Requirements, APIs, distributed systems, databases, caching, queues, scalability and reliability.",
+                    facts: BOOK_FACTS.hld,
+                    href: ROUTES.hld,
+                    view: "View the HLD book",
+                  },
+                  {
+                    key: "lld",
+                    book: lld,
+                    label: "LLD (Java)",
+                    eyebrow: "Book 02 · Low level design",
+                    title: lldTitle,
+                    sub: "Java first class design",
+                    desc: "Java fundamentals, OOP, SOLID, 23 GoF patterns, UML, Spring Boot architecture, concurrency, testing and 16 LLD case studies.",
+                    facts: BOOK_FACTS.lld,
+                    href: ROUTES.lld,
+                    view: "View the LLD book",
+                  },
+                ].map((item, i) => (
+                  <Reveal key={item.key} delay={i * 0.1} as="article" className="cb-card cb-book">
+                    <div className="cb-book-media">
+                      <Cover book={item.book} label={item.label} />
+                    </div>
+                    <div>
+                      <span className="cb-eyebrow">{item.eyebrow}</span>
+                      <h3>{item.title}</h3>
+                      <p className="cb-book-sub">{item.sub}</p>
+                      <p className="cb-book-desc">{item.desc}</p>
+                      <ul className="cb-facts">
+                        {item.facts.map((fact) => (
+                          <li key={fact}>
+                            <Check size={14} weight="bold" />
+                            {fact}
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="cb-book-foot">
+                        <small>
+                          On its own
+                          <b>{loading ? "…" : purchasable(item.book) ? money(item.book.price, item.book.currency) : "–"}</b>
+                        </small>
+                        <Link to={item.href} className="cb-link">
+                          {item.view}
+                          <ArrowRight size={14} weight="bold" />
+                        </Link>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+                <span className="cb-join" aria-hidden="true">
+                  <Plus size={22} weight="bold" />
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section className="cb-tagline" aria-label="Why both books">
+            <div className="cb-shell">
+              <Reveal as="p">{TAGLINE}</Reveal>
+            </div>
+          </section>
+
+          {/* ------------------------------ WHY THE COMBO ------------------------------ */}
+          <section id="why-combo" className="cb-sec" aria-labelledby="why-title">
+            <div className="cb-shell">
+              <Head
+                id="why-title"
+                eyebrow="Why choose the combo"
+                title="Interviewers test both halves. Prepare for both."
+                text="A strong candidate can zoom out to the whole architecture and zoom in to a clean class design. The combo is built around that skill."
+              />
+
+              <div className="cb-grid-3">
+                {WHY_COMBO.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <Reveal key={item.title} delay={(index % 3) * 0.06} as="article" className="cb-card is-lift">
+                      <span className="cb-tile">
+                        <Icon size={22} weight="duotone" />
+                      </span>
+                      <h3>{item.title}</h3>
+                      <p>{item.text}</p>
+                    </Reveal>
+                  );
+                })}
+              </div>
+
+              <div className="cb-grid-3" style={{ marginTop: 14 }}>
+                {READERS.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <Reveal key={item.title} delay={index * 0.06} as="article" className="cb-card is-lift" style={{ background: "var(--surface-2)" }}>
+                      <span className="cb-eyebrow" style={{ gap: 10 }}>
+                        <Icon size={18} weight="duotone" />
+                        For {item.title.toLowerCase()}
+                      </span>
+                      <p>{item.detail}</p>
+                    </Reveal>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* ------------------------------ HLD OR LLD ------------------------------ */}
+          <section id="round-picker" className="cb-sec cb-tint" aria-labelledby="round-title">
+            <div className="cb-shell">
+              <Head
+                id="round-title"
+                eyebrow="HLD or LLD?"
+                title="Architecture decisions and implementation decisions"
+                text="A strong system design answer connects the components of a system with the internal design of those components."
+              />
+
+              <div className="cb-levels">
+                {DESIGN_LEVELS.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <Reveal key={item.title} delay={index * 0.08} as="article" className="cb-card cb-level is-lift">
+                      <div className="cb-level-top">
+                        <span className="cb-tile">
+                          <Icon size={22} weight="duotone" />
+                        </span>
+                        <h3>{item.title}</h3>
+                      </div>
+                      <p className="cb-level-intro">{item.intro}</p>
+                      <ul>
+                        {item.points.map((point) => (
+                          <li key={point}>
+                            <Check size={14} weight="bold" />
+                            {point}
+                          </li>
+                        ))}
+                      </ul>
+                    </Reveal>
+                  );
+                })}
+              </div>
+
+              <Reveal className="cb-matrix">
+                <div className="cb-matrix-row" role="row">
+                  <span>Interview round</span>
+                  <span>HLD</span>
+                  <span>LLD</span>
+                </div>
+                {ROUND_MATRIX.map((row) => (
+                  <div key={row.round} className="cb-matrix-row">
+                    <span>{row.round}</span>
+                    <span><YesNo yes={row.hld} /></span>
+                    <span><YesNo yes={row.lld} /></span>
+                  </div>
+                ))}
+              </Reveal>
+
+              <ClassifyGame />
+            </div>
+          </section>
+
+          {/* ------------------------------ CURRICULUM ------------------------------ */}
+          <section id="curriculum" className="cb-sec" aria-labelledby="curriculum-title">
+            <div className="cb-shell">
+              <Head
+                id="curriculum-title"
+                eyebrow="Detailed curriculum"
+                title="Explore the subjects in depth"
+                text="Foundations, architecture, Java object design, concurrency, practical scenarios and interview problem solving. Open any module to see its topics."
+              />
+
+              <Reveal>
+                <div className="cb-switch" role="tablist" aria-label="Choose a book curriculum">
+                  {[
+                    { id: "hld", label: "HLD · Architecture", count: HLD_MODULES.length },
+                    { id: "lld", label: "LLD · Java", count: LLD_MODULES.length },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeCurriculum === tab.id}
+                      onClick={() => setActiveCurriculum(tab.id)}
+                    >
+                      {tab.label}
+                      <span className="cb-mono">{tab.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </Reveal>
+
+              {activeCurriculum === "hld" ? (
+                <ModuleList key="hld" modules={HLD_MODULES} prefix="hld" />
+              ) : (
+                <ModuleList key="lld" modules={LLD_MODULES} prefix="lld" />
+              )}
+
+              <p className="cb-note">
+                This outline lists {totalModules} modules and {totalTopics} topic entries. It is a topic level
+                study guide for the collection, not a page by page table of contents from the PDFs.
+              </p>
+            </div>
+          </section>
+
+          {/* ------------------------------ CASE STUDIES ------------------------------ */}
+          <section id="practice" className="cb-sec cb-tint" aria-labelledby="practice-title">
+            <div className="cb-shell">
+              <Head
+                id="practice-title"
+                eyebrow="Case studies"
+                title="Real world systems to study"
+                text="Use familiar products and engineering problems to practise system architecture, class modelling, concurrency and failure handling."
+              />
+
+              <ProblemExplorer />
+
+              <Reveal className="cb-center">
+                <p>35 worked designs across the two books.</p>
+                <button type="button" onClick={buyCombo} disabled={!canBuy} className="cb-btn cb-btn-primary cb-btn-lg">
+                  {buyLabel}
+                  <ArrowRight size={18} weight="bold" />
+                </button>
               </Reveal>
             </div>
           </section>
 
-          {/* ---------------------- THE TWO BOOKS (HLD, LLD) -------------------- */}
-          <Section id="included-books" alt labelledBy="included-title">
-            <SectionHeader
-              id="included-title"
-              eyebrow="Inside your combo"
-              title="Two complete books. One purchase."
-              description="The combo brings together system architecture and Java object design. You can also open either book on its own page."
-            />
-
-            <div className="mt-10 grid gap-6 lg:grid-cols-2">
-              <Reveal>
-                <BookOfferCard
-                  eyebrow="Book 01 · High level design"
-                  title={hld?.title && hld.title !== "Untitled" ? hld.title : "Mastering System Design: HLD"}
-                  subtitle="Architecture and scale"
-                  description="Requirements, APIs, distributed systems, databases, caching, queues, scalability and reliability."
-                  cover={hld?.coverPageUrl}
-                  features={BOOK_FACTS.hld}
-                  status={bookStatus(hld)}
-                  price={hld?.price}
-                  mrp={hld?.mrp}
-                  currency={hld?.currency}
-                  href={ROUTES.hld}
-                  viewLabel="View the HLD book"
-                />
-              </Reveal>
-              <Reveal delay={0.1}>
-                <BookOfferCard
-                  eyebrow="Book 02 · Low level design"
-                  title={lld?.title && lld.title !== "Untitled" ? lld.title : "Mastering System Design: LLD (Java)"}
-                  subtitle="Java first class design"
-                  description="Java fundamentals, OOP, SOLID, 23 GoF patterns, UML, Spring Boot architecture, concurrency, testing and 16 LLD case studies."
-                  cover={lld?.coverPageUrl}
-                  features={BOOK_FACTS.lld}
-                  status={bookStatus(lld)}
-                  price={lld?.price}
-                  mrp={lld?.mrp}
-                  currency={lld?.currency}
-                  href={ROUTES.lld}
-                  viewLabel="View the LLD book"
-                />
-              </Reveal>
-            </div>
-          </Section>
-
-          {/* ------------------------------ PROOF ------------------------------ */}
-          <StatsStrip label="Combo at a glance" items={GLANCE_STATS.map((item) => [item.value, "", item.label])} />
-          <div className="bg-base pb-16">
-            <Marquee terms={MARQUEE_TERMS} label="Topics covered in both books" />
-          </div>
-
-          <TaglineReveal text={TAGLINE} />
-
-          {/* ---------------------------- WHY THE COMBO ------------------------ */}
-          <Section id="why-combo" alt labelledBy="why-title">
-            <SectionHeader
-              id="why-title"
-              eyebrow="Why choose the combo"
-              title="Interviewers test both halves. Prepare for both."
-              description="A strong candidate can zoom out to the whole architecture and zoom in to a clean class design. The combo is built around that skill."
-            />
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {WHY_COMBO.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <Reveal key={item.title} delay={(index % 3) * 0.07}>
-                    <article className="card lift h-full rounded-3xl p-6">
-                      <span className="tile h-12 w-12 rounded-xl">
-                        <Icon size={24} weight="duotone" />
-                      </span>
-                      <h3 className="heading-6 t1 mt-6">{item.title}</h3>
-                      <p className="body-6 t2 mt-2">{item.text}</p>
-                    </article>
-                  </Reveal>
-                );
-              })}
-            </div>
-          </Section>
-
-          {/* ------------------------ HLD VS LLD + ROUNDS ---------------------- */}
-          <Section id="round-picker" labelledBy="round-title">
-            <SectionHeader
-              id="round-title"
-              eyebrow="The complete picture"
-              title="Architecture decisions and implementation decisions"
-              description="A strong system design answer connects the components of a system with the internal design of those components."
-            />
-
-            <div className="mt-10 grid gap-4 lg:grid-cols-2">
-              {DESIGN_LEVELS.map((item, cardIndex) => {
-                const Icon = item.icon;
-                return (
-                  <Reveal key={item.title} delay={cardIndex * 0.1}>
-                    <article className="card lift h-full rounded-3xl p-6 sm:p-8">
-                      <span className="tile h-12 w-12 rounded-xl">
-                        <Icon size={24} weight="duotone" />
-                      </span>
-                      <h3 className="heading-5 t1 mt-6">{item.title}</h3>
-                      <p className="body-6 t2 mt-2">{item.intro}</p>
-                      <ul className="mt-6 space-y-3">
-                        {item.points.map((point) => (
-                          <li key={point} className="flex items-start gap-3">
-                            <Check className="ta mt-0.5 shrink-0" size={16} weight="bold" />
-                            <span className="body-6 t1">{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </article>
-                  </Reveal>
-                );
-              })}
-            </div>
-
-            <Reveal className="mt-6">
-              <div className="rule bd grid gap-px overflow-hidden rounded-3xl">
-                <div className="bg-s2 grid grid-cols-[3fr_1fr_1fr] gap-3 px-4 py-3">
-                  <span className="caption-3 t3 uppercase tracking-wider">Interview round</span>
-                  <span className="caption-3 t3 text-center uppercase tracking-wider">HLD</span>
-                  <span className="caption-3 t3 text-center uppercase tracking-wider">LLD</span>
-                </div>
-                {ROUND_MATRIX.map((row) => (
-                  <div key={row.round} className="bg-s1 row-hover grid grid-cols-[3fr_1fr_1fr] items-center gap-3 px-4 py-4">
-                    <span className="body-5 t1">{row.round}</span>
-                    <span className="flex justify-center"><YesNo yes={row.hld} /></span>
-                    <span className="flex justify-center"><YesNo yes={row.lld} /></span>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-
-            <ClassifyGame />
-          </Section>
-
-          {/* ----------------------------- CURRICULUM -------------------------- */}
-          <Section id="curriculum" alt labelledBy="curriculum-title">
-            <SectionHeader
-              id="curriculum-title"
-              eyebrow="Detailed curriculum"
-              title="Explore the subjects in depth"
-              description="Move through foundations, architecture, Java object design, concurrency, practical scenarios and interview problem solving techniques."
-            />
-
-            <Reveal className="mt-8">
-              <PillTabs
-                label="Choose a book curriculum"
-                value={activeCurriculum}
-                onChange={setActiveCurriculum}
-                items={[
-                  { id: "hld", label: "HLD · Architecture", count: HLD_MODULES.length },
-                  { id: "lld", label: "LLD · Java", count: LLD_MODULES.length },
-                ]}
+          {/* ------------------------------ METHOD + STUDY PLAN ------------------------------ */}
+          <section className="cb-sec" aria-labelledby="method-title">
+            <div className="cb-shell">
+              <Head
+                id="method-title"
+                eyebrow="Interview method"
+                title="A repeatable approach to design rounds"
+                text="Practise explaining why a design works, not just drawing boxes or naming design patterns."
               />
-            </Reveal>
 
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={activeCurriculum}
-                role="tabpanel"
-                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
-                transition={{ duration: 0.4, ease: EASE }}
-                className="mt-6"
-              >
-                {activeCurriculum === "hld" ? (
-                  <ModuleList key="hld" modules={HLD_MODULES} prefix="hld" />
-                ) : (
-                  <ModuleList key="lld" modules={LLD_MODULES} prefix="lld" />
-                )}
-              </motion.div>
-            </AnimatePresence>
-
-            <p className="caption-2 t3 mt-4">
-              This outline lists {totalModules} modules and {totalTopics} topic entries. It is a topic level
-              study guide for the collection, not a page by page table of contents from the PDFs.
-            </p>
-          </Section>
-
-          {/* ---------------------------- CASE STUDIES ------------------------- */}
-          <Section id="practice" labelledBy="practice-title">
-            <SectionHeader
-              id="practice-title"
-              eyebrow="Applied design"
-              title="Real world systems to study"
-              description="Use familiar products and engineering problems to practice system architecture, class modeling, concurrency and failure handling."
-            />
-            <ProblemExplorer />
-            <Reveal className="mt-10 flex flex-col items-center gap-3 text-center">
-              <p className="body-2 t1">35 worked designs across the two books.</p>
-              <button type="button" onClick={buyCombo} disabled={!canBuy} className="btn btn-primary btn-lg button-md">
-                Get the combo {priceNode !== "Unavailable" && priceNode}
-                <ArrowRight className="arrow" size={18} weight="bold" />
-              </button>
-            </Reveal>
-          </Section>
-
-          {/* ------------------------------ METHOD ----------------------------- */}
-          <Section id="method" alt labelledBy="method-title">
-            <SectionHeader
-              id="method-title"
-              eyebrow="Interview preparation"
-              title="A repeatable approach to design rounds"
-              description="Practice explaining why a design works, not just drawing boxes or naming design patterns."
-            />
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {METHOD_STEPS.map(([number, title, description], index) => (
-                <Reveal key={number} delay={(index % 3) * 0.07}>
-                  <article className="card lift h-full rounded-3xl p-6">
-                    <span className="num heading-4 mono">{number}</span>
-                    <h3 className="heading-6 t1 mt-4">{title}</h3>
-                    <p className="body-6 t2 mt-2">{description}</p>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
-          </Section>
-
-          {/* ----------------------------- STUDY PLAN -------------------------- */}
-          <Section id="study-plan" labelledBy="plan-title">
-            <SectionHeader
-              id="plan-title"
-              eyebrow="How to prepare"
-              title="Pick your timeline. Get a study plan."
-              description="Choose how much time you have before the interview. The plan shows how to split it between the two books."
-            />
-            <PlanBuilder />
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {STAGES.map(([stage, title, text], index) => (
-                <Reveal key={stage} delay={index * 0.07} y={24}>
-                  <article className="card lift h-full rounded-2xl p-4 sm:p-6">
-                    <span className="num caption-3 mono">{stage}</span>
-                    <h3 className="title-2 t1 mt-3">{title}</h3>
-                    <p className="body-6 t2 mt-1">{text}</p>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
-          </Section>
-
-          {/* ------------------------------ READERS ---------------------------- */}
-          <Section id="readers" alt labelledBy="who-title">
-            <SectionHeader
-              id="who-title"
-              eyebrow="Intended readers"
-              title="Built for developers who want stronger design fundamentals"
-            />
-
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {READERS.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <Reveal key={item.title} delay={index * 0.08}>
-                    <article className="card lift h-full rounded-3xl p-6">
-                      <span className="tile h-12 w-12 rounded-xl">
-                        <Icon size={24} weight="duotone" />
-                      </span>
-                      <h3 className="heading-6 t1 mt-6">{item.title}</h3>
-                      <p className="body-6 t2 mt-2">{item.detail}</p>
-                    </article>
+              <div className="cb-steps">
+                {METHOD_STEPS.map(([number, title, text], index) => (
+                  <Reveal key={number} delay={(index % 3) * 0.06} as="article" className="cb-card cb-step is-lift">
+                    <span className="cb-step-n">{number}</span>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
                   </Reveal>
-                );
-              })}
-            </div>
-          </Section>
-
-          {/* ------------------------------ PAYMENTS --------------------------- */}
-          <Section id="payments" labelledBy="payments-title">
-            <SectionHeader
-              id="payments-title"
-              eyebrow="Checkout and delivery"
-              title="A straightforward digital purchase"
-              description={`Your checkout is powered by ${PROVIDER_NAME}. The payment methods you see depend on those enabled for the merchant account.`}
-            />
-
-            <div className="mt-10 grid gap-4 lg:grid-cols-2">
-              <Reveal>
-                <div className="card h-full rounded-3xl p-6 sm:p-8">
-                  <h3 className="heading-6 t1">Payment options</h3>
-                  <div className="mt-6 grid grid-cols-2 gap-3">
-                    {PAY_OPTIONS.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={item.title} className="bg-s2 row-hover rounded-xl p-4">
-                          <Icon className="ta" size={24} weight="duotone" />
-                          <p className="body-4 t1 mt-3">{item.title}</p>
-                          <p className="caption-2 t2 mt-1">{item.text}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="caption-2 t3 mt-4">
-                    Payment availability is decided at checkout. This page does not verify which methods are active.
-                  </p>
-                </div>
-              </Reveal>
-
-              <Reveal delay={0.1}>
-                <div className="card h-full rounded-3xl p-6 sm:p-8">
-                  <h3 className="heading-6 t1">After successful payment</h3>
-                  <ol className="mt-6 space-y-6">
-                    {AFTER_PAYMENT.map((item, index) => {
-                      const Icon = item.icon;
-                      return (
-                        <Reveal as="li" key={item.title} y={16} delay={index * 0.1} className="flex items-start gap-4">
-                          <span className="tile h-10 w-10 rounded-lg">
-                            <Icon size={20} weight="duotone" />
-                          </span>
-                          <div>
-                            <h4 className="body-1 t1">{item.title}</h4>
-                            <p className="body-6 t2 mt-1">{item.text}</p>
-                          </div>
-                        </Reveal>
-                      );
-                    })}
-                  </ol>
-                </div>
-              </Reveal>
-            </div>
-          </Section>
-
-          {/* ------------------------------ PRICING ---------------------------- */}
-          <Section id="pricing" alt labelledBy="pricing-title">
-            <SectionHeader
-              id="pricing-title"
-              eyebrow="Pricing"
-              title="One book or the complete combo"
-              description="Buy an individual edition, or choose the combo and receive both."
-            />
-
-            <SavingsBars hld={hld} lld={lld} combo={combo} currency={currency} savings={savings || 0} />
-
-            <Reveal className="mt-6">
-              <div className="rule bd grid gap-px overflow-hidden rounded-3xl">
-                <div className="bg-s2 grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 px-3 py-3 sm:px-6">
-                  <span />
-                  <span className="caption-3 t3 text-center uppercase tracking-wider">HLD</span>
-                  <span className="caption-3 t3 text-center uppercase tracking-wider">LLD</span>
-                  <span className="caption-3 ta text-center uppercase tracking-wider">Combo</span>
-                </div>
-                {INCLUDES_MATRIX.map((row) => (
-                  <div key={row[0]} className="bg-s1 row-hover grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2 px-3 py-4 sm:px-6">
-                    <span className="body-5 t1">{row[0]}</span>
-                    {row.slice(1).map((yes, index) => (
-                      <span key={index} className="flex justify-center"><YesNo yes={yes} /></span>
-                    ))}
-                  </div>
                 ))}
-                <div className="bg-s1 grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2 px-3 py-4 sm:px-6">
-                  <span className="body-4 t1">Price</span>
-                  {[hld, lld, combo].map((book, index) => (
-                    <span key={index} className={cx("body-4 mono text-center", index === 2 ? "ta" : "t1")}>
-                      {loading ? <PriceSkeleton className="h-4 w-10" /> : purchasable(book) ? money(book.price, book.currency) : "–"}
-                    </span>
-                  ))}
-                </div>
               </div>
-            </Reveal>
+            </div>
+          </section>
 
-            <Reveal className="mt-6">
-              <div className="card no-scrollbar overflow-x-auto rounded-3xl">
-                <table className="w-full min-w-[640px] text-left">
+          <section id="study-plan" className="cb-sec cb-tint" aria-labelledby="plan-title">
+            <div className="cb-shell">
+              <Head
+                id="plan-title"
+                eyebrow="Study plan"
+                title="Pick your timeline. Get a study plan."
+                text="Choose how much time you have before the interview. The plan shows how to split it between the two books."
+              />
+
+              <PlanBuilder />
+
+              <div className="cb-stages">
+                {STAGES.map(([stage, title, text], index) => (
+                  <Reveal key={stage} delay={index * 0.06} as="article" className="cb-card is-lift">
+                    <small>{stage}</small>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ------------------------------ PRICING ------------------------------ */}
+          <section id="pricing" className="cb-sec" aria-labelledby="pricing-title">
+            <div className="cb-shell">
+              <Head
+                id="pricing-title"
+                eyebrow="Pricing"
+                title="One book or the complete combo"
+                text="Buy an individual edition, or choose the combo and receive both."
+                center
+              />
+
+              <div className="cb-plans">
+                {[
+                  { key: "hld", name: "HLD only", book: hld, col: 1, to: ROUTES.hld },
+                  { key: "lld", name: "LLD (Java) only", book: lld, col: 2, to: ROUTES.lld },
+                  { key: "combo", name: "HLD + LLD combo", book: combo, col: 3 },
+                ].map((plan, index) => {
+                  const isCombo = plan.key === "combo";
+                  return (
+                    <Reveal key={plan.key} delay={index * 0.08} as="article" className={cx("cb-plan-card", isCombo && "is-combo")}>
+                      {isCombo && (
+                        <span className="cb-ribbon">
+                          <Lightning size={12} weight="fill" />
+                          Best value
+                        </span>
+                      )}
+                      <h3>{plan.name}</h3>
+                      <PriceTag book={plan.book} loading={loading} large />
+                      {isCombo && savings !== null && savings > 0 && (
+                        <span className="cb-save">Save {money(savings, currency)}</span>
+                      )}
+                      <ul>
+                        {INCLUDES_MATRIX.map((row) => {
+                          const yes = row[plan.col];
+                          return (
+                            <li key={row[0]} className={cx(!yes && "is-no")}>
+                              <YesNo yes={yes} />
+                              {row[0]}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {isCombo ? (
+                        <button type="button" onClick={buyCombo} disabled={!canBuy} className="cb-btn cb-btn-primary">
+                          Get the combo
+                          <ArrowRight size={16} weight="bold" />
+                        </button>
+                      ) : (
+                        <Link to={plan.to} className="cb-btn cb-btn-ghost">
+                          View this book
+                          <ArrowRight size={16} weight="bold" />
+                        </Link>
+                      )}
+                    </Reveal>
+                  );
+                })}
+              </div>
+
+              <SavingsBars hld={hld} lld={lld} combo={combo} currency={currency} savings={savings || 0} />
+
+              <Reveal className="cb-table-wrap">
+                <table className="cb-table">
+                  <caption className="cb-skip" style={{ position: "absolute", left: -9999 }}>
+                    HLD, LLD and combo compared
+                  </caption>
                   <thead>
-                    <tr className="bg-s2">
+                    <tr>
                       {["", "HLD", "LLD (Java)", "Combo"].map((label, index) => (
-                        <th key={index} scope="col" className="caption-3 t3 p-4 uppercase tracking-wider">
+                        <th key={index} scope="col" className={cx(index === 3 && "is-combo")}>
                           {label}
                         </th>
                       ))}
@@ -2100,10 +2258,10 @@ export default function SystemDesignCombo() {
                   </thead>
                   <tbody>
                     {COMPARE_ROWS.map((row) => (
-                      <tr key={row[0]} className="row-hover">
-                        <th scope="row" className="body-4 t1 p-4">{row[0]}</th>
+                      <tr key={row[0]}>
+                        <th scope="row">{row[0]}</th>
                         {row.slice(1).map((cell, index) => (
-                          <td key={index} className={cx("body-6 p-4", index === 2 ? "ta font-semibold" : "t2")}>
+                          <td key={index} className={cx(index === 2 && "is-combo")}>
                             {cell}
                           </td>
                         ))}
@@ -2111,60 +2269,137 @@ export default function SystemDesignCombo() {
                     ))}
                   </tbody>
                 </table>
+              </Reveal>
+
+              <div className="cb-pay">
+                <Reveal className="cb-card">
+                  <h3>Checkout and payment</h3>
+                  <p style={{ marginTop: 6 }}>
+                    Your checkout is powered by {PROVIDER_NAME}. The methods you see depend on those enabled for the merchant account.
+                  </p>
+                  <div className="cb-pay-opts">
+                    {PAY_OPTIONS.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.title}>
+                          <Icon size={22} weight="duotone" />
+                          <b>{item.title}</b>
+                          <span>{item.text}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Reveal>
+
+                <Reveal className="cb-card" delay={0.08}>
+                  <h3>After successful payment</h3>
+                  <ol className="cb-after">
+                    {AFTER_PAYMENT.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <li key={item.title}>
+                          <span className="cb-tile">
+                            <Icon size={20} weight="duotone" />
+                          </span>
+                          <span>
+                            <b>{item.title}</b>
+                            <span>{item.text}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  <p className="cb-fine">Digital products are not refundable after purchase.</p>
+                </Reveal>
               </div>
-            </Reveal>
-          </Section>
+            </div>
+          </section>
 
-          {/* -------------------------------- FAQ ------------------------------ */}
-          <Section id="faq" narrow labelledBy="faq-title">
-            <SectionHeader id="faq-title" eyebrow="Questions" title="Frequently asked questions" align="center" />
-            <FaqList items={allFaqs} idPrefix="combo-faq" defaultOpen={0} />
-          </Section>
+          {/* ------------------------------ FAQ ------------------------------ */}
+          <section id="faq" className="cb-sec cb-tint" aria-labelledby="faq-title">
+            <div className="cb-narrow">
+              <Head id="faq-title" eyebrow="Questions" title="Frequently asked questions" center />
+              <div className="cb-faq">
+                {allFaqs.map((item, index) => (
+                  <FaqItem
+                    key={item.q}
+                    item={item}
+                    index={index}
+                    open={openFaq === index}
+                    onToggle={() => setOpenFaq(openFaq === index ? -1 : index)}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
 
-          <FinalCta
-            titleId="combo-final"
-            eyebrow="Complete digital collection"
-            title="Get HLD and LLD together."
-            copy="Two ebooks, one checkout, separate PDF downloads."
-            price={priceNode}
-            mrp={mrpNode}
-            onBuy={buyCombo}
-            canBuy={canBuy}
-            buyLabel="Get the combo"
-            secondary={{ label: "See what is inside", onClick: (event) => goTo(event, "#included-books") }}
-            note="Digital products are not refundable after purchase."
-          />
+          {/* ------------------------------ FINAL CTA ------------------------------ */}
+          <section className="cb-sec" aria-labelledby="combo-final">
+            <div className="cb-shell">
+              <Reveal className="cb-final">
+                <div>
+                  <span className="cb-eyebrow">Complete digital collection</span>
+                  <h2 id="combo-final" className="cb-h2" style={{ marginTop: 10 }}>
+                    Get HLD and LLD together.
+                  </h2>
+                  <p>Two ebooks, one checkout, separate PDF downloads.</p>
+                </div>
+                <div className="cb-final-buy">
+                  <PriceTag book={combo} loading={loading} large />
+                  <button type="button" onClick={buyCombo} disabled={!canBuy} className="cb-btn cb-btn-primary cb-btn-lg">
+                    Get the combo
+                    <ArrowRight size={18} weight="bold" />
+                  </button>
+                  <small>Digital products are not refundable after purchase.</small>
+                </div>
+              </Reveal>
+
+              <footer className="cb-foot">
+                <p>
+                  Need help with a purchase?{" "}
+                  <a className="cb-link" href={`mailto:${SUPPORT_EMAIL}`}>
+                    Contact Target Trek support
+                  </a>
+                </p>
+                <nav aria-label="Related books">
+                  <Link className="cb-link" to={ROUTES.hld}>System Design HLD</Link>
+                  <Link className="cb-link" to={ROUTES.lld}>System Design LLD (Java)</Link>
+                  <Link className="cb-link" to="/books">All books</Link>
+                </nav>
+              </footer>
+            </div>
+          </section>
         </main>
 
-        <footer className="bg-base caption-2 t3 px-4 pb-8 text-center">
-          <p>
-            Need help with a purchase?{" "}
-            <a className="link focusable font-semibold" href={`mailto:${SUPPORT_EMAIL}`}>
-              Contact Target Trek support
-            </a>
-          </p>
-          <p className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
-            <Link className="link focusable font-medium" to={ROUTES.hld}>System Design HLD</Link>
-            <Link className="link focusable font-medium" to={ROUTES.lld}>System Design LLD (Java)</Link>
-            <a className="link focusable font-medium" href="/books">All books</a>
-          </p>
-        </footer>
-
-        <BuyBar
-          title="HLD + LLD Complete Combo"
-          price={priceNode}
-          mrp={mrpNode}
-          discount={combinedDiscount}
-          onBuy={buyCombo}
-          canBuy={canBuy && !loadError}
-          buyLabel="Get the combo"
-          hidden={checkoutOpen}
-          heroVisible={heroVisible && !loading}
-          secondary={{ label: "What is inside", onClick: (event) => goTo(event, "#included-books") }}
-        />
+        {/* ------------------------------ BOTTOM BUY BAR ------------------------------ */}
+        <AnimatePresence>
+          {showBar && (
+            <motion.aside
+              key="buybar"
+              className="cb-bar-buy"
+              aria-label="Buy the combo"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ duration: 0.4, ease: EASE }}
+            >
+              <div className="cb-bar-copy">
+                <b>HLD + LLD Complete Combo</b>
+                <span>
+                  {money(combo.price, currency)}
+                  {Number(combo.mrp) > Number(combo.price) && <s>{money(combo.mrp, currency)}</s>}
+                  {combinedDiscount > 0 && <em style={{ fontStyle: "normal", color: "var(--ok)" }}>{combinedDiscount}% off</em>}
+                </span>
+              </div>
+              <button type="button" onClick={buyCombo} className="cb-btn cb-btn-primary">
+                Get the combo
+              </button>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
 
       <PayUCheckoutModal isOpen={checkoutOpen} onClose={closeCheckout} product={checkoutProduct} />
-    </>
+    </MotionConfig>
   );
 }

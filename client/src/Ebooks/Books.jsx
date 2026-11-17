@@ -40,6 +40,7 @@ import {
   CreditCard,
   Database,
   EnvelopeSimple,
+  Eye,
   Gift,
   Graph,
   HardDrives,
@@ -48,6 +49,7 @@ import {
   LockKey,
   MagnifyingGlass,
   Package,
+  Plus,
   Rows,
   ShareNetwork,
   ShoppingBagOpen,
@@ -62,10 +64,13 @@ import BASE_URL from "../utils/Url";
 import { describeOffer } from "./bundleRules";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { usePacks } from "./PackSections";
-import ResumePromo from "../resume/ResumePromo.jsx";
+import { fetchPackages, cachedPackages } from "../resume/api";
+import { SAMPLE, planType } from "../resume/landingContent";
+
+import "./books.css";
 
 // =======================================================
-// EXISTING WEBSITE CONFIGURATION
+// CONFIGURATION
 // =======================================================
 
 const SITE_URL = "https://www.targettrek.in";
@@ -80,7 +85,7 @@ const SEO_DESCRIPTION =
   "Explore practical ebooks on System Design HLD, Java LLD, Google ADK, RAG, MCP, GenAI, and backend engineering from Target Trek.";
 
 const FONT_URL =
-  "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap";
 
 // Base motion curve: weighted, decelerates into place.
 const EASE = [0.22, 1, 0.36, 1];
@@ -88,6 +93,12 @@ const EASE = [0.22, 1, 0.36, 1];
 // The two pack pages. Used to recognise packs inside the books list.
 const PACK_PATHS = ["/book/all-books", "/book/life-type-combo"];
 const LIFETIME_PATH = "/book/life-type-combo";
+
+// Books rendered per "page" of the catalog before "Show more"
+const PAGE_SIZE = 12;
+
+// How long each spotlight book stays in front
+const SPOT_MS = 5200;
 
 const SEARCH_EXAMPLES = [
   "System Design HLD",
@@ -134,7 +145,7 @@ const STEPS = [
   {
     n: "01",
     title: "Pick a book or a pack",
-    text: "Search the shelf, compare prices and press Buy now on the one you want.",
+    text: "Search the shelf, open Quick view to compare, and press Buy now on the one you want.",
   },
   {
     n: "02",
@@ -150,6 +161,7 @@ const STEPS = [
 
 const TAGLINE =
   "One clear book beats ten open tabs. Pick the topic you keep postponing and finish it this week.";
+const TAGLINE_KEYS = /^(clear|finish|week\.?)$/i;
 
 const FAQS = [
   {
@@ -188,6 +200,8 @@ const FAQS = [
       "Email supporttargettrek@gmail.com with your order reference and we will help with purchase and access issues.",
   },
 ];
+
+const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 
 // =======================================================
 // UTILITIES
@@ -316,7 +330,7 @@ const isHLDBook = (book) => {
   return (
     value.includes("/system-design/hld") ||
     value.includes("system-design-hld") ||
-    value.includes("high-level design") ||
+    /high[\s-]level[\s-]design/.test(value) ||
     (value.includes("system design") && /\bhld\b/.test(value))
   );
 };
@@ -331,6 +345,22 @@ const getBookUrl = (book) => {
     ? redirectUrl
     : `${SITE_URL}${redirectUrl.startsWith("/") ? redirectUrl : `/${redirectUrl}`}`;
 };
+
+// Plain text paragraphs from the admin description (tags are stripped)
+const getParagraphs = (text) =>
+  String(text || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]*>/g, "")
+    .split(/\n{2,}/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+// Included books are populated objects on the packs API, ids elsewhere
+const getIncludedTitles = (book) =>
+  (Array.isArray(book?.includedBooks) ? book.includedBooks : [])
+    .filter((item) => item && typeof item === "object" && item.title)
+    .map((item) => ({ id: item._id || item.title, title: item.title }));
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -439,7 +469,7 @@ const stagger = (gap = 0.08, delay = 0) => ({
 });
 
 const rise = {
-  hidden: { opacity: 0, y: 32 },
+  hidden: { opacity: 0, y: 28 },
   show: {
     opacity: 1,
     y: 0,
@@ -451,9 +481,9 @@ function Reveal({ children, delay = 0, className }) {
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 32 }}
+      initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-70px" }}
+      viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.7, delay, ease: EASE }}
     >
       {children}
@@ -495,22 +525,6 @@ function Counter({ to }) {
   return <span ref={ref}>{value}</span>;
 }
 
-// One headline line sliding up out of a mask
-function LineReveal({ children, delay = 0 }) {
-  return (
-    <span className="bk-line-mask">
-      <motion.span
-        className="bk-line"
-        initial={{ y: "110%" }}
-        animate={{ y: "0%" }}
-        transition={{ duration: 0.9, delay, ease: EASE }}
-      >
-        {children}
-      </motion.span>
-    </span>
-  );
-}
-
 // Words light up one at a time as the section scrolls into view
 function TaglineReveal({ text }) {
   const ref = useRef(null);
@@ -530,12 +544,13 @@ function TaglineReveal({ text }) {
   });
 
   return (
-    <p className="heading-3 bk-tagline" ref={ref}>
+    <p className="bx-tagline" ref={ref}>
       {words.map((word, index) => (
         <React.Fragment key={`${word}-${index}`}>
           <span
             className={cn(
-              "bk-tagline-word",
+              "bx-tagline-word",
+              TAGLINE_KEYS.test(word) && "is-key",
               (reduced || index < active) && "is-on"
             )}
           >
@@ -544,25 +559,6 @@ function TaglineReveal({ text }) {
         </React.Fragment>
       ))}
     </p>
-  );
-}
-
-// Flat line grid drawn as SVG (no background gradients)
-function GridPattern({ id, size = 32 }) {
-  return (
-    <svg className="bk-gridsvg" aria-hidden="true">
-      <defs>
-        <pattern id={id} width={size} height={size} patternUnits="userSpaceOnUse">
-          <path
-            d={`M${size} 0H0V${size}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-          />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill={`url(#${id})`} />
-    </svg>
   );
 }
 
@@ -597,7 +593,7 @@ function BookCover({ book, className = "", priority = false, decorative = false 
   }, [image]);
 
   return (
-    <div className={cn("bk-cover", className)}>
+    <div className={cn("bx-cover", className)}>
       {image && !imageError ? (
         <img
           src={image}
@@ -610,17 +606,17 @@ function BookCover({ book, className = "", priority = false, decorative = false 
           onError={() => setImageError(true)}
         />
       ) : (
-        <div className="bk-cover-fallback">
-          <span className="mono caption-4">
-            <BookOpen size={16} weight="duotone" />
+        <div className="bx-cover-fallback">
+          <span>
+            <BookOpen size={14} weight="duotone" />
             TARGET TREK
           </span>
 
-          <strong className="body-4">{book?.title || "Digital ebook"}</strong>
+          <strong>{book?.title || "Digital ebook"}</strong>
         </div>
       )}
 
-      <span className="bk-cover-sweep" aria-hidden="true" />
+      <span className="bx-cover-shine" aria-hidden="true" />
     </div>
   );
 }
@@ -635,32 +631,30 @@ function Price({ book, large = false }) {
   const credits = Number(book?.matches) || 0;
 
   return (
-    <div className={cn("bk-price", large && "is-large")}>
-      <div className="bk-price-row">
-        <strong className={cn("mono", large ? "heading-4" : "heading-6")}>
+    <div className={cn("bx-price", large && "is-large")}>
+      <div className="bx-price-row">
+        <strong className="bx-price-now">
           {money(book?.price, book?.currency)}
         </strong>
 
         {saving > 0 && (
-          <s className="mono body-6">{money(book?.mrp, book?.currency)}</s>
+          <s className="bx-price-mrp">{money(book?.mrp, book?.currency)}</s>
         )}
 
-        {discount > 0 && (
-          <span className="mono caption-3 bk-off">{discount}% off</span>
-        )}
+        {discount > 0 && <span className="bx-off">{discount}% off</span>}
       </div>
 
       {(saving > 0 || credits > 0) && (
-        <div className="bk-price-notes">
+        <div className="bx-price-notes">
           {saving > 0 && (
-            <span className="caption-4 bk-save">
+            <span className="bx-save">
               You save {money(saving, book?.currency)}
             </span>
           )}
 
           {credits > 0 && (
             <span
-              className="caption-4 bk-credits"
+              className="bx-credits"
               title="Prep Arena credits included. 1 credit = 1 match = 1 buddy partnership."
             >
               <Sword size={12} weight="bold" />
@@ -678,12 +672,13 @@ function BuyButton({ book, onBuy, label = "Buy now", size = "md", className }) {
     <motion.button
       type="button"
       className={cn(
-        size === "lg" ? "button-lg" : size === "sm" ? "button-sm" : "button-md",
-        "bk-btn bk-btn-primary",
+        "bx-btn bx-btn-primary",
+        size === "lg" && "bx-btn-lg",
+        size === "sm" && "bx-btn-sm",
         className
       )}
       onClick={() => onBuy(book)}
-      whileHover={{ scale: 1.03 }}
+      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.96 }}
       transition={{ duration: 0.4, ease: EASE }}
       aria-label={`${label}: ${book?.title || "this book"} for ${money(book?.price, book?.currency)}`}
@@ -695,142 +690,7 @@ function BuyButton({ book, onBuy, label = "Buy now", size = "md", className }) {
 }
 
 // =======================================================
-// HERO DECK: a cover flow that sells one book at a time
-// =======================================================
-
-function HeroDeck({ books, loading, onBuy }) {
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  const count = books.length;
-  const safeIndex = count ? index % count : 0;
-  const current = books[safeIndex];
-
-  useEffect(() => {
-    if (count < 2 || paused) return undefined;
-
-    const timer = setInterval(() => {
-      setIndex((value) => (value + 1) % count);
-    }, 3400);
-
-    return () => clearInterval(timer);
-  }, [count, paused]);
-
-  const step = (direction) =>
-    setIndex((value) => (value + direction + count) % count);
-
-  if (loading || !count) {
-    return (
-      <div className="bk-deck" aria-hidden="true">
-        <div className="bk-deck-stage">
-          <div className="bk-deck-card bk-skel" />
-        </div>
-      </div>
-    );
-  }
-
-  const half = Math.floor(count / 2);
-
-  return (
-    <div
-      className="bk-deck"
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
-    >
-      <div className="bk-deck-stage">
-        <div className="bk-deck-halo" aria-hidden="true" />
-
-        {books.map((book, i) => {
-          // signed distance from the front card
-          const offset = ((i - safeIndex + count + half) % count) - half;
-          const distance = Math.abs(offset);
-          const front = offset === 0;
-
-          return (
-            <motion.button
-              type="button"
-              key={getBookId(book)}
-              className="bk-deck-card"
-              tabIndex={front ? -1 : distance > 2 ? -1 : 0}
-              aria-hidden={distance > 2 || front}
-              aria-label={`Show ${book.title}`}
-              style={{ zIndex: 10 - distance, pointerEvents: distance > 2 ? "none" : "auto" }}
-              initial={false}
-              animate={{
-                x: `${Math.max(-2.4, Math.min(2.4, offset)) * 38}%`,
-                rotate: offset * 7,
-                scale: 1 - distance * 0.14,
-                opacity: distance > 2 ? 0 : 1,
-              }}
-              transition={{ duration: 0.7, ease: EASE }}
-              onClick={() => setIndex(i)}
-            >
-              <BookCover book={book} priority={distance < 2} decorative />
-            </motion.button>
-          );
-        })}
-      </div>
-
-      <div className="bk-deck-info">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={getBookId(current)}
-            className="bk-deck-copy"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.35, ease: EASE }}
-          >
-            <p className="caption-3 bk-kicker">
-              {current.badge || getCategories(current)[0] || "Ebook"}
-            </p>
-
-            <BookLink book={current} className="title-2 bk-deck-title">
-              {current.title}
-            </BookLink>
-
-            <Price book={current} />
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="bk-deck-actions">
-          <BuyButton book={current} onBuy={onBuy} />
-
-          {count > 1 && (
-            <div className="bk-deck-nav">
-              <button
-                type="button"
-                className="bk-icon-btn"
-                onClick={() => step(-1)}
-                aria-label="Previous book"
-              >
-                <CaretLeft size={16} weight="bold" />
-              </button>
-
-              <span className="mono caption-4" aria-live="polite">
-                {String(safeIndex + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
-              </span>
-
-              <button
-                type="button"
-                className="bk-icon-btn"
-                onClick={() => step(1)}
-                aria-label="Next book"
-              >
-                <CaretRight size={16} weight="bold" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =======================================================
-// SEARCH FIELD (shared by the hero and the sticky toolbar)
+// SEARCH FIELD (hero + catalog toolbar)
 // =======================================================
 
 const SearchField = React.forwardRef(function SearchField(
@@ -840,13 +700,13 @@ const SearchField = React.forwardRef(function SearchField(
   return (
     <form
       role="search"
-      className={cn("bk-search", large && "is-large")}
+      className={cn("bx-search", large && "is-large")}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit?.();
       }}
     >
-      <MagnifyingGlass size={20} weight="bold" className="bk-search-icon" />
+      <MagnifyingGlass size={20} weight="bold" className="bx-search-icon" />
 
       <input
         ref={ref}
@@ -872,7 +732,7 @@ const SearchField = React.forwardRef(function SearchField(
       {value ? (
         <button
           type="button"
-          className="bk-search-clear"
+          className="bx-search-clear"
           onClick={() => onChange("")}
           aria-label="Clear search"
         >
@@ -880,14 +740,14 @@ const SearchField = React.forwardRef(function SearchField(
         </button>
       ) : (
         hint && (
-          <kbd className="mono caption-4 bk-kbd" aria-hidden="true">
+          <kbd className="bx-kbd" aria-hidden="true">
             /
           </kbd>
         )
       )}
 
       {large && (
-        <button type="submit" className="button-md bk-btn bk-btn-primary">
+        <button type="submit" className="bx-btn bx-btn-primary bx-search-go">
           Search
         </button>
       )}
@@ -896,81 +756,259 @@ const SearchField = React.forwardRef(function SearchField(
 });
 
 // =======================================================
+// HERO SPOTLIGHT: one book at a time, with a cover rail
+// =======================================================
+
+function Spotlight({ books, loading, onBuy, onPeek }) {
+  const reduced = useReducedMotion();
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const railRef = useRef(null);
+
+  const count = books.length;
+  const safeIndex = count ? index % count : 0;
+  const current = books[safeIndex];
+  const auto = count > 1 && !reduced;
+
+  useEffect(() => {
+    if (!auto || paused) return undefined;
+
+    const timer = setTimeout(() => {
+      setIndex((value) => (value + 1) % count);
+    }, SPOT_MS);
+
+    return () => clearTimeout(timer);
+  }, [auto, paused, count, safeIndex]);
+
+  // keep the active thumbnail visible inside the rail
+  useEffect(() => {
+    const rail = railRef.current;
+    const thumb = rail?.children?.[safeIndex];
+    if (!rail || !thumb) return;
+
+    const left = thumb.offsetLeft - rail.clientWidth / 2 + thumb.clientWidth / 2;
+    rail.scrollTo({ left, behavior: reduced ? "auto" : "smooth" });
+  }, [safeIndex, reduced]);
+
+  const step = (direction) =>
+    setIndex((value) => (value + direction + count) % count);
+
+  if (loading || !count) {
+    return <div className="bx-spot bx-spot-skel bx-skel" aria-hidden="true" />;
+  }
+
+  return (
+    <section
+      className="bx-spot"
+      aria-roledescription="carousel"
+      aria-label="Featured books"
+      onPointerEnter={() => setPaused(true)}
+      onPointerLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
+      <div className="bx-spot-top">
+        <span className="bx-spot-label">
+          <Sparkle size={14} weight="fill" />
+          Spotlight
+        </span>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span className="bx-spot-count" aria-live="polite">
+            {String(safeIndex + 1).padStart(2, "0")} /{" "}
+            {String(count).padStart(2, "0")}
+          </span>
+
+          {count > 1 && (
+            <div className="bx-spot-nav">
+              <button type="button" onClick={() => step(-1)} aria-label="Previous book">
+                <CaretLeft size={14} weight="bold" />
+              </button>
+              <button type="button" onClick={() => step(1)} aria-label="Next book">
+                <CaretRight size={14} weight="bold" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {auto && (
+        <div className="bx-spot-bar" aria-hidden="true">
+          <i
+            key={safeIndex}
+            className={cn("is-run", paused && "is-paused")}
+            style={{ "--spot-ms": `${SPOT_MS}ms` }}
+          />
+        </div>
+      )}
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={getBookId(current)}
+          className="bx-spot-main"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -14 }}
+          transition={{ duration: 0.4, ease: EASE }}
+        >
+          <div className="bx-spot-cover">
+            <BookLink book={current} tabIndex={-1} aria-hidden="true">
+              <BookCover book={current} priority decorative />
+            </BookLink>
+
+            {getDiscount(current) > 0 && (
+              <span className="bx-spot-tag">{getDiscount(current)}% off</span>
+            )}
+          </div>
+
+          <div className="bx-spot-copy">
+            <p className="bx-spot-kicker">
+              {current.badge || getCategories(current)[0] || "Ebook"}
+            </p>
+
+            <BookLink book={current} className="bx-spot-title">
+              {current.title}
+            </BookLink>
+
+            {(current.subtitle || current.shortDescription) && (
+              <p className="bx-spot-sub">
+                {current.subtitle || current.shortDescription}
+              </p>
+            )}
+
+            <Price book={current} />
+
+            <div className="bx-spot-actions">
+              <BuyButton book={current} onBuy={onBuy} />
+
+              <button
+                type="button"
+                className="bx-btn bx-btn-onpanel"
+                onClick={() => onPeek(current)}
+              >
+                <Eye size={18} weight="bold" />
+                Quick view
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {count > 1 && (
+        <div className="bx-spot-rail" ref={railRef} role="group" aria-label="Choose a featured book">
+          {books.map((book, i) => (
+            <button
+              type="button"
+              key={getBookId(book)}
+              className={cn("bx-spot-thumb", i === safeIndex && "is-on")}
+              onClick={() => setIndex(i)}
+              aria-label={`Show ${book.title}`}
+              aria-current={i === safeIndex ? "true" : undefined}
+            >
+              <BookCover book={book} decorative />
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// =======================================================
 // BOOK CARD
 // =======================================================
 
 const BookCard = React.forwardRef(function BookCard(
-  { book, view, index, query, onBuy },
+  { book, view, index, query, onBuy, onPeek },
   ref
 ) {
   const pack = isPackBook(book);
   const category = getCategories(book)[0];
   const flag = pack ? "Pack" : book?.badge;
+  const discount = getDiscount(book);
+  const tags = getTags(book).slice(0, 2);
 
   return (
     <motion.article
       ref={ref}
       layout
-      className={cn("bk-card", view === "list" && "is-row")}
-      initial={{ opacity: 0, y: 32 }}
+      className={cn("bx-card", view === "list" && "is-row")}
+      initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.25, ease: EASE } }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{
         duration: 0.6,
-        delay: (index % 4) * 0.06,
+        delay: (index % 4) * 0.05,
         ease: EASE,
         layout: { duration: 0.5, ease: EASE },
       }}
     >
       <BookLink
         book={book}
-        className="bk-card-media"
+        className="bx-card-media"
         aria-label={`View ${book?.title}`}
         tabIndex={-1}
       >
         <BookCover book={book} />
 
-        {flag && <span className="caption-3 bk-flag">{flag}</span>}
+        {flag && <span className="bx-flag">{flag}</span>}
+        {discount > 0 && <span className="bx-flag-off">-{discount}%</span>}
       </BookLink>
 
-      <div className="bk-card-body">
-        <p className="caption-3 bk-kicker">
+      <div className="bx-card-body">
+        <p className="bx-kicker">
           {[category, getResourceType(book?.resourceType)]
             .filter(Boolean)
             .join(" · ")}
         </p>
 
-        <h3 className="title-3 bk-card-title">
+        <h3 className="bx-card-title">
           <BookLink book={book}>
             <Highlight text={book?.title} query={query} />
           </BookLink>
         </h3>
 
         {(book?.subtitle || book?.shortDescription) && (
-          <p className="body-6 bk-card-sub">
-            {book.subtitle || book.shortDescription}
-          </p>
+          <p className="bx-card-sub">{book.subtitle || book.shortDescription}</p>
         )}
 
-        <div className="bk-card-foot">
+        {tags.length > 0 && (
+          <div className="bx-card-tags">
+            {tags.map((tag) => (
+              <span key={tag}>#{tag}</span>
+            ))}
+          </div>
+        )}
+
+        <div className="bx-card-foot">
           <Price book={book} />
 
-          <div className="bk-card-actions">
+          <div className="bx-card-actions">
             <BuyButton
               book={book}
               onBuy={onBuy}
               size="sm"
-              label={pack ? "Buy this pack" : "Buy now"}
+              label={pack ? "Buy pack" : "Buy now"}
             />
+
+            <button
+              type="button"
+              className="bx-icon-btn"
+              onClick={() => onPeek(book)}
+              aria-label={`Quick view of ${book?.title}`}
+              title="Quick view"
+            >
+              <Eye size={18} weight="bold" />
+            </button>
 
             <BookLink
               book={book}
-              className="button-sm bk-btn bk-btn-outline"
-              aria-label={`Details of ${book?.title}`}
+              className="bx-icon-btn"
+              aria-label={`Open the page of ${book?.title}`}
+              title="Full details"
             >
-              Details
-              <ArrowUpRight size={14} weight="bold" />
+              <ArrowUpRight size={18} weight="bold" />
             </BookLink>
           </div>
         </div>
@@ -981,18 +1019,540 @@ const BookCard = React.forwardRef(function BookCard(
 
 function BookSkeleton() {
   return (
-    <div className="bk-card bk-card-skel" aria-hidden="true">
-      <div className="bk-card-media">
-        <div className="bk-cover bk-skel" />
+    <div className="bx-card bx-card-skel" aria-hidden="true">
+      <div className="bx-card-media">
+        <div className="bx-cover bx-skel" />
       </div>
 
-      <div className="bk-card-body">
-        <i className="bk-skel" style={{ width: "40%" }} />
-        <i className="bk-skel" style={{ width: "90%", height: 20 }} />
-        <i className="bk-skel" style={{ width: "60%" }} />
-        <i className="bk-skel" style={{ width: "100%", height: 36, marginTop: 16 }} />
+      <div className="bx-card-body">
+        <i className="bx-skel" style={{ width: "40%" }} />
+        <i className="bx-skel" style={{ width: "90%", height: 20 }} />
+        <i className="bx-skel" style={{ width: "60%" }} />
+        <i className="bx-skel" style={{ width: "100%", height: 40, marginTop: 16 }} />
       </div>
     </div>
+  );
+}
+
+// =======================================================
+// QUICK VIEW: side drawer on desktop, bottom sheet on mobile
+// =======================================================
+
+function QuickView({ book, onClose, onBuy }) {
+  const closeRef = useRef(null);
+  const titleId = useId();
+
+  const pack = isPackBook(book);
+  const paragraphs = getParagraphs(book?.description);
+  const categories = getCategories(book);
+  const tags = getTags(book);
+  const included = getIncludedTitles(book);
+  const credits = Number(book?.matches) || 0;
+
+  // Esc to close, lock page scroll, focus the close button
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    closeRef.current?.focus({ preventScroll: true });
+
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="bx-sheet-root">
+      <motion.div
+        className="bx-sheet-backdrop"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      />
+
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bx-sheet"
+        initial={{ opacity: 0, y: 40, x: 0 }}
+        animate={{ opacity: 1, y: 0, x: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ duration: 0.45, ease: EASE }}
+      >
+        <span className="bx-sheet-grip" aria-hidden="true" />
+
+        <div className="bx-sheet-head">
+          <span className="bx-eyebrow">
+            <Eye size={14} weight="bold" />
+            Quick view
+          </span>
+
+          <button
+            ref={closeRef}
+            type="button"
+            className="bx-icon-btn"
+            onClick={onClose}
+            aria-label="Close quick view"
+          >
+            <X size={18} weight="bold" />
+          </button>
+        </div>
+
+        <div className="bx-sheet-body">
+          <div className="bx-sheet-hero">
+            <BookCover book={book} priority />
+
+            <div style={{ minWidth: 0 }}>
+              <p className="bx-kicker">
+                {[pack ? "Pack" : categories[0], getResourceType(book?.resourceType)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+
+              <h2 id={titleId} className="bx-sheet-title">
+                {book?.title}
+              </h2>
+
+              {(book?.subtitle || book?.shortDescription) && (
+                <p className="bx-sheet-sub">
+                  {book.subtitle || book.shortDescription}
+                </p>
+              )}
+
+              <div style={{ marginTop: 14 }}>
+                <Price book={book} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bx-sheet-block">
+            <ul className="bx-sheet-facts">
+              <li>
+                <CreditCard size={18} weight="duotone" />
+                One time payment
+              </li>
+              <li>
+                <BookOpenText size={18} weight="duotone" />
+                Built in reader
+              </li>
+              <li>
+                <LockKey size={18} weight="duotone" />
+                Secure access link
+              </li>
+              <li>
+                {credits > 0 ? (
+                  <>
+                    <Sword size={18} weight="duotone" />
+                    {credits} Prep Arena {credits === 1 ? "credit" : "credits"}
+                  </>
+                ) : (
+                  <>
+                    <EnvelopeSimple size={18} weight="duotone" />
+                    Email support
+                  </>
+                )}
+              </li>
+            </ul>
+          </div>
+
+          {paragraphs.length > 0 && (
+            <div className="bx-sheet-block bx-sheet-desc">
+              <h4>About this {pack ? "pack" : "book"}</h4>
+              {paragraphs.slice(0, 6).map((text, i) => (
+                <p key={i}>{text}</p>
+              ))}
+            </div>
+          )}
+
+          {included.length > 0 && (
+            <div className="bx-sheet-block">
+              <h4>{included.length} books inside</h4>
+              <ul className="bx-inside-list" style={{ paddingTop: 0 }}>
+                {included.map((item) => (
+                  <li key={item.id}>
+                    <Check size={14} weight="bold" />
+                    {item.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(categories.length > 0 || tags.length > 0) && (
+            <div className="bx-sheet-block">
+              <h4>Topics</h4>
+              <div className="bx-sheet-tags">
+                {categories.map((name) => (
+                  <span key={`c-${name}`}>{name}</span>
+                ))}
+                {tags.map((tag) => (
+                  <span key={`t-${tag}`}>#{tag}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bx-sheet-foot">
+          <BuyButton
+            book={book}
+            onBuy={onBuy}
+            label={pack ? "Buy this pack" : "Buy now"}
+          />
+
+          {book?.redirectUrl && (
+            <BookLink book={book} className="bx-btn bx-btn-ghost" onClick={onClose}>
+              Full details
+              <ArrowUpRight size={16} weight="bold" />
+            </BookLink>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// =======================================================
+// SYSTEM DESIGN PICKS: the HLD book and the HLD + LLD combo
+// =======================================================
+
+const HLD_TOPICS = ["Architecture", "APIs", "Databases", "Caching", "Distributed systems"];
+const LLD_TOPICS = ["Classes", "Interfaces", "UML", "Design patterns", "Java"];
+
+function SystemDesignPicks({ hld, lld, combo, onBuy, onPeek }) {
+  // the books inside the combo, HLD first (populated objects on /book)
+  const inside = (Array.isArray(combo?.includedBooks) ? combo.includedBooks : [])
+    .filter((item) => item && typeof item === "object")
+    .sort((a, b) => Number(isHLDBook(b)) - Number(isHLDBook(a)));
+
+  const separate =
+    hld && lld ? Number(hld.price || 0) + Number(lld.price || 0) : 0;
+  const comboSave = combo ? separate - Number(combo.price || 0) : 0;
+
+  return (
+    <div className="bx-sd-grid">
+      {hld && (
+        <motion.article variants={rise} className="bx-sd-card">
+          <div className="bx-sd-media">
+            <BookLink book={hld} tabIndex={-1} aria-hidden="true" className="bx-sd-cover">
+              <BookCover book={hld} priority decorative />
+            </BookLink>
+            {hld.badge && <span className="bx-flag">{hld.badge}</span>}
+          </div>
+
+          <div className="bx-sd-body">
+            <p className="bx-kicker">High level design · Ebook</p>
+
+            <h3 className="bx-sd-title">
+              <BookLink book={hld}>{hld.title}</BookLink>
+            </h3>
+
+            <p className="bx-sd-text">
+              Scalable architecture, APIs, databases, caching and distributed
+              systems, for system design interviews and real projects.
+            </p>
+
+            <ul className="bx-sd-topics">
+              {HLD_TOPICS.map((topic) => (
+                <li key={topic}>{topic}</li>
+              ))}
+            </ul>
+
+            <div className="bx-sd-foot">
+              <Price book={hld} />
+
+              <div className="bx-card-actions">
+                <BuyButton book={hld} onBuy={onBuy} />
+                <button
+                  type="button"
+                  className="bx-icon-btn"
+                  onClick={() => onPeek(hld)}
+                  aria-label={`Quick view of ${hld.title}`}
+                  title="Quick view"
+                >
+                  <Eye size={18} weight="bold" />
+                </button>
+                <BookLink
+                  book={hld}
+                  className="bx-icon-btn"
+                  aria-label={`Open the page of ${hld.title}`}
+                  title="Full details"
+                >
+                  <ArrowUpRight size={18} weight="bold" />
+                </BookLink>
+              </div>
+            </div>
+          </div>
+        </motion.article>
+      )}
+
+      {combo && (
+        <motion.article variants={rise} className="bx-sd-card is-combo">
+          <span className="bx-ribbon bx-sd-ribbon">
+            <Sparkle size={12} weight="fill" />
+            Best value
+          </span>
+
+          <div className="bx-sd-media">
+            <BookLink book={combo} tabIndex={-1} aria-hidden="true" className="bx-sd-fan">
+              {(inside.length ? inside : [combo]).slice(0, 2).map((book, i) => (
+                <BookCover key={book._id || i} book={book} decorative />
+              ))}
+              {inside.length > 1 && (
+                <span className="bx-sd-plus">
+                  <Plus size={14} weight="bold" />
+                </span>
+              )}
+            </BookLink>
+          </div>
+
+          <div className="bx-sd-body">
+            <p className="bx-kicker">
+              HLD + LLD combo · {inside.length || 2} books
+            </p>
+
+            <h3 className="bx-sd-title">
+              <BookLink book={combo}>{combo.title}</BookLink>
+            </h3>
+
+            <p className="bx-sd-text">
+              Both sides of the system design round in one payment: the big
+              picture, and the classes and patterns behind it.
+            </p>
+
+            <ul className="bx-sd-inside">
+              {inside.map((book) => (
+                <li key={book._id || book.title}>
+                  <Check size={14} weight="bold" />
+                  <span>
+                    {book.title}
+                    <small>{(isHLDBook(book) ? HLD_TOPICS : LLD_TOPICS).slice(0, 3).join(" · ")}</small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {comboSave > 0 && (
+              <p className="bx-sd-compare">
+                <span>
+                  Bought one by one <s>{money(separate, combo.currency)}</s>
+                </span>
+                <b>Combo saves {money(comboSave, combo.currency)}</b>
+              </p>
+            )}
+
+            <div className="bx-sd-foot">
+              <Price book={combo} />
+
+              <div className="bx-card-actions">
+                <BuyButton book={combo} onBuy={onBuy} label="Buy combo" />
+                <button
+                  type="button"
+                  className="bx-icon-btn"
+                  onClick={() => onPeek(combo)}
+                  aria-label={`Quick view of ${combo.title}`}
+                  title="Quick view"
+                >
+                  <Eye size={18} weight="bold" />
+                </button>
+                <BookLink
+                  book={combo}
+                  className="bx-icon-btn"
+                  aria-label={`Open the page of ${combo.title}`}
+                  title="Full details"
+                >
+                  <ArrowUpRight size={18} weight="bold" />
+                </BookLink>
+              </div>
+            </div>
+          </div>
+        </motion.article>
+      )}
+    </div>
+  );
+}
+
+// =======================================================
+// RESUME LAB: compact card with the live plans and a real sample
+// =======================================================
+
+const RL_PLANS_URL = "/resume-review#pricing";
+const RL_SAMPLE_URL = "/resume-review#sample";
+
+// "[35]% in [two] quarters" -> the bracketed parts are marked
+function SampleBullet({ text }) {
+  return String(text)
+    .split(/\[(.*?)\]/)
+    .map((part, i) => (i % 2 ? <mark key={i}>{part}</mark> : part));
+}
+
+const planLine = (plan) =>
+  [
+    plan.ai?.reviews
+      ? `${plan.ai.reviews} AI ${plan.ai.reviews === 1 ? "report" : "reports"}`
+      : "",
+    plan.human?.enabled ? "human review" : "",
+    plan.linkedin?.enabled ? "LinkedIn" : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+// Three honest quick picks from the live list: cheapest AI plan,
+// cheapest plan with a person's review, and the recommended plan.
+const pickPlans = (list) => {
+  const plans = (Array.isArray(list) ? list : []).filter(
+    (plan) => plan && Number.isFinite(Number(plan.price))
+  );
+  const cheapest = (items) =>
+    [...items].sort((a, b) => Number(a.price) - Number(b.price))[0];
+
+  const picks = [
+    { plan: cheapest(plans.filter((p) => planType(p) === "ai")), tag: "Quick check" },
+    { plan: cheapest(plans.filter((p) => p.human?.enabled)), tag: "With a person" },
+    { plan: plans.find((p) => p.badge), tag: null },
+  ];
+
+  const seen = new Set();
+
+  return picks
+    .filter(({ plan }) => plan && !seen.has(plan.name) && seen.add(plan.name))
+    .map(({ plan, tag }) => ({ plan, tag: tag || plan.badge }));
+};
+
+function ResumeLabCard() {
+  const [packages, setPackages] = useState(() =>
+    typeof window === "undefined" ? null : cachedPackages()
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    fetchPackages()
+      .then((list) => alive && setPackages(list))
+      .catch(() => {}); // the card still works without live prices
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const picks = useMemo(() => pickPlans(packages), [packages]);
+  const [before, after] = SAMPLE.bullets[0];
+
+  return (
+    <motion.aside
+      className="bx-rl"
+      aria-label="Resume Lab by Target Trek"
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.7, ease: EASE }}
+    >
+      <div className="bx-rl-main">
+        <div className="bx-rl-top">
+          <span className="bx-rl-alert">
+            <i aria-hidden="true" />
+            Applied to 50+ jobs and heard nothing?
+          </span>
+          <span className="bx-eyebrow">Resume Lab by Target Trek</span>
+        </div>
+
+        <h2 className="bx-rl-title">
+          Reading the books but not getting calls?{" "}
+          <span className="bx-hl">Fix the resume.</span>
+        </h2>
+
+        <p className="bx-rl-text">
+          Most resumes are rejected by software or skimmed in ten seconds. See
+          exactly what is costing you shortlists.
+        </p>
+
+        <ul className="bx-rl-feats">
+          <li>
+            <Sparkle size={16} weight="duotone" />
+            AI report in minutes
+          </li>
+          <li>
+            <BookOpenText size={16} weight="duotone" />
+            Working professional review
+          </li>
+          <li>
+            <ShareNetwork size={16} weight="duotone" />
+            LinkedIn review
+          </li>
+        </ul>
+
+        {picks.length > 0 && (
+          <div className="bx-rl-plans">
+            {picks.map(({ plan, tag }) => (
+              <Link
+                key={plan.name}
+                to={RL_PLANS_URL}
+                className={cn("bx-rl-plan", plan.badge && "is-rec")}
+              >
+                <span className="bx-rl-plan-tag">{tag}</span>
+                <strong>{plan.name}</strong>
+                <b className="bx-mono">{money(plan.price, plan.currency || "INR")}</b>
+                <small>{planLine(plan)}</small>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="bx-rl-actions">
+          <Link to={RL_PLANS_URL} className="bx-btn bx-btn-primary">
+            See all plans
+            <ArrowRight size={16} weight="bold" />
+          </Link>
+          <Link to={RL_SAMPLE_URL} className="bx-link">
+            See a sample review
+            <ArrowRight size={14} weight="bold" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="bx-rl-art" aria-label="From a sample report">
+        <div className="bx-rl-art-head">
+          <span>Sample report</span>
+          <small>{SAMPLE.role}</small>
+        </div>
+
+        <div className="bx-rl-scores">
+          {[
+            ["Overall", SAMPLE.overall],
+            ["ATS", SAMPLE.ats],
+            ["Job match", SAMPLE.jobMatch],
+          ].map(([label, value]) => (
+            <div key={label} className="bx-rl-score">
+              <b className="bx-mono">{value}</b>
+              <span>{label}</span>
+              <i>
+                <u style={{ width: `${value}%` }} />
+              </i>
+            </div>
+          ))}
+        </div>
+
+        <div className="bx-rl-fix">
+          <p className="bx-rl-before">
+            <span>Before</span>
+            <s>{before}</s>
+          </p>
+          <p className="bx-rl-after">
+            <span>After</span>
+            <SampleBullet text={after} />
+          </p>
+        </div>
+      </div>
+    </motion.aside>
   );
 }
 
@@ -1007,39 +1567,42 @@ function PackPanel({ pack, worth, onBuy }) {
   const lifetime = pack.plan === "lifetime";
   const credits = Number(pack.matches) || 0;
   const included = Array.isArray(pack.includedBooks) ? pack.includedBooks : [];
+  const named = getIncludedTitles(pack);
   const saving = getSaving(pack);
   const showWorth = Number(worth) > Number(pack.price);
 
   return (
     <motion.article
       variants={rise}
-      className={cn("bk-pack", lifetime && "is-featured")}
+      className={cn("bx-pack", lifetime && "is-featured")}
     >
-      <div className="bk-pack-head">
-        <p className="caption-3 bk-kicker">
+      <div className="bx-pack-head">
+        <span className="bx-eyebrow">
+          <Package size={14} weight="bold" />
           {lifetime ? "Lifetime pack" : "All books pack"}
-        </p>
+        </span>
 
         {(pack.badge || lifetime) && (
-          <span className="caption-3 bk-pack-ribbon">
+          <span className="bx-ribbon">
+            <Sparkle size={12} weight="fill" />
             {pack.badge || "Best value"}
           </span>
         )}
       </div>
 
-      <h3 className="heading-5">{pack.title}</h3>
+      <h3>{pack.title}</h3>
 
-      {pack.subtitle && <p className="body-6 bk-muted">{pack.subtitle}</p>}
+      {pack.subtitle && <p className="bx-pack-sub">{pack.subtitle}</p>}
 
       {included.length > 0 && (
-        <div className="bk-pack-covers" aria-hidden="true">
+        <div className="bx-pack-covers" aria-hidden="true">
           {included.slice(0, 8).map((book, i) => (
             <span
-              key={book._id || i}
-              className="bk-pack-thumb"
+              key={book?._id || i}
+              className="bx-pack-thumb"
               style={{ zIndex: 20 - i }}
             >
-              {book.coverPageUrl ? (
+              {book?.coverPageUrl ? (
                 <img src={book.coverPageUrl} alt="" loading="lazy" />
               ) : (
                 <BookOpen size={16} />
@@ -1048,41 +1611,39 @@ function PackPanel({ pack, worth, onBuy }) {
           ))}
 
           {included.length > 8 && (
-            <span className="mono caption-3 bk-pack-more">
-              +{included.length - 8}
-            </span>
+            <span className="bx-pack-more">+{included.length - 8}</span>
           )}
         </div>
       )}
 
-      <div className="bk-pack-price">
-        <strong className="mono heading-3">{money(pack.price, pack.currency)}</strong>
+      <div className="bx-pack-price">
+        <strong>{money(pack.price, pack.currency)}</strong>
 
-        {saving > 0 && (
-          <s className="mono body-3">{money(pack.mrp, pack.currency)}</s>
+        {saving > 0 && <s>{money(pack.mrp, pack.currency)}</s>}
+
+        {getDiscount(pack) > 0 && (
+          <span className="bx-off">{getDiscount(pack)}% off</span>
         )}
 
-        <span className="caption-4 bk-muted">one time</span>
+        <span>one time</span>
       </div>
 
       {showWorth && (
-        <p className="caption-3 bk-save">
+        <p className="bx-pack-worth">
           Worth {money(worth, pack.currency)} if bought one by one
         </p>
       )}
 
-      <ul className="bk-checks">
-        <li className="body-6">
+      <ul className="bx-checks">
+        <li>
           <Check size={16} weight="bold" />
           <span>
-            <b>
-              {included.length > 0 ? `${included.length} books` : "All books"}
-            </b>{" "}
+            <b>{included.length > 0 ? `${included.length} books` : "All books"}</b>{" "}
             available today
           </span>
         </li>
 
-        <li className="body-6">
+        <li>
           <BellRinging size={16} weight="bold" />
           <span>
             {lifetime
@@ -1092,7 +1653,7 @@ function PackPanel({ pack, worth, onBuy }) {
         </li>
 
         {credits > 0 && (
-          <li className="body-6">
+          <li>
             <Sword size={16} weight="bold" />
             <span>
               {credits} Prep Arena {credits === 1 ? "credit" : "credits"} for
@@ -1102,39 +1663,37 @@ function PackPanel({ pack, worth, onBuy }) {
         )}
 
         {lifetime && (
-          <li className="body-6">
+          <li>
             <Gift size={16} weight="bold" />
-            <span>
-              Free limited Prep Arena credits when we launch new features
-            </span>
+            <span>Free limited Prep Arena credits when we launch new features</span>
           </li>
         )}
 
-        <li className="body-6">
+        <li>
           <Lightbulb size={16} weight="bold" />
           <span>Request or suggest new books inside Prep Arena</span>
         </li>
 
         {(pack.highlights || []).map((item) => (
-          <li className="body-6" key={item}>
+          <li key={item}>
             <Check size={16} weight="bold" />
             <span>{item}</span>
           </li>
         ))}
       </ul>
 
-      {included.length > 0 && (
-        <div className="bk-inside">
+      {named.length > 0 && (
+        <div className="bx-inside">
           <button
             type="button"
-            className="button-sm bk-inside-btn"
+            className="bx-inside-btn"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-controls={panelId}
           >
-            {open ? "Hide" : "See"} all {included.length} books inside
+            {open ? "Hide" : "See"} all {named.length} books inside
             <motion.span
-              className="bk-inline-icon"
+              style={{ display: "inline-grid" }}
               animate={{ rotate: open ? 180 : 0 }}
               transition={{ duration: 0.5, ease: EASE }}
             >
@@ -1153,11 +1712,10 @@ function PackPanel({ pack, worth, onBuy }) {
                 transition={{ duration: 0.5, ease: EASE }}
                 style={{ overflow: "hidden" }}
               >
-                <ul className="bk-inside-list">
-                  {included.map((book, i) => (
+                <ul className="bx-inside-list">
+                  {named.map((book, i) => (
                     <motion.li
-                      key={book._id || i}
-                      className="body-6"
+                      key={book.id}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{
@@ -1177,11 +1735,11 @@ function PackPanel({ pack, worth, onBuy }) {
         </div>
       )}
 
-      <div className="bk-pack-actions">
+      <div className="bx-pack-actions">
         <BuyButton book={pack} onBuy={onBuy} size="lg" label="Buy this pack" />
 
         {pack.redirectUrl && (
-          <BookLink book={pack} className="button-md bk-btn bk-btn-outline">
+          <BookLink book={pack} className="bx-btn bx-btn-lg bx-btn-ghost">
             Pack details
             <ArrowUpRight size={16} weight="bold" />
           </BookLink>
@@ -1199,32 +1757,28 @@ function OfferCard({ offers }) {
 
   return (
     <Reveal>
-      <aside className="bk-offer" aria-label="Bundle offers">
+      <aside className="bx-offer" aria-label="Bundle offers">
         <div>
-          <p className="caption-3 bk-kicker">
+          <span className="bx-eyebrow">
             <Lightning size={14} weight="fill" /> Bundle offers
-          </p>
+          </span>
 
-          <h3 className="heading-6">Buy more books, pay less</h3>
+          <h3>Buy more books, pay less</h3>
 
-          <p className="body-6 bk-muted">
+          <p className="bx-small bx-muted">
             Pick your books and the offer price is applied automatically.
           </p>
 
-          <ul className="bk-offer-pills">
+          <ul className="bx-offer-pills">
             {offers.slice(0, 3).map((offer) => (
-              <li className="mono caption-3" key={offer._id}>
-                {offerDeal(offer)}
-              </li>
+              <li key={offer._id}>{offerDeal(offer)}</li>
             ))}
 
-            {offers.length > 3 && (
-              <li className="mono caption-3">+{offers.length - 3} more</li>
-            )}
+            {offers.length > 3 && <li>+{offers.length - 3} more</li>}
           </ul>
         </div>
 
-        <Link to="/books/bundle-offers" className="button-md bk-btn bk-btn-outline">
+        <Link to="/books/bundle-offers" className="bx-btn bx-btn-ghost">
           View offers
           <ArrowRight size={16} weight="bold" />
         </Link>
@@ -1237,33 +1791,23 @@ function OfferCard({ offers }) {
 // SMALL PIECES
 // =======================================================
 
-function SectionHead({ index, eyebrow, title, text, id, children }) {
+function SectionHead({ eyebrow, title, text, id, children }) {
   return (
-    <div className="bk-head">
-      <div className="bk-head-main">
+    <div className="bx-head">
+      <div className="bx-head-main">
         <Reveal>
-          <p className="caption-3 bk-eyebrow">
-            <span className="mono">{index}</span>
-            <motion.span
-              className="bk-eyebrow-line"
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2, ease: EASE }}
-            />
-            {eyebrow}
-          </p>
+          <span className="bx-eyebrow">{eyebrow}</span>
         </Reveal>
 
-        <Reveal delay={0.08}>
-          <h2 className="heading-3" id={id}>
+        <Reveal delay={0.06}>
+          <h2 className="bx-h2" id={id}>
             {title}
           </h2>
         </Reveal>
 
         {text && (
-          <Reveal delay={0.16}>
-            <p className="body-3 bk-muted bk-head-text">{text}</p>
+          <Reveal delay={0.12}>
+            <p className="bx-lead">{text}</p>
           </Reveal>
         )}
       </div>
@@ -1277,34 +1821,33 @@ function Chip({ active, onClick, children, count, layoutId }) {
   return (
     <button
       type="button"
-      className={cn("button-sm bk-chip", active && "is-on")}
+      className={cn("bx-chip", active && "is-on")}
       aria-pressed={active}
       onClick={onClick}
     >
       {active && (
         <motion.span
           layoutId={layoutId}
-          className="bk-chip-pill"
-          transition={{ duration: 0.5, ease: EASE }}
+          className="bx-chip-pill"
+          transition={{ duration: 0.45, ease: EASE }}
         />
       )}
 
-      <span className="bk-chip-label">
+      <span className="bx-chip-label">
         {children}
-        {count !== undefined && <span className="mono caption-4">{count}</span>}
+        {count !== undefined && <span className="bx-mono">{count}</span>}
       </span>
     </button>
   );
 }
 
 function FaqItem({ faq, index, open, onToggle }) {
-  const panelId = `bk-faq-panel-${index}`;
+  const panelId = `bx-faq-panel-${index}`;
 
   return (
-    <motion.div variants={rise} className={cn("bk-faq-item", open && "is-open")}>
+    <motion.div variants={rise} className={cn("bx-faq-item", open && "is-open")}>
       <button
         type="button"
-        className="title-3"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={onToggle}
@@ -1312,11 +1855,11 @@ function FaqItem({ faq, index, open, onToggle }) {
         <span>{faq.question}</span>
 
         <motion.span
-          className="bk-inline-icon bk-accent"
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.5, ease: EASE }}
+          className="bx-faq-icon"
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ duration: 0.4, ease: EASE }}
         >
-          <CaretDown size={16} weight="bold" />
+          <Plus size={16} weight="bold" />
         </motion.span>
       </button>
 
@@ -1328,10 +1871,10 @@ function FaqItem({ faq, index, open, onToggle }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
+            transition={{ duration: 0.45, ease: EASE }}
             style={{ overflow: "hidden" }}
           >
-            <p className="body-6 bk-faq-answer">{faq.answer}</p>
+            <p className="bx-faq-answer">{faq.answer}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1355,12 +1898,14 @@ export default function Books() {
   const [category, setCategory] = useState("");
   const [tag, setTag] = useState("");
   const [sort, setSort] = useState("");
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
   const [offers, setOffers] = useState([]);
 
   const [view, setView] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
   const [activeFaq, setActiveFaq] = useState(0);
+  const [activeTab, setActiveTab] = useState("");
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -1368,12 +1913,40 @@ export default function Books() {
 
   // The book or pack currently in checkout (null = modal closed)
   const [product, setProduct] = useState(null);
+  // The book open in Quick view (null = closed)
+  const [peek, setPeek] = useState(null);
 
   const { data: packData } = usePacks();
 
   const isDark = theme === "dark";
 
   const toolbarSearchRef = useRef(null);
+  const rootRef = useRef(null);
+
+  // The site header is fixed and its height changes by breakpoint (the phone
+  // header has a second row). Measure it so the sticky tabs sit right below.
+  useEffect(() => {
+    const root = rootRef.current;
+    const header = document.querySelector("nav.fixed");
+    if (!root || !header) return undefined;
+
+    const sync = () => {
+      const height = Math.round(header.getBoundingClientRect().height);
+      if (height > 0) root.style.setProperty("--nav-h", `${height}px`);
+    };
+
+    sync();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", sync);
+      return () => window.removeEventListener("resize", sync);
+    }
+
+    const observer = new ResizeObserver(sync);
+    observer.observe(header);
+
+    return () => observer.disconnect();
+  }, []);
 
   // =====================================================
   // SCROLL EFFECTS
@@ -1383,10 +1956,23 @@ export default function Books() {
 
   const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 28 });
 
+  const tabsSlotRef = useRef(null);
+  const [pinned, setPinned] = useState(false);
+
   useMotionValueEvent(scrollY, "change", (value) => {
     const next = value > 700;
 
     setScrolled((current) => (current === next ? current : next));
+
+    // pin the section tabs once their slot slides under the site header
+    const slot = tabsSlotRef.current;
+    const root = rootRef.current;
+    if (slot && root) {
+      const navH = parseFloat(getComputedStyle(root).getPropertyValue("--nav-h")) || 64;
+      const pin = slot.getBoundingClientRect().top <= navH;
+
+      setPinned((current) => (current === pin ? current : pin));
+    }
   });
 
   // rotating search placeholder
@@ -1396,6 +1982,12 @@ export default function Books() {
     }, 2600);
 
     return () => clearInterval(timer);
+  }, []);
+
+  const focusCatalogSearch = useCallback(() => {
+    scrollToId("library");
+    // wait for the smooth scroll to start before focusing (avoids a jump)
+    setTimeout(() => toolbarSearchRef.current?.focus({ preventScroll: true }), 350);
   }, []);
 
   // Press "/" anywhere to jump into search
@@ -1414,14 +2006,13 @@ export default function Books() {
       if (typing) return;
 
       event.preventDefault();
-      scrollToId("library");
-      toolbarSearchRef.current?.focus({ preventScroll: true });
+      focusCatalogSearch();
     };
 
     window.addEventListener("keydown", onKey);
 
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [focusCatalogSearch]);
 
   // Shareable searches: read ?q= and ?category= once, then keep them updated
   const urlReady = useRef(false);
@@ -1455,6 +2046,11 @@ export default function Books() {
 
     return () => clearTimeout(timer);
   }, [search, category]);
+
+  // New filters start from the first page of results
+  useEffect(() => {
+    setLimit(PAGE_SIZE);
+  }, [search, category, tag, sort]);
 
   // =====================================================
   // THEME - EXISTING EVENT SUPPORT
@@ -1636,7 +2232,7 @@ export default function Books() {
     );
   }, [books]);
 
-  // Hero deck: the HLD book first, then featured books, then the rest
+  // Spotlight: the HLD book first, then featured books, then the rest
   const featuredBook = useMemo(
     () =>
       singles.find(isHLDBook) ||
@@ -1646,7 +2242,7 @@ export default function Books() {
     [singles]
   );
 
-  const deckBooks = useMemo(() => {
+  const spotBooks = useMemo(() => {
     if (!featuredBook) return [];
 
     const id = getBookId(featuredBook);
@@ -1656,8 +2252,31 @@ export default function Books() {
       featuredBook,
       ...rest.filter((book) => book.isFeatured),
       ...rest.filter((book) => !book.isFeatured),
-    ].slice(0, 7);
+    ].slice(0, 8);
   }, [singles, featuredBook]);
+
+  // System design picks shown right after the hero
+  const sdPicks = useMemo(() => {
+    const path = (book) => getPath(book).toLowerCase();
+    const combo =
+      singles.find((book) => /hld-lld|lld-hld/.test(path(book))) ||
+      singles.find(
+        (book) =>
+          book.resourceType === "bundle" && path(book).includes("system-design")
+      ) ||
+      null;
+    const notCombo = (book) => book !== combo;
+    const hld =
+      singles.find((book) => path(book) === "/book/system-design/hld") ||
+      singles.find((book) => notCombo(book) && isHLDBook(book)) ||
+      null;
+    const lld =
+      singles.find((book) => path(book) === "/book/system-design/lld") ||
+      singles.find((book) => notCombo(book) && /\blld\b/.test(lower(`${book.title} ${path(book)}`))) ||
+      null;
+
+    return { hld, lld, combo };
+  }, [singles]);
 
   const stats = useMemo(() => {
     const prices = singles
@@ -1710,6 +2329,9 @@ export default function Books() {
     });
   }, [books, search, category, tag, sort]);
 
+  const visibleBooks = filteredBooks.slice(0, limit);
+  const remaining = Math.max(0, filteredBooks.length - visibleBooks.length);
+
   const hasFilters = Boolean(search.trim() || category || tag || sort);
 
   const clearFilters = () => {
@@ -1724,8 +2346,65 @@ export default function Books() {
     setTag("");
     setSearch("");
 
-    requestAnimationFrame(() => scrollToId("bk-results"));
+    requestAnimationFrame(() => scrollToId("bx-results"));
   };
+
+  const openCheckout = useCallback((book) => {
+    setPeek(null);
+    setProduct(book);
+  }, []);
+
+  const closePeek = useCallback(() => setPeek(null), []);
+
+  // =====================================================
+  // SECTION TABS + SCROLLSPY
+  // =====================================================
+
+  const tabs = useMemo(() => {
+    const list = [];
+
+    if (!error && (sdPicks.hld || sdPicks.combo)) {
+      list.push({ id: "system-design", label: "System Design" });
+    }
+
+    if (!error && packs.length > 0) {
+      list.push({ id: "packs", label: "Packs", count: packs.length });
+    }
+
+    if (!error) {
+      list.push({ id: "library", label: "All books", count: books.length || undefined });
+    }
+
+    list.push({ id: "how", label: "How it works" });
+    list.push({ id: "faq", label: "FAQ" });
+
+    return list;
+  }, [error, packs.length, books.length, sdPicks]);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+
+    const nodes = tabs
+      .map((tab) => document.getElementById(tab.id))
+      .filter(Boolean);
+
+    if (!nodes.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+        if (visible[0]) setActiveTab(visible[0].target.id);
+      },
+      { rootMargin: "-35% 0px -55% 0px", threshold: 0 }
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+
+    return () => observer.disconnect();
+  }, [tabs, loading]);
 
   // =====================================================
   // SEO STRUCTURED DATA
@@ -1820,7 +2499,32 @@ export default function Books() {
 
   const cover = featuredBook ? getCoverUrl(featuredBook) : "";
   const ready = !loading && !error && books.length > 0;
-  const showBar = scrolled && !barClosed && !product && Boolean(cheapestPack);
+  const showBar = scrolled && !barClosed && !product && !peek && Boolean(cheapestPack);
+
+  const statItems = ready
+    ? [
+        { key: "count", value: <Counter to={stats.count} />, label: "Ebooks" },
+        { key: "topics", value: <Counter to={stats.topics} />, label: "Topics" },
+        stats.from > 0 && {
+          key: "from",
+          value: (
+            <>
+              ₹<Counter to={stats.from} />
+            </>
+          ),
+          label: "Prices start at",
+        },
+        stats.maxOff > 0 && {
+          key: "off",
+          value: (
+            <>
+              <Counter to={stats.maxOff} />%
+            </>
+          ),
+          label: "Top discount",
+        },
+      ].filter(Boolean)
+    : [];
 
   // =====================================================
   // RENDER
@@ -1874,663 +2578,86 @@ export default function Books() {
         </script>
       </Helmet>
 
-      <style>{`
-        .bkRoot {
-          --bg: #FAF9F6;
-          --surface: #FFFFFF;
-          --surface-2: #F3F0EB;
-          --text: #131209;
-          --muted: #5F5852;
-          --subtle: #8A8179;
-          --border: #E5DFD7;
-          --accent: #EA580C;
-          --accent-text: #C2410C;
-          --accent-soft: #FFF0E4;
-          --accent-line: #FDBA74;
-          --btn-bg: #C2410C;
-          --btn-bg-hover: #9A3412;
-          --btn-text: #FFFFFF;
-          --ok: #15803D;
-          --ok-soft: #E8F5EC;
-          --mark: #FFE2B8;
-          --panel: #131209;
-          --panel-border: #313131;
-          --panel-text: #FAF8F5;
-          --panel-muted: #A8A29E;
-          --h-from: #000000;
-          --h-to: #666666;
-          --shadow: 0 24px 48px rgba(19,18,9,.08);
-          --shadow-book: 0 16px 32px rgba(19,18,9,.22);
-          --ease: cubic-bezier(0.22,1,0.36,1);
-
-          min-height: 100vh;
-          width: 100%;
-          overflow-x: clip;
-          background: var(--bg);
-          color: var(--text);
-          font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          transition: background-color .3s var(--ease), color .3s var(--ease);
-        }
-
-        .bkRoot[data-theme="dark"] {
-          --bg: #131209;
-          --surface: #181818;
-          --surface-2: #1F1F1F;
-          --text: #FAF8F5;
-          --muted: #B5ACA5;
-          --subtle: #8D827A;
-          --border: #313131;
-          --accent: #FB923C;
-          --accent-text: #FB923C;
-          --accent-soft: #272727;
-          --accent-line: #7C4A22;
-          --btn-bg: #FB923C;
-          --btn-bg-hover: #FDBA74;
-          --btn-text: #131209;
-          --ok: #4ADE80;
-          --ok-soft: #272727;
-          --mark: #7C4A22;
-          --panel: #000000;
-          --h-from: #FFFFFF;
-          --h-to: #9B9B9B;
-          --shadow: 0 24px 48px rgba(0,0,0,.4);
-          --shadow-book: 0 16px 32px rgba(0,0,0,.6);
-          color-scheme: dark;
-        }
-
-        .bkRoot *, .bkRoot *::before, .bkRoot *::after { box-sizing: border-box; }
-        .bkRoot a { color: inherit; text-decoration: none; }
-        .bkRoot button, .bkRoot input, .bkRoot select { font: inherit; color: inherit; }
-        .bkRoot button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        .bkRoot :where(h1, h2, h3, h4, p, ul) { margin: 0; padding: 0; }
-        .bkRoot ul { list-style: none; }
-        .bkRoot :where(h1, h2, h3, h4) { text-wrap: balance; letter-spacing: -.02em; }
-        .bkRoot p { text-wrap: pretty; }
-        .bkRoot s { color: var(--subtle); }
-        .bkRoot mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 2px; }
-        .bkRoot a:focus-visible, .bkRoot button:focus-visible, .bkRoot select:focus-visible {
-          outline: 2px solid var(--accent); outline-offset: 2px;
-        }
-
-        /* ---------- text styles ---------- */
-        .bkRoot .mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0; }
-        .bkRoot .heading-1 { font-size: 36px; line-height: 40px; font-weight: 600; }
-        .bkRoot .heading-3 { font-size: 30px; line-height: 36px; font-weight: 600; }
-        .bkRoot .heading-4 { font-size: 30px; line-height: 36px; font-weight: 600; }
-        .bkRoot .heading-5 { font-size: 24px; line-height: 32px; font-weight: 600; }
-        .bkRoot .heading-6 { font-size: 20px; line-height: 28px; font-weight: 600; }
-        .bkRoot .title-2 { font-size: 18px; line-height: 28px; font-weight: 500; }
-        .bkRoot .title-3 { font-size: 16px; line-height: 24px; font-weight: 500; }
-        .bkRoot .body-3 { font-size: 16px; line-height: 24px; font-weight: 400; }
-        .bkRoot .body-4 { font-size: 14px; line-height: 20px; font-weight: 600; }
-        .bkRoot .body-6 { font-size: 14px; line-height: 20px; font-weight: 400; }
-        .bkRoot .button-lg { font-size: 18px; line-height: 28px; font-weight: 600; }
-        .bkRoot .button-md { font-size: 16px; line-height: 24px; font-weight: 600; }
-        .bkRoot .button-sm { font-size: 14px; line-height: 20px; font-weight: 600; }
-        .bkRoot .caption-3 { font-size: 12px; line-height: 16px; font-weight: 600; }
-        .bkRoot .caption-4 { font-size: 12px; line-height: 16px; font-weight: 500; }
-        @media (min-width: 768px) {
-          .bkRoot .heading-1 { font-size: 48px; line-height: 48px; }
-          .bkRoot .heading-3 { font-size: 36px; line-height: 40px; }
-        }
-        @media (min-width: 1280px) { .bkRoot .heading-1 { font-size: 60px; line-height: 60px; } }
-
-        /* ---------- layout ---------- */
-        .bk-shell { width: min(1240px, calc(100% - 32px)); margin: 0 auto; }
-        .bk-section { padding: 64px 0; position: relative; }
-        @media (min-width: 768px) {
-          .bk-shell { width: min(1240px, calc(100% - 48px)); }
-          .bk-section { padding: 96px 0; }
-        }
-        .bk-alt { background: var(--surface-2); }
-        .bk-muted { color: var(--muted); }
-        .bk-accent { color: var(--accent-text); }
-        .bk-inline-icon { display: inline-grid; place-items: center; flex-shrink: 0; }
-        .bk-gridsvg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-
-        .bk-progress {
-          position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 9999;
-          transform-origin: 0 50%; background: #F97316;
-        }
-
-        .bk-kicker {
-          display: inline-flex; align-items: center; gap: 4px;
-          color: var(--accent-text); text-transform: uppercase; letter-spacing: .1em;
-        }
-
-        .bk-skel { position: relative; overflow: hidden; background: var(--surface-2); border-radius: 8px; }
-        .bk-skel::after {
-          content: ""; position: absolute; inset: 0; width: 40%;
-          background: var(--surface); opacity: .6; filter: blur(16px);
-          animation: bk-shimmer 1.4s var(--ease) infinite;
-        }
-
-        /* ---------- buttons ---------- */
-        .bk-btn {
-          position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 8px 12px; border-radius: 8px; border: 1px solid transparent; white-space: nowrap;
-          transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease);
-        }
-        .bk-btn svg { flex-shrink: 0; transition: transform .5s var(--ease); }
-        .bk-btn-primary { background: var(--btn-bg); color: var(--btn-text) !important; }
-        .bk-btn-primary:hover { background: var(--btn-bg-hover); }
-        .bk-btn-primary:hover svg { transform: translateY(-2px) rotate(-8deg); }
-        .bk-btn-outline { background: var(--surface); border-color: var(--border); color: var(--text) !important; }
-        .bk-btn-outline:hover { border-color: var(--accent); color: var(--accent-text) !important; }
-        .bk-btn-outline:hover svg { transform: translate(2px, -2px); }
-        .bk-btn-outline:active { transform: scale(.98); }
-
-        .bk-icon-btn {
-          display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px;
-          background: var(--surface); border: 1px solid var(--border); color: var(--text);
-          transition: border-color .3s var(--ease), color .3s var(--ease), transform .5s var(--ease);
-        }
-        .bk-icon-btn:hover { border-color: var(--accent); color: var(--accent-text); }
-        .bk-icon-btn:active { transform: scale(.94); }
-
-        .bk-text-link { display: inline-flex; align-items: center; gap: 8px; color: var(--accent-text) !important; background: none; border: 0; padding: 0; }
-        .bk-text-link svg { transition: transform .5s var(--ease); }
-        .bk-text-link:hover svg { transform: translateX(4px); }
-
-        /* ---------- section heads ---------- */
-        .bk-head { display: flex; flex-direction: column; gap: 24px; margin-bottom: 40px; }
-        @media (min-width: 880px) { .bk-head { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
-        .bk-head-main { max-width: 680px; }
-        .bk-eyebrow { display: flex; align-items: center; gap: 12px; color: var(--accent-text); text-transform: uppercase; letter-spacing: .12em; }
-        .bk-eyebrow .mono { color: var(--subtle); }
-        .bk-eyebrow-line { display: block; width: 24px; height: 2px; background: var(--accent); transform-origin: 0 50%; }
-        .bk-head h2 { margin-top: 16px; }
-        .bk-head-text { margin-top: 16px; }
-
-        /* ---------- price ---------- */
-        .bk-price-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
-        .bk-price-row strong { color: var(--text); }
-        .bk-off { padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-text); align-self: center; }
-        .bk-price-notes { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
-        .bk-save { color: var(--ok); }
-        .bk-credits { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-text); }
-
-        /* ---------- cover ---------- */
-        .bk-cover {
-          position: relative; aspect-ratio: 3 / 4; overflow: hidden;
-          border-radius: 4px 8px 8px 4px; background: var(--panel);
-          box-shadow: var(--shadow-book);
-        }
-        .bk-cover::before {
-          content: ""; position: absolute; z-index: 2; left: 0; top: 0; bottom: 0; width: 6px;
-          background: #000; opacity: .18; pointer-events: none;
-        }
-        .bk-cover img { display: block; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; user-select: none; }
-        .bk-cover-fallback {
-          display: flex; flex-direction: column; justify-content: space-between; height: 100%;
-          padding: 16px 12px 16px 16px; color: #FAF8F5;
-        }
-        .bk-cover-fallback span { display: inline-flex; align-items: center; gap: 4px; color: #FDBA74; letter-spacing: .08em; }
-        .bk-cover-sweep {
-          position: absolute; z-index: 3; top: -20%; bottom: -20%; left: 0; width: 40%;
-          background: #fff; opacity: 0; transform: translateX(-160%) skewX(-18deg); pointer-events: none;
-        }
-
-        /* ---------- HERO ---------- */
-        .bk-hero { position: relative; padding: 128px 0 64px; overflow: hidden; }
-        @media (min-width: 768px) { .bk-hero { padding: 144px 0 96px; } }
-        .bk-hero-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-        .bk-hero-bg .bk-gridsvg {
-          color: var(--border);
-          -webkit-mask-image: radial-gradient(ellipse at 72% 40%, #000 0%, transparent 70%);
-          mask-image: radial-gradient(ellipse at 72% 40%, #000 0%, transparent 70%);
-        }
-        .bk-hero-grid { position: relative; display: grid; gap: 64px; align-items: center; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 1080px) { .bk-hero-grid { grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); gap: 48px; } }
-
-        .bk-pill {
-          display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 9999px;
-          background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-        }
-        .bk-pill b { color: var(--accent-text); font-weight: 600; }
-        .bk-ping { position: relative; width: 8px; height: 8px; border-radius: 9999px; background: #16A34A; }
-        .bk-ping::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: #16A34A; animation: bk-ping 2s var(--ease) infinite; }
-
-        .bk-hero-title { max-width: 680px; margin-top: 24px; letter-spacing: -.03em; }
-        .bk-line-mask { display: block; overflow: hidden; padding-bottom: .14em; margin-bottom: -.14em; }
-        .bk-line {
-          display: block; width: fit-content;
-          background-image: linear-gradient(90deg, var(--h-from), var(--h-to));
-          -webkit-background-clip: text; background-clip: text;
-          -webkit-text-fill-color: transparent; color: transparent;
-        }
-        .bk-hero-sub { max-width: 680px; margin-top: 24px; color: var(--muted); }
-        .bk-hero-search { max-width: 680px; margin-top: 32px; }
-        .bk-hero-topics { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 680px; margin-top: 16px; }
-        .bk-hero-topics > span { color: var(--subtle); }
-        .bk-topic {
-          padding: 4px 12px; border-radius: 9999px; background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-          transition: border-color .3s var(--ease), color .3s var(--ease), transform .5s var(--ease);
-        }
-        .bk-topic:hover { border-color: var(--accent); color: var(--accent-text); transform: translateY(-2px); }
-        .bk-topic:active { transform: scale(.96); }
-
-        .bk-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; max-width: 680px; margin-top: 48px; }
-        @media (min-width: 640px) { .bk-stats { grid-template-columns: repeat(4,minmax(0,1fr)); } }
-        .bk-stat strong { display: block; color: var(--text); }
-        .bk-stat > span { display: block; margin-top: 4px; color: var(--muted); }
-
-        /* ---------- search field ---------- */
-        .bk-search {
-          position: relative; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 8px 0 16px;
-          border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
-          transition: border-color .3s var(--ease), box-shadow .3s var(--ease);
-        }
-        .bk-search.is-large { height: 64px; border-radius: 16px; padding-right: 12px; box-shadow: var(--shadow); }
-        .bk-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-        .bk-search-icon { flex-shrink: 0; color: var(--subtle); transition: color .3s var(--ease), transform .5s var(--ease); }
-        .bk-search:focus-within .bk-search-icon { color: var(--accent-text); transform: scale(1.1) rotate(-8deg); }
-        .bk-search input {
-          flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text);
-          font-size: 16px; line-height: 24px; font-weight: 500;
-          -webkit-appearance: none; appearance: none;
-        }
-        .bk-search input::placeholder { color: var(--subtle); opacity: 1; }
-        .bk-search input::-webkit-search-cancel-button, .bk-search input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
-        .bk-search-clear {
-          display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9999px;
-          border: 0; background: var(--surface-2); color: var(--muted);
-          transition: color .3s var(--ease), transform .5s var(--ease);
-        }
-        .bk-search-clear:hover { color: var(--accent-text); transform: rotate(90deg); }
-        .bk-kbd { display: none; flex-shrink: 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); }
-        @media (hover: hover) and (min-width: 880px) { .bk-kbd { display: inline-block; } }
-
-        /* ---------- hero deck ---------- */
-        .bk-deck { width: 100%; max-width: 480px; margin: 0 auto; }
-        .bk-deck-stage { position: relative; display: grid; place-items: center; height: 304px; }
-        @media (min-width: 640px) { .bk-deck-stage { height: 384px; } }
-        .bk-deck-halo {
-          position: absolute; width: 320px; height: 320px; border-radius: 9999px;
-          background: #F97316; opacity: .16; filter: blur(80px);
-        }
-        .bk-deck-card {
-          position: absolute; width: 176px; padding: 0; border: 0; background: transparent; border-radius: 8px;
-          transform-origin: 50% 100%; will-change: transform;
-        }
-        @media (min-width: 640px) { .bk-deck-card { width: 232px; } }
-        .bk-deck-card.bk-skel { aspect-ratio: 3 / 4; position: relative; }
-        .bk-deck-info {
-          position: relative; margin-top: 24px; padding: 16px; border-radius: 16px;
-          background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
-        }
-        .bk-deck-copy { min-height: 104px; }
-        .bk-deck-title {
-          display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
-          margin: 4px 0 8px; color: var(--text); transition: color .3s var(--ease);
-        }
-        .bk-deck-title:hover { color: var(--accent-text); }
-        .bk-deck-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
-        .bk-deck-nav { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-
-        /* ---------- trust strip ---------- */
-        .bk-trust { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); padding: 24px 0; }
-        @media (min-width: 960px) { .bk-trust { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; } }
-        .bk-trust-item { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
-        @media (min-width: 640px) { .bk-trust-item { flex-direction: row; gap: 12px; align-items: flex-start; } }
-        .bk-tile {
-          display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px;
-          background: var(--accent-soft); color: var(--accent-text);
-          transition: transform .5s var(--ease), background-color .3s var(--ease), color .3s var(--ease);
-        }
-        .bk-trust-item:hover .bk-tile, .bk-goal:hover .bk-tile { transform: translateY(-2px) rotate(-6deg); background: var(--btn-bg); color: var(--btn-text); }
-        .bk-trust-item p { margin-top: 2px; color: var(--muted); }
-
-        /* ---------- packs ---------- */
-        .bk-packs { display: grid; gap: 16px; grid-template-columns: minmax(0,1fr); align-items: stretch; }
-        @media (min-width: 960px) { .bk-packs { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-        .bk-pack {
-          position: relative; display: flex; flex-direction: column; padding: 24px; border-radius: 24px;
-          background: var(--surface); border: 1px solid var(--border);
-          transition: transform .5s var(--ease), border-color .3s var(--ease), box-shadow .5s var(--ease);
-        }
-        @media (min-width: 640px) { .bk-pack { padding: 32px; } }
-        .bk-pack:hover { transform: translateY(-4px); border-color: var(--accent-line); box-shadow: var(--shadow); }
-        .bk-pack.is-featured { border: 2px solid var(--accent); }
-        .bk-pack-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-        .bk-pack-ribbon { padding: 4px 12px; border-radius: 9999px; background: var(--btn-bg); color: var(--btn-text); }
-        .bk-pack h3 + p { margin-top: 4px; }
-        .bk-pack-covers { display: flex; align-items: center; margin-top: 24px; padding-left: 12px; }
-        .bk-pack-thumb {
-          position: relative; display: grid; place-items: center; width: 48px; aspect-ratio: 3 / 4; margin-left: -12px; overflow: hidden;
-          border-radius: 4px; background: var(--surface-2); color: var(--accent-text);
-          border: 2px solid var(--surface); box-shadow: 0 4px 8px rgba(19,18,9,.16);
-          transition: transform .5s var(--ease), margin .5s var(--ease);
-        }
-        .bk-pack-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .bk-pack:hover .bk-pack-thumb { transform: translateY(-4px) rotate(-3deg); }
-        .bk-pack:hover .bk-pack-thumb:nth-child(even) { transform: translateY(2px) rotate(3deg); }
-        .bk-pack-more { margin-left: 12px; color: var(--muted); }
-        .bk-pack-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
-        .bk-pack-price + .bk-save { margin-top: 8px; }
-        .bk-checks { display: grid; gap: 12px; margin: 24px 0; }
-        .bk-checks li { display: flex; align-items: flex-start; gap: 12px; color: var(--text); }
-        .bk-checks svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-text); }
-        .bk-checks b { font-weight: 600; }
-        .bk-inside { margin-bottom: 24px; }
-        .bk-inside-btn {
-          display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
-          padding: 8px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
-          transition: border-color .3s var(--ease);
-        }
-        .bk-inside-btn:hover { border-color: var(--accent); }
-        .bk-inside-list { display: grid; gap: 8px; padding: 16px 4px 0; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 520px) { .bk-inside-list { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-        .bk-inside-list li { display: flex; align-items: flex-start; gap: 8px; color: var(--muted); }
-        .bk-inside-list svg { flex-shrink: 0; margin-top: 2px; color: var(--ok); }
-        .bk-pack-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto; }
-        .bk-pack-actions .bk-btn-primary { flex: 1 1 200px; }
-        .bk-notes { display: grid; gap: 12px; margin-top: 24px; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 960px) { .bk-notes { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-        .bk-note { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
-        .bk-note svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-text); }
-        .bk-note b { color: var(--text); font-weight: 600; }
-
-        .bk-offer {
-          display: flex; flex-direction: column; align-items: flex-start; gap: 24px; margin-top: 24px; padding: 24px;
-          border-radius: 16px; background: var(--surface); border: 1px dashed var(--accent-line);
-        }
-        @media (min-width: 768px) { .bk-offer { flex-direction: row; align-items: center; justify-content: space-between; } }
-        .bk-offer h3 { margin: 8px 0 4px; }
-        .bk-offer-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-        .bk-offer-pills li { padding: 4px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-text); }
-
-        /* ---------- goals ---------- */
-        .bk-goals { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); margin-bottom: 32px; }
-        @media (min-width: 768px) { .bk-goals { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; } }
-        .bk-goal {
-          position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; overflow: hidden;
-          text-align: left; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); color: var(--text);
-          transition: transform .5s var(--ease), border-color .3s var(--ease), box-shadow .5s var(--ease);
-        }
-        .bk-goal:hover { transform: translateY(-4px); border-color: var(--accent-line); box-shadow: var(--shadow); }
-        .bk-goal:active { transform: scale(.98); }
-        .bk-goal.is-on { border-color: var(--accent); }
-        .bk-goal small { display: block; margin-top: 2px; color: var(--muted); }
-        .bk-goal-covers { position: absolute; right: -8px; bottom: -24px; display: none; }
-        @media (min-width: 1080px) { .bk-goal-covers { display: flex; } }
-        .bk-goal-covers .bk-cover { width: 56px; margin-left: -20px; box-shadow: 0 8px 16px rgba(19,18,9,.2); transition: transform .5s var(--ease); }
-        .bk-goal-covers .bk-cover:nth-child(1) { transform: rotate(-8deg); }
-        .bk-goal-covers .bk-cover:nth-child(2) { transform: rotate(4deg) translateY(-4px); }
-        .bk-goal:hover .bk-goal-covers .bk-cover:nth-child(1) { transform: rotate(-14deg) translateY(-12px); }
-        .bk-goal:hover .bk-goal-covers .bk-cover:nth-child(2) { transform: rotate(8deg) translateY(-16px); }
-
-        /* ---------- toolbar ---------- */
-        .bk-count { scroll-margin-top: 230px; }
-        @media (max-width: 640px) { .bk-count { scroll-margin-top: 190px; } }
-        .bk-toolbar {
-          position: sticky; top: 70px; z-index: 30; margin-bottom: 24px; padding: 12px;
-          border-radius: 16px; border: 1px solid var(--border); background: var(--bg);
-          box-shadow: 0 8px 24px rgba(19,18,9,.06);
-        }
-        @supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))) {
-          .bk-toolbar { background: color-mix(in srgb, var(--bg) 86%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-        }
-        @media (max-width: 640px) { .bk-toolbar { top: 62px; padding: 8px; border-radius: 12px; } }
-        .bk-toolbar-row { display: flex; align-items: center; gap: 8px; }
-        .bk-toolbar-row .bk-search { flex: 1; min-width: 0; }
-        .bk-select { position: relative; flex-shrink: 0; }
-        .bk-select select {
-          height: 48px; padding: 0 40px 0 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface);
-          font-size: 14px; line-height: 20px; font-weight: 600; cursor: pointer;
-          -webkit-appearance: none; appearance: none; transition: border-color .3s var(--ease);
-        }
-        .bk-select select:hover { border-color: var(--accent); }
-        .bk-select svg { position: absolute; right: 16px; top: 50%; margin-top: -7px; pointer-events: none; color: var(--muted); }
-        .bk-filter-toggle { position: relative; width: 48px; height: 48px; border-radius: 12px; }
-        .bk-filter-toggle i { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 9999px; background: var(--accent); }
-        .bk-view { display: none; padding: 4px; gap: 4px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
-        @media (min-width: 880px) { .bk-view { display: flex; } }
-        .bk-view button { position: relative; display: grid; place-items: center; width: 40px; height: 38px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); transition: color .3s var(--ease); }
-        .bk-view button[aria-pressed="true"] { color: var(--btn-text); }
-        .bk-view-pill { position: absolute; inset: 0; border-radius: 8px; background: var(--btn-bg); }
-        .bk-view svg { position: relative; }
-        @media (max-width: 640px) { .bk-select-sort { display: none; } }
-
-        .bk-chips {
-          display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; padding-bottom: 2px;
-          scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
-        }
-        .bk-chips::-webkit-scrollbar { display: none; }
-        .bk-chip {
-          position: relative; flex-shrink: 0; padding: 8px 12px; border-radius: 9999px;
-          background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-          transition: border-color .3s var(--ease), color .3s var(--ease), transform .5s var(--ease);
-        }
-        .bk-chip:hover { border-color: var(--accent); color: var(--accent-text); }
-        .bk-chip:active { transform: scale(.95); }
-        .bk-chip.is-on, .bk-chip.is-on:hover { color: var(--btn-text); border-color: transparent; }
-        .bk-chip-pill { position: absolute; inset: -1px; border-radius: 9999px; background: var(--btn-bg); }
-        .bk-chip-label { position: relative; display: inline-flex; align-items: center; gap: 8px; }
-        .bk-chip-label .mono { opacity: .7; }
-
-        .bk-filters { padding: 16px 4px 4px; }
-        .bk-filters-row { display: flex; flex-wrap: wrap; gap: 8px; }
-        .bk-filters > p { margin-bottom: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
-        .bk-filters .bk-select { display: none; margin-bottom: 16px; }
-        .bk-filters .bk-select select { width: 100%; }
-        @media (max-width: 640px) { .bk-filters .bk-select { display: block; } }
-
-        .bk-count { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; color: var(--muted); min-height: 24px; }
-        .bk-count b { color: var(--text); font-weight: 600; }
-
-        /* ---------- grid + cards ---------- */
-        .bk-grid { display: grid; gap: 12px; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 560px) { .bk-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; } }
-        @media (min-width: 880px) { .bk-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-        @media (min-width: 1200px) { .bk-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
-        @media (min-width: 880px) { .bk-grid.is-list { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-
-        .bk-card {
-          position: relative; display: flex; flex-direction: row; min-width: 0; padding: 8px; gap: 4px;
-          border-radius: 16px; background: var(--surface); border: 1px solid var(--border);
-          transition: border-color .3s var(--ease), box-shadow .5s var(--ease);
-        }
-        .bk-card:hover, .bk-card:focus-within { border-color: var(--accent-line); box-shadow: var(--shadow); }
-        .bk-card-media {
-          position: relative; display: grid; place-items: center; flex-shrink: 0; width: 112px; padding: 12px;
-          border-radius: 8px; background: var(--surface-2); overflow: hidden;
-        }
-        .bk-card-media .bk-cover { width: 100%; transition: transform .5s var(--ease), box-shadow .5s var(--ease); }
-        .bk-card:hover .bk-card-media .bk-cover { transform: translateY(-6px) rotate(-3deg) scale(1.04); }
-        .bk-card:hover .bk-cover-sweep { opacity: .22; transform: translateX(360%) skewX(-18deg); transition: transform .9s var(--ease), opacity .3s var(--ease); }
-        .bk-flag {
-          position: absolute; z-index: 4; top: 8px; left: 8px; padding: 2px 8px; border-radius: 6px;
-          background: var(--panel); color: #FDBA74; border: 1px solid var(--panel-border);
-        }
-        .bk-card-body { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 8px; }
-        .bk-card-title { margin-top: 4px; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .bk-card-title a { transition: color .3s var(--ease); }
-        .bk-card-title a:hover { color: var(--accent-text); }
-        .bk-card-sub { margin-top: 4px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-        .bk-card-foot { margin-top: auto; padding-top: 12px; }
-        .bk-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-        .bk-card-actions .bk-btn-primary { flex: 1 1 auto; }
-
-        /* stacked card: tablets and up, unless list view is chosen */
-        @media (min-width: 560px) {
-          .bk-card:not(.is-row) { flex-direction: column; }
-          .bk-card:not(.is-row) .bk-card-media { width: 100%; padding: 24px 24px 16px; }
-          .bk-card:not(.is-row) .bk-card-media .bk-cover { width: min(168px, 72%); }
-          .bk-card:not(.is-row) .bk-card-body { padding: 12px 8px 8px; }
-          .bk-card.is-row .bk-card-media { width: 144px; }
-        }
-        .bk-card-skel .bk-card-body { gap: 12px; }
-        .bk-card-skel i { display: block; height: 12px; }
-        .bk-card-skel .bk-cover { width: 100%; box-shadow: none; }
-        @media (min-width: 560px) { .bk-card-skel .bk-card-media .bk-cover { width: min(168px, 72%); } }
-
-        .bk-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 64px 24px; border-radius: 24px; background: var(--surface); border: 1px dashed var(--border); }
-        .bk-empty .bk-tile { width: 64px; height: 64px; border-radius: 16px; margin-bottom: 24px; }
-        .bk-empty p { max-width: 440px; margin: 8px 0 24px; color: var(--muted); }
-        .bk-empty-topics { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 24px; }
-
-        .bk-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; margin: 32px 0; border-radius: 16px; background: var(--surface); border: 1px solid var(--accent-line); }
-        .bk-error p { margin-top: 4px; color: var(--muted); }
-
-        /* ---------- steps ---------- */
-        .bk-steps { display: grid; gap: 16px; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 880px) { .bk-steps { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-        .bk-step { padding: 24px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); transition: transform .5s var(--ease), border-color .3s var(--ease); }
-        .bk-step:hover { transform: translateY(-4px); border-color: var(--accent-line); }
-        .bk-step .mono { color: var(--accent-text); }
-        .bk-step h3 { margin: 16px 0 8px; }
-        .bk-step p { color: var(--muted); }
-
-        /* ---------- tagline ---------- */
-        .bk-tagline-section { padding: 96px 0; }
-        @media (min-width: 768px) { .bk-tagline-section { padding: 160px 0; } }
-        .bk-tagline { max-width: 680px; margin: 0 auto; text-align: center; text-wrap: balance; letter-spacing: -.02em; }
-        .bk-tagline-word { opacity: .3; transition: opacity .5s var(--ease); }
-        .bk-tagline-word.is-on { opacity: 1; }
-
-        /* ---------- faq ---------- */
-        .bk-faq { display: grid; gap: 32px; align-items: start; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 1080px) {
-          .bk-faq { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 64px; }
-          .bk-faq > .bk-head { position: sticky; top: 96px; margin-bottom: 0; }
-        }
-        .bk-faq-list { display: grid; gap: 12px; }
-        .bk-faq-item { border-radius: 12px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); transition: border-color .3s var(--ease); }
-        .bk-faq-item:hover, .bk-faq-item.is-open { border-color: var(--accent-line); }
-        .bk-faq-item button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border: 0; background: transparent; text-align: left; color: var(--text); }
-        .bk-faq-item button:focus-visible { outline-offset: -2px; border-radius: 12px; }
-        .bk-faq-answer { padding: 0 24px 24px; color: var(--muted); }
-
-        /* ---------- support ---------- */
-        .bk-support {
-          position: relative; overflow: hidden; isolation: isolate;
-          display: flex; flex-direction: column; align-items: flex-start; gap: 32px; padding: 40px 24px;
-          border-radius: 24px; background: var(--panel); border: 1px solid var(--panel-border); color: var(--panel-text);
-        }
-        @media (min-width: 880px) { .bk-support { flex-direction: row; align-items: center; justify-content: space-between; padding: 64px; } }
-        .bk-support .bk-gridsvg { z-index: -1; color: var(--panel-border); opacity: .7; }
-        .bk-support h2 { max-width: 560px; color: var(--panel-text); }
-        .bk-support p { max-width: 520px; margin-top: 16px; color: var(--panel-muted); }
-        .bk-support-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; flex-shrink: 0; }
-        .bk-support .bk-btn-primary { background: #FB923C; color: #131209 !important; }
-        .bk-support .bk-btn-primary:hover { background: #FDBA74; }
-        .bk-support .bk-text-link { color: #FDBA74 !important; }
-
-        /* ---------- floating pack bar + back to top ---------- */
-        .bk-bar {
-          position: fixed; z-index: 60; left: 16px; right: 16px; bottom: 16px; margin: 0 auto; max-width: 560px;
-          display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px;
-          border-radius: 16px; background: var(--panel); border: 1px solid var(--panel-border); color: var(--panel-text);
-          box-shadow: 0 24px 48px rgba(0,0,0,.32);
-          padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-        }
-        .bk-bar-copy { flex: 1; min-width: 0; }
-        .bk-bar-copy strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bk-bar-copy span { display: block; color: var(--panel-muted); }
-        .bk-bar .bk-btn-primary { background: #FB923C; color: #131209 !important; }
-        .bk-bar .bk-btn-primary:hover { background: #FDBA74; }
-        .bk-bar-close { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border: 0; border-radius: 9999px; background: transparent; color: var(--panel-muted); transition: color .3s var(--ease), transform .5s var(--ease); }
-        .bk-bar-close:hover { color: #fff; transform: rotate(90deg); }
-
-        .bk-top {
-          position: fixed; z-index: 55; right: 16px; bottom: 16px; display: grid; place-items: center; width: 48px; height: 48px;
-          border-radius: 9999px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
-          box-shadow: var(--shadow);
-        }
-        .bk-top.is-raised { bottom: 96px; }
-        @media (min-width: 880px) { .bk-top.is-raised { bottom: 16px; } }
-
-        /* ---------- keyframes ---------- */
-        @keyframes bk-ping { 0% { transform: scale(1); opacity: .7; } 80%,100% { transform: scale(3); opacity: 0; } }
-        @keyframes bk-shimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(320%); } }
-
-        @media (prefers-reduced-motion: reduce) {
-          .bkRoot *, .bkRoot *::before, .bkRoot *::after {
-            animation: none !important;
-            transition-property: opacity, color, background-color, border-color !important;
-          }
-        }
-      `}</style>
-
       <motion.div
-        className="bk-progress"
+        className="bx-progress"
         style={{ scaleX: progress }}
         aria-hidden="true"
       />
 
-      <main className="bkRoot" data-theme={isDark ? "dark" : "light"}>
+      <main ref={rootRef} className="bx" data-theme={isDark ? "dark" : "light"}>
         {/* ===================================== */}
         {/* HERO                                  */}
         {/* ===================================== */}
 
-        <section className="bk-hero" aria-labelledby="bk-title">
-          <div className="bk-hero-bg" aria-hidden="true">
-            <GridPattern id="bk-grid-hero" />
-          </div>
+        <section className="bx-hero" aria-labelledby="bx-title">
+          <div className="bx-hero-bg" aria-hidden="true" />
 
-          <div className="bk-shell bk-hero-grid">
+          <div className="bx-shell bx-hero-grid">
             <div>
               <motion.p
-                className="caption-3 bk-pill"
-                initial={{ opacity: 0, y: -16 }}
+                className="bx-pill"
+                initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: EASE }}
+                transition={{ duration: 0.6, ease: EASE }}
               >
-                <span className="bk-ping" aria-hidden="true" />
+                <span className="bx-ping" aria-hidden="true" />
                 Target Trek library
                 {ready && stats.count > 0 && <b>{stats.count} ebooks</b>}
               </motion.p>
 
-              <h1 id="bk-title" className="heading-1 bk-hero-title">
-                <LineReveal delay={0.1}>Ebooks that make</LineReveal>
-                <LineReveal delay={0.22}>hard topics click.</LineReveal>
-              </h1>
-
-              <motion.p
-                className="body-3 bk-hero-sub"
+              <motion.h1
+                id="bx-title"
+                className="bx-h1 bx-hero-title"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.45, ease: EASE }}
+                transition={{ duration: 0.8, delay: 0.08, ease: EASE }}
+              >
+                Ebooks that make <span className="bx-hl">hard topics</span> click.
+              </motion.h1>
+
+              <motion.p
+                className="bx-lead bx-hero-lead"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.2, ease: EASE }}
               >
                 Practical ebooks on System Design HLD, Java LLD, Spring Boot,
                 cloud, core CS and GenAI, written for software engineers
-                preparing for interviews and real projects. Pay once and read
-                in the built in reader.
+                preparing for interviews and real projects. Pay once and read in
+                the built in reader.
               </motion.p>
 
               <motion.div
-                className="bk-hero-search"
-                initial={{ opacity: 0, y: 24 }}
+                className="bx-hero-search"
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.6, ease: EASE }}
+                transition={{ duration: 0.7, delay: 0.3, ease: EASE }}
               >
                 <SearchField
                   large
-                  id="bk-hero-search"
+                  id="bx-hero-search"
                   value={search}
                   onChange={setSearch}
-                  onSubmit={() => scrollToId("bk-results")}
+                  onSubmit={() => scrollToId("bx-results")}
                   placeholder={`Try "${SEARCH_EXAMPLES[placeholderIndex]}"`}
                 />
               </motion.div>
 
               {categoryStats.length > 0 && (
                 <motion.div
-                  className="bk-hero-topics"
-                  variants={stagger(0.05, 0.1)}
+                  className="bx-hero-topics"
+                  variants={stagger(0.04, 0.35)}
                   initial="hidden"
                   animate="show"
                 >
-                  <span className="caption-4">Popular</span>
+                  <span>Popular:</span>
 
                   {categoryStats.slice(0, 6).map((item) => (
                     <motion.button
                       type="button"
                       key={item.name}
                       variants={rise}
-                      className="caption-3 bk-topic"
+                      className="bx-topic"
                       onClick={() => pickCategory(item.name)}
                     >
                       {item.name}
@@ -2539,79 +2666,151 @@ export default function Books() {
                 </motion.div>
               )}
 
-              {ready && (
-                <Stagger className="bk-stats" gap={0.08}>
-                  <motion.div variants={rise} className="bk-stat">
-                    <strong className="mono heading-5">
-                      <Counter to={stats.count} />
-                    </strong>
-                    <span className="caption-4">Ebooks</span>
-                  </motion.div>
-
-                  <motion.div variants={rise} className="bk-stat">
-                    <strong className="mono heading-5">
-                      <Counter to={stats.topics} />
-                    </strong>
-                    <span className="caption-4">Topics covered</span>
-                  </motion.div>
-
-                  {stats.from > 0 && (
-                    <motion.div variants={rise} className="bk-stat">
-                      <strong className="mono heading-5">
-                        ₹<Counter to={stats.from} />
-                      </strong>
-                      <span className="caption-4">Prices start at</span>
-                    </motion.div>
-                  )}
-
-                  {stats.maxOff > 0 && (
-                    <motion.div variants={rise} className="bk-stat">
-                      <strong className="mono heading-5">
-                        <Counter to={stats.maxOff} />%
-                      </strong>
-                      <span className="caption-4">Biggest discount today</span>
-                    </motion.div>
-                  )}
-                </Stagger>
+              {statItems.length > 0 && (
+                <motion.div
+                  className="bx-stats"
+                  style={{ "--n": statItems.length }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.45, ease: EASE }}
+                >
+                  {statItems.map((item) => (
+                    <div className="bx-stat" key={item.key}>
+                      <strong>{item.value}</strong>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </motion.div>
               )}
             </div>
 
             <motion.div
-              initial={{ opacity: 0, y: 48 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.3, ease: EASE }}
+              transition={{ duration: 0.9, delay: 0.2, ease: EASE }}
             >
-              <HeroDeck
-                books={deckBooks}
+              <Spotlight
+                books={spotBooks}
                 loading={loading}
-                onBuy={setProduct}
+                onBuy={openCheckout}
+                onPeek={setPeek}
               />
             </motion.div>
           </div>
         </section>
 
         {/* ===================================== */}
+        {/* SYSTEM DESIGN: HLD + the HLD/LLD combo */}
+        {/* ===================================== */}
+
+        {!error && (sdPicks.hld || sdPicks.combo) && (
+          <section
+            className="bx-sec bx-sd"
+            id="system-design"
+            aria-labelledby="bx-sd-title"
+          >
+            <div className="bx-shell">
+              <SectionHead
+                eyebrow="Start here · System Design"
+                id="bx-sd-title"
+                title={
+                  <>
+                    The books most engineers <span className="bx-hl">start with.</span>
+                  </>
+                }
+                text="Begin with High Level Design, or take HLD and LLD together and cover the whole system design round."
+              />
+
+              <Stagger gap={0.12}>
+                <SystemDesignPicks
+                  hld={sdPicks.hld}
+                  lld={sdPicks.lld}
+                  combo={sdPicks.combo}
+                  onBuy={openCheckout}
+                  onPeek={setPeek}
+                />
+              </Stagger>
+
+              {sdPicks.lld && (
+                <p className="bx-sd-more">
+                  Only need low level design?{" "}
+                  <BookLink book={sdPicks.lld} className="bx-link">
+                    {sdPicks.lld.title} · {money(sdPicks.lld.price, sdPicks.lld.currency)}
+                    <ArrowRight size={14} weight="bold" />
+                  </BookLink>
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ===================================== */}
+        {/* STICKY SECTION TABS                   */}
+        {/* ===================================== */}
+
+        <div className="bx-tabs-slot" ref={tabsSlotRef}>
+        <nav className={cn("bx-tabs", pinned && "is-pinned")} aria-label="On this page">
+          <div className="bx-shell bx-tabs-in">
+            <div className="bx-tabs-list">
+              {tabs.map((tab) => {
+                const on = activeTab === tab.id;
+
+                return (
+                  <button
+                    type="button"
+                    key={tab.id}
+                    className={cn("bx-tab", on && "is-on")}
+                    aria-current={on ? "location" : undefined}
+                    onClick={() => scrollToId(tab.id)}
+                  >
+                    <span>
+                      {tab.label}
+                      {tab.count !== undefined && (
+                        <span className="bx-mono">{tab.count}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {cheapestPack && (
+              <span className="bx-tabs-cta">
+                All books from <b>{money(cheapestPack.price, cheapestPack.currency)}</b>
+              </span>
+            )}
+
+            <button
+              type="button"
+              className="bx-icon-btn bx-tabs-search"
+              onClick={focusCatalogSearch}
+              aria-label="Search books"
+              title="Search books ( / )"
+            >
+              <MagnifyingGlass size={18} weight="bold" />
+            </button>
+          </div>
+        </nav>
+        </div>
+
+        {/* ===================================== */}
         {/* TRUST STRIP                           */}
         {/* ===================================== */}
 
-        <div className="bk-alt">
-          <Stagger className="bk-shell bk-trust" gap={0.06}>
+        <div className="bx-tint">
+          <Stagger className="bx-shell bx-trust" gap={0.06}>
             {TRUST.map((item) => {
               const Icon = item.icon;
 
               return (
-                <motion.div
-                  key={item.title}
-                  variants={rise}
-                  className="bk-trust-item"
-                >
-                  <span className="bk-tile">
+                <motion.div key={item.title} variants={rise} className="bx-trust-item">
+                  <span className="bx-tile">
                     <Icon size={20} weight="duotone" />
                   </span>
 
                   <div>
-                    <h2 className="body-4">{item.title}</h2>
-                    <p className="caption-4">{item.text}</p>
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
                   </div>
                 </motion.div>
               );
@@ -2624,16 +2823,16 @@ export default function Books() {
         {/* ===================================== */}
 
         {error && (
-          <div className="bk-shell">
-            <div className="bk-error" role="alert">
+          <div className="bx-shell">
+            <div className="bx-error" role="alert">
               <div>
-                <h2 className="title-3">Unable to load books</h2>
-                <p className="body-6">{error} Check your connection and try again.</p>
+                <h2>Unable to load books</h2>
+                <p>{error} Check your connection and try again.</p>
               </div>
 
               <button
                 type="button"
-                className="button-md bk-btn bk-btn-primary"
+                className="bx-btn bx-btn-primary"
                 onClick={() => setRetryCount((n) => n + 1)}
               >
                 <ArrowClockwise size={16} weight="bold" />
@@ -2648,47 +2847,45 @@ export default function Books() {
         {/* ===================================== */}
 
         {!error && packs.length > 0 && (
-          <section
-            className="bk-section"
-            id="packs"
-            aria-labelledby="bk-packs-title"
-            style={{ scrollMarginTop: 80 }}
-          >
-            <div className="bk-shell">
+          <section className="bx-sec" id="packs" aria-labelledby="bx-packs-title">
+            <div className="bx-shell">
               <SectionHead
-                index="01"
                 eyebrow="Book packs"
-                id="bk-packs-title"
-                title="Get every book in one pack."
+                id="bx-packs-title"
+                title={
+                  <>
+                    Get <span className="bx-hl">every book</span> in one pack.
+                  </>
+                }
                 text="One payment, no subscription. Take all the current books, or go Lifetime and receive every future book too."
               />
 
-              <Stagger className="bk-packs" gap={0.12}>
+              <Stagger className="bx-packs" gap={0.12}>
                 {packs.map((pack) => (
                   <PackPanel
                     key={getBookId(pack)}
                     pack={pack}
                     worth={packWorth}
-                    onBuy={setProduct}
+                    onBuy={openCheckout}
                   />
                 ))}
               </Stagger>
 
               {packsFromApi && (
-                <Stagger className="bk-notes" gap={0.08}>
+                <Stagger className="bx-notes" gap={0.08}>
                   {anyCredits && (
-                    <motion.p variants={rise} className="body-6 bk-note">
+                    <motion.p variants={rise} className="bx-note">
                       <Sword size={20} weight="duotone" />
                       <span>
-                        <b>What is a Prep Arena credit?</b> Prep Arena pairs
-                        you with another serious candidate for mock interviews
-                        and private chat. 1 credit = 1 match = 1 partnership.
+                        <b>What is a Prep Arena credit?</b> Prep Arena pairs you
+                        with another serious candidate for mock interviews and
+                        private chat. 1 credit = 1 match = 1 partnership.
                       </span>
                     </motion.p>
                   )}
 
                   {hasLifetime && (
-                    <motion.p variants={rise} className="body-6 bk-note">
+                    <motion.p variants={rise} className="bx-note">
                       <Gift size={20} weight="duotone" />
                       <span>
                         <b>Lifetime bonus.</b> We give you free, limited Prep
@@ -2698,11 +2895,11 @@ export default function Books() {
                     </motion.p>
                   )}
 
-                  <motion.p variants={rise} className="body-6 bk-note">
+                  <motion.p variants={rise} className="bx-note">
                     <BellRinging size={20} weight="duotone" />
                     <span>
-                      <b>New books, straight to your inbox.</b> Pack members
-                      are emailed when a book is published and can request new
+                      <b>New books, straight to your inbox.</b> Pack members are
+                      emailed when a book is published and can request new
                       books from inside Prep Arena.
                     </span>
                   </motion.p>
@@ -2715,12 +2912,16 @@ export default function Books() {
         )}
 
         {/* ===================================== */}
-        {/* RESUME LAB, right after the packs     */}
+        {/* RESUME LAB                            */}
         {/* ===================================== */}
 
-        <section className="bk-section" style={{ paddingTop: 0 }} aria-label="Resume Lab">
-          <div className="bk-shell">
-            <ResumePromo variant="card" pain lead="Reading the books but not getting interview calls?" accent="Fix the resume that is stopping them." isDark={isDark} />
+        <section
+          className="bx-sec"
+          style={{ paddingTop: packs.length > 0 && !error ? 0 : undefined }}
+          aria-label="Resume Lab"
+        >
+          <div className="bx-shell">
+            <ResumeLabCard />
           </div>
         </section>
 
@@ -2730,24 +2931,22 @@ export default function Books() {
 
         {!error && (
           <section
-            className="bk-section bk-alt"
+            className="bx-sec bx-tint"
             id="library"
-            aria-labelledby="bk-library-title"
-            style={{ scrollMarginTop: 64 }}
+            aria-labelledby="bx-library-title"
           >
-            <div className="bk-shell">
+            <div className="bx-shell">
               <SectionHead
-                index="02"
                 eyebrow="Book collection"
-                id="bk-library-title"
+                id="bx-library-title"
                 title="Find your next book."
-                text="Search by title, topic or tag, or start from a goal. Every book has a Buy now button, so checkout is one tap away."
+                text="Start from a topic, or search by title and tag. Open Quick view to read the details without leaving the page."
               />
 
-              {/* SHOP BY GOAL */}
+              {/* BROWSE BY TOPIC */}
 
               {categoryStats.length > 0 && (
-                <Stagger className="bk-goals" gap={0.05}>
+                <Stagger className="bx-topics" gap={0.05}>
                   {categoryStats.slice(0, 8).map((item) => {
                     const Icon = getCategoryIcon(item.name);
                     const active = lower(category) === lower(item.name);
@@ -2757,30 +2956,25 @@ export default function Books() {
                         type="button"
                         key={item.name}
                         variants={rise}
-                        className={cn("bk-goal", active && "is-on")}
+                        className={cn("bx-topic-card", active && "is-on")}
                         aria-pressed={active}
                         onClick={() => pickCategory(active ? "" : item.name)}
                       >
-                        <span className="bk-tile">
+                        <span className="bx-tile">
                           <Icon size={20} weight="duotone" />
                         </span>
 
                         <span>
-                          <span className="body-4">{item.name}</span>
-                          <small className="caption-4">
+                          <strong>{item.name}</strong>
+                          <small>
                             {item.count} {item.count === 1 ? "book" : "books"}
-                            {Number.isFinite(item.from) &&
-                              ` · from ${money(item.from)}`}
+                            {Number.isFinite(item.from) && ` · from ${money(item.from)}`}
                           </small>
                         </span>
 
-                        <span className="bk-goal-covers" aria-hidden="true">
+                        <span className="bx-topic-covers" aria-hidden="true">
                           {item.covers.slice(0, 2).map((book) => (
-                            <BookCover
-                              key={getBookId(book)}
-                              book={book}
-                              decorative
-                            />
+                            <BookCover key={getBookId(book)} book={book} decorative />
                           ))}
                         </span>
                       </motion.button>
@@ -2789,24 +2983,24 @@ export default function Books() {
                 </Stagger>
               )}
 
-              {/* STICKY TOOLBAR */}
+              {/* TOOLBAR */}
 
-              <div className="bk-toolbar">
-                <div className="bk-toolbar-row">
+              <div className="bx-toolbar">
+                <div className="bx-toolbar-row">
                   <SearchField
                     ref={toolbarSearchRef}
-                    id="bk-search"
+                    id="bx-search"
                     hint
                     value={search}
                     onChange={setSearch}
                     onSubmit={() => {
                       toolbarSearchRef.current?.blur();
-                      scrollToId("bk-results");
+                      scrollToId("bx-results");
                     }}
                     placeholder={`Search ${SEARCH_EXAMPLES[placeholderIndex]}`}
                   />
 
-                  <div className="bk-select bk-select-sort">
+                  <div className="bx-select bx-select-sort">
                     <select
                       value={sort}
                       onChange={(event) => setSort(event.target.value)}
@@ -2823,17 +3017,17 @@ export default function Books() {
 
                   <button
                     type="button"
-                    className="bk-icon-btn bk-filter-toggle"
+                    className={cn("bx-icon-btn bx-filter-toggle", showFilters && "is-on")}
                     onClick={() => setShowFilters((value) => !value)}
                     aria-expanded={showFilters}
-                    aria-controls="bk-filters"
+                    aria-controls="bx-filters"
                     aria-label="More filters"
                   >
                     <SlidersHorizontal size={18} weight="bold" />
                     {(tag || sort) && <i aria-hidden="true" />}
                   </button>
 
-                  <div className="bk-view" role="group" aria-label="Layout">
+                  <div className="bx-view" role="group" aria-label="Layout">
                     {[
                       { id: "grid", icon: SquaresFour, label: "Grid view" },
                       { id: "list", icon: Rows, label: "List view" },
@@ -2850,9 +3044,9 @@ export default function Books() {
                         >
                           {view === option.id && (
                             <motion.span
-                              layoutId="bk-view-pill"
-                              className="bk-view-pill"
-                              transition={{ duration: 0.5, ease: EASE }}
+                              layoutId="bx-view-pill"
+                              className="bx-view-pill"
+                              transition={{ duration: 0.45, ease: EASE }}
                             />
                           )}
                           <Icon size={18} weight="bold" />
@@ -2862,12 +3056,12 @@ export default function Books() {
                   </div>
                 </div>
 
-                <nav className="bk-chips" aria-label="Book categories">
+                <div className="bx-chips" role="group" aria-label="Book categories">
                   <Chip
                     active={!category}
                     onClick={() => setCategory("")}
                     count={books.length || undefined}
-                    layoutId="bk-chip-pill"
+                    layoutId="bx-chip-pill"
                   >
                     All books
                   </Chip>
@@ -2876,31 +3070,28 @@ export default function Books() {
                     <Chip
                       key={item.name}
                       active={lower(category) === lower(item.name)}
-                      onClick={() => {
-                        setCategory(item.name);
-                        requestAnimationFrame(() => scrollToId("bk-results"));
-                      }}
+                      onClick={() => setCategory(item.name)}
                       count={item.count}
-                      layoutId="bk-chip-pill"
+                      layoutId="bx-chip-pill"
                     >
                       {item.name}
                     </Chip>
                   ))}
-                </nav>
+                </div>
 
                 <AnimatePresence initial={false}>
                   {showFilters && (
                     <motion.div
                       key="filters"
-                      id="bk-filters"
+                      id="bx-filters"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.5, ease: EASE }}
+                      transition={{ duration: 0.45, ease: EASE }}
                       style={{ overflow: "hidden" }}
                     >
-                      <div className="bk-filters">
-                        <div className="bk-select">
+                      <div className="bx-filters">
+                        <div className="bx-select">
                           <select
                             value={sort}
                             onChange={(event) => setSort(event.target.value)}
@@ -2917,17 +3108,15 @@ export default function Books() {
 
                         {tagOptions.length > 0 ? (
                           <>
-                            <p className="caption-3">Tags</p>
+                            <p className="bx-filters-label">Tags</p>
 
-                            <div className="bk-filters-row">
+                            <div className="bx-filters-row">
                               {tagOptions.map((item) => (
                                 <Chip
                                   key={item.key}
                                   active={tag === item.key}
-                                  onClick={() =>
-                                    setTag(tag === item.key ? "" : item.key)
-                                  }
-                                  layoutId="bk-tag-pill"
+                                  onClick={() => setTag(tag === item.key ? "" : item.key)}
+                                  layoutId="bx-tag-pill"
                                 >
                                   #{item.label}
                                 </Chip>
@@ -2935,7 +3124,7 @@ export default function Books() {
                             </div>
                           </>
                         ) : (
-                          <p className="caption-3">No tags to filter by yet</p>
+                          <p className="bx-filters-label">No tags to filter by yet</p>
                         )}
                       </div>
                     </motion.div>
@@ -2945,7 +3134,7 @@ export default function Books() {
 
               {/* RESULT COUNT */}
 
-              <div id="bk-results" className="body-6 bk-count" aria-live="polite">
+              <div id="bx-results" className="bx-count" aria-live="polite">
                 {!loading && (
                   <p>
                     Showing <b>{filteredBooks.length}</b>{" "}
@@ -2953,7 +3142,7 @@ export default function Books() {
                     {search.trim() && (
                       <>
                         {" "}
-                        for <b>{search.trim()}</b>
+                        for <b>“{search.trim()}”</b>
                       </>
                     )}
                     {category && (
@@ -2962,15 +3151,17 @@ export default function Books() {
                         in <b>{category}</b>
                       </>
                     )}
+                    {tag && (
+                      <>
+                        {" "}
+                        tagged <b>#{tag}</b>
+                      </>
+                    )}
                   </p>
                 )}
 
                 {hasFilters && (
-                  <button
-                    type="button"
-                    className="button-sm bk-text-link"
-                    onClick={clearFilters}
-                  >
+                  <button type="button" className="bx-link" onClick={clearFilters}>
                     <X size={14} weight="bold" />
                     Clear all
                   </button>
@@ -2980,7 +3171,7 @@ export default function Books() {
               {/* LOADING GRID */}
 
               {loading && (
-                <div className="bk-grid">
+                <div className="bx-grid">
                   {Array.from({ length: 8 }).map((_, index) => (
                     <BookSkeleton key={index} />
                   ))}
@@ -2989,20 +3180,48 @@ export default function Books() {
 
               {/* LIVE BOOK GRID */}
 
-              {!loading && filteredBooks.length > 0 && (
-                <div className={cn("bk-grid", view === "list" && "is-list")}>
+              {!loading && visibleBooks.length > 0 && (
+                <div className={cn("bx-grid", view === "list" && "is-list")}>
                   <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredBooks.map((book, index) => (
+                    {visibleBooks.map((book, index) => (
                       <BookCard
                         key={getBookId(book)}
                         book={book}
                         view={view}
                         index={index}
                         query={search}
-                        onBuy={setProduct}
+                        onBuy={openCheckout}
+                        onPeek={setPeek}
                       />
                     ))}
                   </AnimatePresence>
+                </div>
+              )}
+
+              {/* SHOW MORE */}
+
+              {!loading && remaining > 0 && (
+                <div className="bx-more">
+                  <span>
+                    You have seen {visibleBooks.length} of {filteredBooks.length} books
+                  </span>
+
+                  <span className="bx-more-bar" aria-hidden="true">
+                    <i
+                      style={{
+                        width: `${(visibleBooks.length / filteredBooks.length) * 100}%`,
+                      }}
+                    />
+                  </span>
+
+                  <button
+                    type="button"
+                    className="bx-btn bx-btn-ghost"
+                    onClick={() => setLimit((n) => n + PAGE_SIZE)}
+                  >
+                    Show {Math.min(PAGE_SIZE, remaining)} more
+                    <CaretDown size={16} weight="bold" />
+                  </button>
                 </div>
               )}
 
@@ -3010,28 +3229,28 @@ export default function Books() {
 
               {!loading && filteredBooks.length === 0 && books.length > 0 && (
                 <motion.div
-                  className="bk-empty"
+                  className="bx-empty"
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: EASE }}
                 >
-                  <span className="bk-tile">
+                  <span className="bx-tile">
                     <MagnifyingGlass size={28} weight="duotone" />
                   </span>
 
-                  <h3 className="heading-6">No books match that search</h3>
+                  <h3>No books match that search</h3>
 
-                  <p className="body-6">
-                    Try a shorter keyword such as HLD, Java or RAG, or jump
-                    into one of these topics.
+                  <p>
+                    Try a shorter keyword such as HLD, Java or RAG, or jump into
+                    one of these topics.
                   </p>
 
-                  <div className="bk-empty-topics">
+                  <div className="bx-empty-topics">
                     {categoryStats.slice(0, 5).map((item) => (
                       <button
                         type="button"
                         key={item.name}
-                        className="caption-3 bk-topic"
+                        className="bx-topic"
                         onClick={() => pickCategory(item.name)}
                       >
                         {item.name}
@@ -3039,11 +3258,7 @@ export default function Books() {
                     ))}
                   </div>
 
-                  <button
-                    type="button"
-                    className="button-md bk-btn bk-btn-primary"
-                    onClick={clearFilters}
-                  >
+                  <button type="button" className="bx-btn bx-btn-primary" onClick={clearFilters}>
                     Show all books
                   </button>
                 </motion.div>
@@ -3052,14 +3267,14 @@ export default function Books() {
               {/* EMPTY CATALOG */}
 
               {!loading && books.length === 0 && (
-                <div className="bk-empty">
-                  <span className="bk-tile">
+                <div className="bx-empty">
+                  <span className="bx-tile">
                     <BookOpen size={28} weight="duotone" />
                   </span>
 
-                  <h3 className="heading-6">No books available yet</h3>
+                  <h3>No books available yet</h3>
 
-                  <p className="body-6">Published books will appear here.</p>
+                  <p>Published books will appear here.</p>
                 </div>
               )}
             </div>
@@ -3070,22 +3285,23 @@ export default function Books() {
         {/* HOW IT WORKS                          */}
         {/* ===================================== */}
 
-        <section className="bk-section" aria-labelledby="bk-steps-title">
-          <div className="bk-shell">
+        <section className="bx-sec" id="how" aria-labelledby="bx-steps-title">
+          <div className="bx-shell">
             <SectionHead
-              index="03"
               eyebrow="How it works"
-              id="bk-steps-title"
+              id="bx-steps-title"
               title="From Buy now to page one in three steps."
               text="No account setup before you pay and nothing to install. Here is exactly what happens after you press the button."
             />
 
-            <Stagger className="bk-steps" gap={0.12}>
+            <Stagger className="bx-steps" gap={0.12}>
+              <span className="bx-steps-line" aria-hidden="true" />
+
               {STEPS.map((step) => (
-                <motion.div key={step.n} variants={rise} className="bk-step">
-                  <span className="mono heading-5">{step.n}</span>
-                  <h3 className="heading-6">{step.title}</h3>
-                  <p className="body-6">{step.text}</p>
+                <motion.div key={step.n} variants={rise} className="bx-step">
+                  <span className="bx-step-n">{step.n}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
                 </motion.div>
               ))}
             </Stagger>
@@ -3096,8 +3312,8 @@ export default function Books() {
         {/* TAGLINE REVEAL                        */}
         {/* ===================================== */}
 
-        <section className="bk-tagline-section bk-alt">
-          <div className="bk-shell">
+        <section className="bx-tagline-sec" aria-label="Our promise">
+          <div className="bx-shell">
             <TaglineReveal text={TAGLINE} />
           </div>
         </section>
@@ -3106,26 +3322,41 @@ export default function Books() {
         {/* FAQ                                   */}
         {/* ===================================== */}
 
-        <section className="bk-section" aria-labelledby="bk-faq-title">
-          <div className="bk-shell bk-faq">
-            <SectionHead
-              index="04"
-              eyebrow="Good to know"
-              id="bk-faq-title"
-              title="Questions before you buy?"
-              text="Straight answers on access, payment and refunds."
-            />
+        <section className="bx-sec" id="faq" aria-labelledby="bx-faq-title">
+          <div className="bx-shell bx-faq">
+            <div className="bx-faq-side">
+              <SectionHead
+                eyebrow="Good to know"
+                id="bx-faq-title"
+                title="Questions before you buy?"
+                text="Straight answers on access, payment and refunds."
+              />
 
-            <Stagger className="bk-faq-list" gap={0.06}>
+              <Reveal delay={0.15}>
+                <div className="bx-faq-help">
+                  <span className="bx-tile">
+                    <EnvelopeSimple size={20} weight="duotone" />
+                  </span>
+
+                  <p>
+                    Still stuck? Write to us with your order reference.
+                    <br />
+                    <a className="bx-link" href={`mailto:${SUPPORT_EMAIL}`}>
+                      {SUPPORT_EMAIL}
+                    </a>
+                  </p>
+                </div>
+              </Reveal>
+            </div>
+
+            <Stagger className="bx-faq-list" gap={0.06}>
               {FAQS.map((faq, index) => (
                 <FaqItem
                   key={faq.question}
                   faq={faq}
                   index={index}
                   open={activeFaq === index}
-                  onToggle={() =>
-                    setActiveFaq(activeFaq === index ? null : index)
-                  }
+                  onToggle={() => setActiveFaq(activeFaq === index ? null : index)}
                 />
               ))}
             </Stagger>
@@ -3133,33 +3364,37 @@ export default function Books() {
         </section>
 
         {/* ===================================== */}
-        {/* SUPPORT                               */}
+        {/* SUPPORT CTA                           */}
         {/* ===================================== */}
 
-        <section className="bk-section" style={{ paddingTop: 0 }}>
-          <div className="bk-shell">
+        <section className="bx-sec" style={{ paddingTop: 0 }}>
+          <div className="bx-shell">
             <motion.div
-              className="bk-support"
-              initial={{ opacity: 0, y: 32 }}
+              className="bx-cta"
+              initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.8, ease: EASE }}
             >
-              <GridPattern id="bk-grid-support" />
-
               <div>
-                <h2 className="heading-3">Not sure which book fits you?</h2>
+                <span className="bx-eyebrow" style={{ color: "#5eead4" }}>
+                  Need a hand?
+                </span>
 
-                <p className="body-3">
-                  Tell us what you are preparing for and we will point you to
-                  the right book. We also help with purchase and access issues.
+                <h2 className="bx-h2" style={{ marginTop: 12 }}>
+                  Not sure which book fits you?
+                </h2>
+
+                <p>
+                  Tell us what you are preparing for and we will point you to the
+                  right book. We also help with purchase and access issues.
                 </p>
               </div>
 
-              <div className="bk-support-actions">
+              <div className="bx-cta-actions">
                 <motion.a
-                  href="mailto:supporttargettrek@gmail.com"
-                  className="button-lg bk-btn bk-btn-primary"
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="bx-btn bx-btn-lg bx-btn-mark"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.96 }}
                   transition={{ duration: 0.4, ease: EASE }}
@@ -3170,7 +3405,7 @@ export default function Books() {
 
                 <button
                   type="button"
-                  className="button-md bk-text-link"
+                  className="bx-btn bx-btn-lg bx-btn-onpanel"
                   onClick={() => scrollToId("library")}
                 >
                   Browse all books
@@ -3189,18 +3424,20 @@ export default function Books() {
           {showBar && (
             <motion.aside
               key="bar"
-              className="bk-bar"
+              className="bx-bar"
               aria-label="Book pack offer"
               initial={{ opacity: 0, y: 48 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 48 }}
               transition={{ duration: 0.5, ease: EASE }}
             >
-              <Package size={24} weight="duotone" color="#FB923C" />
+              <span className="bx-bar-icon">
+                <Package size={22} weight="duotone" />
+              </span>
 
-              <div className="bk-bar-copy">
-                <strong className="body-4">{cheapestPack.title}</strong>
-                <span className="mono caption-4">
+              <div className="bx-bar-copy">
+                <strong>{cheapestPack.title}</strong>
+                <span>
                   {money(cheapestPack.price, cheapestPack.currency)}
                   {getDiscount(cheapestPack) > 0 &&
                     ` · ${getDiscount(cheapestPack)}% off`}
@@ -3209,14 +3446,14 @@ export default function Books() {
 
               <BuyButton
                 book={cheapestPack}
-                onBuy={setProduct}
+                onBuy={openCheckout}
                 size="sm"
-                label="Buy this pack"
+                label="Buy pack"
               />
 
               <button
                 type="button"
-                className="bk-bar-close"
+                className="bx-bar-close"
                 onClick={() => setBarClosed(true)}
                 aria-label="Hide pack offer"
               >
@@ -3227,11 +3464,11 @@ export default function Books() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {scrolled && !product && (
+          {scrolled && !product && !peek && (
             <motion.button
               key="top"
               type="button"
-              className={cn("bk-top", showBar && "is-raised")}
+              className={cn("bx-top", showBar && "is-raised")}
               aria-label="Back to top"
               initial={{ opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -3243,6 +3480,21 @@ export default function Books() {
             >
               <ArrowUp size={20} weight="bold" />
             </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* ===================================== */}
+        {/* QUICK VIEW                            */}
+        {/* ===================================== */}
+
+        <AnimatePresence>
+          {peek && (
+            <QuickView
+              key={getBookId(peek)}
+              book={peek}
+              onClose={closePeek}
+              onBuy={openCheckout}
+            />
           )}
         </AnimatePresence>
       </main>

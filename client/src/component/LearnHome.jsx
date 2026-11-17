@@ -1,44 +1,63 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import ResumePromo from "../resume/ResumePromo.jsx";
 
 import {
   AnimatePresence,
   MotionConfig,
-  animate,
   motion,
-  useInView,
-  useMotionValue,
   useMotionValueEvent,
-  useReducedMotion,
   useScroll,
   useSpring,
-  useTransform,
 } from "framer-motion";
 
 import {
   ArrowRight,
+  ArrowUp,
   ArrowUpRight,
+  Article,
   BookOpen,
+  Books,
+  Brain,
   Briefcase,
   Broadcast,
-  CaretDown,
+  Cake,
+  CaretLeft,
+  CaretRight,
+  ChatCircleText,
   Check,
-  Code,
+  Confetti,
   Database,
-  FileCode,
+  Diamond,
+  Eye,
   FileText,
   GraduationCap,
   Graph,
+  Handshake,
   HardDrives,
-  Rocket,
+  Heart,
+  HeartBreak,
+  Images,
+  Infinity as InfinityIcon,
+  LockKey,
+  Microphone,
+  Package,
+  PencilSimple,
+  Plugs,
+  Plus,
   ShieldCheck,
   Sparkle,
   Stack,
   Target,
+  UsersThree,
+  VideoCamera,
 } from "@phosphor-icons/react";
+
+import BASE_URL from "../utils/Url";
+import { SAMPLE } from "../resume/landingContent";
+
+import "./learn.css";
 
 // =====================================================
 // CONFIGURATION
@@ -54,22 +73,256 @@ const THEME_EVENT = "targettrek-theme-change";
 const SEO_TITLE = "Learn System Design, Java LLD & GenAI | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Learn System Design HLD, Java LLD, backend architecture and GenAI with Target Trek ebooks, free resources and real interview experiences.";
+  "Free system design and backend guides, interview preparation ebooks, real interview experiences, mock interviews, resume reviews and more, all in one place on Target Trek.";
 
 const FONT_URL =
-  "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap";
 
-// Base motion curve: weighted, decelerates into place.
 const EASE = [0.22, 1, 0.36, 1];
 
+// Pack pages (recognised inside the single /book response)
+const ALL_BOOKS_PATH = "/book/all-books";
+const LIFETIME_PATH = "/book/life-type-combo";
+
 // =====================================================
-// THEME
+// CONTENT: every link below is a real route on the site
+// =====================================================
+
+const GOALS = [
+  { id: "resources", label: "Learn for free", icon: GraduationCap },
+  { id: "books", label: "Read a full book", icon: BookOpen },
+  { id: "interview-prep", label: "Practise interviews", icon: VideoCamera },
+  { id: "resume", label: "Get more calls", icon: FileText },
+];
+
+const PATH = [
+  {
+    step: "Step 1",
+    title: "Learn the concepts",
+    text: "Free guides on SQL, APIs and system design",
+    to: "/resources",
+    icon: GraduationCap,
+  },
+  {
+    step: "Step 2",
+    title: "Go deep with a book",
+    text: "HLD, LLD, Java, Spring Boot, cloud and GenAI",
+    to: "/books",
+    icon: BookOpen,
+  },
+  {
+    step: "Step 3",
+    title: "Practise out loud",
+    text: "Mock interviews and a practice buddy",
+    to: "/mock-interviews",
+    icon: VideoCamera,
+  },
+  {
+    step: "Step 4",
+    title: "Get the interview call",
+    text: "AI and expert review of your resume",
+    to: "/resume-review",
+    icon: Target,
+  },
+];
+
+// The directory: everything on Target Trek in one grid
+const EXPLORE = [
+  {
+    title: "Free resources",
+    text: "SQL, API engineering and system design guides you can read right now.",
+    to: "/resources",
+    icon: GraduationCap,
+    free: true,
+    size: "is-wide",
+  },
+  {
+    title: "Ebooks",
+    text: "Interview preparation books, packs and the lifetime library.",
+    to: "/books",
+    icon: Books,
+    size: "is-tall is-feature",
+    covers: true,
+  },
+  {
+    title: "Interview experiences",
+    text: "Real rounds, questions and results shared by engineers.",
+    to: "/interviews",
+    icon: Briefcase,
+    free: true,
+  },
+  {
+    title: "Mock interviews",
+    text: "A 1:1 session with an engineer, with feedback.",
+    to: "/mock-interviews",
+    icon: VideoCamera,
+  },
+  {
+    title: "Prep Buddy",
+    text: "Find a serious partner to practise with, by mutual match.",
+    to: "/prep-buddy",
+    icon: Handshake,
+  },
+  {
+    title: "Resume Review",
+    text: "An AI report in minutes, then a working professional's notes.",
+    to: "/resume-review",
+    icon: FileText,
+  },
+  {
+    title: "Mentorship",
+    text: "Placement guidance for students and early-career engineers.",
+    to: "/mentorship",
+    icon: UsersThree,
+  },
+  {
+    title: "Memories",
+    text: "Make a personal page for a birthday, proposal or thank you.",
+    to: "/memories",
+    icon: Heart,
+  },
+  {
+    title: "Blogs",
+    text: "Engineering articles on backend, system design and careers.",
+    to: "/blogs",
+    icon: Article,
+    free: true,
+    size: "is-wide",
+  },
+];
+
+const CORE_RESOURCES = [
+  {
+    title: "SQL",
+    code: "SQL",
+    text: "From fundamentals to joins, subqueries, CTEs, window functions, indexes, transactions, locking, optimization and interview problems.",
+    to: "/resources/sql",
+    icon: Database,
+    tags: ["Joins", "CTEs", "Window functions", "Indexes", "ACID"],
+  },
+  {
+    title: "API engineering",
+    code: "API",
+    text: "REST and HTTP, GraphQL, authentication, pagination, idempotency, caching, rate limiting, webhooks, OpenAPI and production API design.",
+    to: "/resources/apis",
+    icon: Plugs,
+    tags: ["REST", "GraphQL", "Auth", "Idempotency", "Webhooks"],
+  },
+];
+
+const HLD_GUIDES = [
+  {
+    title: "Caching",
+    text: "Strategies, eviction, invalidation, Redis, TTLs and distributed caches.",
+    to: "/resources/hld/cache",
+    icon: Stack,
+    area: "Performance",
+  },
+  {
+    title: "Load balancing",
+    text: "L4 vs L7, routing, health checks and high availability.",
+    to: "/resources/hld/load-balancing",
+    icon: Graph,
+    area: "Scalability",
+  },
+  {
+    title: "Database design",
+    text: "SQL vs NoSQL, indexes, replication, sharding and consistency.",
+    to: "/resources/hld/database",
+    icon: Database,
+    area: "Data",
+  },
+  {
+    title: "Message queues",
+    text: "Async messaging, events, consumers, retries and delivery guarantees.",
+    to: "/resources/hld/message-queue",
+    icon: Broadcast,
+    area: "Distributed systems",
+  },
+  {
+    title: "Rate limiting",
+    text: "Token and leaky buckets, fixed and sliding windows, distributed limits.",
+    to: "/resources/hld/rate-limiting",
+    icon: ShieldCheck,
+    area: "Reliability",
+  },
+  {
+    title: "API gateway",
+    text: "Routing, auth, throttling, security and resilient gateway design.",
+    to: "/resources/hld/api-gateway",
+    icon: HardDrives,
+    area: "Architecture",
+  },
+];
+
+const MOCK_TOPICS = [
+  ["DSA", "Coding, complexity and edge cases"],
+  ["Low level design", "OOP, SOLID, patterns, concurrency"],
+  ["High level design", "Scale, caching, databases"],
+  ["GenAI engineering", "RAG, agents, LLMs, evaluation"],
+  ["Backend and projects", "Java, Spring Boot, APIs, trade-offs"],
+];
+
+const OCCASIONS = [
+  ["Birthdays", Cake],
+  ["Proposals", Diamond],
+  ["Anniversaries", Heart],
+  ["Apologies", HeartBreak],
+  ["Thank yous", Sparkle],
+  ["Christmas", Confetti],
+];
+
+const MEMORY_FEATURES = [
+  { icon: Microphone, title: "Your own voice", text: "Record a voice message or upload one." },
+  { icon: Images, title: "Photos and videos", text: "Your best moments, all on one page." },
+  { icon: LockKey, title: "Private with a PIN", text: "Lock the page so only they can open it." },
+  { icon: Eye, title: "Know when they open it", text: "See when they visit and what they reply." },
+];
+
+const FAQS = [
+  {
+    question: "Where should I start learning system design?",
+    answer:
+      "Start with the free guides on caching, load balancing, databases and API gateways. When you want complete interview preparation, move on to the System Design HLD book.",
+  },
+  {
+    question: "What is the difference between HLD and LLD?",
+    answer:
+      "HLD (high level design) covers scalable architecture, APIs, databases, caching, distributed systems and trade-offs. LLD (low level design) covers object oriented modelling, classes, interfaces, UML, design patterns and Java implementation.",
+  },
+  {
+    question: "Which parts of Target Trek are free?",
+    answer:
+      "The resources (SQL, API engineering and the system design guides), the interview experiences and the blogs are free to read. Ebooks, mock interviews, Prep Buddy, mentorship, Resume Review and Memories are paid, and each page shows its details before you pay.",
+  },
+  {
+    question: "What is the difference between the All books pack and Lifetime?",
+    answer:
+      "The All books pack gives you every book available today in one payment. Lifetime gives you every current book plus every book published in future. Both are one time payments, with no subscription.",
+  },
+  {
+    question: "How is a mock interview different from Prep Buddy?",
+    answer:
+      "A mock interview is a 1:1 session with an engineer who interviews you and gives feedback. Prep Buddy matches you with another candidate, by mutual consent, so you can practise together and chat privately.",
+  },
+  {
+    question: "What do I get from Resume Review?",
+    answer:
+      "An AI report in minutes with an overall and ATS score, section grades, missing keywords and rewritten bullets. Plans with a human review add notes from a working professional, and some plans add a LinkedIn review.",
+  },
+  {
+    question: "Can I share my own interview experience?",
+    answer:
+      "Yes. Open Interview experiences and use Share your experience, so other engineers can learn from the rounds you went through.",
+  },
+];
+
+// =====================================================
+// HELPERS
 // =====================================================
 
 const readTheme = () => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
+  if (typeof window === "undefined") return "light";
 
   try {
     return window.localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
@@ -78,1096 +331,230 @@ const readTheme = () => {
   }
 };
 
-// =====================================================
-// CONTENT (routes unchanged)
-// =====================================================
+const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-const ROTATING_WORDS = [
-  "System design",
-  "Java LLD",
-  "Backend engineering",
-  "GenAI and agents",
-  "Interview prep",
-];
+const getCoverUrl = (book) =>
+  book?.coverPageUrl || book?.coverpageurl || book?.cover_page_url || "";
 
-const LEARNING_AREAS = [
-  {
-    id: "books",
-    number: "01",
-    eyebrow: "Guided learning",
-    title: "Technical books",
-    description:
-      "Complete engineering handbooks that take you from fundamentals to the architecture and implementation depth interviews expect.",
-    path: "/books",
-    action: "Explore books",
-    icon: BookOpen,
-    topics: ["System Design HLD", "Java LLD", "GenAI and agents"],
-  },
-  {
-    id: "interviews",
-    number: "02",
-    eyebrow: "Career preparation",
-    title: "Interview experiences",
-    description:
-      "Interview journeys and technical rounds across DSA, low level design, high level design and engineering discussions.",
-    path: "/interviews",
-    action: "Explore interviews",
-    icon: Briefcase,
-    topics: ["DSA and coding", "System design", "Backend and GenAI"],
-  },
-  {
-    id: "resources",
-    number: "03",
-    eyebrow: "Learn for free",
-    title: "Engineering resources",
-    description:
-      "Focused guides on system architecture, scalability, databases, distributed systems and backend fundamentals.",
-    path: "/resources/hld/cache",
-    action: "Start learning",
-    icon: GraduationCap,
-    topics: ["Architecture", "Databases", "Distributed systems"],
-  },
-  {
-    id: "blogs",
-    number: "04",
-    eyebrow: "Articles and insights",
-    title: "Engineering blogs",
-    description:
-      "Complex engineering ideas explained through practical examples, concepts and technical articles.",
-    path: "/blogs",
-    action: "Read articles",
-    icon: FileText,
-    topics: ["Development", "Engineering", "Interview prep"],
-  },
-];
+const getCategories = (book) => {
+  if (Array.isArray(book?.categories)) return book.categories.filter(Boolean);
+  if (book?.category) return [book.category];
+  return [];
+};
 
-const FEATURED_BOOKS = [
-  {
-    number: "01",
-    type: "High level design",
-    title: "Mastering System Design",
-    highlight: "HLD",
-    subtitle: "Think in systems. Design for scale.",
-    description:
-      "Approach system design interviews with clear requirements, APIs, data modeling, scalable architectures, caching, distributed systems, failure handling and tradeoffs.",
-    path: "/book/system-design/hld",
-    icon: Graph,
-    artTag: "Architecture",
-    artLine: "High level design",
-    topics: [
-      "Architecture",
-      "Databases",
-      "Redis",
-      "Kafka",
-      "Scalability",
-      "Tradeoffs",
-    ],
-    benefits: [
-      "Understand production style architectures",
-      "Practice structured system design discussions",
-      "Prepare for HLD interviews",
-    ],
-  },
-  {
-    number: "02",
-    type: "Low level design",
-    title: "Mastering System Design",
-    highlight: "LLD",
-    subtitle: "Write better Java. Design better software.",
-    description:
-      "Master object oriented design in Java through OOP, SOLID principles, UML, design patterns, concurrency, locking and detailed interview design problems.",
-    path: "/book/system-design/lld",
-    icon: Code,
-    artTag: "Java and OOP",
-    artLine: "Low level design · Java",
-    topics: ["Java", "OOP", "SOLID", "UML", "Design patterns", "Concurrency"],
-    benefits: [
-      "Strengthen object oriented design skills",
-      "Learn reusable design patterns",
-      "Practice Java LLD interview questions",
-    ],
-  },
-];
+const getPath = (book) =>
+  String(book?.redirectUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
 
-const FREE_RESOURCES = [
-  {
-    number: "01",
-    title: "Caching",
-    description:
-      "Caching strategies, eviction policies, cache invalidation, Redis, TTLs and distributed cache design.",
-    icon: Stack,
-    path: "/resources/hld/cache",
-    category: "Performance",
-    tags: ["Redis", "Cache aside", "TTL"],
-  },
-  {
-    number: "02",
-    title: "Load balancing",
-    description:
-      "L4 vs L7 load balancing, request routing, health checks, high availability and traffic distribution.",
-    icon: Graph,
-    path: "/resources/hld/load-balancing",
-    category: "Scalability",
-    tags: ["L4 / L7", "Routing", "HA"],
-  },
-  {
-    number: "03",
-    title: "Database design",
-    description:
-      "SQL vs NoSQL, indexes, replication, sharding, consistency, database selection and scaling strategies.",
-    icon: Database,
-    path: "/resources/hld/database",
-    category: "Data",
-    tags: ["SQL", "NoSQL", "Sharding"],
-  },
-  {
-    number: "04",
-    title: "Message queues",
-    description:
-      "Asynchronous communication, event driven systems, queues, consumers, retries and delivery guarantees.",
-    icon: Broadcast,
-    path: "/resources/hld/message-queue",
-    category: "Distributed systems",
-    tags: ["Kafka", "Events", "Retries"],
-  },
-  {
-    number: "05",
-    title: "Rate limiting",
-    description:
-      "Token bucket, leaky bucket, fixed windows, sliding windows and distributed API rate limiting.",
-    icon: ShieldCheck,
-    path: "/resources/hld/rate-limiting",
-    category: "Reliability",
-    tags: ["Token bucket", "Redis", "API"],
-  },
-  {
-    number: "06",
-    title: "API gateway",
-    description:
-      "API routing, authentication, authorization, throttling, security and resilient gateway architecture.",
-    icon: HardDrives,
-    path: "/resources/hld/api-gateway",
-    category: "Architecture",
-    tags: ["Routing", "Security", "API"],
-  },
-];
+const getId = (book) =>
+  String(book?._id || book?.slug || book?.redirectUrl || book?.title || "");
 
-const BENEFITS = [
-  {
-    icon: Target,
-    title: "Built for interviews",
-    description:
-      "Connect technical knowledge to the questions and discussions that engineering interviews actually use.",
-  },
-  {
-    icon: Stack,
-    title: "Structured content",
-    description:
-      "Move from single concepts to complete systems without stitching together disconnected material.",
-  },
-  {
-    icon: Code,
-    title: "Practical engineering",
-    description:
-      "Understand implementation decisions, design patterns, scalability, concurrency and production tradeoffs.",
-  },
-  {
-    icon: Rocket,
-    title: "Learn at your pace",
-    description:
-      "Use the free guides for quick revision, or a full book when you are preparing a complete subject.",
-  },
-];
+const isPack = (book) =>
+  Boolean(book?.isPack || book?.plan) ||
+  [ALL_BOOKS_PATH, LIFETIME_PATH].includes(getPath(book));
 
-const INTERVIEW_TOPICS = [
-  {
-    icon: FileCode,
-    title: "DSA and problem solving",
-    description:
-      "Coding questions, algorithmic thinking, optimization and problem solving discussions.",
-  },
-  {
-    icon: Code,
-    title: "Low level design",
-    description:
-      "Object oriented modeling, design patterns, classes, interfaces, concurrency and Java.",
-  },
-  {
-    icon: Graph,
-    title: "High level design",
-    description:
-      "Architecture, databases, scale, caching, queues, consistency and distributed systems.",
-  },
-  {
-    icon: Sparkle,
-    title: "AI and GenAI engineering",
-    description:
-      "RAG, agents, MCP, orchestration, backend integrations and discussions of real AI projects.",
-  },
-];
+const includedCount = (book) =>
+  Array.isArray(book?.includedBooks) ? book.includedBooks.length : 0;
 
-const INTERVIEW_TAGS = ["DSA", "LLD", "HLD", "Java", "Backend", "GenAI"];
+const scrollToId = (id) => {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
 
-const PATH_STEPS = [
-  {
-    n: "01",
-    title: "Understand",
-    description:
-      "Build strong fundamentals with one free guide at a time, from caching to API gateways.",
-    path: "/resources/hld/cache",
-    action: "Open the free guides",
-  },
-  {
-    n: "02",
-    title: "Design",
-    description:
-      "Connect the components into complete systems with the HLD and LLD books.",
-    path: "/books",
-    action: "Browse the books",
-  },
-  {
-    n: "03",
-    title: "Apply",
-    description:
-      "See how real rounds go, then practice explaining your own design decisions.",
-    path: "/interviews",
-    action: "Read interview experiences",
-  },
-];
+// Internal routes use <Link>, absolute ones a plain <a>
+function SmartLink({ to, className, children, ...rest }) {
+  const raw = String(to || "").trim();
 
-const COMPARE = [
-  {
-    icon: GraduationCap,
-    title: "Focused free learning",
-    text: "Explore one engineering concept at a time with explanations and practical examples. Ideal for quick revision.",
-    items: [
-      "Understand one topic",
-      "Build conceptual clarity",
-      "Revise engineering fundamentals",
-      "Learn at your own pace",
-    ],
-    link: "/resources/hld/cache",
-    linkText: "Start with free resources",
-  },
-  {
-    icon: BookOpen,
-    title: "Structured deep learning",
-    text: "Study entire topics through connected chapters, case studies, implementation details, architecture choices and interview exercises.",
-    items: [
-      "Follow structured chapters",
-      "Connect related concepts",
-      "Explore design decisions",
-      "Prepare complete interview topics",
-    ],
-    link: "/books",
-    linkText: "Explore structured books",
-    featured: true,
-  },
-];
+  if (!raw) {
+    return (
+      <span className={className} {...rest}>
+        {children}
+      </span>
+    );
+  }
 
-const FAQS = [
-  {
-    question: "Where should I start learning system design?",
-    answer:
-      "Begin with the free caching, load balancing, database and API gateway resources. When you want complete system design interview preparation, explore the HLD book.",
-  },
-  {
-    question: "What is the difference between HLD and LLD?",
-    answer:
-      "HLD focuses on scalable architecture, APIs, databases, caching, distributed systems and system level tradeoffs. LLD focuses on object oriented modeling, classes, interfaces, UML, design patterns and Java implementation.",
-  },
-  {
-    question: "Should I read the HLD book or the LLD book first?",
-    answer:
-      "Choose by the round you are preparing for. Pick HLD for architecture and scalability discussions, and LLD for object oriented design and Java implementation rounds. They cover different skills, so the order is up to you.",
-  },
-  {
-    question: "Are the learning resources free?",
-    answer:
-      "The resources listed in the free engineering resources section are available through their respective learning pages. The books are separate products; current prices and purchase details are shown on their individual pages.",
-  },
-  {
-    question: "Does Target Trek cover GenAI and AI engineering?",
-    answer:
-      "Yes. The technical books include GenAI and agents, and the interview experiences cover AI engineering topics such as RAG, agents, MCP and orchestration.",
-  },
-  {
-    question: "Can I find software engineering interview experiences?",
-    answer:
-      "Yes. The interview experiences section covers preparation and technical rounds across software engineering, backend, low level design, high level design and AI engineering.",
-  },
-];
+  if (/^https?:\/\//i.test(raw)) {
+    return (
+      <a href={raw} className={className} {...rest}>
+        {children}
+      </a>
+    );
+  }
 
-const TAGLINE =
-  "Anyone can memorize an architecture diagram. Interviews go to the engineer who can explain every box, every arrow and every tradeoff.";
-
-const MARQUEE_ITEMS = [
-  "System design",
-  "Java LLD",
-  "Caching",
-  "Kafka",
-  "Redis",
-  "Sharding",
-  "Rate limiting",
-  "API gateway",
-  "GenAI",
-  "RAG",
-  "MCP",
-  "Design patterns",
-  "Concurrency",
-  "Load balancing",
-];
-
-// Live request path in the hero. Every linked node opens its free guide.
-const FLOW_TRUNK = [
-  { n: "00", label: "Client", note: "request", y: 36 },
-  {
-    n: "01",
-    label: "Rate limiting",
-    note: "token bucket",
-    y: 108,
-    path: "/resources/hld/rate-limiting",
-  },
-  {
-    n: "02",
-    label: "API gateway",
-    note: "auth · routing",
-    y: 180,
-    path: "/resources/hld/api-gateway",
-  },
-  {
-    n: "03",
-    label: "Load balancing",
-    note: "L4 / L7",
-    y: 252,
-    path: "/resources/hld/load-balancing",
-  },
-];
-
-const FLOW_STORES = [
-  { label: "Caching", x: 75, path: "/resources/hld/cache" },
-  { label: "Database", x: 200, path: "/resources/hld/database" },
-  { label: "Queues", x: 325, path: "/resources/hld/message-queue" },
-];
-
-const FLOW_EDGES = ["M200 36V416", "M200 296H75V416", "M200 296H325V416"];
-
-const FLOW_PACKETS = [
-  { d: "M200 36V296H75V416", begin: "0s" },
-  { d: "M200 36V416", begin: "-1.2s" },
-  { d: "M200 36V296H325V416", begin: "-2.4s" },
-];
+  return (
+    <Link to={raw.startsWith("/") ? raw : `/${raw}`} className={className} {...rest}>
+      {children}
+    </Link>
+  );
+}
 
 // =====================================================
 // MOTION HELPERS
 // =====================================================
 
+// Router links that can take part in staggered entrance animations
 const MotionLink = motion.create(Link);
 
-const stagger = (gap = 0.08, delay = 0) => ({
-  hidden: {},
-  show: { transition: { staggerChildren: gap, delayChildren: delay } },
-});
-
 const rise = {
-  hidden: { opacity: 0, y: 32 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.7, ease: EASE },
-  },
+  hidden: { opacity: 0, y: 26 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.65, ease: EASE } },
 };
 
-const cn = (...classes) => classes.filter(Boolean).join(" ");
-
-// Rise and fade in once when scrolled into view
 function Reveal({ children, delay = 0, className }) {
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 32 }}
+      initial={{ opacity: 0, y: 26 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.7, delay, ease: EASE }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.65, delay, ease: EASE }}
     >
       {children}
     </motion.div>
   );
 }
 
-// Staggered group that animates its children on scroll
-function Stagger({ children, className, gap, delay }) {
+function Stagger({ children, className, gap = 0.07 }) {
   return (
     <motion.div
       className={className}
-      variants={stagger(gap, delay)}
+      variants={{ hidden: {}, show: { transition: { staggerChildren: gap } } }}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, margin: "-70px" }}
+      viewport={{ once: true, margin: "-60px" }}
     >
       {children}
     </motion.div>
   );
 }
 
-// 3D tilt that follows the cursor
-function Tilt({ children, className, max = 6 }) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [max, -max]), {
-    stiffness: 200,
-    damping: 22,
-  });
-
-  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-max, max]), {
-    stiffness: 200,
-    damping: 22,
-  });
-
-  const onMove = (event) => {
-    if (event.pointerType !== "mouse") return;
-
-    const rect = event.currentTarget.getBoundingClientRect();
-
-    x.set((event.clientX - rect.left) / rect.width - 0.5);
-    y.set((event.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  const onLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      className={className}
-      style={{ rotateX, rotateY, transformPerspective: 1000 }}
-      onPointerMove={onMove}
-      onPointerLeave={onLeave}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-// Number that counts up once visible
-function Counter({ to }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    if (!inView) return undefined;
-
-    const controls = animate(0, to, {
-      duration: 1.4,
-      ease: EASE,
-      onUpdate: (latest) => setValue(Math.round(latest)),
-    });
-
-    return () => controls.stop();
-  }, [inView, to]);
-
-  return (
-    <span ref={ref}>{String(value).padStart(2, "0")}</span>
-  );
-}
-
-// One headline line sliding up out of a mask
-function LineReveal({ children, delay = 0 }) {
-  return (
-    <span className="lh-line-mask">
-      <motion.span
-        className="lh-line"
-        initial={{ y: "110%" }}
-        animate={{ y: "0%" }}
-        transition={{ duration: 0.9, delay, ease: EASE }}
-      >
-        {children}
-      </motion.span>
-    </span>
-  );
-}
-
-// Cycles through topics in the hero status line
-function RotatingWord() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setIndex((current) => (current + 1) % ROTATING_WORDS.length);
-    }, 2400);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <span className="lh-rotator">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.span
-          key={ROTATING_WORDS[index]}
-          initial={{ y: 12, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -12, opacity: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-        >
-          {ROTATING_WORDS[index]}
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  );
-}
-
-// Flat line grid drawn as SVG (no background gradients)
-function GridPattern({ id, size = 32 }) {
-  return (
-    <svg className="lh-gridsvg" aria-hidden="true">
-      <defs>
-        <pattern
-          id={id}
-          width={size}
-          height={size}
-          patternUnits="userSpaceOnUse"
-        >
-          <path
-            d={`M${size} 0H0V${size}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-          />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill={`url(#${id})`} />
-    </svg>
-  );
-}
-
 // =====================================================
-// HERO: LIVE REQUEST PATH
+// SMALL PIECES
 // =====================================================
 
-function FlowNode({ x, y, w, label, path, delay }) {
-  const body = (
-    <>
-      <rect
-        className="lh-flow-box"
-        x={x - w / 2}
-        y={y - 20}
-        width={w}
-        height="40"
-        rx="8"
-      />
-      <text className="lh-flow-label" x={x} y={y + 4} textAnchor="middle">
-        {label}
-      </text>
-    </>
-  );
+function Cover({ book, priority = false }) {
+  const [failed, setFailed] = useState(false);
+  const image = getCoverUrl(book);
 
   return (
-    <motion.g
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6, delay, ease: EASE }}
-    >
-      {path ? (
-        <Link
-          to={path}
-          className="lh-flow-link"
-          aria-label={`${label}: open the free guide`}
-        >
-          {body}
-        </Link>
-      ) : (
-        body
-      )}
-    </motion.g>
-  );
-}
-
-function FlowDiagram() {
-  return (
-    <svg
-      className="lh-flow"
-      viewBox="0 0 400 452"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="group"
-      aria-label="A request travelling through rate limiting, an API gateway and a load balancer to services backed by a cache, a database and queues"
-    >
-      {FLOW_EDGES.map((d, index) => (
-        <motion.path
-          key={d}
-          className="lh-flow-edge"
-          d={d}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.5 + index * 0.1, ease: EASE }}
+    <div className="lx-cover">
+      {image && !failed ? (
+        <img
+          src={image}
+          alt=""
+          width="300"
+          height="400"
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          draggable="false"
+          onError={() => setFailed(true)}
         />
-      ))}
-
-      <g className="lh-flow-packets" aria-hidden="true">
-        {FLOW_PACKETS.map((packet) => (
-          <g key={packet.d}>
-            <circle className="lh-flow-halo" r="9" />
-            <circle className="lh-flow-packet" r="3.5" />
-            <animateMotion
-              path={packet.d}
-              dur="3.6s"
-              begin={packet.begin}
-              repeatCount="indefinite"
-              calcMode="spline"
-              keyPoints="0;1"
-              keyTimes="0;1"
-              keySplines="0.45 0 0.2 1"
-            />
-          </g>
-        ))}
-      </g>
-
-      {FLOW_TRUNK.map((node, index) => (
-        <React.Fragment key={node.label}>
-          <text
-            className="lh-flow-note"
-            x="112"
-            y={node.y + 4}
-            textAnchor="end"
-            aria-hidden="true"
-          >
-            {node.n}
-          </text>
-
-          <FlowNode
-            x={200}
-            y={node.y}
-            w={150}
-            label={node.label}
-            path={node.path}
-            delay={0.6 + index * 0.1}
-          />
-
-          <text
-            className="lh-flow-note"
-            x="288"
-            y={node.y + 4}
-            aria-hidden="true"
-          >
-            {node.note}
-          </text>
-        </React.Fragment>
-      ))}
-
-      {FLOW_STORES.map((store, index) => (
-        <React.Fragment key={store.label}>
-          <motion.g
-            aria-hidden="true"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 1 + index * 0.08, ease: EASE }}
-          >
-            <rect
-              className="lh-flow-svc"
-              x={store.x - 36}
-              y="322"
-              width="72"
-              height="28"
-              rx="6"
-            />
-            <text
-              className="lh-flow-note"
-              x={store.x}
-              y="340"
-              textAnchor="middle"
-            >
-              {`svc ${"abc"[index]}`}
-            </text>
-          </motion.g>
-
-          <FlowNode
-            x={store.x}
-            y={416}
-            w={110}
-            label={store.label}
-            path={store.path}
-            delay={1.15 + index * 0.08}
-          />
-        </React.Fragment>
-      ))}
-    </svg>
+      ) : (
+        <div className="lx-cover-fallback">
+          <span>TARGET TREK</span>
+          <strong>{book?.title || "Ebook"}</strong>
+        </div>
+      )}
+    </div>
   );
 }
 
-// =====================================================
-// TAGLINE: words light up one at a time on scroll
-// =====================================================
-
-function TaglineReveal({ text }) {
-  const ref = useRef(null);
-  const reduced = useReducedMotion();
-  const words = useMemo(() => text.split(" "), [text]);
-  const [active, setActive] = useState(0);
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 85%", "end 55%"],
-  });
-
-  useMotionValueEvent(scrollYProgress, "change", (progress) => {
-    const next = Math.round(progress * words.length);
-
-    // Reveal once: never dim a word again on scroll back up.
-    setActive((current) => (next > current ? next : current));
-  });
-
+function SectionHead({ eyebrow, title, text, id, children }) {
   return (
-    <p className="heading-3 lh-tagline" ref={ref}>
-      {words.map((word, index) => (
-        <React.Fragment key={`${word}-${index}`}>
-          <span
-            className={cn(
-              "lh-tagline-word",
-              (reduced || index < active) && "is-on"
-            )}
-          >
-            {word}
-          </span>{" "}
-        </React.Fragment>
-      ))}
-    </p>
-  );
-}
-
-// =====================================================
-// REUSABLE COMPONENTS
-// =====================================================
-
-function SectionHeading({ index, eyebrow, title, description, action, actionPath }) {
-  return (
-    <div className="lh-heading">
-      <div className="lh-heading-main">
+    <div className="lx-head">
+      <div className="lx-head-main">
         <Reveal>
-          <p className="caption-3 lh-eyebrow">
-            <span className="mono lh-eyebrow-index">{index}</span>
-            <motion.span
-              className="lh-eyebrow-line"
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2, ease: EASE }}
-            />
-            {eyebrow}
-          </p>
+          <span className="lx-eyebrow">{eyebrow}</span>
         </Reveal>
-
-        <Reveal delay={0.08}>
-          <h2 className="heading-3 lh-section-title">{title}</h2>
+        <Reveal delay={0.06}>
+          <h2 className="lx-h2" id={id}>
+            {title}
+          </h2>
         </Reveal>
-
-        {description && (
-          <Reveal delay={0.16}>
-            <p className="body-3 lh-section-description">{description}</p>
+        {text && (
+          <Reveal delay={0.12}>
+            <p className="lx-lead">{text}</p>
           </Reveal>
         )}
       </div>
 
-      {action && actionPath && (
-        <Reveal delay={0.2}>
-          <Link to={actionPath} className="button-sm lh-text-link">
-            {action}
-            <ArrowUpRight size={16} weight="bold" />
-          </Link>
+      {children && (
+        <Reveal delay={0.16} className="lx-head-links">
+          {children}
         </Reveal>
       )}
     </div>
   );
 }
 
-function Chip({ children }) {
-  return <span className="caption-4 lh-chip">{children}</span>;
-}
+// Arrow buttons that scroll a horizontal rail by one screen
+function RailNav({ railRef, label, watch }) {
+  const [edges, setEdges] = useState({ start: true, end: false });
 
-function LearningAreaCard({ item }) {
-  const Icon = item.icon;
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return undefined;
+
+    const update = () =>
+      setEdges({
+        start: rail.scrollLeft <= 4,
+        end: rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 4,
+      });
+
+    update();
+    rail.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+
+    return () => {
+      rail.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [railRef, watch]);
+
+  const go = (direction) =>
+    railRef.current?.scrollBy({
+      left: direction * railRef.current.clientWidth * 0.85,
+      behavior: "smooth",
+    });
 
   return (
-    <motion.div variants={rise} className="lh-cell">
-      <Link to={item.path} className="lh-card lh-card-link">
-        <div className="lh-card-top">
-          <span className="lh-icon-tile">
-            <Icon size={24} weight="duotone" />
-          </span>
-
-          <span className="mono caption-3 lh-card-number">{item.number}</span>
-        </div>
-
-        <p className="caption-3 lh-kicker">{item.eyebrow}</p>
-
-        <h3 className="title-1 lh-card-title">{item.title}</h3>
-
-        <p className="body-6 lh-card-text">{item.description}</p>
-
-        <div className="lh-chips">
-          {item.topics.map((topic) => (
-            <Chip key={topic}>{topic}</Chip>
-          ))}
-        </div>
-
-        <div className="button-sm lh-card-action">
-          <span>{item.action}</span>
-
-          <span className="lh-arrow">
-            <ArrowUpRight size={16} weight="bold" />
-          </span>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-// Strokes draw themselves when the card scrolls into view
-const draw = (delay = 0) => ({
-  initial: { pathLength: 0, opacity: 0 },
-  whileInView: { pathLength: 1, opacity: 1 },
-  viewport: { once: true },
-  transition: { duration: 1.1, delay, ease: EASE },
-});
-
-function BookDiagram({ index }) {
-  if (index === 0) {
-    return (
-      <svg
-        viewBox="0 0 260 160"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
+    <div>
+      <button
+        type="button"
+        className="lx-icon-btn"
+        onClick={() => go(-1)}
+        disabled={edges.start}
+        aria-label={`Scroll ${label} left`}
       >
-        <motion.rect x="83" y="60" width="94" height="43" rx="7" stroke="currentColor" strokeWidth="2" {...draw(0)} />
-        <rect x="96" y="71" width="68" height="20" rx="3" fill="currentColor" fillOpacity=".12" />
-        <motion.path d="M130 60V35M130 103V126M83 81H52M177 81H208" stroke="currentColor" strokeWidth="2" {...draw(0.3)} />
-        <motion.rect x="96" y="12" width="68" height="23" rx="5" stroke="currentColor" strokeWidth="2" {...draw(0.5)} />
-        <motion.rect x="16" y="67" width="36" height="28" rx="5" stroke="currentColor" strokeWidth="2" {...draw(0.6)} />
-        <motion.rect x="208" y="67" width="36" height="28" rx="5" stroke="currentColor" strokeWidth="2" {...draw(0.7)} />
-        <motion.rect x="97" y="126" width="66" height="23" rx="5" stroke="currentColor" strokeWidth="2" {...draw(0.8)} />
-        <circle className="lh-pulse-dot" cx="130" cy="81" r="4" fill="currentColor" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      viewBox="0 0 260 160"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <motion.rect x="19" y="20" width="222" height="120" rx="9" stroke="currentColor" strokeWidth="2" {...draw(0)} />
-      <motion.path d="M19 48H241" stroke="currentColor" strokeWidth="2" {...draw(0.3)} />
-      <circle cx="36" cy="34" r="4" fill="currentColor" />
-      <circle cx="50" cy="34" r="4" fill="currentColor" fillOpacity=".65" />
-      <circle cx="64" cy="34" r="4" fill="currentColor" fillOpacity=".35" />
-      <motion.path
-        d="M86 69L62 91L86 113M175 69L199 91L175 113M143 64L118 118"
-        stroke="currentColor"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        {...draw(0.5)}
-      />
-    </svg>
-  );
-}
-
-function FeaturedBookCard({ book, index }) {
-  const Icon = book.icon;
-
-  return (
-    <motion.article variants={rise} className="lh-card lh-book">
-      <div className="lh-book-content">
-        <div className="lh-book-meta">
-          <span className="mono caption-3 lh-book-number">{book.number}</span>
-          <span className="caption-3 lh-kicker">{book.type}</span>
-        </div>
-
-        <h3 className="heading-5 lh-book-title">
-          {book.title} <span>{book.highlight}</span>
-        </h3>
-
-        <p className="body-4 lh-book-subtitle">{book.subtitle}</p>
-
-        <p className="body-6 lh-card-text">{book.description}</p>
-
-        <div className="lh-chips">
-          {book.topics.map((topic) => (
-            <Chip key={topic}>{topic}</Chip>
-          ))}
-        </div>
-
-        <ul className="lh-checks">
-          {book.benefits.map((benefit, i) => (
-            <motion.li
-              key={benefit}
-              className="body-6"
-              initial={{ opacity: 0, x: -16 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 + i * 0.08, ease: EASE }}
-            >
-              <Check size={16} weight="bold" />
-              <span>{benefit}</span>
-            </motion.li>
-          ))}
-        </ul>
-
-        <Link to={book.path} className="button-md lh-btn lh-btn-outline">
-          Explore the {book.highlight} book
-          <ArrowUpRight size={16} weight="bold" />
-        </Link>
-      </div>
-
-      <div className="lh-book-art" aria-hidden="true">
-        <GridPattern id={`lh-grid-book-${index}`} size={24} />
-
-        <div className="lh-orbit lh-orbit-one" />
-        <div className="lh-orbit lh-orbit-two" />
-
-        <motion.div
-          className="lh-book-float"
-          animate={{ y: [0, -12, 0] }}
-          transition={{
-            duration: 5 + index,
-            repeat: Infinity,
-            ease: [0.45, 0, 0.55, 1],
-          }}
-        >
-          <div className="lh-cover">
-            <div className="mono lh-cover-top">
-              <span>TARGET TREK</span>
-              <Icon size={18} weight="duotone" />
-            </div>
-
-            <div className="lh-cover-visual">
-              <BookDiagram index={index} />
-            </div>
-
-            <div className="lh-cover-bottom">
-              <span className="lh-cover-heading">{book.highlight}</span>
-              <span className="mono lh-cover-line">{book.artLine}</span>
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="caption-3 lh-art-tag">
-          <Icon size={16} weight="duotone" />
-          <span>{book.artTag}</span>
-        </div>
-      </div>
-    </motion.article>
-  );
-}
-
-function ResourceCard({ resource }) {
-  const Icon = resource.icon;
-
-  return (
-    <motion.div variants={rise} className="lh-cell">
-      <Link to={resource.path} className="lh-card lh-card-link">
-        <div className="lh-card-top">
-          <span className="lh-icon-tile">
-            <Icon size={24} weight="duotone" />
-          </span>
-
-          <span className="mono caption-3 lh-card-number">
-            {resource.number}
-          </span>
-        </div>
-
-        <p className="caption-3 lh-kicker">{resource.category}</p>
-
-        <h3 className="title-1 lh-card-title">{resource.title}</h3>
-
-        <p className="body-6 lh-card-text">{resource.description}</p>
-
-        <div className="lh-chips">
-          {resource.tags.map((tag) => (
-            <Chip key={tag}>{tag}</Chip>
-          ))}
-        </div>
-
-        <div className="button-sm lh-card-action">
-          <span>Read the guide</span>
-
-          <span className="lh-arrow">
-            <ArrowUpRight size={16} weight="bold" />
-          </span>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-function CompareCard({ item }) {
-  const Icon = item.icon;
-
-  return (
-    <motion.div
-      variants={rise}
-      className={cn("lh-card lh-compare", item.featured && "lh-compare-featured")}
-    >
-      <span className="lh-icon-tile">
-        <Icon size={24} weight="duotone" />
-      </span>
-
-      <h3 className="heading-6 lh-card-title">{item.title}</h3>
-
-      <p className="body-6 lh-card-text">{item.text}</p>
-
-      <ul className="lh-checks">
-        {item.items.map((entry, i) => (
-          <motion.li
-            key={entry}
-            className="body-6"
-            initial={{ opacity: 0, x: -16 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.25 + i * 0.08, ease: EASE }}
-          >
-            <Check size={16} weight="bold" />
-            <span>{entry}</span>
-          </motion.li>
-        ))}
-      </ul>
-
-      <Link to={item.link} className="button-sm lh-text-link">
-        {item.linkText}
-        <ArrowUpRight size={16} weight="bold" />
-      </Link>
-    </motion.div>
+        <CaretLeft size={16} weight="bold" />
+      </button>
+      <button
+        type="button"
+        className="lx-icon-btn"
+        onClick={() => go(1)}
+        disabled={edges.end}
+        aria-label={`Scroll ${label} right`}
+      >
+        <CaretRight size={16} weight="bold" />
+      </button>
+    </div>
   );
 }
 
 function FaqItem({ faq, index, open, onToggle }) {
-  const panelId = `lh-faq-panel-${index}`;
+  const panelId = `lx-faq-${index}`;
 
   return (
-    <motion.div
-      variants={rise}
-      className={cn("lh-faq-item", open && "lh-faq-open")}
-    >
-      <button
-        type="button"
-        className="title-3"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={onToggle}
-      >
+    <motion.div variants={rise} className={cn("lx-faq-item", open && "is-open")}>
+      <button type="button" aria-expanded={open} aria-controls={panelId} onClick={onToggle}>
         <span>{faq.question}</span>
-
         <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.5, ease: EASE }}
-          className="lh-faq-caret"
+          className="lx-faq-icon"
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ duration: 0.4, ease: EASE }}
         >
-          <CaretDown size={16} weight="bold" />
+          <Plus size={16} weight="bold" />
         </motion.span>
       </button>
 
@@ -1179,10 +566,10 @@ function FaqItem({ faq, index, open, onToggle }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
+            transition={{ duration: 0.4, ease: EASE }}
             style={{ overflow: "hidden" }}
           >
-            <p className="body-6 lh-faq-answer">{faq.answer}</p>
+            <p className="lx-faq-answer">{faq.answer}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1190,173 +577,209 @@ function FaqItem({ faq, index, open, onToggle }) {
   );
 }
 
-// Three steps with a rail that fills as you scroll past
-function PathSteps() {
-  const ref = useRef(null);
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 80%", "end 60%"],
-  });
-
-  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 26 });
-
-  return (
-    <div className="lh-steps-wrap" ref={ref}>
-      <div className="lh-rail" aria-hidden="true">
-        <motion.div className="lh-rail-fill" style={{ scaleX }} />
-      </div>
-
-      <Stagger className="lh-steps" gap={0.12}>
-        {PATH_STEPS.map((step) => (
-          <motion.div key={step.n} variants={rise} className="lh-card lh-step">
-            <span className="mono heading-5 lh-step-number">{step.n}</span>
-
-            <h3 className="heading-6 lh-card-title">{step.title}</h3>
-
-            <p className="body-6 lh-card-text">{step.description}</p>
-
-            <Link to={step.path} className="button-sm lh-text-link">
-              {step.action}
-              <ArrowRight size={16} weight="bold" />
-            </Link>
-          </motion.div>
-        ))}
-      </Stagger>
-    </div>
-  );
-}
-
-// Interview list with a line that fills as you scroll
-function InterviewList() {
-  const ref = useRef(null);
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 75%", "end 55%"],
-  });
-
-  const scaleY = useSpring(scrollYProgress, { stiffness: 120, damping: 26 });
-
-  return (
-    <div className="lh-interview-right" ref={ref}>
-      <div className="lh-timeline" aria-hidden="true">
-        <motion.div className="lh-timeline-fill" style={{ scaleY }} />
-      </div>
-
-      <Stagger gap={0.1} className="lh-interview-stack">
-        {INTERVIEW_TOPICS.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <motion.div
-              key={item.title}
-              variants={rise}
-              className="lh-interview-item"
-            >
-              <span className="lh-icon-tile lh-icon-tile-sm">
-                <Icon size={20} weight="duotone" />
-              </span>
-
-              <div>
-                <h4 className="title-3">{item.title}</h4>
-                <p className="body-6 lh-card-text">{item.description}</p>
-              </div>
-            </motion.div>
-          );
-        })}
-      </Stagger>
-    </div>
-  );
+// "[35]% in [two] quarters": the bracketed parts are marked
+function SampleBullet({ text }) {
+  return String(text)
+    .split(/\[(.*?)\]/)
+    .map((part, i) => (i % 2 ? <mark key={i}>{part}</mark> : part));
 }
 
 // =====================================================
-// MAIN PAGE
+// MAIN
 // =====================================================
 
 export default function LearnHome() {
   const [theme, setTheme] = useState(readTheme);
-  const [activeFaq, setActiveFaq] = useState(0);
-
   const isDark = theme === "dark";
 
-  const heroRef = useRef(null);
+  // the one API call on this page: the public book list
+  const [books, setBooks] = useState([]);
+  const [booksState, setBooksState] = useState("loading"); // loading | ready | error
 
-  // Page scroll progress bar
-  const { scrollYProgress: pageProgress } = useScroll();
+  const [bookFilter, setBookFilter] = useState("");
+  const [activeFaq, setActiveFaq] = useState(0);
+  const [activeTab, setActiveTab] = useState("");
+  const [pinned, setPinned] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  const progressScale = useSpring(pageProgress, {
-    stiffness: 140,
-    damping: 28,
-  });
+  const rootRef = useRef(null);
+  const tabsSlotRef = useRef(null);
+  const resRailRef = useRef(null);
+  const bookRailRef = useRef(null);
 
-  // Hero parallax
-  const { scrollYProgress: heroProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-
-  const panelY = useTransform(heroProgress, [0, 1], [0, 64]);
-  const copyY = useTransform(heroProgress, [0, 1], [0, 32]);
-  const heroFade = useTransform(heroProgress, [0, 0.9], [1, 0.3]);
-
-  // Soft glow that trails the cursor across the hero
-  const glowX = useMotionValue(0);
-  const glowY = useMotionValue(0);
-  const glowSX = useSpring(glowX, { stiffness: 50, damping: 20 });
-  const glowSY = useSpring(glowY, { stiffness: 50, damping: 20 });
-
-  const onHeroMove = (event) => {
-    if (event.pointerType !== "mouse") return;
-
-    const rect = event.currentTarget.getBoundingClientRect();
-
-    glowX.set(event.clientX - rect.left - rect.width * 0.7);
-    glowY.set(event.clientY - rect.top - rect.height * 0.35);
-  };
-
-  // Navbar controls theme. No local theme switch.
+  // ---------- theme (navbar owns the toggle) ----------
   useEffect(() => {
-    const syncTheme = (event) => {
-      const nextTheme = event?.detail?.theme;
-
-      if (nextTheme === "dark" || nextTheme === "light") {
-        setTheme(nextTheme);
-        return;
-      }
-
-      setTheme(readTheme());
+    const sync = (event) => {
+      const next = event?.detail?.theme;
+      setTheme(next === "dark" || next === "light" ? next : readTheme());
     };
-
     const onStorage = (event) => {
-      if (!event.key || event.key === THEME_KEY) {
-        setTheme(readTheme());
-      }
+      if (!event.key || event.key === THEME_KEY) setTheme(readTheme());
     };
 
-    window.addEventListener(THEME_EVENT, syncTheme);
-    window.addEventListener("themechange", syncTheme);
+    window.addEventListener(THEME_EVENT, sync);
     window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", syncTheme);
+    window.addEventListener("focus", sync);
 
     return () => {
-      window.removeEventListener(THEME_EVENT, syncTheme);
-      window.removeEventListener("themechange", syncTheme);
+      window.removeEventListener(THEME_EVENT, sync);
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", syncTheme);
+      window.removeEventListener("focus", sync);
     };
   }, []);
 
+  // ---------- the single API request ----------
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`${BASE_URL}/book`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((json) => {
+        if (json?.success !== true || !Array.isArray(json.data)) throw new Error();
+        setBooks(json.data);
+        setBooksState("ready");
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setBooksState("error");
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  // ---------- fixed header height (phone header has two rows) ----------
+  useEffect(() => {
+    const root = rootRef.current;
+    const header = document.querySelector("nav.fixed");
+    if (!root || !header) return undefined;
+
+    const sync = () => {
+      const height = Math.round(header.getBoundingClientRect().height);
+      if (height > 0) root.style.setProperty("--nav-h", `${height}px`);
+    };
+
+    sync();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", sync);
+      return () => window.removeEventListener("resize", sync);
+    }
+
+    const observer = new ResizeObserver(sync);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  // ---------- scroll: progress bar, pinned tabs, back to top ----------
+  const { scrollY, scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 28 });
+
+  useMotionValueEvent(scrollY, "change", (value) => {
+    const far = value > 900;
+    setScrolled((current) => (current === far ? current : far));
+
+    const slot = tabsSlotRef.current;
+    const root = rootRef.current;
+    if (!slot || !root) return;
+
+    const navH = parseFloat(getComputedStyle(root).getPropertyValue("--nav-h")) || 64;
+    const pin = slot.getBoundingClientRect().top <= navH;
+    setPinned((current) => (current === pin ? current : pin));
+
+    // above the sections no tab is "current"
+    if (!pin) setActiveTab((current) => (current ? "" : current));
+  });
+
+  // ---------- derived book data ----------
+  const singles = useMemo(() => books.filter((book) => !isPack(book)), [books]);
+
+  const allPack = useMemo(
+    () => books.find((book) => getPath(book) === ALL_BOOKS_PATH) || null,
+    [books]
+  );
+  const lifePack = useMemo(
+    () => books.find((book) => getPath(book) === LIFETIME_PATH) || null,
+    [books]
+  );
+
+  const categories = useMemo(() => {
+    const counts = new Map();
+    for (const book of singles) {
+      for (const name of getCategories(book)) counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [singles]);
+
+  const railBooks = useMemo(() => {
+    const list = bookFilter
+      ? singles.filter((book) => getCategories(book).includes(bookFilter))
+      : singles;
+    // featured books first, keep the API order otherwise
+    return [...list].sort((a, b) => Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)));
+  }, [singles, bookFilter]);
+
+  const shelfCovers = useMemo(
+    () => singles.filter((book) => getCoverUrl(book)).slice(0, 5),
+    [singles]
+  );
+
+  const packCovers = (pack) => {
+    const inside = (Array.isArray(pack?.includedBooks) ? pack.includedBooks : []).filter(
+      (item) => item && typeof item === "object" && getCoverUrl(item)
+    );
+    return (inside.length ? inside : shelfCovers).slice(0, 3);
+  };
+
+  // new filter: start the rail from the first card
+  useEffect(() => {
+    bookRailRef.current?.scrollTo({ left: 0 });
+  }, [bookFilter]);
+
+  // ---------- section tabs + scrollspy ----------
+  const tabs = [
+    { id: "explore", label: "Explore" },
+    { id: "resources", label: "Free resources" },
+    { id: "books", label: "Books" },
+    { id: "interview-prep", label: "Interview prep" },
+    { id: "resume", label: "Resume review" },
+    { id: "memories", label: "Memories" },
+    { id: "faq", label: "FAQ" },
+  ];
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+
+    const nodes = ["explore", "resources", "books", "interview-prep", "resume", "memories", "faq"]
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveTab(visible[0].target.id);
+      },
+      { rootMargin: "-35% 0px -55% 0px", threshold: 0 }
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
+  const jump = useCallback((id) => scrollToId(id), []);
+
+  // ---------- SEO ----------
   const structuredData = useMemo(() => {
-    const resources = [
-      ...LEARNING_AREAS.map((item) => ({
-        name: item.title,
-        url: `${SITE_URL}${item.path}`,
-      })),
-      ...FREE_RESOURCES.map((item) => ({
-        name: item.title,
-        url: `${SITE_URL}${item.path}`,
-      })),
+    const links = [
+      ...EXPLORE.map((item) => ({ name: item.title, url: `${SITE_URL}${item.to}` })),
+      ...CORE_RESOURCES.map((item) => ({ name: `${item.title} guide`, url: `${SITE_URL}${item.to}` })),
+      ...HLD_GUIDES.map((item) => ({ name: `${item.title} guide`, url: `${SITE_URL}${item.to}` })),
     ];
 
     return {
@@ -1368,33 +791,19 @@ export default function LearnHome() {
           name: SEO_TITLE,
           description: SEO_DESCRIPTION,
           url: PAGE_URL,
-          isPartOf: {
-            "@type": "WebSite",
-            name: "Target Trek",
-            url: SITE_URL,
-          },
+          isPartOf: { "@type": "WebSite", name: "Target Trek", url: SITE_URL },
         },
         {
           "@type": "BreadcrumbList",
           itemListElement: [
-            {
-              "@type": "ListItem",
-              position: 1,
-              name: "Target Trek",
-              item: SITE_URL,
-            },
-            {
-              "@type": "ListItem",
-              position: 2,
-              name: "Learn",
-              item: PAGE_URL,
-            },
+            { "@type": "ListItem", position: 1, name: "Target Trek", item: SITE_URL },
+            { "@type": "ListItem", position: 2, name: "Learn", item: PAGE_URL },
           ],
         },
         {
           "@type": "ItemList",
-          name: "Target Trek learning resources",
-          itemListElement: resources.map((item, index) => ({
+          name: "Everything on Target Trek",
+          itemListElement: links.map((item, index) => ({
             "@type": "ListItem",
             position: index + 1,
             name: item.name,
@@ -1413,936 +822,946 @@ export default function LearnHome() {
     };
   }, []);
 
-  // Counts come straight from the content above, never invented.
-  const stats = [
-    { value: FREE_RESOURCES.length, label: "Free guides" },
-    { value: FEATURED_BOOKS.length, label: "Flagship books" },
-    { value: LEARNING_AREAS.length, label: "Learning paths" },
-    { value: INTERVIEW_TAGS.length, label: "Interview tracks" },
-  ];
+  const [before, after] = SAMPLE.bullets[0];
+  const bookCount = singles.length;
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <MotionConfig reducedMotion="user">
       <Helmet>
         <title>{SEO_TITLE}</title>
-
         <meta name="description" content={SEO_DESCRIPTION} />
-
         <meta
           name="keywords"
-          content="system design, software engineering, Java LLD, HLD, GenAI, backend engineering, developer resources, software engineering interview experiences, Target Trek"
+          content="system design, software engineering, Java LLD, HLD, GenAI, backend engineering, developer resources, interview experiences, mock interviews, resume review, Target Trek"
         />
-
         <meta name="robots" content="index,follow,max-image-preview:large" />
-
         <link rel="canonical" href={PAGE_URL} />
         <link rel="stylesheet" href={FONT_URL} />
-
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Target Trek" />
         <meta property="og:title" content={SEO_TITLE} />
         <meta property="og:description" content={SEO_DESCRIPTION} />
         <meta property="og:url" content={PAGE_URL} />
-
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={SEO_TITLE} />
         <meta name="twitter:description" content={SEO_DESCRIPTION} />
-
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      <style>{`
-        .ttLearn {
-          --bg: #FAF9F6;
-          --surface: #FFFFFF;
-          --surface-2: #F3F0EB;
-          --text: #131209;
-          --muted: #5F5852;
-          --subtle: #8A8179;
-          --border: #E5DFD7;
-          --accent: #EA580C;
-          --accent-text: #C2410C;
-          --accent-soft: #FFF0E4;
-          --accent-line: #FDBA74;
-          --btn-bg: #C2410C;
-          --btn-bg-hover: #9A3412;
-          --btn-text: #FFFFFF;
-          --panel: #131209;
-          --panel-2: #1F1F1F;
-          --panel-3: #272727;
-          --panel-border: #313131;
-          --panel-text: #FAF8F5;
-          --panel-muted: #A8A29E;
-          --panel-accent: #FB923C;
-          --h-from: #000000;
-          --h-to: #666666;
-          --shadow: 0 24px 48px rgba(19,18,9,.08);
-          --ease: cubic-bezier(0.22,1,0.36,1);
+      <motion.div className="lx-progress" style={{ scaleX: progress }} aria-hidden="true" />
 
-          min-height: 100vh;
-          width: 100%;
-          overflow-x: clip;
-          background: var(--bg);
-          color: var(--text);
-          font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          transition: background-color .3s var(--ease), color .3s var(--ease);
-        }
+      <main ref={rootRef} className="lx" data-theme={isDark ? "dark" : "light"}>
+        {/* ===================================== */}
+        {/* HERO                                  */}
+        {/* ===================================== */}
 
-        .ttLearn[data-theme="dark"] {
-          --bg: #131209;
-          --surface: #181818;
-          --surface-2: #1F1F1F;
-          --text: #FAF8F5;
-          --muted: #B5ACA5;
-          --subtle: #8D827A;
-          --border: #313131;
-          --accent: #FB923C;
-          --accent-text: #FB923C;
-          --accent-soft: #272727;
-          --accent-line: #7C4A22;
-          --btn-bg: #FB923C;
-          --btn-bg-hover: #FDBA74;
-          --btn-text: #131209;
-          --panel: #000000;
-          --panel-2: #181818;
-          --panel-3: #272727;
-          --h-from: #FFFFFF;
-          --h-to: #9B9B9B;
-          --shadow: 0 24px 48px rgba(0,0,0,.4);
-          color-scheme: dark;
-        }
-
-        .ttLearn *, .ttLearn *::before, .ttLearn *::after { box-sizing: border-box; }
-        .ttLearn a { color: inherit; text-decoration: none; }
-        .ttLearn button { font: inherit; }
-        .ttLearn :where(h1, h2, h3, h4, p, ul) { margin: 0; padding: 0; }
-        .ttLearn ul { list-style: none; }
-        .ttLearn h1, .ttLearn h2, .ttLearn h3, .ttLearn h4 { text-wrap: balance; letter-spacing: -.02em; }
-        .ttLearn p { text-wrap: pretty; }
-        .ttLearn a:focus-visible, .ttLearn button:focus-visible {
-          outline: 2px solid var(--accent); outline-offset: 2px;
-        }
-
-        /* ---------- text styles ---------- */
-        .ttLearn .mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0; }
-        .ttLearn .heading-1 { font-size: 30px; line-height: 36px; font-weight: 600; }
-        .ttLearn .heading-3 { font-size: 30px; line-height: 36px; font-weight: 600; }
-        .ttLearn .heading-5 { font-size: 24px; line-height: 32px; font-weight: 600; }
-        .ttLearn .heading-6 { font-size: 20px; line-height: 28px; font-weight: 600; }
-        .ttLearn .title-1 { font-size: 20px; line-height: 28px; font-weight: 500; }
-        .ttLearn .title-3 { font-size: 16px; line-height: 24px; font-weight: 500; }
-        .ttLearn .body-3 { font-size: 16px; line-height: 24px; font-weight: 400; }
-        .ttLearn .body-4 { font-size: 14px; line-height: 20px; font-weight: 600; }
-        .ttLearn .body-6 { font-size: 14px; line-height: 20px; font-weight: 400; }
-        .ttLearn .button-lg { font-size: 18px; line-height: 28px; font-weight: 600; }
-        .ttLearn .button-md { font-size: 16px; line-height: 24px; font-weight: 600; }
-        .ttLearn .button-sm { font-size: 14px; line-height: 20px; font-weight: 600; }
-        .ttLearn .caption-3 { font-size: 12px; line-height: 16px; font-weight: 600; }
-        .ttLearn .caption-4 { font-size: 12px; line-height: 16px; font-weight: 500; }
-        @media (min-width: 480px) { .ttLearn .heading-1 { font-size: 36px; line-height: 40px; } }
-        @media (min-width: 768px) {
-          .ttLearn .heading-1 { font-size: 48px; line-height: 48px; }
-          .ttLearn .heading-3 { font-size: 36px; line-height: 40px; }
-        }
-        @media (min-width: 1280px) { .ttLearn .heading-1 { font-size: 60px; line-height: 60px; } }
-
-        /* ---------- layout ---------- */
-        .lh-shell { width: min(1200px, calc(100% - 32px)); margin: 0 auto; }
-        .lh-section { padding: 64px 0; position: relative; }
-        @media (min-width: 768px) {
-          .lh-shell { width: min(1200px, calc(100% - 48px)); }
-          .lh-section { padding: 96px 0; }
-        }
-        .lh-section-alt { background: var(--surface-2); }
-        .lh-cell { height: 100%; }
-
-        .lh-progress {
-          position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 9999;
-          transform-origin: 0 50%; background: #F97316;
-        }
-
-        .lh-gridsvg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-
-        /* ---------- headings ---------- */
-        .lh-heading { display: flex; flex-direction: column; gap: 16px; }
-        @media (min-width: 768px) {
-          .lh-heading { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 32px; }
-        }
-        .lh-heading-main { max-width: 680px; }
-        .lh-eyebrow {
-          display: flex; align-items: center; gap: 12px;
-          color: var(--accent-text); text-transform: uppercase; letter-spacing: .12em;
-        }
-        .lh-eyebrow-index { color: var(--subtle); }
-        .lh-eyebrow-line { display: block; width: 24px; height: 2px; background: var(--accent); transform-origin: 0 50%; }
-        .lh-section-title { margin-top: 16px; color: var(--text); }
-        .lh-section-description { margin-top: 16px; color: var(--muted); }
-
-        .lh-text-link {
-          display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
-          color: var(--accent-text) !important;
-        }
-        .lh-text-link svg { transition: transform .5s var(--ease); }
-        .lh-text-link:hover svg { transform: translate(4px, 0); }
-
-        /* ---------- buttons ---------- */
-        .lh-btn {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 8px 12px; border-radius: 8px; border: 1px solid transparent;
-          transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease), transform .5s var(--ease);
-        }
-        .lh-btn svg { transition: transform .5s var(--ease); }
-        .lh-btn:hover svg { transform: translate(2px, -2px); }
-        .lh-btn:active { transform: scale(.98); }
-        .lh-btn-primary { background: var(--btn-bg); color: var(--btn-text) !important; }
-        .lh-btn-primary:hover { background: var(--btn-bg-hover); }
-        .lh-btn-outline { background: var(--surface); border-color: var(--border); color: var(--text) !important; }
-        .lh-btn-outline:hover { border-color: var(--accent); color: var(--accent-text) !important; }
-
-        /* ---------- chips ---------- */
-        .lh-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-        .lh-chip {
-          display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 6px;
-          background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
-          transition: border-color .3s var(--ease), color .3s var(--ease);
-        }
-
-        /* ---------- cards ---------- */
-        .lh-card {
-          position: relative; display: flex; flex-direction: column; height: 100%; min-width: 0;
-          padding: 24px; border-radius: 16px;
-          background: var(--surface); border: 1px solid var(--border);
-          transition: transform .5s var(--ease), border-color .3s var(--ease), box-shadow .5s var(--ease);
-        }
-        /* corner brackets that lock on when hovered */
-        .lh-card::before, .lh-card::after {
-          content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none;
-          border: 0 solid var(--accent); opacity: 0;
-          transition: opacity .3s var(--ease), transform .5s var(--ease);
-        }
-        .lh-card::before { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 8px; transform: translate(6px, 6px); }
-        .lh-card::after { right: 8px; bottom: 8px; border-right-width: 2px; border-bottom-width: 2px; border-bottom-right-radius: 8px; transform: translate(-6px, -6px); }
-        .lh-card:hover { border-color: var(--accent-line); box-shadow: var(--shadow); }
-        .lh-card:hover::before, .lh-card:hover::after,
-        .lh-card-link:focus-visible::before, .lh-card-link:focus-visible::after { opacity: 1; transform: translate(0, 0); }
-        .lh-card-link:hover { transform: translateY(-4px); }
-        .lh-card-link:active { transform: translateY(0) scale(.98); }
-        .lh-card-link:hover .lh-chip { border-color: var(--accent-line); }
-
-        .lh-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
-        .lh-icon-tile {
-          display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0;
-          border-radius: 12px; background: var(--accent-soft); color: var(--accent-text);
-          transition: transform .5s var(--ease), background-color .3s var(--ease), color .3s var(--ease);
-        }
-        .lh-icon-tile-sm { width: 40px; height: 40px; border-radius: 8px; }
-        .lh-card:hover .lh-icon-tile, .lh-interview-item:hover .lh-icon-tile {
-          transform: translateY(-2px) rotate(-6deg); background: var(--btn-bg); color: var(--btn-text);
-        }
-        .lh-card-number { color: var(--subtle); transition: color .3s var(--ease); }
-        .lh-card:hover .lh-card-number { color: var(--accent-text); }
-        .lh-kicker { margin-top: 24px; color: var(--accent-text); text-transform: uppercase; letter-spacing: .1em; }
-        .lh-card-title { margin-top: 8px; color: var(--text); }
-        .lh-card-text { margin-top: 8px; color: var(--muted); }
-        .lh-card-link .lh-card-text { flex: 1; }
-        .lh-card-action {
-          display: flex; align-items: center; justify-content: space-between; gap: 12px;
-          margin-top: 24px; color: var(--accent-text);
-        }
-        .lh-arrow {
-          display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9999px;
-          background: var(--accent-soft);
-          transition: transform .5s var(--ease), background-color .3s var(--ease), color .3s var(--ease);
-        }
-        .lh-card:hover .lh-arrow { transform: rotate(45deg); background: var(--btn-bg); color: var(--btn-text); }
-
-        .lh-grid-4, .lh-grid-3, .lh-grid-2 { display: grid; gap: 16px; margin-top: 48px; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 640px) {
-          .lh-grid-4, .lh-grid-3 { grid-template-columns: repeat(2,minmax(0,1fr)); }
-        }
-        @media (min-width: 1080px) {
-          .lh-grid-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
-          .lh-grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
-          .lh-grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
-        }
-
-        .lh-checks { display: grid; gap: 8px; margin-top: 24px; }
-        .lh-checks li { display: flex; align-items: flex-start; gap: 8px; color: var(--muted); }
-        .lh-checks svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-text); }
-
-        /* ---------- HERO ---------- */
-        .lh-hero { position: relative; padding: 128px 0 64px; overflow: hidden; background: var(--bg); }
-        @media (min-width: 768px) { .lh-hero { padding: 144px 0 96px; } }
-        .lh-hero-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-        .lh-hero-bg .lh-gridsvg {
-          color: var(--border);
-          -webkit-mask-image: radial-gradient(ellipse at 70% 35%, #000 0%, transparent 70%);
-          mask-image: radial-gradient(ellipse at 70% 35%, #000 0%, transparent 70%);
-        }
-        .lh-glow {
-          position: absolute; left: 70%; top: 35%; width: 480px; height: 480px;
-          margin: -240px 0 0 -240px; border-radius: 9999px;
-          background: #F97316; opacity: .14; filter: blur(96px);
-        }
-        .lh-hero-grid { position: relative; display: grid; gap: 64px; align-items: center; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 1080px) { .lh-hero-grid { grid-template-columns: minmax(0,1.2fr) minmax(0,.8fr); gap: 48px; } }
-
-        .lh-now {
-          display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
-          padding: 4px 12px; border-radius: 9999px;
-          background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-        }
-        .lh-ping { position: relative; width: 8px; height: 8px; border-radius: 9999px; background: #16A34A; }
-        .lh-ping::after {
-          content: ""; position: absolute; inset: 0; border-radius: inherit; background: #16A34A;
-          animation: lh-ping 2s var(--ease) infinite;
-        }
-        .lh-rotator { display: inline-block; overflow: hidden; color: var(--accent-text); }
-        .lh-rotator span { display: inline-block; }
-
-        .lh-hero-title { max-width: 680px; margin-top: 24px; letter-spacing: -.03em; }
-        .lh-line-mask { display: block; overflow: hidden; padding-bottom: .14em; margin-bottom: -.14em; }
-        .lh-line {
-          display: block; width: fit-content;
-          background-image: linear-gradient(90deg, var(--h-from), var(--h-to));
-          -webkit-background-clip: text; background-clip: text;
-          -webkit-text-fill-color: transparent; color: transparent;
-        }
-        .lh-hero-sub { max-width: 680px; margin-top: 24px; color: var(--muted); }
-        .lh-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; margin-top: 32px; }
-
-        .lh-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; margin-top: 48px; max-width: 680px; }
-        @media (min-width: 640px) { .lh-stats { grid-template-columns: repeat(4,minmax(0,1fr)); } }
-        .lh-stat strong { display: block; color: var(--text); }
-        .lh-stat span { display: block; margin-top: 4px; color: var(--muted); }
-
-        .lh-hero-visual { position: relative; width: 100%; max-width: 480px; margin: 0 auto; }
-        .lh-panel {
-          position: relative; padding: 16px; border-radius: 24px; overflow: hidden;
-          background: var(--panel); border: 1px solid var(--panel-border); color: var(--panel-text);
-          box-shadow: 0 32px 64px rgba(19,18,9,.24);
-        }
-        .lh-panel-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 8px 12px; color: var(--panel-muted); }
-        .lh-panel-live { display: inline-flex; align-items: center; gap: 8px; color: var(--panel-accent); }
-        .lh-panel-screen { position: relative; border-radius: 8px; overflow: hidden; background: var(--panel-2); padding: 16px 8px; }
-        .lh-panel-screen .lh-gridsvg { color: var(--panel-border); opacity: .6; }
-        .lh-panel-foot { padding: 12px 8px 0; color: var(--panel-muted); }
-        .lh-scan {
-          position: absolute; left: 0; right: 0; top: 0; height: 64px; pointer-events: none;
-          background: var(--panel-accent); opacity: .05;
-          animation: lh-scan 6s cubic-bezier(.45,0,.55,1) infinite;
-        }
-
-        .lh-flow { position: relative; display: block; width: 100%; height: auto; font-family: "Geist Mono", ui-monospace, monospace; }
-        .lh-flow-edge { stroke: #4A4038; stroke-width: 1.5; stroke-dasharray: 4 6; animation: lh-dash 1.2s linear infinite; }
-        .lh-flow-box { fill: #1F1F1F; stroke: #3D3D3D; stroke-width: 1; transition: fill .3s var(--ease), stroke .3s var(--ease); }
-        .lh-flow-link .lh-flow-box { stroke: #9A5A2A; }
-        .lh-flow-link { cursor: pointer; outline: none; }
-        .lh-flow-link:hover .lh-flow-box, .lh-flow-link:focus-visible .lh-flow-box { fill: #313131; stroke: #FB923C; stroke-width: 2; }
-        .lh-flow-label { fill: #FAF8F5; font-size: 12px; font-weight: 500; }
-        .lh-flow-link .lh-flow-label { transition: fill .3s var(--ease); }
-        .lh-flow-link:hover .lh-flow-label, .lh-flow-link:focus-visible .lh-flow-label { fill: #FDBA74; }
-        .lh-flow-note { fill: #8D827A; font-size: 11px; }
-        .lh-flow-svc { fill: #181818; stroke: #313131; stroke-width: 1; }
-        .lh-flow-packet { fill: #FB923C; }
-        .lh-flow-halo { fill: #FB923C; opacity: .22; }
-
-        /* ---------- MARQUEE ---------- */
-        .lh-marquee {
-          overflow: hidden; padding: 16px 0; background: var(--surface-2);
-          -webkit-mask-image: linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
-          mask-image: linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
-        }
-        .lh-marquee-track { display: flex; width: max-content; animation: lh-marquee 40s linear infinite; }
-        .lh-marquee:hover .lh-marquee-track { animation-play-state: paused; }
-        .lh-marquee-item { display: inline-flex; align-items: center; gap: 24px; padding-right: 24px; white-space: nowrap; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-        .lh-marquee-item i { width: 4px; height: 4px; border-radius: 9999px; background: var(--accent); }
-
-        /* ---------- TAGLINE ---------- */
-        .lh-tagline-section { padding: 96px 0; }
-        @media (min-width: 768px) { .lh-tagline-section { padding: 160px 0; } }
-        .lh-tagline { max-width: 680px; margin: 0 auto; text-align: center; color: var(--text); letter-spacing: -.02em; text-wrap: balance; }
-        .lh-tagline-word { opacity: .3; transition: opacity .5s var(--ease); }
-        .lh-tagline-word.is-on { opacity: 1; }
-
-        /* ---------- BOOKS ---------- */
-        .lh-book { padding: 8px; flex-direction: column; border-radius: 24px; }
-        .lh-book-content { display: flex; flex-direction: column; min-width: 0; padding: 16px; flex: 1; }
-        @media (min-width: 640px) { .lh-book { flex-direction: row; } .lh-book-content { padding: 24px; } }
-        .lh-book-meta { display: flex; align-items: center; gap: 12px; }
-        .lh-book-meta .lh-kicker { margin-top: 0; }
-        .lh-book-number { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); }
-        .lh-book-title { margin-top: 16px; color: var(--text); }
-        .lh-book-title span { color: var(--accent-text); }
-        .lh-book-subtitle { margin-top: 8px; color: var(--text); }
-        .lh-book-content .lh-btn { align-self: flex-start; margin-top: 24px; }
-        .lh-book-content .lh-checks { margin-bottom: auto; }
-
-        .lh-book-art {
-          position: relative; display: grid; place-items: center; overflow: hidden;
-          min-height: 320px; padding: 24px 16px; border-radius: 16px;
-          background: var(--panel); perspective: 900px;
-        }
-        @media (min-width: 640px) { .lh-book-art { width: 40%; flex-shrink: 0; } }
-        .lh-book-art .lh-gridsvg { color: var(--panel-border); opacity: .7; }
-        .lh-orbit { position: absolute; width: 288px; height: 288px; border-radius: 9999px; border: 1px dashed rgba(251,146,60,.28); animation: lh-spin 30s linear infinite; }
-        .lh-orbit::after { content: ""; position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; border-radius: 9999px; background: #FB923C; }
-        .lh-orbit-two { width: 208px; height: 208px; animation-direction: reverse; animation-duration: 22s; }
-        .lh-book-float { position: relative; z-index: 2; width: min(168px, 100%); }
-        .lh-cover {
-          display: flex; flex-direction: column; width: 100%; aspect-ratio: 2 / 3; padding: 16px;
-          border-radius: 4px 8px 8px 4px; color: #FAF8F5;
-          background: #1F1F1F; border: 1px solid #3D3D3D;
-          box-shadow: 16px 24px 40px rgba(0,0,0,.5), inset 4px 0 0 #FB923C;
-          transform: rotateY(-14deg) rotateZ(-3deg);
-          transition: transform .5s var(--ease);
-        }
-        .lh-book:hover .lh-cover { transform: rotateY(-24deg) rotateZ(-5deg) scale(1.06); }
-        .lh-cover-top { display: flex; align-items: center; justify-content: space-between; font-size: 12px; line-height: 16px; transform: scale(.75); transform-origin: 0 50%; width: 133%; color: #FDBA74; letter-spacing: .12em; }
-        .lh-cover-visual { flex: 1; display: grid; place-items: center; color: #FDBA74; }
-        .lh-cover-visual svg { width: 100%; height: auto; }
-        .lh-cover-bottom { display: flex; flex-direction: column; gap: 4px; }
-        .lh-cover-heading { font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -.03em; }
-        .lh-cover-line { font-size: 12px; line-height: 16px; transform: scale(.75); transform-origin: 0 50%; width: 133%; color: #FDBA74; text-transform: uppercase; letter-spacing: .08em; }
-        .lh-art-tag {
-          position: absolute; z-index: 3; right: 12px; bottom: 12px;
-          display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px;
-          background: #1F1F1F; border: 1px solid #3D3D3D; color: #FDBA74;
-          animation: lh-float 5s cubic-bezier(.45,0,.55,1) infinite;
-        }
-        .lh-pulse-dot { animation: lh-pulse 2s cubic-bezier(.45,0,.55,1) infinite; transform-origin: center; transform-box: fill-box; }
-
-        /* ---------- STEPS ---------- */
-        .lh-steps-wrap { margin-top: 48px; }
-        .lh-rail { height: 2px; border-radius: 2px; background: var(--border); overflow: hidden; }
-        .lh-rail-fill { width: 100%; height: 100%; background: var(--accent); transform-origin: 0 50%; }
-        .lh-steps { display: grid; gap: 16px; margin-top: 24px; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 880px) { .lh-steps { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-        .lh-step-number { color: var(--accent-text); }
-        .lh-step .lh-card-title { margin-top: 16px; }
-        .lh-step .lh-card-text { flex: 1; }
-        .lh-step .lh-text-link { margin-top: 24px; align-self: flex-start; }
-
-        /* ---------- INTERVIEW ---------- */
-        .lh-interview {
-          display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; margin-top: 48px; padding: 8px;
-          border-radius: 24px; background: var(--surface); border: 1px solid var(--border);
-        }
-        @media (min-width: 880px) { .lh-interview { grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr); } }
-        .lh-interview-left { padding: 16px; }
-        @media (min-width: 640px) { .lh-interview-left { padding: 32px; } }
-        .lh-interview-left h3 { color: var(--text); }
-        .lh-interview-left > p { margin-top: 16px; color: var(--muted); max-width: 520px; }
-        .lh-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 32px; }
-        .lh-tags span {
-          padding: 4px 12px; border-radius: 9999px;
-          border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent-text);
-          transition: transform .5s var(--ease);
-        }
-        .lh-tags span:hover { transform: translateY(-4px); }
-        .lh-interview-right { position: relative; padding: 24px 16px 24px 40px; border-radius: 16px; background: var(--surface-2); }
-        @media (min-width: 640px) { .lh-interview-right { padding: 32px 32px 32px 56px; } }
-        .lh-timeline { position: absolute; left: 19px; top: 40px; bottom: 40px; width: 2px; border-radius: 2px; background: var(--border); overflow: hidden; }
-        @media (min-width: 640px) { .lh-timeline { left: 27px; } }
-        .lh-timeline-fill { width: 100%; height: 100%; transform-origin: 50% 0; background: var(--accent); }
-        .lh-interview-stack { display: grid; gap: 12px; }
-        .lh-interview-item {
-          display: flex; gap: 16px; align-items: flex-start; padding: 16px; border-radius: 12px;
-          background: var(--surface); border: 1px solid var(--border);
-          transition: transform .5s var(--ease), border-color .3s var(--ease);
-        }
-        .lh-interview-item:hover { transform: translateX(8px); border-color: var(--accent-line); }
-        .lh-interview-item h4 { color: var(--text); }
-        .lh-interview-item .lh-card-text { margin-top: 4px; }
-
-        /* ---------- COMPARE ---------- */
-        .lh-compare .lh-card-title { margin-top: 24px; }
-        .lh-compare .lh-checks { margin-bottom: 24px; }
-        .lh-compare .lh-text-link { margin-top: auto; align-self: flex-start; }
-        .lh-compare-featured { border-color: var(--accent-line); }
-
-        /* ---------- BENEFITS ---------- */
-        .lh-benefit .lh-card-title { margin-top: 24px; }
-
-        /* ---------- FAQ ---------- */
-        .lh-faq { display: grid; gap: 32px; align-items: start; grid-template-columns: minmax(0,1fr); }
-        @media (min-width: 1080px) {
-          .lh-faq { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 64px; }
-          .lh-faq > .lh-heading { position: sticky; top: 96px; }
-        }
-        .lh-faq-list { display: grid; gap: 12px; }
-        .lh-faq-item {
-          border-radius: 12px; overflow: hidden; background: var(--surface); border: 1px solid var(--border);
-          transition: border-color .3s var(--ease);
-        }
-        .lh-faq-item:hover, .lh-faq-open { border-color: var(--accent-line); }
-        .lh-faq-item button {
-          width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px;
-          padding: 16px 24px; border: 0; background: transparent; text-align: left; cursor: pointer; color: var(--text);
-        }
-        .lh-faq-item button:focus-visible { outline-offset: -2px; border-radius: 12px; }
-        .lh-faq-caret { display: grid; place-items: center; flex-shrink: 0; color: var(--accent-text); }
-        .lh-faq-answer { padding: 0 24px 24px; color: var(--muted); }
-
-        /* ---------- FINAL CTA ---------- */
-        .lh-cta {
-          position: relative; overflow: hidden; isolation: isolate;
-          display: flex; flex-direction: column; align-items: flex-start; gap: 32px;
-          padding: 40px 24px; border-radius: 24px;
-          background: var(--panel); border: 1px solid var(--panel-border); color: var(--panel-text);
-        }
-        @media (min-width: 880px) { .lh-cta { flex-direction: row; align-items: center; justify-content: space-between; padding: 64px; } }
-        .lh-cta .lh-gridsvg { z-index: -1; color: var(--panel-border); opacity: .7; }
-        .lh-cta-ring { position: absolute; z-index: -1; border-radius: 9999px; pointer-events: none; border: 1px dashed rgba(251,146,60,.35); }
-        .lh-cta-ring-1 { width: 416px; height: 416px; right: -128px; top: -192px; animation: lh-spin 34s linear infinite; }
-        .lh-cta-ring-2 { width: 256px; height: 256px; left: -96px; bottom: -128px; animation: lh-spin 26s linear infinite reverse; }
-        .lh-cta h2 { max-width: 560px; color: var(--panel-text); }
-        .lh-cta p { max-width: 520px; margin-top: 16px; color: var(--panel-muted); }
-        .lh-cta-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; flex-shrink: 0; }
-        .lh-cta .lh-btn-primary { background: #FB923C; color: #131209 !important; }
-        .lh-cta .lh-btn-primary:hover { background: #FDBA74; }
-        .lh-cta .lh-text-link { color: #FDBA74 !important; }
-
-        /* ---------- KEYFRAMES ---------- */
-        @keyframes lh-spin { to { transform: rotate(360deg); } }
-        @keyframes lh-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        @keyframes lh-ping { 0% { transform: scale(1); opacity: .7; } 80%,100% { transform: scale(3); opacity: 0; } }
-        @keyframes lh-marquee { to { transform: translateX(-50%); } }
-        @keyframes lh-dash { to { stroke-dashoffset: -20; } }
-        @keyframes lh-scan { 0% { transform: translateY(-64px); } 100% { transform: translateY(560px); } }
-        @keyframes lh-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.8); opacity: .5; } }
-
-        @media (prefers-reduced-motion: reduce) {
-          .ttLearn *, .ttLearn *::before, .ttLearn *::after {
-            animation: none !important;
-            transition-property: opacity, color, background-color, border-color !important;
-          }
-          .lh-flow-packets, .lh-scan { display: none; }
-        }
-      `}</style>
-
-      <motion.div
-        className="lh-progress"
-        style={{ scaleX: progressScale }}
-        aria-hidden="true"
-      />
-
-      <main className="ttLearn" data-theme={isDark ? "dark" : "light"}>
-        {/* ================================================= */}
-        {/* HERO                                              */}
-        {/* ================================================= */}
-
-        <section className="lh-hero" ref={heroRef} onPointerMove={onHeroMove}>
-          <div className="lh-hero-bg" aria-hidden="true">
-            <GridPattern id="lh-grid-hero" />
-            <motion.div className="lh-glow" style={{ x: glowSX, y: glowSY }} />
+        <section className="lx-hero" aria-labelledby="lx-title">
+          <div className="lx-hero-bg" aria-hidden="true">
+            <i />
           </div>
 
-          <div className="lh-shell lh-hero-grid">
-            <motion.div style={{ y: copyY, opacity: heroFade }}>
-              <motion.div
-                className="caption-3 lh-now"
-                aria-hidden="true"
-                initial={{ opacity: 0, y: -16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: EASE }}
-              >
-                <span className="lh-ping" />
-                Now exploring
-                <RotatingWord />
-              </motion.div>
-
-              <h1 className="heading-1 lh-hero-title">
-                <LineReveal delay={0.1}>Learn the concepts.</LineReveal>
-                <LineReveal delay={0.22}>Build the intuition.</LineReveal>
-              </h1>
-
+          <div className="lx-shell lx-hero-grid">
+            <div>
               <motion.p
-                className="body-3 lh-hero-sub"
+                className="lx-pill"
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: EASE }}
+              >
+                <span className="lx-ping" aria-hidden="true" />
+                Target Trek · Learn
+                <b>for software engineers</b>
+              </motion.p>
+
+              <motion.h1
+                id="lx-title"
+                className="lx-h1 lx-hero-title"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.45, ease: EASE }}
+                transition={{ duration: 0.8, delay: 0.08, ease: EASE }}
               >
-                A focused learning space for software engineers. Study system
-                design, Java LLD and GenAI through free guides, complete books
-                and real interview experiences that show how systems actually
-                work.
+                Everything you need to <span className="lx-hl">crack the interview</span>, in
+                one place.
+              </motion.h1>
+
+              <motion.p
+                className="lx-lead lx-hero-lead"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.2, ease: EASE }}
+              >
+                Free system design and backend guides, interview preparation books,
+                real interview experiences, mock interviews and a resume review, so
+                you always know what to do next.
               </motion.p>
 
               <motion.div
-                className="lh-hero-actions"
-                initial={{ opacity: 0, y: 24 }}
+                className="lx-goals"
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.6, ease: EASE }}
+                transition={{ duration: 0.7, delay: 0.3, ease: EASE }}
               >
-                <MotionLink
-                  to="/books"
-                  className="button-lg lh-btn lh-btn-primary"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.5, ease: EASE }}
-                >
-                  Browse the books
-                  <ArrowUpRight size={18} weight="bold" />
-                </MotionLink>
+                <p>What do you want to do today?</p>
 
-                <Link to="/resources/hld/cache" className="button-md lh-text-link">
-                  Start with the free guides
-                  <ArrowRight size={16} weight="bold" />
-                </Link>
+                <div className="lx-goal-grid">
+                  {GOALS.map((goal) => {
+                    const Icon = goal.icon;
+                    return (
+                      <button
+                        type="button"
+                        key={goal.id}
+                        className="lx-goal"
+                        onClick={() => jump(goal.id)}
+                      >
+                        <Icon size={22} weight="duotone" />
+                        <b>{goal.label}</b>
+                      </button>
+                    );
+                  })}
+                </div>
               </motion.div>
 
               <motion.div
-                className="lh-stats"
-                variants={stagger(0.08, 0.75)}
-                initial="hidden"
-                animate="show"
+                className="lx-hero-ctas"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.4, ease: EASE }}
               >
-                {stats.map((stat) => (
-                  <motion.div key={stat.label} variants={rise} className="lh-stat">
-                    <strong className="mono heading-5">
-                      <Counter to={stat.value} />
-                    </strong>
-                    <span className="caption-4">{stat.label}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              className="lh-hero-visual"
-              style={{ y: panelY }}
-              initial={{ opacity: 0, y: 48 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.3, ease: EASE }}
-            >
-              <Tilt>
-                <div className="lh-panel">
-                  <div className="mono caption-4 lh-panel-bar">
-                    <span>request path</span>
-                    <span className="lh-panel-live">
-                      <span className="lh-ping" />
-                      live
-                    </span>
-                  </div>
-
-                  <div className="lh-panel-screen">
-                    <GridPattern id="lh-grid-panel" size={24} />
-                    <div className="lh-scan" aria-hidden="true" />
-                    <FlowDiagram />
-                  </div>
-
-                  <p className="caption-4 lh-panel-foot">
-                    Every highlighted node opens a free guide.
-                  </p>
-                </div>
-              </Tilt>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* TOPIC MARQUEE                                     */}
-        {/* ================================================= */}
-
-        <div className="lh-marquee" aria-hidden="true">
-          <div className="lh-marquee-track">
-            {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, index) => (
-              <span className="mono caption-4 lh-marquee-item" key={`${item}-${index}`}>
-                {item}
-                <i />
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* ================================================= */}
-        {/* EXPLORE LEARNING AREAS                            */}
-        {/* ================================================= */}
-
-        <section className="lh-section">
-          <div className="lh-shell">
-            <SectionHeading
-              index="01"
-              eyebrow="Explore Target Trek"
-              title="Everything you need to keep learning."
-              description="Choose your path, whether you are revising a single concept, preparing for an interview or studying a complete software engineering topic."
-            />
-
-            <Stagger className="lh-grid-4">
-              {LEARNING_AREAS.map((item) => (
-                <LearningAreaCard key={item.id} item={item} />
-              ))}
-            </Stagger>
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* TAGLINE REVEAL                                    */}
-        {/* ================================================= */}
-
-        <section className="lh-tagline-section lh-section-alt">
-          <div className="lh-shell">
-            <TaglineReveal text={TAGLINE} />
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* FEATURED HLD / LLD BOOKS                          */}
-        {/* ================================================= */}
-
-        <section className="lh-section">
-          <div className="lh-shell">
-            <SectionHeading
-              index="02"
-              eyebrow="Deeper learning"
-              title="Technical books that connect the dots."
-              description="Go beyond memorizing concepts. Learn to explain design decisions, understand tradeoffs and prepare for real software engineering discussions."
-              action="View all books"
-              actionPath="/books"
-            />
-
-            <Stagger className="lh-grid-2" gap={0.16}>
-              {FEATURED_BOOKS.map((book, index) => (
-                <FeaturedBookCard key={book.path} book={book} index={index} />
-              ))}
-            </Stagger>
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* FREE SYSTEM DESIGN RESOURCES                      */}
-        {/* ================================================= */}
-
-        <section className="lh-section lh-section-alt">
-          <div className="lh-shell">
-            <SectionHeading
-              index="03"
-              eyebrow="Free engineering resources"
-              title="Master the building blocks of scalable systems."
-              description="Focused guides that explain the technologies, architecture decisions and tradeoffs behind modern backend systems."
-            />
-
-            <Stagger className="lh-grid-3">
-              {FREE_RESOURCES.map((resource) => (
-                <ResourceCard key={resource.path} resource={resource} />
-              ))}
-            </Stagger>
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* HOW IT WORKS                                      */}
-        {/* ================================================= */}
-
-        <section className="lh-section">
-          <div className="lh-shell">
-            <SectionHeading
-              index="04"
-              eyebrow="How it works"
-              title="From concepts to confidence in three steps."
-              description="Start small with a single guide, go deeper with a book, then test yourself against real interview rounds."
-            />
-
-            <PathSteps />
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* INTERVIEW EXPERIENCE                              */}
-        {/* ================================================= */}
-
-        <section className="lh-section lh-section-alt">
-          <div className="lh-shell">
-            <SectionHeading
-              index="05"
-              eyebrow="Interview preparation"
-              title="Prepare beyond coding questions."
-              description="Technical interviews test how you reason about algorithms, software design, engineering tradeoffs and real systems."
-            />
-
-            <Reveal className="lh-interview">
-              <div className="lh-interview-left">
-                <h3 className="heading-5">
-                  Understand the rounds.
-                  <br />
-                  Prepare with direction.
-                </h3>
-
-                <p className="body-3">
-                  Explore interview experiences covering DSA, backend
-                  engineering, Java, system design, AI engineering and
-                  managerial discussions. Use them to understand what each
-                  round expects and to plan your preparation.
-                </p>
-
-                <Stagger className="lh-tags" gap={0.06}>
-                  {INTERVIEW_TAGS.map((item) => (
-                    <motion.span key={item} variants={rise} className="mono caption-3">
-                      {item}
-                    </motion.span>
-                  ))}
-                </Stagger>
-
-                <Link to="/interviews" className="button-md lh-btn lh-btn-outline">
-                  Explore interviews
-                  <ArrowUpRight size={16} weight="bold" />
+                <Link to="/resources" className="lx-btn lx-btn-primary">
+                  Start with free guides
+                  <ArrowRight size={16} weight="bold" />
                 </Link>
+                <Link to="/books" className="lx-btn lx-btn-ghost">
+                  Browse the books
+                </Link>
+              </motion.div>
+            </div>
+
+            <motion.aside
+              className="lx-path"
+              aria-labelledby="lx-path-title"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.2, ease: EASE }}
+            >
+              <div className="lx-path-head">
+                <h2 id="lx-path-title">Your prep path</h2>
+                <span>4 steps</span>
               </div>
 
-              <InterviewList />
-            </Reveal>
+              <ol className="lx-steps">
+                {PATH.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.title}>
+                      <Link to={item.to} className="lx-step">
+                        <span className="lx-tile">
+                          <Icon size={20} weight="duotone" />
+                        </span>
+                        <span>
+                          <small>{item.step}</small>
+                          <b>{item.title}</b>
+                          <em>{item.text}</em>
+                        </span>
+                        <ArrowUpRight size={18} weight="bold" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <Link to="/books" className="lx-shelf">
+                <span className="lx-shelf-covers" aria-hidden="true">
+                  {booksState === "ready" && shelfCovers.length
+                    ? shelfCovers.map((book, i) => <Cover key={getId(book)} book={book} priority={i < 3} />)
+                    : [0, 1, 2, 3].map((i) => <div key={i} className="lx-cover lx-skel" />)}
+                </span>
+                <span className="lx-shelf-copy">
+                  <b>
+                    {booksState === "ready" && bookCount
+                      ? `${bookCount} ebooks on the shelf`
+                      : "Ebooks on the shelf"}
+                  </b>
+                  <span>System design, Java, Spring Boot, SQL, cloud, GenAI</span>
+                </span>
+                <ArrowRight size={18} weight="bold" />
+              </Link>
+            </motion.aside>
           </div>
         </section>
 
-        {/* ================================================= */}
-        {/* FREE VS STRUCTURED                                */}
-        {/* ================================================= */}
+        {/* ===================================== */}
+        {/* SECTION TABS                          */}
+        {/* ===================================== */}
 
-        <section className="lh-section">
-          <div className="lh-shell">
-            <SectionHeading
-              index="06"
-              eyebrow="How to learn"
-              title="Start small. Go deeper when you are ready."
-              description="Free guides and structured books complement each other. Choose based on the depth of understanding you need."
-            />
-
-            <Stagger className="lh-grid-2" gap={0.16}>
-              {COMPARE.map((item) => (
-                <CompareCard key={item.title} item={item} />
-              ))}
-            </Stagger>
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* WHY TARGET TREK                                   */}
-        {/* ================================================= */}
-
-        <section className="lh-section lh-section-alt">
-          <div className="lh-shell">
-            <SectionHeading
-              index="07"
-              eyebrow="Why Target Trek"
-              title="Learning with an engineering mindset."
-              description="Technical preparation should help you reason about systems, understand implementation details and communicate engineering decisions."
-            />
-
-            <Stagger className="lh-grid-4" gap={0.1}>
-              {BENEFITS.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <motion.article
-                    key={item.title}
-                    variants={rise}
-                    className="lh-card lh-benefit"
+        <div className="lx-tabs-slot" ref={tabsSlotRef}>
+          <nav className={cn("lx-tabs", pinned && "is-pinned")} aria-label="On this page">
+            <div className="lx-shell lx-tabs-in">
+              <div className="lx-tabs-list">
+                {tabs.map((tab) => (
+                  <button
+                    type="button"
+                    key={tab.id}
+                    className={cn("lx-tab", activeTab === tab.id && "is-on")}
+                    aria-current={activeTab === tab.id ? "location" : undefined}
+                    onClick={() => jump(tab.id)}
                   >
-                    <span className="lh-icon-tile">
-                      <Icon size={24} weight="duotone" />
-                    </span>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </nav>
+        </div>
 
-                    <h3 className="title-1 lh-card-title">{item.title}</h3>
+        {/* ===================================== */}
+        {/* EXPLORE: everything on Target Trek    */}
+        {/* ===================================== */}
 
-                    <p className="body-6 lh-card-text">{item.description}</p>
-                  </motion.article>
+        <section className="lx-sec" id="explore" aria-labelledby="lx-explore-title">
+          <div className="lx-shell">
+            <SectionHead
+              eyebrow="Explore Target Trek"
+              id="lx-explore-title"
+              title={
+                <>
+                  Pick where you are. <span className="lx-hl">We have a page for it.</span>
+                </>
+              }
+              text="Every part of Target Trek in one place. Free ones are marked, and each card opens the full page."
+            />
+
+            <Stagger className="lx-bento" gap={0.05}>
+              {EXPLORE.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <MotionLink key={item.title} variants={rise} to={item.to} className={cn("lx-cell", item.size)}>
+                      <div className="lx-cell-top">
+                        <span className="lx-tile">
+                          <Icon size={22} weight="duotone" />
+                        </span>
+                        {item.free && <span className="lx-tag is-free">Free</span>}
+                      </div>
+
+                      <h3>{item.title}</h3>
+                      <p>{item.text}</p>
+
+                      {item.covers && (
+                        <div className="lx-cell-covers" aria-hidden="true">
+                          {booksState === "ready" && shelfCovers.length
+                            ? shelfCovers.slice(0, 3).map((book) => <Cover key={getId(book)} book={book} />)
+                            : [0, 1, 2].map((i) => <div key={i} className="lx-cover lx-skel" style={{ width: 54 }} />)}
+                        </div>
+                      )}
+
+                      <span className="lx-go">
+                        Open {item.title.toLowerCase()}
+                        <ArrowRight size={14} weight="bold" />
+                      </span>
+                  </MotionLink>
                 );
               })}
             </Stagger>
           </div>
         </section>
 
-        {/* ================================================= */}
-        {/* RESUME LAB                                        */}
-        {/* ================================================= */}
+        {/* ===================================== */}
+        {/* FREE RESOURCES                        */}
+        {/* ===================================== */}
 
-        <section className="lh-section" aria-label="Resume Lab">
-          <div className="lh-shell">
-            <ResumePromo variant="card" pain lead="Learning every day but not getting interview calls?" accent="Get your resume reviewed." isDark={isDark} />
+        <section className="lx-sec lx-tint" id="resources" aria-labelledby="lx-res-title">
+          <div className="lx-shell">
+            <SectionHead
+              eyebrow="Free resources"
+              id="lx-res-title"
+              title="Learn one concept at a time, for free."
+              text="Clear guides with examples for quick revision before a round, or to build the fundamentals the books build on."
+            >
+              <Link to="/resources" className="lx-btn lx-btn-ghost lx-btn-sm">
+                All resources
+                <ArrowRight size={14} weight="bold" />
+              </Link>
+            </SectionHead>
+
+            <Stagger className="lx-res-core">
+              {CORE_RESOURCES.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <MotionLink key={item.title} variants={rise} to={item.to} className="lx-res-big" data-code={item.code}>
+                      <div className="lx-res-top">
+                        <span className="lx-tile">
+                          <Icon size={22} weight="duotone" />
+                        </span>
+                        <span className="lx-tag is-free">Free guide</span>
+                      </div>
+                      <h3>{item.title}</h3>
+                      <p>{item.text}</p>
+                      <ul className="lx-chips">
+                        {item.tags.map((tag) => (
+                          <li key={tag}>{tag}</li>
+                        ))}
+                      </ul>
+                      <span className="lx-go">
+                        Read the {item.title} guide
+                        <ArrowRight size={14} weight="bold" />
+                      </span>
+                  </MotionLink>
+                );
+              })}
+            </Stagger>
+
+            <div className="lx-sub-head">
+              <h3>System design (HLD) guides</h3>
+              <RailNav railRef={resRailRef} label="system design guides" />
+            </div>
+
+            <div className="lx-rail" ref={resRailRef}>
+              {HLD_GUIDES.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.title} to={item.to} className="lx-res">
+                    <div className="lx-res-top">
+                      <span className="lx-tile">
+                        <Icon size={20} weight="duotone" />
+                      </span>
+                      <span className="lx-res-n">{String(index + 1).padStart(2, "0")}</span>
+                    </div>
+                    <small>{item.area}</small>
+                    <h4>{item.title}</h4>
+                    <p>{item.text}</p>
+                    <span className="lx-go">
+                      Open guide
+                      <ArrowRight size={14} weight="bold" />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <p className="lx-books-foot" style={{ justifyContent: "center" }}>
+              <Link to="/resources/hld" className="lx-link">
+                See every system design guide
+                <ArrowRight size={14} weight="bold" />
+              </Link>
+            </p>
           </div>
         </section>
 
-        {/* ================================================= */}
-        {/* FAQ                                               */}
-        {/* ================================================= */}
+        {/* ===================================== */}
+        {/* BOOKS (the one API call)              */}
+        {/* ===================================== */}
 
-        <section className="lh-section">
-          <div className="lh-shell lh-faq">
-            <SectionHeading
-              index="08"
-              eyebrow="Help and guidance"
-              title="Questions about learning?"
-              description="A few answers to help you choose the right place to start."
+        <section className="lx-sec" id="books" aria-labelledby="lx-books-title">
+          <div className="lx-shell">
+            <SectionHead
+              eyebrow="Ebooks"
+              id="lx-books-title"
+              title={
+                <>
+                  Go deep with a book, or <span className="lx-hl">take the whole shelf.</span>
+                </>
+              }
+              text="Practical interview books written for software engineers, read in the built in reader. Take one book, every book, or every book we will ever publish."
+            >
+              <Link to="/books" className="lx-btn lx-btn-ghost lx-btn-sm">
+                All books
+                <ArrowRight size={14} weight="bold" />
+              </Link>
+            </SectionHead>
+
+            {/* the two packs */}
+            <Stagger className="lx-packs" gap={0.1}>
+                <MotionLink variants={rise} to={ALL_BOOKS_PATH} className="lx-pack">
+                  <div>
+                    <span className="lx-eyebrow">
+                      <Package size={14} weight="bold" />
+                      All books pack
+                    </span>
+                    <h3>{allPack?.title || "Target Trek All Books"}</h3>
+                    <p>Every book available today, in one payment.</p>
+                    <ul>
+                      <li>
+                        <Check size={14} weight="bold" />
+                        {includedCount(allPack)
+                          ? `${includedCount(allPack)} books included`
+                          : "Every current book included"}
+                      </li>
+                      <li>
+                        <Check size={14} weight="bold" />
+                        An email alert when a new book is published
+                      </li>
+                      {Number(allPack?.matches) > 0 && (
+                        <li>
+                          <Check size={14} weight="bold" />
+                          {allPack.matches} Prep Buddy {Number(allPack.matches) === 1 ? "credit" : "credits"} included
+                        </li>
+                      )}
+                      <li>
+                        <Check size={14} weight="bold" />
+                        One time payment, no subscription
+                      </li>
+                    </ul>
+                    <span className="lx-go">
+                      See what is inside
+                      <ArrowRight size={14} weight="bold" />
+                    </span>
+                  </div>
+                  <div className="lx-pack-art" aria-hidden="true">
+                    {booksState === "ready"
+                      ? packCovers(allPack).map((book, i) => <Cover key={getId(book) || i} book={book} />)
+                      : [0, 1, 2].map((i) => <div key={i} className="lx-cover lx-skel" />)}
+                  </div>
+                </MotionLink>
+
+                <MotionLink variants={rise} to={LIFETIME_PATH} className="lx-pack is-life">
+                  <div>
+                    <span className="lx-pack-badge">
+                      <InfinityIcon size={14} weight="bold" />
+                      Lifetime
+                    </span>
+                    <h3>{lifePack?.title || "Target Trek Lifetime Books"}</h3>
+                    <p>Every book today, plus every book we publish in future.</p>
+                    <ul>
+                      <li>
+                        <Check size={14} weight="bold" />
+                        {includedCount(lifePack)
+                          ? `${includedCount(lifePack)} books today, more as they launch`
+                          : "Every current and future book"}
+                      </li>
+                      <li>
+                        <Check size={14} weight="bold" />
+                        New books emailed to you free
+                      </li>
+                      {Number(lifePack?.matches) > 0 && (
+                        <li>
+                          <Check size={14} weight="bold" />
+                          {lifePack.matches} Prep Buddy {Number(lifePack.matches) === 1 ? "credit" : "credits"} included
+                        </li>
+                      )}
+                    </ul>
+                    <span className="lx-go">
+                      See the Lifetime pack
+                      <ArrowRight size={14} weight="bold" />
+                    </span>
+                  </div>
+                  <div className="lx-pack-art" aria-hidden="true">
+                    {booksState === "ready"
+                      ? packCovers(lifePack).map((book, i) => <Cover key={getId(book) || i} book={book} />)
+                      : [0, 1, 2].map((i) => <div key={i} className="lx-cover lx-skel" />)}
+                  </div>
+                </MotionLink>
+            </Stagger>
+
+            {/* book rail */}
+            <div className="lx-sub-head">
+              <h3>
+                {booksState === "ready" && bookCount ? `All ${bookCount} books` : "Every book"}
+              </h3>
+              <RailNav railRef={bookRailRef} label="books" watch={`${booksState}-${railBooks.length}-${bookFilter}`} />
+            </div>
+
+            {categories.length > 0 && (
+              <div className="lx-filter" role="group" aria-label="Filter books by topic" style={{ marginBottom: 14 }}>
+                <button type="button" aria-pressed={!bookFilter} onClick={() => setBookFilter("")}>
+                  All<span className="lx-mono">{bookCount}</span>
+                </button>
+                {categories.map((item) => (
+                  <button
+                    type="button"
+                    key={item.name}
+                    aria-pressed={bookFilter === item.name}
+                    onClick={() => setBookFilter(bookFilter === item.name ? "" : item.name)}
+                  >
+                    {item.name}
+                    <span className="lx-mono">{item.count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {booksState === "error" ? (
+              <div className="lx-blog">
+                <div className="lx-blog-main">
+                  <span className="lx-tile">
+                    <BookOpen size={22} weight="duotone" />
+                  </span>
+                  <div>
+                    <h3>The shelf did not load</h3>
+                    <p>Every book is still on the books page, with details and a reader preview.</p>
+                  </div>
+                </div>
+                <Link to="/books" className="lx-btn lx-btn-primary">
+                  Open the books page
+                  <ArrowRight size={16} weight="bold" />
+                </Link>
+              </div>
+            ) : (
+              <div className="lx-rail" ref={bookRailRef} aria-busy={booksState === "loading"}>
+                {booksState === "loading"
+                  ? [0, 1, 2, 3].map((i) => (
+                      <div key={i} className="lx-book lx-book-skel" aria-hidden="true">
+                        <div className="lx-book-media">
+                          <div className="lx-cover lx-skel" style={{ width: "min(140px, 62%)" }} />
+                        </div>
+                        <div className="lx-book-body">
+                          <i className="lx-skel" style={{ width: "40%" }} />
+                          <i className="lx-skel" style={{ width: "85%", height: 18 }} />
+                          <i className="lx-skel" style={{ width: "60%" }} />
+                        </div>
+                      </div>
+                    ))
+                  : railBooks.map((book) => (
+                      <SmartLink key={getId(book)} to={book.redirectUrl} className="lx-book">
+                        <div className="lx-book-media">
+                          <Cover book={book} />
+                          {book.badge && <span className="lx-book-flag">{book.badge}</span>}
+                        </div>
+                        <div className="lx-book-body">
+                          <p className="lx-kicker">
+                            {getCategories(book)[0] ||
+                              (book.resourceType === "bundle" ? "Combo" : "Ebook")}
+                          </p>
+                          <h4 className="lx-book-title">{book.title}</h4>
+                          {(book.subtitle || book.shortDescription) && (
+                            <p className="lx-book-sub">{book.subtitle || book.shortDescription}</p>
+                          )}
+                          <span className="lx-go">
+                            View book
+                            <ArrowRight size={14} weight="bold" />
+                          </span>
+                        </div>
+                      </SmartLink>
+                    ))}
+              </div>
+            )}
+
+            <div className="lx-books-foot">
+              <p>Buying several? Bundle offers lower the price when you pick more books.</p>
+              <div>
+                <Link to="/books/bundle-offers" className="lx-btn lx-btn-ghost lx-btn-sm">
+                  Bundle offers
+                </Link>
+                <Link to="/books" className="lx-btn lx-btn-primary lx-btn-sm">
+                  Browse all books
+                  <ArrowRight size={14} weight="bold" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* INTERVIEW PREP                        */}
+        {/* ===================================== */}
+
+        <section className="lx-sec lx-tint" id="interview-prep" aria-labelledby="lx-prep-title">
+          <div className="lx-shell">
+            <SectionHead
+              eyebrow="Interview prep"
+              id="lx-prep-title"
+              title="Read real rounds. Then practise out loud."
+              text="Knowing the answer is half of it. These are the places to see how interviews really go, and to rehearse explaining your own thinking."
             />
 
-            <Stagger className="lh-faq-list" gap={0.08}>
+            <Stagger className="lx-prep" gap={0.08}>
+              {/* interview experiences */}
+              <motion.article variants={rise} className="lx-prep-card">
+                <div className="lx-prep-top">
+                  <span className="lx-tile">
+                    <Briefcase size={22} weight="duotone" />
+                  </span>
+                  <span className="lx-tag is-free">Free to read</span>
+                </div>
+                <h3>Interview experiences</h3>
+                <p>
+                  Real interview experiences from engineers: the rounds, the questions
+                  and the results, across DSA, LLD, HLD, backend, GenAI and system design.
+                </p>
+                <ul className="lx-chips">
+                  {["DSA", "LLD", "HLD", "Java", "Backend", "GenAI"].map((tag) => (
+                    <li key={tag}>{tag}</li>
+                  ))}
+                </ul>
+                <div className="lx-prep-actions">
+                  <Link to="/interviews" className="lx-btn lx-btn-primary lx-btn-sm">
+                    Read experiences
+                    <ArrowRight size={14} weight="bold" />
+                  </Link>
+                  <Link to="/interview/create" className="lx-link">
+                    <PencilSimple size={14} weight="bold" />
+                    Share yours
+                  </Link>
+                </div>
+              </motion.article>
+
+              {/* mock interviews */}
+              <motion.article variants={rise} className="lx-prep-card is-feature">
+                <div className="lx-prep-top">
+                  <span className="lx-tile">
+                    <VideoCamera size={22} weight="duotone" />
+                  </span>
+                  <span className="lx-tag">1:1 with an engineer</span>
+                </div>
+                <h3>Mock interviews</h3>
+                <p>
+                  A live technical discussion with an interviewer, follow-up questions on
+                  trade-offs and edge cases, and feedback on what to improve.
+                </p>
+                <ul className="lx-topics">
+                  {MOCK_TOPICS.map(([title, text]) => (
+                    <li key={title}>
+                      <b>{title}</b>
+                      <span>{text}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="lx-prep-actions">
+                  <Link to="/mock-interviews" className="lx-btn lx-btn-primary lx-btn-sm">
+                    See mock interview slots
+                    <ArrowRight size={14} weight="bold" />
+                  </Link>
+                </div>
+              </motion.article>
+
+              {/* prep buddy */}
+              <motion.article variants={rise} className="lx-prep-card">
+                <div className="lx-prep-top">
+                  <span className="lx-tile">
+                    <Handshake size={22} weight="duotone" />
+                  </span>
+                  <span className="lx-tag">Peer practice</span>
+                </div>
+                <h3>Prep Buddy</h3>
+                <p>
+                  Find a serious interview-prep partner for system design, frontend,
+                  backend, DevOps, SDET, DSA and GenAI.
+                </p>
+                <ul className="lx-points">
+                  <li>
+                    <Check size={14} weight="bold" />
+                    Anonymous profiles, your name stays hidden until you allow it
+                  </li>
+                  <li>
+                    <Check size={14} weight="bold" />
+                    Matches only happen when both of you accept
+                  </li>
+                  <li>
+                    <ChatCircleText size={14} weight="bold" />
+                    Private chat to plan and run mock interviews together
+                  </li>
+                </ul>
+                <div className="lx-prep-actions">
+                  <Link to="/prep-buddy" className="lx-btn lx-btn-ghost lx-btn-sm">
+                    Find a prep buddy
+                    <ArrowRight size={14} weight="bold" />
+                  </Link>
+                </div>
+              </motion.article>
+
+              {/* mentorship */}
+              <motion.article variants={rise} className="lx-prep-card">
+                <div className="lx-prep-top">
+                  <span className="lx-tile">
+                    <UsersThree size={22} weight="duotone" />
+                  </span>
+                  <span className="lx-tag">Students and freshers</span>
+                </div>
+                <h3>Placement mentorship</h3>
+                <p>
+                  For college students and engineers with up to one year of experience:
+                  guidance from your resume to the offer.
+                </p>
+                <ul className="lx-points">
+                  {[
+                    "Resume and project guidance",
+                    "Preparation plan and resources",
+                    "Mock interviews",
+                    "Applications, shortlisting and placement suggestions",
+                  ].map((point) => (
+                    <li key={point}>
+                      <Check size={14} weight="bold" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <div className="lx-prep-actions">
+                  <Link to="/mentorship" className="lx-btn lx-btn-ghost lx-btn-sm">
+                    About mentorship
+                    <ArrowRight size={14} weight="bold" />
+                  </Link>
+                </div>
+              </motion.article>
+            </Stagger>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* RESUME REVIEW                         */}
+        {/* ===================================== */}
+
+        <section className="lx-sec" id="resume" aria-label="Resume Review">
+          <div className="lx-shell">
+            <Reveal>
+              <div className="lx-resume">
+                <div>
+                  <span className="lx-eyebrow">Resume Review by Target Trek</span>
+                  <h2 className="lx-h2">
+                    Ready for the interview? <span className="lx-hl">Now get the call.</span>
+                  </h2>
+                  <p className="lx-resume-text">
+                    Most resumes are rejected by software or skimmed in ten seconds.
+                    Find out exactly what is costing you shortlists, and how to fix it.
+                  </p>
+
+                  <ul className="lx-points">
+                    <li>
+                      <Sparkle size={16} weight="duotone" />
+                      <span>
+                        <b>AI report in minutes.</b> Overall and ATS score, section
+                        grades, missing keywords and rewritten bullets.
+                      </span>
+                    </li>
+                    <li>
+                      <UsersThree size={16} weight="duotone" />
+                      <span>
+                        <b>A working professional reviews it.</b> Plain-language notes
+                        on your story, level and fit.
+                      </span>
+                    </li>
+                    <li>
+                      <Brain size={16} weight="duotone" />
+                      <span>
+                        <b>LinkedIn review too.</b> One consistent story across your
+                        resume and your profile.
+                      </span>
+                    </li>
+                  </ul>
+
+                  <div className="lx-resume-actions">
+                    <Link to="/resume-review" className="lx-btn lx-btn-primary">
+                      Review my resume
+                      <ArrowRight size={16} weight="bold" />
+                    </Link>
+                    <Link to="/resume-review#sample" className="lx-link">
+                      See a sample report
+                      <ArrowRight size={14} weight="bold" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="lx-report" aria-label="From a sample report">
+                  <div className="lx-report-head">
+                    <span>Sample report</span>
+                    <small>{SAMPLE.role}</small>
+                  </div>
+                  <h4>{SAMPLE.headline}</h4>
+
+                  <div className="lx-scores">
+                    {[
+                      ["Overall", SAMPLE.overall],
+                      ["ATS", SAMPLE.ats],
+                      ["Job match", SAMPLE.jobMatch],
+                    ].map(([label, value]) => (
+                      <div key={label} className="lx-score">
+                        <b>{value}</b>
+                        <span>{label}</span>
+                        <i>
+                          <u style={{ width: `${value}%` }} />
+                        </i>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="lx-fix">
+                    <p className="lx-before">
+                      <span>Before</span>
+                      <s>{before}</s>
+                    </p>
+                    <p className="lx-after">
+                      <span>After</span>
+                      <SampleBullet text={after} />
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* MEMORIES                              */}
+        {/* ===================================== */}
+
+        <section className="lx-sec" id="memories" aria-label="Memories" style={{ paddingTop: 0 }}>
+          <div className="lx-shell">
+            <Reveal>
+              <div className="lx-mem">
+                <div>
+                  <span className="lx-eyebrow" style={{ color: "var(--rose)" }}>
+                    Memories by Target Trek
+                  </span>
+                  <h2 className="lx-h2">
+                    Say it with a page <span className="lx-hl">they will never forget.</span>
+                  </h2>
+                  <p className="lx-mem-text">
+                    Pick an occasion, add your words, photos and your own voice, then send
+                    one link. Nothing to install for them, and it works on any phone.
+                  </p>
+
+                  <ul className="lx-occasions">
+                    {OCCASIONS.map(([label, Icon]) => (
+                      <li key={label}>
+                        <Icon size={14} weight="fill" />
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="lx-mem-actions">
+                    <Link to="/memories" className="lx-btn lx-btn-primary">
+                      Make a memory page
+                      <ArrowRight size={16} weight="bold" />
+                    </Link>
+                    <Link to="/memories/preview/birthday" className="lx-link">
+                      See a birthday preview
+                      <ArrowRight size={14} weight="bold" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="lx-mem-feats">
+                  {MEMORY_FEATURES.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.title} className="lx-mem-feat">
+                        <span className="lx-tile">
+                          <Icon size={18} weight="duotone" />
+                        </span>
+                        <b>{item.title}</b>
+                        <p>{item.text}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* BLOGS                                 */}
+        {/* ===================================== */}
+
+        <section className="lx-sec" aria-label="Blogs" style={{ paddingTop: 0 }}>
+          <div className="lx-shell">
+            <Reveal>
+              <div className="lx-blog">
+                <div className="lx-blog-main">
+                  <span className="lx-tile">
+                    <Article size={22} weight="duotone" />
+                  </span>
+                  <div>
+                    <h3>Engineering blogs</h3>
+                    <p>
+                      Practical articles on system design, backend development, Java,
+                      GenAI, APIs, databases and interview preparation.
+                    </p>
+                    <ul className="lx-chips">
+                      {["System design", "Backend", "Java", "GenAI", "Careers"].map((tag) => (
+                        <li key={tag}>{tag}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <Link to="/blogs" className="lx-btn lx-btn-ghost">
+                  Read the blogs
+                  <ArrowRight size={16} weight="bold" />
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* FAQ                                   */}
+        {/* ===================================== */}
+
+        <section className="lx-sec lx-tint" id="faq" aria-labelledby="lx-faq-title">
+          <div className="lx-shell lx-faq">
+            <SectionHead
+              eyebrow="Good to know"
+              id="lx-faq-title"
+              title="Questions, answered."
+              text="What is free, what each part of Target Trek is for, and where to start."
+            />
+
+            <Stagger className="lx-faq-list" gap={0.05}>
               {FAQS.map((faq, index) => (
                 <FaqItem
                   key={faq.question}
                   faq={faq}
                   index={index}
                   open={activeFaq === index}
-                  onToggle={() =>
-                    setActiveFaq(activeFaq === index ? null : index)
-                  }
+                  onToggle={() => setActiveFaq(activeFaq === index ? null : index)}
                 />
               ))}
             </Stagger>
           </div>
         </section>
 
-        {/* ================================================= */}
-        {/* FINAL CTA                                         */}
-        {/* ================================================= */}
+        {/* ===================================== */}
+        {/* CLOSING CTA                           */}
+        {/* ===================================== */}
 
-        <section className="lh-section" style={{ paddingTop: 0 }}>
-          <div className="lh-shell">
-            <motion.div
-              className="lh-cta"
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.8, ease: EASE }}
-            >
-              <GridPattern id="lh-grid-cta" />
-              <span className="lh-cta-ring lh-cta-ring-1" aria-hidden="true" />
-              <span className="lh-cta-ring lh-cta-ring-2" aria-hidden="true" />
-
-              <div>
-                <h2 className="heading-3">
-                  Your next engineering breakthrough starts with one concept.
-                </h2>
-
-                <p className="body-3">
-                  Start with a free guide, go deep with a technical book and
-                  learn from real interview experiences, all on Target Trek.
-                </p>
+        <section className="lx-sec">
+          <div className="lx-shell">
+            <Reveal>
+              <div className="lx-cta">
+                <div>
+                  <span className="lx-eyebrow">Not sure where to start?</span>
+                  <h2 className="lx-h2" style={{ marginTop: 12 }}>
+                    Tell us your next interview. We will point the way.
+                  </h2>
+                  <p>
+                    Write to us with the role and the round you are preparing for, and we
+                    will suggest the right guide, book or session.
+                  </p>
+                </div>
+                <div className="lx-cta-actions">
+                  <Link to="/contact" className="lx-btn lx-btn-primary">
+                    Contact us
+                    <ArrowRight size={16} weight="bold" />
+                  </Link>
+                  <Link to="/about" className="lx-btn lx-btn-ghost">
+                    About Target Trek
+                  </Link>
+                </div>
               </div>
-
-              <div className="lh-cta-actions">
-                <MotionLink
-                  to="/books"
-                  className="button-lg lh-btn lh-btn-primary"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.5, ease: EASE }}
-                >
-                  Browse the books
-                  <ArrowUpRight size={18} weight="bold" />
-                </MotionLink>
-
-                <Link to="/resources/hld/cache" className="button-md lh-text-link">
-                  Start with the free guides
-                  <ArrowRight size={16} weight="bold" />
-                </Link>
-              </div>
-            </motion.div>
+            </Reveal>
           </div>
         </section>
+
+        <AnimatePresence>
+          {scrolled && (
+            <motion.button
+              key="top"
+              type="button"
+              className="lx-top"
+              aria-label="Back to top"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={{ duration: 0.35, ease: EASE }}
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            >
+              <ArrowUp size={20} weight="bold" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </main>
     </MotionConfig>
   );

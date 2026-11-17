@@ -1,0 +1,82 @@
+/* Site footer. Resume Lab look: deep pine panel, teal accent, yellow highlighter, Bricolage headings + Manrope body. */
+.tt-foot {
+  --f-bg: #f6f8f7; --f-surface: #ffffff; --f-text: #0c1a17; --f-muted: #4a5d58; --f-subtle: #74877f;
+  --f-border: #dfe8e5; --f-border-strong: #c3d2cd; --f-brand: #0f766e; --f-brand-hover: #115e59; --f-on-brand: #ffffff;
+  --f-mark: #fde68a; --f-mark-ink: #1c1917; --f-glow: rgba(15, 118, 110, 0.08);
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  background: var(--f-bg); color: var(--f-text);
+  background-image: radial-gradient(ellipse 70% 60% at 100% 0%, var(--f-glow), transparent 65%);
+  border-top: 1px solid var(--f-border);
+  margin-top: 40px; width: 100%; overflow-x: clip; -webkit-font-smoothing: antialiased;
+}
+.tt-foot[data-theme="dark"] {
+  --f-bg: #0a1312; --f-surface: #101c1a; --f-text: #e8f2ef; --f-muted: #a3b8b2; --f-subtle: #73897f;
+  --f-border: #1f302c; --f-border-strong: #2e4641; --f-brand: #2dd4bf; --f-brand-hover: #5eead4; --f-on-brand: #04201c;
+  --f-mark: #a16207; --f-mark-ink: #fffbeb; --f-glow: rgba(45, 212, 191, 0.12);
+}
+.tt-foot *, .tt-foot *::before, .tt-foot *::after { box-sizing: border-box; }
+.tt-foot a { color: inherit; text-decoration: none; }
+.tt-foot ul { list-style: none; margin: 0; padding: 0; }
+.tt-foot a:focus-visible { outline: 2px solid var(--f-brand); outline-offset: 3px; border-radius: 4px; }
+.tt-foot { padding: 0; }
+.tt-foot-in { max-width: none; width: 100%; margin: 0; padding: 0; }
+.tt-foot-shell { background: var(--f-surface); border: 0; border-radius: 0; overflow: hidden; }
+.tt-foot-main { padding: 0 20px; }
+
+/* statement */
+.tt-foot-hero { display: grid; gap: 22px; padding: 48px 0 40px; border-bottom: 1px solid var(--f-border); }
+.tt-foot-eyebrow { font-size: 12.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--f-brand); }
+.tt-foot-title { margin: 10px 0 0; font-family: "Bricolage Grotesque", "Manrope", ui-sans-serif, system-ui, sans-serif; font-size: clamp(28px, 6vw, 46px); line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; max-width: 720px; }
+.tt-foot-mark { background: linear-gradient(transparent 12%, var(--f-mark) 12%, var(--f-mark) 88%, transparent 88%); color: var(--f-mark-ink); padding: 0 0.12em; border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.tt-foot-sub { margin: 14px 0 0; max-width: 560px; font-size: 16px; line-height: 1.65; color: var(--f-muted); }
+.tt-foot-cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.tt-foot-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 10px; font-size: 15px; font-weight: 700; transition: background .15s, border-color .15s, color .15s; }
+.tt-foot-btn--primary { background: var(--f-brand); color: var(--f-on-brand) !important; }
+.tt-foot-btn--primary:hover { background: var(--f-brand-hover); }
+.tt-foot-btn--ghost { border: 1px solid var(--f-border-strong); }
+.tt-foot-btn--ghost:hover { border-color: var(--f-brand); color: var(--f-brand-hover); }
+
+/* columns */
+.tt-foot-cols { display: grid; gap: 36px 24px; padding: 40px 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tt-foot-brand, .tt-foot-col--books { grid-column: 1 / -1; }
+.tt-foot-logo { display: inline-flex; align-items: center; gap: 10px; font-family: "Bricolage Grotesque", "Manrope", sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.tt-foot-logo-mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--f-brand); color: var(--f-on-brand); }
+.tt-foot-about { margin: 14px 0 0; max-width: 380px; font-size: 15px; line-height: 1.65; color: var(--f-muted); }
+.tt-foot-mail { display: grid; gap: 10px; margin-top: 20px; }
+.tt-foot-mail a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--f-border); border-radius: 12px; background: var(--f-bg); min-width: 0; transition: border-color .15s; }
+.tt-foot-mail a:hover { border-color: var(--f-brand); }
+.tt-foot-mail svg { flex: none; color: var(--f-brand); }
+.tt-foot-mail small { display: block; font-size: 12px; font-weight: 600; color: var(--f-subtle); }
+.tt-foot-mail span { display: block; font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
+.tt-foot-h { margin: 0 0 14px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--f-brand); }
+.tt-foot-list { display: grid; gap: 2px; }
+.tt-foot-link { display: inline-block; padding: 6px 0; font-size: 15px; line-height: 1.45; color: var(--f-muted); transition: color .15s; }
+.tt-foot-link:hover { color: var(--f-brand-hover); }
+
+/* bottom */
+.tt-foot-bar { border-top: 1px solid var(--f-border-strong); background: var(--f-bg); }
+.tt-foot-bar-in { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px 20px; font-size: 14px; line-height: 1.5; font-weight: 600; color: var(--f-muted); text-align: center; }
+.tt-foot-bar-in a { color: var(--f-brand); font-weight: 700; overflow-wrap: anywhere; }
+.tt-foot-legal { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.tt-foot-legal a { color: var(--f-muted); }
+.tt-foot-legal a:hover { color: var(--f-brand-hover); }
+
+@media (max-width: 420px) { .tt-foot-btn { width: 100%; } .tt-foot-cta { flex-direction: column; } }
+@media (min-width: 640px) {
+  .tt-foot-main { padding: 0 32px; }
+  .tt-foot-bar-in { padding-left: 32px; padding-right: 32px; }
+  .tt-foot-hero { padding: 64px 0 52px; }
+  .tt-foot-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tt-foot-brand { grid-column: 1 / -1; }
+  .tt-foot-col--books { grid-column: auto; }
+  .tt-foot-mail { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; }
+}
+@media (min-width: 1024px) {
+  .tt-foot-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 48px; padding: 80px 0 64px; }
+  .tt-foot-cols { grid-template-columns: 1.5fr 1fr 1.3fr 1fr; gap: 40px; padding: 56px 0; }
+  .tt-foot-brand { grid-column: auto; }
+  .tt-foot-mail { grid-template-columns: 1fr; max-width: none; }
+  .tt-foot-bar-in { flex-direction: row; justify-content: space-between; align-items: center; text-align: left; }
+}
+@media (min-width: 1280px) { .tt-foot-main { padding: 0 56px; } .tt-foot-bar-in { padding-left: 56px; padding-right: 56px; } }
+@media (min-width: 1700px) { .tt-foot-main { padding: 0 96px; } .tt-foot-bar-in { padding-left: 96px; padding-right: 96px; } }
