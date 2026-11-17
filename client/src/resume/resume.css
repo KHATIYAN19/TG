@@ -820,3 +820,67 @@ html.dark .rv, [data-theme="dark"] .rv { --rv-brand: #f97316; --rv-brand-hover: 
 .rv-mdl-name { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .rv-mdl-cost { display: grid; gap: 2px; text-align: right; flex: 0 0 auto; margin-left: auto; }
 @media (max-width: 520px) { .rv-mdl-cost { text-align: left; margin-left: 32px; } }
+
+/* ---------- payment result page ---------- */
+.rv-pay { border-top: 4px solid var(--rv-border-strong); }
+.rv-pay.ok { border-top-color: var(--rv-ok); }
+.rv-pay.warn { border-top-color: var(--rv-warn, #d97706); }
+.rv-pay.bad { border-top-color: var(--rv-bad); }
+.rv-pay-icon { display: inline-grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; background: var(--rv-surface-2); color: var(--rv-text); }
+.rv-pay-icon.ok { background: var(--rv-ok-soft, rgba(22, 163, 74, 0.12)); color: var(--rv-ok); }
+.rv-pay-icon.warn { background: var(--rv-warn-soft, rgba(217, 119, 6, 0.12)); color: var(--rv-warn, #d97706); }
+.rv-pay-icon.bad { background: var(--rv-bad-soft); color: var(--rv-bad); }
+.rv-pay-icon.pulse { animation: rv-pay-pulse 1.6s ease-in-out infinite; }
+.rv-pay-icon.pop { animation: rv-pay-pop 0.5s var(--rv-ease, ease) both; }
+@keyframes rv-pay-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.28); } 50% { box-shadow: 0 0 0 14px rgba(234, 88, 12, 0); } }
+@keyframes rv-pay-pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+.rv-pay-plan { margin-top: 10px; display: inline-block; padding: 6px 12px; border-radius: 999px; background: var(--rv-surface-2); font-size: 13px; }
+.rv-pay-actions { display: grid; gap: 10px; margin-top: 28px; }
+.rv-pay-actions .rv-btn { width: 100%; }
+.rv-pay-sub { justify-self: center; font-size: 13px; background: none; border: 0; cursor: pointer; padding: 6px; }
+.rv-pay-steps { display: grid; gap: 14px; list-style: none; padding: 0; margin: 0; }
+.rv-pay-steps li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--rv-muted); }
+.rv-pay-steps li.done, .rv-pay-steps li.now { color: var(--rv-text); font-weight: 600; }
+.rv-pay-dot { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; flex: 0 0 24px; border: 2px solid var(--rv-border-strong); font-size: 12px; }
+.rv-pay-steps li.done .rv-pay-dot { background: var(--rv-ok); border-color: var(--rv-ok); color: #fff; }
+.rv-pay-steps li.now .rv-pay-dot { border-color: var(--rv-brand); color: var(--rv-brand); }
+.rv-pay-steps li.now .rv-pay-dot .rv-spin { width: 12px; height: 12px; border-width: 2px; }
+.rv-pay-list { display: grid; gap: 14px; list-style: none; padding: 0; margin: 0; }
+.rv-pay-list li { display: flex; gap: 12px; font-size: 14px; line-height: 1.55; color: var(--rv-muted); }
+.rv-pay-list li svg { flex: 0 0 auto; margin-top: 2px; color: var(--rv-text); }
+.rv-pay-tips { padding: 16px; border-radius: 12px; background: var(--rv-surface-2); }
+.rv-pay-tips ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--rv-muted); }
+.rv-pay-ref { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--rv-border); flex-wrap: wrap; }
+.rv-pay-ref code { word-break: break-all; }
+.rv-pay-ref button { background: none; border: 0; cursor: pointer; color: var(--rv-muted); padding: 4px; }
+.rv-pay-ref button:hover { color: var(--rv-text); }
+@media (prefers-reduced-motion: reduce) { .rv-pay-icon.pulse, .rv-pay-icon.pop { animation: none; } }
+
+/* ---------- login nudges, unfinished payment banner ---------- */
+.rv-loginbar { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; font-size: 14px; border-bottom: 1px solid var(--rv-border); background: var(--rv-surface-2); }
+.rv-loginbar a { font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.rv-unfinished { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 20px; border-radius: 14px; border: 1px solid var(--rv-warn, #d97706); background: var(--rv-warn-soft, rgba(217, 119, 6, 0.08)); }
+
+/* ---------- sticky bottom bar on the Resume Review landing page ---------- */
+.rv-stick { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: flex; justify-content: center; padding: 0 12px max(12px, env(safe-area-inset-bottom)); pointer-events: none; transition: transform 0.4s var(--rv-ease, ease), opacity 0.3s var(--rv-ease, ease); }
+.rv-stick-in { pointer-events: auto; width: 100%; max-width: 760px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 18px; border-radius: 18px; border: 1px solid var(--rv-border-strong); background: color-mix(in srgb, var(--rv-surface) 88%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 18px 44px rgba(28, 25, 23, 0.18); }
+.rv-stick-txt { min-width: 0; display: grid; gap: 1px; }
+.rv-stick-txt b { font-size: 14px; line-height: 20px; }
+.rv-stick-txt span { font-size: 12.5px; line-height: 18px; color: var(--rv-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-stick-btns { display: flex; gap: 8px; flex: 0 0 auto; }
+.rv-stick-btns .rv-btn { min-height: 44px; padding: 10px 16px; }
+/* phones: always docked, the two buttons share the row */
+@media (max-width: 640px) {
+  .rv-stick-in { padding: 8px; border-radius: 16px; }
+  .rv-stick-txt { display: none; }
+  .rv-stick-btns { flex: 1 1 auto; }
+  .rv-stick-btns .rv-btn { flex: 1 1 0; min-width: 0; padding-inline: 10px; }
+  .rv.rv-landing { padding-bottom: 84px; }
+}
+/* tablets and desktops: floats a little higher, centred */
+@media (min-width: 641px) {
+  .rv-stick { padding-bottom: 24px; }
+  .rv-stick-in { padding-left: 22px; }
+  .rv.rv-landing { padding-bottom: 96px; }
+}
+@media (prefers-reduced-motion: reduce) { .rv-stick { transition: none; } }

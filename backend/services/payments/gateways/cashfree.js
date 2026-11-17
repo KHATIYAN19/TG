@@ -62,7 +62,9 @@ export default {
     const hit = payments.find((p) => String(p?.payment_status || "").toUpperCase() === "SUCCESS");
     if (hit) return { status: "paid", paymentId: String(hit.cf_payment_id), amountPaise: Math.round(Number(hit.payment_amount) * 100), currency: String(hit.payment_currency || "").toUpperCase(), method: hit.payment_group ? String(hit.payment_group) : Object.keys(hit.payment_method || {})[0] || null, raw: { payments } };
     const failed = payments.length && payments.every((p) => ["FAILED", "USER_DROPPED", "CANCELLED"].includes(String(p?.payment_status || "").toUpperCase()));
-    return { status: failed ? "failed" : "pending" };
+    if (failed) return { status: "failed", reason: payments.every((p) => ["USER_DROPPED", "CANCELLED"].includes(String(p?.payment_status || "").toUpperCase())) ? "USER_CANCELLED" : "PAYMENT_DECLINED" };
+    // "processing" = a payment is really in flight at the bank; "none" = nothing was paid or attempted (closed the window, never started)
+    return { status: "pending", progress: payments.some((p) => String(p?.payment_status || "").toUpperCase() === "PENDING") ? "processing" : "none" };
   },
 
   parseWebhook({ credentials: c }, { rawBody, headers }) {

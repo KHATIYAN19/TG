@@ -12,6 +12,7 @@ import { ResumeError, assertId, assertNotBlocked, listActivePackages, packageOut
 import { callbackOf, fetchStatus, refreshPurchase, settlePurchase, startCheckout, webhookOf } from "../../services/resume/payments.js";
 import { runAiReview } from "../../services/resume/ai.js";
 
+const DAY = 24 * 60 * 60 * 1000;
 const uid = (req) => String(req.user?.id || req.user?._id);
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
 const handler = (fn) => asyncHandler(async (req, res) => { try { await fn(req, res); } catch (err) { return sendError(res, err); } });
@@ -124,15 +125,32 @@ export const verifyPayment = handler(async (req, res) => {
 
 export const paymentStatus = handler(async (req, res) => {
   const purchase = await ownPurchase(req);
-  const state = await refreshPurchase(purchase);
-  ok(res, { status: state === "pending" ? "created" : state, purchaseId: String(purchase._id) });
+  const { state, progress, reason } = await refreshPurchase(purchase, { detail: true });
+  ok(res, {
+    status: state === "pending" ? "created" : state, // "created" = not paid yet (see `progress`)
+    progress, // pending only: "processing" | "none" | "unknown"
+    reason: state === "failed" ? reason : null, // USER_CANCELLED | PAYMENT_DECLINED | ...
+    purchaseId: String(purchase._id),
+    plan: { name: purchase.packageSnapshot?.name || "Resume Lab plan", amount: toRupees(purchase.payment.amount), human: (purchase.humanAllowed || 0) > 0 },
+    startedAt: purchase.updatedAt,
+  });
 });
 
 const livePurchases = (userId) => ResumePurchase.find({ user: userId, "payment.status": "paid" }).sort({ createdAt: -1 }).limit(100).lean();
 
+/* payments the person started in the last 2 days and never finished, so the app can offer "complete this payment" */
+const unfinishedPurchases = async (userId, paid = []) => {
+  const rows = await ResumePurchase.find({ user: userId, "payment.status": "created", "payment.gateway": { $ne: "admin" }, updatedAt: { $gt: new Date(Date.now() - 2 * DAY) } }).sort({ updatedAt: -1 }).limit(10).lean();
+  // a plan they have since paid for (same plan, later) is not "unfinished" any more
+  const done = (p) => paid.some((x) => String(x.package) === String(p.package) && new Date(x.payment?.paidAt || 0) >= new Date(p.createdAt));
+  // only the most recent one: older half-finished attempts are just noise
+  return rows.filter((p) => !done(p)).slice(0, 1).map((p) => ({ id: String(p._id), name: p.packageSnapshot?.name || "Resume Lab plan", amount: toRupees(p.payment?.amount), startedAt: p.updatedAt }));
+};
+
 export const myPlans = handler(async (req, res) => {
   const rows = await livePurchases(uid(req));
-  ok(res, { plans: rows.map(purchaseOut), summary: poolOf(rows) });
+  const unfinished = await unfinishedPurchases(uid(req), rows);
+  ok(res, { plans: rows.map(purchaseOut), summary: poolOf(rows), unfinished });
 });
 
 export const getPlan = handler(async (req, res) => {

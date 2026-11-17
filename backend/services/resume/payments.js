@@ -46,7 +46,7 @@ export const fetchStatus = async (purchase, proof) => {
     expectedAmountPaise: purchase.payment.amount, ...(proof ? { proof } : {}),
   });
   if (r.status === "paid" || r.reason === "AMOUNT_MISMATCH") return { paid: true, paymentId: r.paymentId, amountPaise: r.amountPaise };
-  return r.status === "failed" ? { paid: false, failed: true, reason: r.reason || "GATEWAY_FAILED" } : { paid: false };
+  return r.status === "failed" ? { paid: false, failed: true, reason: r.reason || "GATEWAY_FAILED" } : { paid: false, progress: r.progress || "none" };
 };
 
 export const webhookOf = ({ gateway, rawBody, headers }) => {
@@ -83,13 +83,17 @@ export const settlePurchase = async (purchase, status) => {
   return "paid";
 };
 
-export const refreshPurchase = async (purchase) => {
-  if (purchase.payment.status === "paid") return "paid";
-  if (!purchase.payment.gatewayOrderId) return "pending";
+/* `detail: true` also says WHY it is pending: "processing" (a payment is in flight at the bank), "none" (nothing was paid or started: the window was closed or the payment cancelled), "unknown" (we couldn't ask the gateway) */
+export const refreshPurchase = async (purchase, { detail = false } = {}) => {
+  const out = (state, extra = {}) => (detail ? { state, progress: "none", reason: purchase.payment.failureReason || null, ...extra } : state);
+  if (purchase.payment.status === "paid") return out("paid");
+  if (!purchase.payment.gatewayOrderId) return out("pending", { progress: "none" });
   try {
-    return await settlePurchase(purchase, await fetchStatus(purchase));
+    const st = await fetchStatus(purchase);
+    const state = await settlePurchase(purchase, st);
+    return out(state, { progress: st.progress || "none", reason: st.reason || purchase.payment.failureReason || null });
   } catch (e) {
     console.error(`[resume] status check failed for ${purchase._id}:`, e?.message || e);
-    return purchase.payment.status === "failed" ? "failed" : "pending";
+    return out(purchase.payment.status === "failed" ? "failed" : "pending", { progress: "unknown" });
   }
 };

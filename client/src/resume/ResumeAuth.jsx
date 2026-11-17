@@ -318,6 +318,7 @@ export default function ResumeAuth() {
                   <Field required label="Confirm password" htmlFor="rv-pw2" error={se.confirmPassword?.message}><PasswordInput id="rv-pw2" autoComplete="new-password" invalid={se.confirmPassword} {...signupForm.register("confirmPassword")} /></Field>
                 </div>
                 <Btn type="submit" size="lg" block loading={busy} disabled={locked}>Send me a code</Btn>
+                <p className="rv-sm rv-muted" style={{ textAlign: "center", marginTop: 0 }}>Already have an account or a plan? <button type="button" className="rv-link" onClick={() => go("login")}>Log in</button></p>
                 <p className="rv-hint" style={{ textAlign: "center", marginTop: 0 }}>By continuing you agree to the <Link to="/terms-of-service" style={{ textDecoration: "underline" }}>Terms</Link> and <Link to="/privacy-policy" style={{ textDecoration: "underline" }}>Privacy Policy</Link>.</p>
               </form>
             )}

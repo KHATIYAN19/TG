@@ -44,12 +44,13 @@ export default {
     if (!res.ok) throw new PaymentError(502, "The payment provider could not be reached.", "GATEWAY_ERROR", `HTTP ${res.status}`);
     let t;
     try { t = JSON.parse(text)?.transaction_details?.[gatewayOrderId]; } catch { throw new PaymentError(502, "Invalid response from the payment provider.", "GATEWAY_ERROR"); }
-    if (!t) return { status: "pending" };
+    if (!t) return { status: "pending", progress: "none" };
     const st = String(t.status || "").toLowerCase();
     if (st === "success") {
       return { status: "paid", paymentId: String(t.mihpayid || t.txnid || gatewayOrderId), amountPaise: Math.round(Number(t.amt ?? t.transaction_amount) * 100), currency: "INR", method: t.mode || null, raw: t };
     }
-    return { status: ["failure", "failed", "bounced", "dropped"].includes(st) ? "failed" : "pending" };
+    if (["failure", "failed", "bounced", "dropped"].includes(st)) return { status: "failed", reason: st === "dropped" ? "USER_CANCELLED" : "PAYMENT_DECLINED" };
+    return { status: "pending", progress: st === "pending" || st === "in progress" ? "processing" : "none" };
   },
 
   /* PayU posts the result to returnUrl. This only reads the id and checks the reverse hash; the amount/status still come from fetchStatus. */

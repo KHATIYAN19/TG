@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { ArrowLeft, ArrowRight, Brain, LinkedinLogo, Sparkle, UserCircle, Prohibit } from "@phosphor-icons/react";
 
-import { cachedPackages, fetchPackages, myPlans } from "./api";
+import { cachedPackages, fetchPackages, formatINR, myPlans } from "./api";
 import {
   AI_VS_HUMAN, ATS_ANSWER, ATS_DO, ATS_DONT, ATS_HOW, FAQ, INSIDE, INSIDE_TAGS, MISTAKES, PAGE_URL, PLAN_TYPES, REVIEWER_ANSWER, REVIEWER_POINTS,
   REVIEWER_PROCESS, SECTIONS, SEO, STEPS, UPDATED_ISO, WHICH_PLAN, WHO_FOR, planType,
@@ -69,7 +69,7 @@ const TYPE_ICON = { ai: Brain, human: UserCircle, linkedin: LinkedinLogo, mix: S
 const RETURN_KEY = "resume:returnTo";
 
 /* ============================ hero ============================ */
-function Hero({ onPick, paid }) {
+function Hero({ onPick, paid, signedIn, onLogin }) {
   return (
     <header className="rv-section rv-hero">
       <div className="rv-shell rv-center-col">
@@ -95,8 +95,9 @@ function Hero({ onPick, paid }) {
           <Btn as="a" href="#pricing" size="lg">Choose a plan <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
           <Btn as="a" href="#sample" variant="ghost" size="lg">See a sample review</Btn>
           {paid && <Btn as={Link} to="/resume-review/app" variant="ghost" size="lg"><UserCircle size={18} weight="duotone" aria-hidden />My reviews and plans</Btn>}
+          {!signedIn && <Btn as={Link} to="/resume-review/login" variant="ghost" size="lg" onClick={onLogin}><UserCircle size={18} weight="duotone" aria-hidden />Log in</Btn>}
         </div>
-        <p className="rv-updated rv-in" style={{ marginTop: 20, "--i": 5 }}>One-time payment · No subscription</p>
+        <p className="rv-updated rv-in" style={{ marginTop: 20, "--i": 5 }}>One-time payment · No subscription{!signedIn && <> · Already bought a plan? <Link to="/resume-review/login" className="rv-link" onClick={onLogin}>Log in</Link></>}</p>
       </div>
     </header>
   );
@@ -323,6 +324,34 @@ function Faq() {
   );
 }
 
+/*
+  The sticky bar, same idea as the System Design book page: docked at the bottom with the two things a visitor needs next.
+    signed out        Log in  +  Choose a plan
+    signed in, plan   My reviews and plans
+    signed in, none   Choose a plan
+  Always visible, on every screen size, so a visitor can log in or pick a plan from anywhere on the page.
+*/
+function StickyBar({ token, hasPlan, packs, onLogin }) {
+  const cheapest = packs?.length ? Math.min(...packs.map((p) => Number(p.price)).filter((n) => n > 0)) : null;
+  const goPlans = () => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  return (
+    <div className="rv-stick" role="region" aria-label="Quick actions">
+      <div className="rv-stick-in">
+        <div className="rv-stick-txt">
+          <b>{token ? (hasPlan ? "Welcome back" : "Resume Review") : "Resume Review"}</b>
+          <span>{token && hasPlan ? "Your reports and credits are in your space." : Number.isFinite(cheapest) && cheapest > 0 ? `Plans from ${formatINR(cheapest)} · pay once, no subscription` : "Pay once, no subscription"}</span>
+        </div>
+        <div className="rv-stick-btns">
+          {!token && <Btn as={Link} to="/resume-review/login" variant="ghost" onClick={onLogin}>Log in</Btn>}
+          {token && hasPlan
+            ? <Btn as={Link} to="/resume-review/app">My reviews and plans <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
+            : <Btn onClick={goPlans}>Choose a plan <ArrowRight size={16} weight="bold" aria-hidden /></Btn>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ResumeLanding() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -350,6 +379,8 @@ export default function ResumeLanding() {
     navigate("/resume-review/signup", { state: { from: { pathname: "/resume-review", search } } });
     return true;
   }, [token, navigate]);
+  // a plain "Log in" (not tied to a plan) lands in their own space afterwards
+  const rememberApp = useCallback(() => { try { sessionStorage.setItem(RETURN_KEY, "/resume-review/app"); } catch { /* ignore */ } }, []);
   const buyer = usePlanBuy({ onNeedLogin: needLogin });
 
   const want = params.get("buy");
@@ -366,9 +397,16 @@ export default function ResumeLanding() {
   const pick = (id) => { setType(id); document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
   return (
-    <Page title={SEO.title} description={SEO.description}>
+    <Page title={SEO.title} description={SEO.description} className="rv-landing">
       <Head plans={plans} />
-      <Hero onPick={pick} paid={paid} />
+      {!token && (
+        <div className="rv-loginbar" role="navigation" aria-label="Account">
+          <span>Already have an account or a plan?</span>
+          <Link to="/resume-review/login" className="rv-link" onClick={rememberApp}>Log in to your space <ArrowRight size={14} weight="bold" aria-hidden /></Link>
+        </div>
+      )}
+      <Hero onPick={pick} paid={paid} signedIn={Boolean(token)} onLogin={rememberApp} />
+      <StickyBar token={token} hasPlan={paid} packs={packs} onLogin={rememberApp} />
       <main>
         <Plans packs={packs} failed={failed} type={type} setType={setType} buyer={buyer} />
         <Sample />

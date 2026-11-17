@@ -60,7 +60,8 @@ export default {
   async fetchStatus({ credentials: c }, { gatewayOrderId }) {
     const list = await client(c).orders.fetchPayments(gatewayOrderId);
     const hit = (list?.items || []).find((p) => p.status === "captured");
-    return hit ? { status: "paid", paymentId: hit.id, amountPaise: Number(hit.amount), currency: String(hit.currency || "").toUpperCase(), method: hit.method || null, raw: hit } : { status: "pending" };
+    if (hit) return { status: "paid", paymentId: hit.id, amountPaise: Number(hit.amount), currency: String(hit.currency || "").toUpperCase(), method: hit.method || null, raw: hit };
+    return { status: "pending", progress: (list?.items || []).some((p) => ["created", "authorized"].includes(p.status)) ? "processing" : "none" };
   },
 
   parseWebhook({ credentials: c }, { rawBody, headers }) {

@@ -26,8 +26,8 @@ export function usePlanBuy({ onNeedLogin } = {}) {
       if (out.status === "redirect") return; // the browser is leaving for the gateway
       if (out.status === "paid") { toast.success("Payment received. Now send in your resume."); return navigate(`/resume-review/app/submit/${out.purchaseId}`, { replace: true }); }
       if (out.status === "pending") return navigate(`/resume-review/payment-result?purchase=${out.purchaseId}&status=pending`, { replace: true });
-      if (out.status === "dismissed") toast("Payment cancelled. You can try again whenever you're ready.");
-      else toast.error(out.message || "The payment didn't go through. Nothing was charged.");
+      if (out.status === "dismissed") toast("Payment window closed. Nothing was charged. Your plan is saved under Unfinished payments, so you can complete it any time.", { duration: 6000 });
+      else return navigate(`/resume-review/payment-result?purchase=${out.purchaseId}&status=failed`);
     } catch (e) {
       toast.error(errMsg(e));
     } finally { setBusy(""); }

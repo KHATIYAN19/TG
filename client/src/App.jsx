@@ -1138,6 +1138,7 @@ function App() {
           <Route path="/resume-review/login" element={<ResumeAuth />} />
           <Route path="/resume-review/signup" element={<ResumeAuth />} />
           <Route path="/resume-review/payment-result" element={<ResumePaymentResult />} />
+          <Route path="/resume-review/plans" element={<Navigate to="/resume-review/app/plans" replace />} />
           <Route path="/resume-review/app/*" element={<ResumeApp />} />
           <Route
             path="/admin/resume-reviews"

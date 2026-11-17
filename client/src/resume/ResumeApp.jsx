@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { ArrowLeft, ArrowRight, Brain, CalendarBlank, CaretLeft, CaretRight, FilePdf, House, LinkedinLogo, Plus, Stack, UploadSimple, UserCircle } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, Brain, Warning, CalendarBlank, CaretLeft, CaretRight, FilePdf, House, LinkedinLogo, Plus, Stack, UploadSimple, UserCircle } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
 import { PLAN_STATE, STATUS, dateFmt, dayFmt, daysLeft, fetchPackages, formatINR, myPlans, myRequestsPage } from "./api";
@@ -130,6 +130,26 @@ function Sidebar() {
   );
 }
 
+/* a payment that was started and never finished: one tap takes them back to finish it (or see what happened to it) */
+function Unfinished() {
+  const { data } = useContext(AppData);
+  const list = (data?.unfinished || []).slice(0, 1); // only the latest unfinished payment
+  if (!list.length) return null;
+  return (
+    <div style={{ display: "grid", gap: 12, marginBottom: 28 }}>
+      {list.map((u) => (
+        <div key={u.id} className="rv-unfinished" role="status">
+          <span style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
+            <Warning size={22} weight="duotone" style={{ color: "var(--rv-warn)", flex: "none" }} aria-hidden />
+            <span><b>Unfinished payment: {u.name}</b><br /><span className="rv-sm rv-muted">{formatINR(u.amount)} · started {dayFmt(u.startedAt)}. Not confirmed yet. Tap to check it or finish paying.</span></span>
+          </span>
+          <Btn as={Link} to={`/resume-review/payment-result?purchase=${u.id}&status=pending`} size="sm">Check or complete <ArrowRight size={14} weight="bold" aria-hidden /></Btn>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- paging ---------- */
 const pageList = (page, pages) => {
   const out = [];
@@ -227,6 +247,7 @@ function Dashboard() {
         </div>
       </section>
       {(error || planError) && <p role="alert" className="rv-err">{error || planError}</p>}
+      <Unfinished />
 
       {/* phones and tablets: the credits sit here; on large screens they live in the left menu */}
       <div className="rv-below-lg"><Summary s={data?.summary} /></div>
@@ -275,11 +296,16 @@ export default function ResumeApp() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => { window.scrollTo({ top: 0 }); }, [location.pathname]);
-  useEffect(() => { if (token) myPlans().then(setData).catch((e) => setError(errMsg(e))); }, [token, location.pathname]);
+  useEffect(() => { if (token) myPlans().then((d) => setData({ ...d, path: location.pathname })).catch((e) => setError(errMsg(e))); }, [token, location.pathname]);
 
   if (!token) {
     try { sessionStorage.setItem("resume:returnTo", location.pathname + location.search); } catch { /* ignore */ }
-    return <Navigate to="/resume-review/signup" replace state={{ from: location }} />;
+    // most people arriving here already have an account, so the first thing they see is "Log in" (the page has a tab for new accounts)
+    return <Navigate to="/resume-review/login" replace state={{ from: location }} />;
+  }
+  // never paid for anything: the only useful page is the plans page
+  if (data && data.path === location.pathname && data.plans?.length === 0 && /^\/resume-review\/app\/?$/.test(location.pathname)) {
+    return <Navigate to="/resume-review/app/plans" replace state={{ first: true }} />;
   }
   return (
     <Page title="Resume Lab">
@@ -289,7 +315,7 @@ export default function ResumeApp() {
           <main className="rv-app-main">
             <Routes>
               <Route index element={<Dashboard />} />
-              <Route path="plans" element={<ResumeBuy />} />
+              <Route path="plans" element={<><Unfinished /><ResumeBuy /></>} />
               <Route path="submit/:purchaseId" element={<ResumeSubmit />} />
               <Route path="requests/:id" element={<ResumeDetail />} />
               <Route path="*" element={<Navigate to="/resume-review/app" replace />} />
