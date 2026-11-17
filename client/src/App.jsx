@@ -148,7 +148,6 @@ const AdminBookOffers = lazy(() =>
 const AdminOfferPayments = lazy(() =>
   import("./Admin/AdminOfferPayments.jsx")
 );
-import BookMatchesNotice from "./Ebooks/BookMatchesNotice.jsx";
 const AllAccess = lazy(() =>
   import("./Ebooks/AllAccess.jsx")
 );
@@ -915,7 +914,6 @@ function App() {
       <Analytics />
       {!hideNavbar && <Navbar />}
       {/* Book promos and sale popups are for the Target Trek store, not for Memories. */}
-      {!onMemories && <BookMatchesNotice />}
       {!onMemories && (
         <Suspense fallback={null}>
           <SaleCampaign />
