@@ -52,6 +52,9 @@ export const adminGrant = (body) => resumeAdminHttp.post("/purchases/grant", bod
 export const adminMembers = (params) => resumeAdminHttp.get("/members", { params }).then(data);
 export const adminBlock = (userId, reason) => resumeAdminHttp.post(`/members/${userId}/block`, { reason }).then(data);
 export const adminUnblock = (userId) => resumeAdminHttp.delete(`/members/${userId}/block`).then(data);
+export const adminAiSettings = () => resumeAdminHttp.get("/ai-settings").then(data);
+export const adminSaveAiSettings = (body) => resumeAdminHttp.put("/ai-settings", body).then(data);
+export const adminTestAiModel = (body) => resumeAdminHttp.post("/ai-settings/test", body, { timeout: 75000 }).then(data);
 export const adminPackages = () => resumeAdminHttp.get("/packages").then(data);
 export const adminSavePackage = (id, body) => (id ? resumeAdminHttp.put(`/packages/${id}`, body) : resumeAdminHttp.post("/packages", body)).then(data);
 export const adminDeletePackage = (id) => resumeAdminHttp.delete(`/packages/${id}`).then(data);

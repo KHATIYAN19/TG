@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowSquareOut, CaretLeft, CaretRight, FileText, LinkedinLogo, MagnifyingGlass, Plus, Trash, UploadSimple } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowSquareOut, Brain, CaretLeft, CaretRight, FileText, LinkedinLogo, MagnifyingGlass, Plus, Trash, UploadSimple } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
 import {
-  PLAN_STATE, STATUS, adminBlock, adminClaim, adminDeletePackage, adminDeletePurchase, adminDeleteRequest, adminGet, adminGrant, adminList, adminMembers, adminPackages,
-  adminPurchases, adminRerunAi, adminSavePackage, adminSaveReview, adminStats, adminUnblock, adminUpdatePurchase, dateFmt, dayFmt, formatINR, uploadDocument,
+  PLAN_STATE, STATUS, adminAiSettings, adminBlock, adminClaim, adminDeletePackage, adminDeletePurchase, adminDeleteRequest, adminGet, adminGrant, adminList, adminMembers, adminPackages,
+  adminPurchases, adminRerunAi, adminSaveAiSettings, adminSavePackage, adminTestAiModel, adminSaveReview, adminStats, adminUnblock, adminUpdatePurchase, dateFmt, dayFmt, formatINR, uploadDocument,
 } from "../resume/api";
 import { AiReport } from "../resume/ResumeDetail";
 import { Btn, Field, FormattedText, Modal, Page, Pill, Skeleton, cx } from "../resume/ui";
@@ -18,6 +18,7 @@ import { Btn, Field, FormattedText, Modal, Page, Pill, Skeleton, cx } from "../r
     Payments  every plan bought: extend, add reviews, switch off, delete, or give a plan for free
     Members   who is using it, and blocking someone from using it
     Plans     prices, bundles, how many reviews and for how many days (admin only)
+    AI model  which provider (OpenAI, Gemini, Claude) and model writes the AI reviews (admin only)
   Reviewers (admin now, Employee accounts later) only see Reviews.
 */
 const lines = (v) => String(v || "").split("\n").map((s) => s.trim()).filter(Boolean);
@@ -490,6 +491,127 @@ function Plans({ list, reload }) {
   );
 }
 
+/* ============================ AI model ============================ */
+const usd = (n) => (n == null ? "" : `$${n < 1 ? n.toFixed(3) : n.toFixed(2)}`);
+
+function AiModel() {
+  const [data, setData] = useState(null);
+  const [sel, setSel] = useState(null); // { provider, model }
+  const [custom, setCustom] = useState({});
+  const [busy, setBusy] = useState("");
+  const [result, setResult] = useState(null);
+  const load = useCallback(() => adminAiSettings().then((d) => { setData(d); setSel((s) => s || { provider: d.active.provider, model: d.active.model }); }).catch((e) => toast.error(errMsg(e))), []);
+  useEffect(() => { load(); }, [load]);
+
+  if (!data || !sel) return <div style={{ display: "grid", gap: 16 }}><Skeleton h={90} /><Skeleton h={260} /><Skeleton h={260} /></div>;
+
+  const inCatalog = (p, m) => data.providers.find((x) => x.id === p)?.models.some((x) => x.id === m);
+  const pick = (provider, model) => { setSel({ provider, model }); setResult(null); };
+  const chosenLabel = () => {
+    const p = data.providers.find((x) => x.id === sel.provider);
+    return `${p?.label || sel.provider} · ${p?.models.find((x) => x.id === sel.model)?.label || sel.model}`;
+  };
+  const changed = sel.provider !== data.active.provider || sel.model !== data.active.model || data.active.source === "default";
+  const body = { provider: sel.provider, model: sel.model.trim() };
+  const ready = body.model.length >= 2 && data.providers.find((x) => x.id === sel.provider)?.configured;
+
+  const test = async () => {
+    setBusy("test"); setResult(null);
+    try { setResult(await adminTestAiModel(body)); } catch (e) { setResult({ ok: false, message: errMsg(e) }); } finally { setBusy(""); }
+  };
+  const save = async () => {
+    setBusy("save");
+    try { await adminSaveAiSettings(body); toast.success("Saved. New reviews use this model."); setResult(null); await load(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(""); }
+  };
+
+  const activeP = data.providers.find((x) => x.id === data.active.provider);
+  const activeM = activeP?.models.find((x) => x.id === data.active.model);
+  const fellBack = data.saved && (data.saved.provider !== data.active.provider || data.saved.model !== data.active.model);
+
+  return (
+    <div style={{ display: "grid", gap: 24 }}>
+      <section className="rv-card rv-card-pad" aria-labelledby="ai-now">
+        <p className="rv-kicker" id="ai-now" style={{ marginBottom: 12 }}>In use right now</p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <Brain size={26} weight="duotone" aria-hidden />
+          <b style={{ fontSize: 20 }}>{activeP?.label} · {activeM?.label || data.active.model}</b>
+          <Pill>{data.active.source === "admin" ? "Your choice" : "Default"}</Pill>
+        </div>
+        <p className="rv-sm rv-muted" style={{ marginTop: 10 }}>
+          Every new AI review, and every re-run, is written by this model. Reviews already written keep the model that wrote them.
+          {data.active.source === "default" && !data.saved && " Nothing has been chosen yet, so OpenAI's default is used."}
+        </p>
+        {fellBack && <p role="alert" className="rv-err" style={{ marginTop: 12 }}>You chose {data.saved.model}, but that provider has no API key on the server right now, so the default is being used.</p>}
+      </section>
+
+      {data.providers.map((p) => {
+        const selectedHere = sel.provider === p.id;
+        const customSelected = selectedHere && !inCatalog(p.id, sel.model);
+        return (
+          <section key={p.id} className={cx("rv-card rv-card-pad rv-mdl", !p.configured && "off")} aria-labelledby={`ai-${p.id}`}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+              <h2 className="rv-h3" id={`ai-${p.id}`}>{p.label}</h2>
+              {p.configured ? <Pill className="ok">API key found</Pill> : <Pill className="warn">No key yet</Pill>}
+            </div>
+            {!p.configured && <p className="rv-sm rv-muted" style={{ marginTop: 10 }}>To use {p.label}, add <code className="rv-mono">{p.envKey}</code> to the server settings and restart. These models unlock as soon as the key is there.</p>}
+            <div className="rv-mdl-list" role="radiogroup" aria-label={`${p.label} models`}>
+              {p.models.map((m) => {
+                const on = selectedHere && sel.model === m.id;
+                return (
+                  <label key={m.id} className={cx("rv-mdl-row", on && "on", !p.configured && "dis")}>
+                    <input type="radio" name="ai-model" checked={on} disabled={!p.configured} onChange={() => pick(p.id, m.id)} />
+                    <span className="rv-mdl-main">
+                      <span className="rv-mdl-name"><b>{m.label}</b>{m.reasoning && <Pill>Thinks first</Pill>}{data.active.provider === p.id && data.active.model === m.id && <Pill className="ok">In use</Pill>}</span>
+                      <span className="rv-xs rv-subtle">{m.note}</span>
+                      <span className="rv-xs rv-mono rv-subtle">{m.id}</span>
+                    </span>
+                    <span className="rv-mdl-cost">
+                      {m.costInr != null ? <><b>about ₹{m.costInr < 10 ? m.costInr.toFixed(1) : Math.round(m.costInr)}</b><span className="rv-xs rv-subtle">per review ({usd(m.costUsd)})</span></> : <span className="rv-xs rv-subtle">Price: see {p.label} pricing</span>}
+                    </span>
+                  </label>
+                );
+              })}
+              <label className={cx("rv-mdl-row", customSelected && "on", !p.configured && "dis")}>
+                <input type="radio" name="ai-model" checked={customSelected} disabled={!p.configured} onChange={() => { const v = (custom[p.id] || "").trim(); if (v) pick(p.id, v); }} />
+                <span className="rv-mdl-main">
+                  <span className="rv-mdl-name"><b>Another {p.label} model</b></span>
+                  <span className="rv-xs rv-subtle">A newer model that is not listed. Type its exact id.</span>
+                  <input className="rv-input" style={{ marginTop: 6 }} disabled={!p.configured} placeholder="model id" maxLength={100} aria-label={`Custom ${p.label} model id`}
+                    value={customSelected ? sel.model : custom[p.id] || ""}
+                    onChange={(e) => { const v = e.target.value; setCustom((c) => ({ ...c, [p.id]: v })); pick(p.id, v); }} />
+                </span>
+              </label>
+            </div>
+          </section>
+        );
+      })}
+
+      <div className="rv-sendbar" role="group" aria-label="Save the model">
+        <div style={{ minWidth: 0 }}>
+          <b>{chosenLabel()}</b>
+          {result && <p role="status" className={cx("rv-sm", result.ok ? "" : "rv-err")} style={{ marginTop: 4, ...(result.ok ? { color: "var(--rv-ok)" } : {}) }}>{result.ok ? `Works. Answered in ${(result.ms / 1000).toFixed(1)}s.` : result.message}</p>}
+          {!result && <p className="rv-xs rv-subtle" style={{ marginTop: 4 }}>Test it first: one tiny real call, a fraction of a rupee.</p>}
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Btn variant="ghost" loading={busy === "test"} disabled={!ready || Boolean(busy)} onClick={test}>Test model</Btn>
+          <Btn loading={busy === "save"} disabled={!ready || !changed || Boolean(busy)} onClick={save}>Use this model</Btn>
+        </div>
+      </div>
+
+      <p className="rv-xs rv-subtle">The ₹ guide assumes a typical review (about 8,000 tokens read, 4,500 written) at the provider's list price and ₹{data.usdToInr} per US dollar. Real cost depends on resume length. Prices change, so confirm on the provider's pricing page.</p>
+
+      {data.history.length > 0 && (
+        <section aria-labelledby="ai-hist">
+          <h2 className="rv-h3" id="ai-hist" style={{ marginBottom: 12 }}>Recent changes</h2>
+          <ul style={{ display: "grid", gap: 8 }}>
+            {data.history.map((h, i) => <li key={i} className="rv-sm rv-muted"><b style={{ color: "var(--rv-text)" }}>{h.toModel}</b> ({h.toProvider}) replaced {h.fromModel} · {h.byName || "an admin"} · {dateFmt(h.at)}</li>)}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
 /* ============================ page ============================ */
 export default function AdminResumeReviews() {
   const role = useSelector((s) => s.auth?.user?.role);
@@ -503,7 +625,7 @@ export default function AdminResumeReviews() {
   const loadPackages = useCallback(() => { if (isAdmin) adminPackages().then(setPackages).catch((e) => toast.error(errMsg(e))); }, [isAdmin]);
   useEffect(() => { adminStats().then(setStats).catch(() => {}); }, [tick]);
   useEffect(() => { loadPackages(); }, [loadPackages]);
-  const tabs = useMemo(() => [["reviews", "Reviews"], ...(isAdmin ? [["payments", "Payments"], ["members", "Members"], ["plans", "Plans and prices"]] : [])], [isAdmin]);
+  const tabs = useMemo(() => [["reviews", "Reviews"], ...(isAdmin ? [["payments", "Payments"], ["members", "Members"], ["plans", "Plans and prices"], ["ai", "AI model"]] : [])], [isAdmin]);
 
   return (
     <Page title="Resume Lab | Admin" top={false}>
@@ -528,6 +650,7 @@ export default function AdminResumeReviews() {
         {openId
           ? <ReviewDesk id={openId} role={role} onBack={() => setOpenId(null)} onChanged={bump} />
           : tab === "plans" && isAdmin ? <Plans list={packages} reload={loadPackages} />
+          : tab === "ai" && isAdmin ? <AiModel />
           : tab === "payments" && isAdmin ? <Payments packages={packages} onChanged={bump} refreshKey={tick} />
           : tab === "members" && isAdmin ? <Members onChanged={bump} />
           : <Queue onOpen={setOpenId} refreshKey={tick} />}

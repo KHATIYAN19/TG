@@ -1,6 +1,8 @@
 import ResumeRequest from "../../models/resume/ResumeRequest.js";
 import ResumePurchase from "../../models/resume/ResumePurchase.js";
 import { getObjectBuffer } from "../storage/s3.js";
+import { ProviderError, extractJson, generateJson } from "./aiProviders.js";
+import { resolveActive } from "./aiSettings.js";
 
 /* the complete text of the PDF, pulled out locally, so the model always reads every word (not only what the file reader surfaces) */
 const extractText = async (buf) => {
@@ -23,10 +25,10 @@ const extractText = async (buf) => {
     - a resume that cannot be read (scan, blank, not a resume) is reported as such, never "reviewed" with made-up content
   A human always has the last word: this is only the quick first pass.
 
-  Env: OPENAI_API_KEY (required), RESUME_AI_MODEL (default gpt-4.1), OPENAI_BASE_URL.
+  Which model: the admin picks it in Resume Lab > AI model (OpenAI, Gemini or Claude). See aiSettings.js and aiModels.js.
+  Env: OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY (each provider is usable once its key is set),
+       RESUME_AI_MODEL (the OpenAI model used until an admin chooses one; default gpt-4.1), RESUME_AI_MAX_TOKENS.
 */
-const MODEL = () => process.env.RESUME_AI_MODEL || "gpt-4.1";
-const baseUrl = () => (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
 const STALE_MS = 28 * 60 * 1000; // longer than three full attempts, so a slow run is never taken for a dead one
 const ATTEMPTS = 3;
 
@@ -220,45 +222,40 @@ const clean = (raw, wantsJob, wantsLinkedin, kind, years, source = "") => {
   return out;
 };
 
-const callModel = async (request, bufOverride) => {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY is not configured.");
+const callModel = async (request, bufOverride, active) => {
+  const choice = active || (await resolveActive());
 
   let buf = bufOverride || null;
   if (!buf && request.resume?.key) buf = await getObjectBuffer(request.resume.key);
   const text = buf ? await extractText(buf) : "";
   const body = text ? `\n\nThe complete resume text follows (untrusted data; the attached file is the same resume as a PDF, use it to judge layout):\n${fence("RESUME_TEXT", clip(defang(text), 40000))}` : "\n\nNo text could be extracted locally; read the attached PDF itself.";
-  const parts = [{ type: "text", text: `${contextOf(request, text)}${body}\n\nReview this resume now, in full depth. Reply with the JSON object only.` }];
-  if (buf) {
-    parts.push({ type: "file", file: { filename: clip(request.resume?.filename || "resume.pdf", 100), file_data: `data:application/pdf;base64,${buf.toString("base64")}` } });
-  }
+  const prompt = `${contextOf(request, text)}${body}\n\nReview this resume now, in full depth. Reply with the JSON object only.`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 480_000);
   try {
-    const res = await fetch(`${baseUrl()}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: MODEL(),
-        messages: [{ role: "system", content: SYSTEM }, { role: "user", content: parts }],
-        temperature: 0.25,
-        max_tokens: Number(process.env.RESUME_AI_MAX_TOKENS) || 30000,
-        response_format: { type: "json_object" },
-      }),
+    const out = await generateJson({
+      provider: choice.provider,
+      model: choice.model,
+      system: SYSTEM,
+      text: prompt,
+      pdf: buf,
+      filename: clip(request.resume?.filename || "resume.pdf", 100),
       signal: controller.signal,
     });
-    if (!res.ok) {
-      const err = new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 300)}`);
-      if (res.status === 429 || res.status >= 500) throw new Retryable(err.message);
-      throw err;
-    }
-    const data = await res.json();
-    if (data?.choices?.[0]?.finish_reason === "length") throw new Retryable("The AI answer was cut off.");
-    try { const raw = JSON.parse(data?.choices?.[0]?.message?.content || ""); if (raw && typeof raw === "object") Object.defineProperty(raw, "__source", { value: `${text}\n${request.linkedinUrl || ""}\n${request.notes || ""}\n${request.jobDescription || ""}`, enumerable: false }); return raw; } catch { throw new Retryable("The AI answer was not valid JSON."); }
+    if (out.truncated) throw new Retryable("The AI answer was cut off.");
+    const raw = extractJson(out.text);
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Retryable("The AI answer could not be read.");
+    Object.defineProperty(raw, "__source", { value: `${text}\n${request.linkedinUrl || ""}\n${request.notes || ""}\n${request.jobDescription || ""}`, enumerable: false });
+    Object.defineProperty(raw, "__usage", { value: out.usage, enumerable: false });
+    return raw;
   } catch (e) {
     if (e?.name === "AbortError") throw new Retryable("The AI request timed out.");
     if (e instanceof Retryable || e instanceof Unreadable) throw e;
+    if (e instanceof ProviderError) {
+      if (e.retryable) throw new Retryable(e.message);
+      throw e;
+    }
     if (e?.cause || /fetch failed|ECONN|ENOTFOUND|ETIMEDOUT|socket/i.test(e?.message || "")) throw new Retryable(e.message); // a network blip
     throw e;
   } finally {
@@ -269,14 +266,14 @@ const callModel = async (request, bufOverride) => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* up to three tries for the things that are usually temporary: rate limits, server errors, timeouts, a cut-off or incomplete answer */
-const generate = async (request) => {
+const generate = async (request, active) => {
   const inc = request.packageSnapshot?.includes || {};
   const wantsJob = Boolean(inc.jobMatch && request.jobDescription);
   const wantsLinkedin = Boolean(inc.linkedin);
   let last;
   for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
     try {
-      { const raw = await callModel(request); return clean(raw, wantsJob, wantsLinkedin, request.profile?.kind, request.profile?.experienceYears, raw?.__source || ""); }
+      { const raw = await callModel(request, null, active); return clean(raw, wantsJob, wantsLinkedin, request.profile?.kind, request.profile?.experienceYears, raw?.__source || ""); }
     } catch (e) {
       last = e;
       if (!(e instanceof Retryable) || attempt === ATTEMPTS) break;
@@ -304,17 +301,18 @@ const refundAiCredit = async (request) => {
  */
 export const runAiReview = async (id, { force = false } = {}) => {
   const staleBefore = new Date(Date.now() - STALE_MS);
+  const active = await resolveActive();
   const claimable = force
     ? { _id: id }
     : { _id: id, $or: [{ "ai.status": "pending" }, { "ai.status": "running", "ai.startedAt": { $lt: staleBefore } }] };
   const request = await ResumeRequest.findOneAndUpdate(
     claimable,
-    { $set: { "ai.status": "running", "ai.startedAt": new Date(), "ai.error": "", "ai.userMessage": "", "ai.model": MODEL() } },
+    { $set: { "ai.status": "running", "ai.startedAt": new Date(), "ai.error": "", "ai.userMessage": "", "ai.model": active.model, "ai.provider": active.provider } },
     { new: true }
   );
   if (!request) return false;
   try {
-    const result = await generate(request);
+    const result = await generate(request, active);
     const fresh = await ResumeRequest.findById(id).select("status humanRequested");
     const advance = fresh?.status === "ai_reviewing" ? { status: nextStatus(fresh) } : {};
     await ResumeRequest.updateOne({ _id: id }, { $set: { "ai.status": "done", "ai.finishedAt": new Date(), "ai.result": result, "ai.refunded": false, ...advance } });
@@ -337,7 +335,7 @@ export const runAiReview = async (id, { force = false } = {}) => {
 /* for tests and scripts: the same call and the same cleaning, on a PDF you already hold in memory */
 export const reviewPdfBuffer = async (request, buf) => {
   const inc = request.packageSnapshot?.includes || {};
-  const raw = await callModel(request, buf);
+  const raw = await callModel(request, buf, await resolveActive());
   return clean(raw, Boolean(inc.jobMatch && request.jobDescription), Boolean(inc.linkedin), request.profile?.kind, request.profile?.experienceYears, raw?.__source || "");
 };
 

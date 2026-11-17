@@ -190,7 +190,7 @@ export function HumanReport({ id, human, includes, preview = false }) {
   };
   return (
     <section className="rv-card" style={{ border: "2px solid var(--rv-brand)", overflow: "hidden" }}>
-      <div className="rv-panel" style={{ borderRadius: 0, padding: 28, display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="rv-panel rv-hr-head" style={{ borderRadius: 0, padding: 28, display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ background: "var(--rv-bg)", borderRadius: "50%", padding: 6, color: "var(--rv-text)" }}><ScoreRing value={human.score ?? 0} size={104} stroke={8} label="Reviewer" /></div>
         <div style={{ minWidth: 0 }}>
           <Pill>Human review</Pill>
@@ -198,7 +198,7 @@ export function HumanReport({ id, human, includes, preview = false }) {
           {human.completedAt && <p style={{ marginTop: 4, fontSize: 14, color: "var(--rv-panel-muted)" }}>Delivered {dateFmt(human.completedAt)}</p>}
         </div>
       </div>
-      <div style={{ padding: 28, display: "grid", gap: 32 }}>
+      <div className="rv-hr-body" style={{ padding: 28, display: "grid", gap: 32, gridTemplateColumns: "minmax(0, 1fr)" }}>
         {human.deliverable && (
           <div className="rv-note" style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "space-between" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><FileText size={28} weight="duotone" aria-hidden /><span><b>Your rewritten resume</b><br /><span className="rv-subtle" style={{ wordBreak: "break-all" }}>{human.deliverable.filename}</span></span></span>

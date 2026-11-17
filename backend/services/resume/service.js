@@ -127,22 +127,22 @@ export const poolOf = (purchases) => {
 /* Shown the first time, so the page is never empty. The admin edits or hides these from the dashboard. */
 const IN = (o = {}) => ({ resume: true, linkedin: false, jobMatch: false, humanReview: false, rewrittenResume: false, ...o });
 export const DEFAULT_PLANS = [
-  { key: "ai-1", name: "AI Check", sortOrder: 1, tagline: "One instant AI review of your resume.", pricePaise: 9900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 1, humanReviews: 0, linkedinReviews: 0, validityDays: 0,
-    includes: IN(), features: ["Overall and ATS readiness score", "Section grades and missing keywords", "Weak bullets rewritten"] },
-  { key: "ai-3", name: "AI Triple", sortOrder: 2, tagline: "Three AI reviews to fix and re-check your resume.", pricePaise: 19900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 3, humanReviews: 0, linkedinReviews: 0, validityDays: 0,
-    includes: IN(), features: ["Check every new version of your resume", "Overall and ATS readiness score", "Rewritten bullets and keyword gaps"] },
-  { key: "human-1", name: "Human Review", sortOrder: 3, tagline: "A working professional reviews your resume.", pricePaise: 24900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 1, humanReviews: 1, linkedinReviews: 0, validityDays: 0,
-    includes: IN({ humanReview: true }), features: ["Detailed feedback from a working professional", "Instant AI report on the same resume", "Clear list of what to change first"] },
-  { key: "starter-30", name: "Starter · 30 days", badge: "", sortOrder: 4, tagline: "AI, LinkedIn and a person's review for a month.", pricePaise: 49900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 5, humanReviews: 1, linkedinReviews: 2, validityDays: 30,
-    includes: IN({ humanReview: true }), features: ["5 AI reviews to test every change", "1 human review by a working professional", "2 LinkedIn profile reviews"] },
-  { key: "plus-30", name: "Plus · 30 days", badge: "Recommended", sortOrder: 0, tagline: "Tailor your resume to every job you apply for.", pricePaise: 99900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 20, humanReviews: 1, linkedinReviews: 2, validityDays: 30,
-    includes: IN({ humanReview: true, jobMatch: true }), features: ["20 AI reviews in 30 days", "Match each version to a job description", "Human review back within 24 hours", "1 human review and 2 LinkedIn reviews"] },
-  { key: "pro-180", name: "Pro · 6 months", sortOrder: 6, tagline: "A full job search, or a small group of students.", pricePaise: 199900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 100, humanReviews: 1, linkedinReviews: 20, validityDays: 180,
-    includes: IN({ humanReview: true, jobMatch: true }), features: ["100 AI reviews over 6 months", "20 LinkedIn profile reviews", "Job-description match on every review"] },
-  { key: "power-365", name: "Power · 1 year", sortOrder: 7, tagline: "For coaches, mentors and placement cells.", pricePaise: 399900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 500, humanReviews: 1, linkedinReviews: 100, validityDays: 365,
-    includes: IN({ humanReview: true, jobMatch: true }), features: ["500 AI reviews for 365 days", "100 LinkedIn profile reviews", "Job-description match on every review"] },
-  { key: "institute", name: "Institute · No expiry", sortOrder: 8, tagline: "Bulk reviews for colleges and training teams.", pricePaise: 999900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 1000, humanReviews: 2, linkedinReviews: 250, validityDays: 0,
-    includes: IN({ humanReview: true, jobMatch: true }), features: ["1,000 AI reviews, never expire", "250 LinkedIn profile reviews and 2 human reviews", "One payment, no renewals"] },
+  { key: "ai-49", name: "AI Check", sortOrder: 1, tagline: "One instant AI review of your resume.", pricePaise: 4900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 1, humanReviews: 0, linkedinReviews: 0, validityDays: 30,
+    includes: IN(), features: ["1 AI review, valid for 30 days", "Overall and ATS readiness score", "Section grades and missing keywords"] },
+  { key: "ai-99", name: "AI Double", sortOrder: 2, tagline: "Two AI reviews to fix and re-check your resume.", pricePaise: 9900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 2, humanReviews: 0, linkedinReviews: 0, validityDays: 60,
+    includes: IN(), features: ["2 AI reviews, valid for 60 days", "Check your resume again after you fix it", "Rewritten bullets and keyword gaps"] },
+  { key: "ai-199", name: "AI Plus", sortOrder: 3, tagline: "Five AI reviews and a LinkedIn profile review.", pricePaise: 19900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 5, humanReviews: 0, linkedinReviews: 1, validityDays: 60,
+    includes: IN({ linkedin: true }), features: ["5 AI reviews, valid for 60 days", "1 LinkedIn profile review", "Check every new version of your resume"] },
+  { key: "starter-299", name: "Starter", sortOrder: 4, tagline: "AI, LinkedIn and a person's review for a month.", pricePaise: 29900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 1, humanReviews: 1, linkedinReviews: 1, validityDays: 30,
+    includes: IN({ humanReview: true, linkedin: true }), features: ["1 AI review", "1 human review by a working professional", "1 LinkedIn profile review", "Valid for 30 days"] },
+  { key: "plus-499", name: "Plus", sortOrder: 5, tagline: "Tailor your resume to the jobs you apply for.", pricePaise: 49900, compareAtPaise: 0, deliveryHours: 48, aiReviews: 15, humanReviews: 1, linkedinReviews: 3, validityDays: 180,
+    includes: IN({ humanReview: true, linkedin: true, jobMatch: true }), features: ["15 AI reviews over 6 months", "1 human review by a working professional", "3 LinkedIn profile reviews", "Job-description match on every review"] },
+  { key: "pro-999", name: "Pro", badge: "Recommended", sortOrder: 6, tagline: "A full job search, with room to test every change.", pricePaise: 99900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 40, humanReviews: 1, linkedinReviews: 8, validityDays: 180,
+    includes: IN({ humanReview: true, linkedin: true, jobMatch: true }), features: ["40 AI reviews over 6 months", "1 human review, back within 24 hours", "8 LinkedIn profile reviews", "Job-description match on every review"] },
+  { key: "power-1999", name: "Power", sortOrder: 7, tagline: "For coaches, mentors and small groups.", pricePaise: 199900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 100, humanReviews: 2, linkedinReviews: 20, validityDays: 365,
+    includes: IN({ humanReview: true, linkedin: true, jobMatch: true }), features: ["100 AI reviews for a year", "2 human reviews, back within 24 hours", "20 LinkedIn profile reviews", "Job-description match on every review"] },
+  { key: "institute-9999", name: "Institute", sortOrder: 8, tagline: "Bulk reviews for colleges and training teams.", pricePaise: 999900, compareAtPaise: 0, deliveryHours: 24, aiReviews: 1500, humanReviews: 5, linkedinReviews: 100, validityDays: 0,
+    includes: IN({ humanReview: true, linkedin: true, jobMatch: true }), features: ["1,500 AI reviews, never expire", "5 human reviews and 100 LinkedIn reviews", "One payment, no renewals"] },
 ];
 
 /** Active plans in display order. Creates the starter set once if the admin has never added any. */

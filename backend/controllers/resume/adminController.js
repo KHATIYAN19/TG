@@ -9,6 +9,9 @@ import User from "../../models/User.js";
 import { createDownloadUrl, deleteObject, headObject, keyBelongsTo, userPrefix } from "../../services/storage/s3.js";
 import { DAY_MS, ResumeError, assertId, listActivePackages, packageOut, parse, purchaseOut, sendError, snapshotOf, toRupees } from "../../services/resume/service.js";
 import { runAiReview } from "../../services/resume/ai.js";
+import { MODELS, PROVIDERS, PROVIDER_IDS, costPerReviewUsd, findModel, isConfigured, validModelId } from "../../services/resume/aiModels.js";
+import { ProviderError, extractJson, generateJson } from "../../services/resume/aiProviders.js";
+import { readSettings, resolveActive, saveSettings } from "../../services/resume/aiSettings.js";
 import { sendReviewReady } from "../../services/resume/mail.js";
 import { requestOut } from "./userController.js";
 
@@ -404,4 +407,76 @@ export const deletePackage = handler(async (req, res) => {
   }
   await ResumePackage.deleteOne({ _id: req.params.id });
   ok(res, { deleted: true });
+});
+
+
+/* =====================================================
+   AI MODEL  (which provider and model write the reviews)
+===================================================== */
+const aiChoiceSchema = z.object({
+  provider: z.enum(PROVIDER_IDS),
+  model: z.string().trim().min(2).max(100),
+});
+
+const usdToInr = () => Number(process.env.USD_INR_RATE) || 85;
+
+const modelOut = (m) => {
+  const usd = costPerReviewUsd(m);
+  return {
+    id: m.id, label: m.label, note: m.note, reasoning: Boolean(m.reasoning),
+    inPer1M: m.inPer1M, outPer1M: m.outPer1M,
+    costUsd: usd == null ? null : Math.round(usd * 10000) / 10000,
+    costInr: usd == null ? null : Math.round(usd * usdToInr() * 100) / 100,
+  };
+};
+
+export const getAiSettings = handler(async (req, res) => {
+  const [active, saved] = await Promise.all([resolveActive(), readSettings({ fresh: true })]);
+  ok(res, {
+    active, // what the next review really uses
+    saved: saved ? { provider: saved.provider, model: saved.model, updatedAt: saved.updatedAt } : null, // what the admin chose
+    providers: PROVIDER_IDS.map((id) => ({
+      id, label: PROVIDERS[id].label, envKey: PROVIDERS[id].envKey, configured: isConfigured(id),
+      models: MODELS.filter((m) => m.provider === id).map(modelOut),
+    })),
+    history: (saved?.history || []).slice(-10).reverse(),
+    usdToInr: usdToInr(),
+  });
+});
+
+const checkChoice = (req) => {
+  const b = parse(aiChoiceSchema, req.body);
+  if (!validModelId(b.model)) throw new ResumeError(400, "That model name has characters that are not allowed. Use letters, numbers and . _ - : / only.", "VALIDATION_FAILED");
+  if (!isConfigured(b.provider)) throw new ResumeError(400, `${PROVIDERS[b.provider].label} is not set up yet. Add ${PROVIDERS[b.provider].envKey} to the server settings, restart, then choose it here.`, "PROVIDER_NOT_CONFIGURED");
+  return b;
+};
+
+export const saveAiSettings = handler(async (req, res) => {
+  const b = checkChoice(req);
+  await saveSettings({ ...b, userId: uid(req), userName: req.user?.name || req.user?.email || "" });
+  ok(res, { provider: b.provider, model: b.model, known: Boolean(findModel(b.provider, b.model)) });
+});
+
+/* a tiny real call, so the admin knows the key and the model name work before customers use it */
+export const testAiModel = handler(async (req, res) => {
+  const b = checkChoice(req);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  const started = Date.now();
+  try {
+    const out = await generateJson({
+      provider: b.provider, model: b.model, signal: controller.signal,
+      system: "You are a connection test. Reply with a JSON object only.",
+      text: 'Reply with exactly this JSON and nothing else: {"ok": true}',
+    });
+    const json = extractJson(out.text);
+    if (!json) return ok(res, { ok: false, message: "The model answered, but not with JSON. It may not suit reviews.", ms: Date.now() - started });
+    ok(res, { ok: true, ms: Date.now() - started, usage: out.usage });
+  } catch (e) {
+    if (e?.name === "AbortError") return ok(res, { ok: false, message: "No answer within 60 seconds.", ms: Date.now() - started });
+    if (e instanceof ProviderError) return ok(res, { ok: false, message: e.message, ms: Date.now() - started });
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 });

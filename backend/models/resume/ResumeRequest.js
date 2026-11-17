@@ -50,6 +50,7 @@ const resumeRequestSchema = new Schema(
     ai: {
       status: { type: String, enum: ["pending", "running", "done", "failed"], default: "pending" },
       model: { type: String, default: "" },
+      provider: { type: String, default: "" }, // openai | gemini | anthropic: who wrote this review
       startedAt: { type: Date, default: null },
       finishedAt: { type: Date, default: null },
       error: { type: String, default: "" },
