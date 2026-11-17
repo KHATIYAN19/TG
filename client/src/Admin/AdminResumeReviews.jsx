@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowSquareOut, Brain, CaretLeft, CaretRight, FileText, LinkedinLogo, MagnifyingGlass, Plus, Trash, UploadSimple } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowSquareOut, Brain, CaretLeft, CaretRight, ClipboardText, CreditCard, CurrencyInr, FileText, Hourglass, House, LinkedinLogo, MagnifyingGlass, Plus, ProhibitInset, SealCheck, Tag, Trash, UploadSimple, UsersThree } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
 import {
@@ -11,6 +11,7 @@ import {
 } from "../resume/api";
 import { AiReport } from "../resume/ResumeDetail";
 import { Btn, Field, FormattedText, Modal, Page, Pill, Skeleton, cx } from "../resume/ui";
+import "./adminResume.css"; // after the shared styles so it can refine them
 
 /*
   RESUME LAB: admin and reviewer screen.
@@ -31,11 +32,20 @@ const Pager = ({ page, pages, setPage }) => pages > 1 && (
   </div>
 );
 
-const Chips = ({ options, value, onChange }) => (
-  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Filter">
-    {options.map(([k, label]) => <button key={k} type="button" aria-pressed={value === k} onClick={() => onChange(k)} className={cx("rv-pill", value === k && "dark")} style={{ cursor: "pointer", padding: "6px 14px", fontSize: 13 }}>{label}</button>)}
+const Chips = ({ options, value, onChange, counts = {} }) => (
+  <div className="ar-chips" role="group" aria-label="Filter">
+    {options.map(([k, label]) => <button key={k} type="button" aria-pressed={value === k} onClick={() => onChange(k)}>{label}{counts[k] != null && <em>{counts[k]}</em>}</button>)}
   </div>
 );
+
+const HUES = [18, 32, 152, 200, 262, 330, 8, 174];
+const Avatar = ({ name, email, size }) => {
+  const label = (name || email || "?").trim();
+  const initials = label.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+  const hue = HUES[[...label].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length];
+  return <span className={cx("ar-av", size)} style={{ background: `linear-gradient(135deg, hsl(${hue} 78% 55%), hsl(${(hue + 28) % 360} 72% 42%))` }} aria-hidden>{initials}</span>;
+};
+const Who = ({ name, email }) => <div className="ar-who"><Avatar name={name} email={email} /><div style={{ minWidth: 0 }}><b>{name || "User"}</b><small>{email}</small></div></div>;
 
 const SearchBox = ({ value, onChange, placeholder }) => (
   <div style={{ position: "relative", width: "100%", maxWidth: 280 }}>
@@ -43,6 +53,36 @@ const SearchBox = ({ value, onChange, placeholder }) => (
     <input className="rv-input" style={{ padding: "9px 12px 9px 36px", fontSize: 15 }} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} aria-label={placeholder} />
   </div>
 );
+
+/* an in-page confirm box, used instead of the browser's confirm()/prompt() popups */
+function ConfirmModal({ title, children, confirmLabel = "Confirm", danger = false, busy = false, onConfirm, onClose }) {
+  return (
+    <Modal title={title} onClose={busy ? () => {} : onClose}>
+      <div className="rv-sm rv-muted" style={{ display: "grid", gap: 14 }}>{children}</div>
+      <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+        <Btn variant={danger ? "danger" : undefined} loading={busy} onClick={onConfirm}>{confirmLabel}</Btn>
+        <Btn variant="ghost" disabled={busy} onClick={onClose}>Cancel</Btn>
+      </div>
+    </Modal>
+  );
+}
+
+/* the delete box for one submission: removes the record and the files from storage for good */
+function DeleteReviewModal({ review, onClose, onDeleted }) {
+  const [give, setGive] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true);
+    try { await adminDeleteRequest(review.id, give); toast.success("Review deleted for good."); onDeleted(); } catch (e) { toast.error(errMsg(e)); setBusy(false); }
+  };
+  return (
+    <ConfirmModal title="Delete this review for good?" danger confirmLabel="Delete permanently" busy={busy} onConfirm={go} onClose={onClose}>
+      <p><b style={{ color: "var(--rv-text)" }}>{review.name || "User"}</b>{review.email && ` · ${review.email}`}{review.file && ` · ${review.file}`}</p>
+      <p>This removes the whole submission: the AI and human review, the uploaded resume and any rewritten resume file are deleted from storage. It cannot be undone.</p>
+      <label className="rv-check"><input type="checkbox" checked={give} onChange={(e) => setGive(e.target.checked)} />Give the user this review back on their plan</label>
+    </ConfirmModal>
+  );
+}
 
 const useDebounced = (v, ms = 350) => { const [d, setD] = useState(v); useEffect(() => { const t = setTimeout(() => setD(v), ms); return () => clearTimeout(t); }, [v, ms]); return d; };
 
@@ -57,6 +97,7 @@ function ReviewDesk({ id, role, onBack, onChanged }) {
   const [file, setFile] = useState(undefined); // undefined = unchanged, null = remove, {key, filename, size} = a new file
   const [uploading, setUploading] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
+  const [dlg, setDlg] = useState(""); // "deliver" | "delete"
   const fileInput = useRef(null);
 
   const load = useCallback(async () => {
@@ -88,18 +129,10 @@ function ReviewDesk({ id, role, onBack, onChanged }) {
     linkedinFeedback: form.linkedinFeedback, jobMatchFeedback: form.jobMatchFeedback, nextSteps: form.nextSteps, internalNotes: form.internalNotes,
     ...(file === null ? { deliverable: null } : file ? { deliverable: { key: file.key, filename: file.filename } } : {}), complete,
   });
-  const deliver = () => {
-    if (!window.confirm(`Deliver this review to ${r.user.name || "the user"}? They'll be emailed and see it right away.`)) return;
-    run("deliver", () => adminSaveReview(id, payload(true)), "Delivered. The user was emailed.");
-  };
+  const deliver = async () => { await run("deliver", () => adminSaveReview(id, payload(true)), "Delivered. The user was emailed."); setDlg(""); };
   const upload = async (f) => {
     setUploading(true);
     try { setFile(await uploadDocument(f)); } catch (e) { toast.error(errMsg(e)); } finally { setUploading(false); }
-  };
-  const remove = async () => {
-    if (!window.confirm("Delete this submission and its files for good?")) return;
-    const give = window.confirm("Give the user this review back on their plan?\n\nOK = yes, give it back. Cancel = no.");
-    try { await adminDeleteRequest(id, give); toast.success("Deleted."); onChanged(); onBack(); } catch (e) { toast.error(errMsg(e)); }
   };
 
   /* a long-text field with a "how it will look" preview */
@@ -114,17 +147,20 @@ function ReviewDesk({ id, role, onBack, onChanged }) {
 
   return (
     <div>
-      <button type="button" onClick={onBack} className="rv-link" style={{ textDecoration: "none", marginBottom: 20 }}><ArrowLeft size={14} weight="bold" aria-hidden />All reviews</button>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 32 }}>
-        <div>
+      <button type="button" onClick={onBack} className="ar-back"><ArrowLeft size={14} weight="bold" aria-hidden />All reviews</button>
+      <div className="ar-desk-head">
+        <div style={{ display: "flex", gap: 18, alignItems: "flex-start", minWidth: 0 }}>
+          <Avatar name={r.user.name} email={r.user.email} size="lg" />
+        <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><Pill className={STATUS[r.status]?.tone}>{STATUS[r.status]?.label}</Pill><Pill>{r.package.name}</Pill>{r.humanRequested ? <Pill className="dark">Human review asked</Pill> : <Pill>AI only</Pill>}{inc.rewrittenResume && <Pill className="dark">Includes rewritten resume</Pill>}</div>
           <h1 className="rv-h2" style={{ marginTop: 12, fontSize: 30 }}>{r.user.name || "User"}</h1>
           <p className="rv-muted rv-sm" style={{ marginTop: 4 }}>{r.user.email}{r.user.mobile && ` · ${r.user.mobile}`} · sent {dateFmt(r.createdAt)}</p>
         </div>
+        </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {canTake && <Btn loading={busy === "claim"} onClick={() => run("claim", () => adminClaim(id), "It's yours now.")}>{r.status === "in_review" ? "Take over" : "Take this review"}</Btn>}
           {isAdmin && <Btn variant="ghost" loading={busy === "ai"} onClick={() => run("ai", async () => { const o = await adminRerunAi(id); if (o.aiStatus === "failed") throw new Error(o.error || "The AI failed again."); }, "AI review refreshed.")}>Re-run AI</Btn>}
-          {isAdmin && <Btn variant="danger" onClick={remove}><Trash size={15} aria-hidden />Delete</Btn>}
+          {isAdmin && <Btn variant="danger" onClick={() => setDlg("delete")}><Trash size={15} aria-hidden />Delete</Btn>}
         </div>
       </div>
 
@@ -187,11 +223,17 @@ function ReviewDesk({ id, role, onBack, onChanged }) {
           {canEdit && (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", paddingTop: 20, borderTop: "1px solid var(--rv-border)" }}>
               <Btn variant="ghost" loading={busy === "save"} disabled={uploading} onClick={() => run("save", () => adminSaveReview(id, payload(false)), "Draft saved.")}>Save draft</Btn>
-              {r.status !== "completed" ? <Btn loading={busy === "deliver"} disabled={uploading} onClick={deliver}>Deliver to user</Btn> : <Btn loading={busy === "save2"} disabled={uploading} onClick={() => run("save2", () => adminSaveReview(id, payload(true)), "Updated.")}>Update delivered review</Btn>}
+              {r.status !== "completed" ? <Btn loading={busy === "deliver"} disabled={uploading} onClick={() => setDlg("deliver")}>Deliver to user</Btn> : <Btn loading={busy === "save2"} disabled={uploading} onClick={() => run("save2", () => adminSaveReview(id, payload(true)), "Updated.")}>Update delivered review</Btn>}
             </div>
           )}
         </section>
       </div>
+      {dlg === "deliver" && (
+        <ConfirmModal title="Deliver this review?" confirmLabel="Deliver to user" busy={busy === "deliver"} onConfirm={deliver} onClose={() => setDlg("")}>
+          <p>{r.user.name || "The user"} will be emailed and can see this review right away.</p>
+        </ConfirmModal>
+      )}
+      {dlg === "delete" && <DeleteReviewModal review={{ id, name: r.user.name, email: r.user.email, file: r.resume?.filename }} onClose={() => setDlg("")} onDeleted={() => { onChanged(); onBack(); }} />}
     </div>
   );
 }
@@ -199,7 +241,8 @@ function ReviewDesk({ id, role, onBack, onChanged }) {
 /* ============================ reviews queue ============================ */
 const FILTERS = [["all", "All"], ["awaiting_review", "Waiting"], ["in_review", "In review"], ["ai_reviewing", "AI running"], ["completed", "Delivered"]];
 
-function Queue({ onOpen, refreshKey }) {
+function Queue({ onOpen, refreshKey, isAdmin, onChanged, stats }) {
+  const [del, setDel] = useState(null);
   const [filter, setFilter] = useState("awaiting_review");
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
@@ -217,20 +260,20 @@ function Queue({ onOpen, refreshKey }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
-        <Chips options={FILTERS} value={filter} onChange={setFilter} />
+      <div className="ar-bar">
+        <Chips options={FILTERS} value={filter} onChange={setFilter} counts={stats ? { all: stats.totalReviews, awaiting_review: stats.awaiting, in_review: stats.inReview, ai_reviewing: stats.aiRunning, completed: stats.completed } : {}} />
         <label className="rv-check" style={{ marginLeft: "auto" }}><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />Mine only</label>
         <SearchBox value={search} onChange={setSearch} placeholder="Name, email, company, file…" />
       </div>
       {error && <p role="alert" className="rv-err">{error}</p>}
       <div className="rv-card" style={{ overflowX: "auto" }}>
         <table className="rv-table">
-          <thead><tr><th>Person</th><th>Plan</th><th>Background</th><th>File</th><th>AI</th><th>Human</th><th>Status</th><th>Reviewer</th><th>Sent</th></tr></thead>
+          <thead><tr><th>Person</th><th>Plan</th><th>Background</th><th>File</th><th>AI</th><th>Human</th><th>Status</th><th>Reviewer</th><th>Sent</th>{isAdmin && <th aria-label="Actions" />}</tr></thead>
           <tbody>
-            {data === null && !error && [0, 1, 2, 3].map((i) => <tr key={i}><td colSpan={9}><Skeleton h={18} /></td></tr>)}
+            {data === null && !error && [0, 1, 2, 3].map((i) => <tr key={i}><td colSpan={10}><Skeleton h={18} /></td></tr>)}
             {data?.rows.map((r) => (
               <tr key={r.id} className="click" onClick={() => onOpen(r.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onOpen(r.id); }}>
-                <td><b>{r.user.name || "User"}</b><div className="rv-xs rv-subtle">{r.user.email}</div></td>
+                <td><Who name={r.user.name} email={r.user.email} /></td>
                 <td style={{ whiteSpace: "nowrap" }}>{r.package}{r.includes?.rewrittenResume && <Pill className="dark" style={{ marginLeft: 6 }}>Rewrite</Pill>}</td>
                 <td><span className="rv-xs">{r.kind === "student" ? "Student" : "Pro"} · {r.organization}</span><div className="rv-xs rv-subtle">{r.targetRole}</div></td>
                 <td className="rv-xs" style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.file || "–"}</td>
@@ -239,20 +282,22 @@ function Queue({ onOpen, refreshKey }) {
                 <td><Pill className={STATUS[r.status]?.tone}>{STATUS[r.status]?.label}</Pill></td>
                 <td className="rv-xs">{r.reviewerName || <span className="rv-subtle">–</span>}</td>
                 <td className="rv-xs" style={{ whiteSpace: "nowrap" }}>{dateFmt(r.createdAt)}</td>
+                {isAdmin && <td style={{ textAlign: "right" }}><Btn variant="danger" size="sm" aria-label="Delete review" onClick={(e) => { e.stopPropagation(); setDel({ id: r.id, name: r.user.name, email: r.user.email, file: r.file }); }}><Trash size={14} aria-hidden /></Btn></td>}
               </tr>
             ))}
-            {data?.rows.length === 0 && <tr><td colSpan={9} className="rv-subtle" style={{ padding: 56, textAlign: "center" }}>Nothing here.</td></tr>}
+            {data?.rows.length === 0 && <tr><td colSpan={10}><div className="ar-empty"><ClipboardText size={36} aria-hidden />Nothing here yet.</div></td></tr>}
           </tbody>
         </table>
       </div>
       {data && <Pager page={page} pages={data.pages} setPage={setPage} />}
+      {del && <DeleteReviewModal review={del} onClose={() => setDel(null)} onDeleted={() => { setDel(null); onChanged(); }} />}
     </div>
   );
 }
 
 /* ============================ payments ============================ */
 function Payments({ packages, onChanged, refreshKey }) {
-  const [filter, setFilter] = useState("paid");
+  const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
   const [page, setPage] = useState(1);
@@ -274,8 +319,8 @@ function Payments({ packages, onChanged, refreshKey }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
-        <Chips options={[["paid", "Paid"], ["unpaid", "Unpaid / failed"], ["expired", "Expired"], ["revoked", "Switched off"], ["all", "All"]]} value={filter} onChange={setFilter} />
+      <div className="ar-bar">
+        <Chips options={[["all", "All"], ["paid", "Paid"], ["unpaid", "Pending / failed"], ["expired", "Expired"], ["revoked", "Switched off"]]} value={filter} onChange={setFilter} />
         <span style={{ marginLeft: "auto" }} />
         <SearchBox value={search} onChange={setSearch} placeholder="Name, email, payment id…" />
         <Btn size="sm" onClick={() => { setF({ email: "", packageId: packages?.[0]?.id || "", extraDays: 0 }); setModal({ type: "grant" }); }}><Plus size={15} weight="bold" aria-hidden />Give a plan</Btn>
@@ -290,7 +335,7 @@ function Payments({ packages, onChanged, refreshKey }) {
               const st = PLAN_STATE[p.state] || {};
               return (
                 <tr key={p.id}>
-                  <td><b>{p.user.name || "User"}</b><div className="rv-xs rv-subtle">{p.user.email}</div></td>
+                  <td><Who name={p.user.name} email={p.user.email} /></td>
                   <td style={{ whiteSpace: "nowrap" }}>{p.package.name}<div className="rv-xs rv-subtle">{p.package.terms}</div></td>
                   <td style={{ whiteSpace: "nowrap" }}><span className="rv-mono">{p.free ? "Free" : formatINR(p.payment.amount)}</span><div className="rv-xs rv-subtle">{p.free ? "given by admin" : `${p.payment.gateway || "–"} ${p.payment.status !== "paid" ? `· ${p.payment.status}` : ""}`}</div>{p.gatewayPaymentId && <div className="rv-xs rv-subtle rv-mono" style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }} title={p.gatewayPaymentId}>{p.gatewayPaymentId}</div>}</td>
                   <td className="rv-mono">{p.ai.unlimited ? `${p.ai.used} / ∞` : `${p.ai.used} / ${p.ai.allowed}`}</td>
@@ -302,13 +347,13 @@ function Payments({ packages, onChanged, refreshKey }) {
                     {p.payment.status === "paid" && <Btn variant="ghost" size="sm" onClick={() => { setF({ addDays: 0, addAi: 0, addHuman: 0, addLinkedin: 0 }); setModal({ type: "extend", row: p }); }}>Extend</Btn>}{" "}
                     {p.payment.status === "paid" && (p.revoked
                       ? <Btn variant="ghost" size="sm" onClick={() => act(() => adminUpdatePurchase(p.id, { revoked: false }), "Switched back on.")}>Restore</Btn>
-                      : <Btn variant="ghost" size="sm" onClick={() => { const reason = window.prompt("Why are you switching this plan off? (shown only to you)", ""); if (reason !== null) act(() => adminUpdatePurchase(p.id, { revoked: true, reason }), "Plan switched off."); }}>Switch off</Btn>)}{" "}
+                      : <Btn variant="ghost" size="sm" onClick={() => { setF({ reason: "" }); setModal({ type: "off", row: p }); }}>Switch off</Btn>)}{" "}
                     <Btn variant="danger" size="sm" onClick={() => { setF({ keep: false }); setModal({ type: "delete", row: p }); }} aria-label="Delete payment"><Trash size={14} aria-hidden /></Btn>
                   </td>
                 </tr>
               );
             })}
-            {data?.rows.length === 0 && <tr><td colSpan={9} className="rv-subtle" style={{ padding: 56, textAlign: "center" }}>No payments here.</td></tr>}
+            {data?.rows.length === 0 && <tr><td colSpan={9}><div className="ar-empty"><CreditCard size={36} aria-hidden />No payments here.</div></td></tr>}
           </tbody>
         </table>
       </div>
@@ -319,6 +364,13 @@ function Payments({ packages, onChanged, refreshKey }) {
           <p className="rv-sm rv-muted">{modal.row.user.email} · {modal.row.package.name} · {modal.row.free ? "free" : formatINR(modal.row.payment.amount)}. This removes the payment record from Resume Lab. It does not refund money at the payment gateway.</p>
           <label className="rv-check" style={{ marginTop: 16 }}><input type="checkbox" checked={Boolean(f.keep)} onChange={(e) => setF({ ...f, keep: e.target.checked })} />Keep the reviews sent in under it (otherwise they and their files are deleted too)</label>
           <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn variant="danger" loading={busy} onClick={() => act(async () => { const o = await adminDeletePurchase(modal.row.id, f.keep); toast(`${o.reviewsDeleted} review${o.reviewsDeleted === 1 ? "" : "s"} deleted with it.`); }, "Payment deleted.")}>Delete payment</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
+        </Modal>
+      )}
+      {modal?.type === "off" && (
+        <Modal title="Switch this plan off?" onClose={() => setModal(null)}>
+          <p className="rv-sm rv-muted">{modal.row.user.email} · {modal.row.package.name}. They won't be able to send in new resumes under it until you switch it back on.</p>
+          <div style={{ marginTop: 16 }}><Field label="Reason" htmlFor="off-r" optional hint="Shown only to you."><input id="off-r" className="rv-input" value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} maxLength={300} /></Field></div>
+          <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn variant="danger" loading={busy} onClick={() => act(() => adminUpdatePurchase(modal.row.id, { revoked: true, reason: f.reason }), "Plan switched off.")}>Switch off</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
         </Modal>
       )}
       {modal?.type === "extend" && (
@@ -370,7 +422,7 @@ function Members({ onChanged }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+      <div className="ar-bar">
         <p className="rv-sm rv-muted" style={{ flex: "1 1 280px" }}>{q ? "Search results across all accounts." : "Members who bought a plan or are blocked. Search to find anyone else."}</p>
         <SearchBox value={search} onChange={setSearch} placeholder="Name, email, mobile…" />
       </div>
@@ -382,14 +434,14 @@ function Members({ onChanged }) {
             {rows === null && !error && [0, 1, 2].map((i) => <tr key={i}><td colSpan={7}><Skeleton h={18} /></td></tr>)}
             {rows?.map((m) => (
               <tr key={m.id}>
-                <td><b>{m.name || "User"}</b><div className="rv-xs rv-subtle">{m.email}{m.mobile && ` · ${m.mobile}`}</div></td>
+                <td><Who name={m.name} email={`${m.email}${m.mobile ? ` · ${m.mobile}` : ""}`} /></td>
                 <td className="rv-mono">{m.plans}</td><td className="rv-mono">{formatINR(m.paid)}</td><td className="rv-mono">{m.reviews}</td>
                 <td className="rv-xs">{m.lastActive ? dayFmt(m.lastActive) : "–"}</td>
                 <td>{m.blocked ? <><Pill className="bad">Blocked</Pill>{m.blockReason && <div className="rv-xs rv-subtle" style={{ marginTop: 4 }}>{m.blockReason}</div>}</> : <Pill className="ok">Active</Pill>}</td>
                 <td style={{ textAlign: "right" }}>{m.blocked ? <Btn variant="ghost" size="sm" onClick={() => unblock(m)}>Unblock</Btn> : <Btn variant="danger" size="sm" onClick={() => { setReason(""); setModal(m); }}>Block</Btn>}</td>
               </tr>
             ))}
-            {rows?.length === 0 && <tr><td colSpan={7} className="rv-subtle" style={{ padding: 56, textAlign: "center" }}>No members found.</td></tr>}
+            {rows?.length === 0 && <tr><td colSpan={7}><div className="ar-empty"><UsersThree size={36} aria-hidden />No members found.</div></td></tr>}
           </tbody>
         </table>
       </div>
@@ -411,6 +463,7 @@ const toForm = (p) => ({ id: p.id, key: p.key, name: p.name, tagline: p.tagline,
 function Plans({ list, reload }) {
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [del, setDel] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
   const save = async (e) => {
@@ -425,9 +478,9 @@ function Plans({ list, reload }) {
       toast.success("Saved."); setForm(null); reload();
     } catch (err) { toast.error(errMsg(err)); } finally { setBusy(false); }
   };
-  const remove = async (p) => {
-    if (!window.confirm(`Delete "${p.name}"? If anyone bought it, it is only hidden.`)) return;
-    try { const o = await adminDeletePackage(p.id); toast.success(o.hidden ? "Hidden (it has orders)." : "Deleted."); reload(); } catch (err) { toast.error(errMsg(err)); }
+  const remove = async () => {
+    setBusy(true);
+    try { const o = await adminDeletePackage(del.id); toast.success(o.hidden ? "Hidden (it has orders)." : "Deleted."); setDel(null); reload(); } catch (err) { toast.error(errMsg(err)); } finally { setBusy(false); }
   };
 
   if (form) {
@@ -483,10 +536,11 @@ function Plans({ list, reload }) {
             <p className="rv-sm" style={{ marginTop: 8, fontWeight: 600 }}>{p.terms}</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>{p.includes.resume && <Pill>Resume</Pill>}{p.linkedin.enabled && <Pill>LinkedIn ×{p.linkedin.reviews}</Pill>}{p.includes.jobMatch && <Pill>Job match</Pill>}{p.human.enabled ? <Pill className="dark">Human ×{p.human.reviews}</Pill> : <Pill>AI only</Pill>}{p.human.configured > 0 && !p.human.switch && <Pill className="warn">Human off</Pill>}{p.includes.rewrittenResume && <Pill className="dark">Rewritten resume</Pill>}</div>
             <p className="rv-xs rv-subtle" style={{ marginTop: 12, flex: 1 }}>{p.sold} sold</p>
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}><Btn variant="ghost" size="sm" onClick={() => setForm(toForm(p))}>Edit</Btn><Btn variant="danger" size="sm" onClick={() => remove(p)}><Trash size={14} aria-hidden />Delete</Btn></div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}><Btn variant="ghost" size="sm" onClick={() => setForm(toForm(p))}>Edit</Btn><Btn variant="danger" size="sm" onClick={() => setDel(p)}><Trash size={14} aria-hidden />Delete</Btn></div>
           </div>
         ))}
       </div>
+      {del && <ConfirmModal title={`Delete "${del.name}"?`} danger confirmLabel="Delete plan" busy={busy} onConfirm={remove} onClose={() => setDel(null)}><p>If anyone bought this plan it is only hidden from the site, so their purchases keep working.</p></ConfirmModal>}
     </div>
   );
 }
@@ -625,36 +679,54 @@ export default function AdminResumeReviews() {
   const loadPackages = useCallback(() => { if (isAdmin) adminPackages().then(setPackages).catch((e) => toast.error(errMsg(e))); }, [isAdmin]);
   useEffect(() => { adminStats().then(setStats).catch(() => {}); }, [tick]);
   useEffect(() => { loadPackages(); }, [loadPackages]);
-  const tabs = useMemo(() => [["reviews", "Reviews"], ...(isAdmin ? [["payments", "Payments"], ["members", "Members"], ["plans", "Plans and prices"], ["ai", "AI model"]] : [])], [isAdmin]);
+  const tabs = useMemo(() => [["reviews", "Reviews", ClipboardText, "Every resume sent in, the AI's take and the human review."], ...(isAdmin ? [["payments", "Payments", CreditCard, "Every plan bought, paid or not. Extend, switch off or give plans."], ["members", "Members", UsersThree, "Who is using Resume Lab, and who is blocked."], ["plans", "Plans and prices", Tag, "What you sell: prices, review counts and validity."], ["ai", "AI model", Brain, "Which provider and model writes the AI reviews."]] : [])], [isAdmin]);
+  const cur = tabs.find((t) => t[0] === tab) || tabs[0];
+  const cards = [
+    ["Waiting", stats?.awaiting, Hourglass, "warn"], ["In review", stats?.inReview, ClipboardText, ""], ["Delivered", stats?.completed, SealCheck, "ok"],
+    ...(isAdmin ? [["Paid plans", stats?.paidPlans, CreditCard, ""], ["Members", stats?.members, UsersThree, "ink"], ["Blocked", stats?.blocked, ProhibitInset, "bad"], ["Revenue", stats ? formatINR(stats.revenue) : null, CurrencyInr, "ok"]] : []),
+  ];
 
   return (
-    <Page title="Resume Lab | Admin" top={false}>
-      <header style={{ borderBottom: "1px solid var(--rv-border)" }}>
-        <div className="rv-shell" style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700 }}><FileText size={20} weight="fill" aria-hidden />Resume Lab <Pill className="dark">{isAdmin ? "Admin" : "Reviewer"}</Pill></span>
-          <Link to="/admin" className="rv-btn rv-btn-ghost rv-btn-sm">Admin home</Link>
-        </div>
-      </header>
-      <main className="rv-shell" style={{ padding: "40px 0 96px" }}>
-        {!openId && (
-          <>
-            <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", marginBottom: 32 }}>
-              {[["Waiting", stats?.awaiting], ["In review", stats?.inReview], ["Delivered", stats?.completed], ...(isAdmin ? [["Paid plans", stats?.paidPlans], ["Members", stats?.members], ["Blocked", stats?.blocked], ["Revenue", stats ? formatINR(stats.revenue) : null]] : [])].map(([k, v]) => <div key={k} className="rv-stat"><span className="rv-xs rv-subtle" style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>{k}</span><b>{v ?? "–"}</b></div>)}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
-              <h1 className="rv-h2" style={{ fontSize: 30 }}>{tabs.find((t) => t[0] === tab)?.[1]}</h1>
-              {tabs.length > 1 && <div className="rv-tabs" role="tablist">{tabs.map(([k, label]) => <button key={k} role="tab" type="button" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>)}</div>}
-            </div>
-          </>
-        )}
-        {openId
-          ? <ReviewDesk id={openId} role={role} onBack={() => setOpenId(null)} onChanged={bump} />
-          : tab === "plans" && isAdmin ? <Plans list={packages} reload={loadPackages} />
-          : tab === "ai" && isAdmin ? <AiModel />
-          : tab === "payments" && isAdmin ? <Payments packages={packages} onChanged={bump} refreshKey={tick} />
-          : tab === "members" && isAdmin ? <Members onChanged={bump} />
-          : <Queue onOpen={setOpenId} refreshKey={tick} />}
-      </main>
+    <Page title="Resume Lab | Admin" top={false} className="ar">
+      <div className="ar-layout">
+        <aside className="ar-side">
+          <div className="ar-top">
+            <div className="ar-brand"><span className="ar-logo"><FileText size={22} weight="fill" aria-hidden /></span><div><b>Resume Lab</b><small>{isAdmin ? "Admin console" : "Reviewer desk"}</small></div></div>
+            <Link to="/dashboard" className="ar-mobile-home" aria-label="Admin home"><House size={18} weight="fill" aria-hidden /></Link>
+          </div>
+          <nav className="ar-nav" aria-label="Resume Lab sections">
+            <span className="ar-nav-label">Manage</span>
+            {tabs.map(([k, label, Icon]) => (
+              <button key={k} type="button" aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setOpenId(null); }}>
+                <Icon size={19} weight={tab === k ? "fill" : "regular"} aria-hidden />{label}
+                {k === "reviews" && stats?.awaiting > 0 && <span className="ar-badge">{stats.awaiting}</span>}
+              </button>
+            ))}
+          </nav>
+          <div className="ar-side-foot">
+            <Link to="/dashboard" className="ar-home"><House size={18} weight="fill" aria-hidden />Admin home</Link>
+          </div>
+        </aside>
+        <main className="ar-main">
+          {!openId && (
+            <>
+              <div className="ar-head"><div><h1>{cur[1]}</h1><p>{cur[3]}</p></div></div>
+              {tab === "reviews" && (
+                <div className="ar-stats">
+                  {cards.map(([k, v, Icon, tone]) => <div key={k} className="ar-stat"><span className={cx("ar-stat-ic", tone)}><Icon size={22} weight="duotone" aria-hidden /></span><div><span>{k}</span><b>{v ?? "–"}</b></div></div>)}
+                </div>
+              )}
+            </>
+          )}
+          {openId
+            ? <ReviewDesk id={openId} role={role} onBack={() => setOpenId(null)} onChanged={bump} />
+            : tab === "plans" && isAdmin ? <Plans list={packages} reload={loadPackages} />
+            : tab === "ai" && isAdmin ? <AiModel />
+            : tab === "payments" && isAdmin ? <Payments packages={packages} onChanged={bump} refreshKey={tick} />
+            : tab === "members" && isAdmin ? <Members onChanged={bump} />
+            : <Queue onOpen={setOpenId} refreshKey={tick} isAdmin={isAdmin} onChanged={bump} stats={stats} />}
+        </main>
+      </div>
     </Page>
   );
 }
