@@ -6,6 +6,7 @@ import { ArrowRight, Brain, Briefcase, Check, FilePdf, GraduationCap, LinkedinLo
 import { errMsg } from "../arena/api";
 import { dayFmt, daysLeft, getPlan, myRequests, submitRequest, uploadDocument } from "./api";
 import { Btn, Field, Kicker, Pill, Skeleton, cx } from "./ui";
+import { checkJobDescription } from "./jdCheck";
 
 const LINKEDIN_RE = /^https?:\/\/([a-z0-9-]+\.)?linkedin\.com\/(in|pub|profile)\/\S+$/i;
 const MAX_MB = 10;
@@ -119,8 +120,10 @@ export default function ResumeSubmit() {
     return Object.keys(e).length === 0;
   };
 
+  const jdCheck = checkJobDescription(f.jobDescription);
   const send = async () => {
     if (!validate()) return;
+    if (!jdCheck.ok && !window.confirm(`The job description you pasted may not be a real job posting. ${jdCheck.reason}\n\nIf you send it anyway, we will ignore it and give a general review of your resume, and your AI review will still be used.\n\nPress OK to send anyway, or Cancel to fix it.`)) return;
     setBusy(true);
     try {
       const r = await submitRequest({
@@ -207,6 +210,7 @@ export default function ResumeSubmit() {
           )}
           <Field label="Job description" htmlFor="rv-jd" required={inc.jobMatch} optional={!inc.jobMatch} error={errors.jobDescription} hint={inc.jobMatch ? "Paste the full posting. We'll show how well you match and what to add." : "Aiming at a specific job? Paste it and the reviewer will tailor the feedback."}>
             <textarea id="rv-jd" {...bad("jobDescription")} rows={6} className={cx("rv-input", errors.jobDescription && "bad")} value={f.jobDescription} onChange={set("jobDescription")} maxLength={10000} placeholder="Paste the job description here…" />
+            {!jdCheck.ok && f.jobDescription.trim().length >= 20 && <p role="alert" className="rv-hint" style={{ marginTop: 8, color: "var(--rv-warn, #b45309)" }}><b>This may not be a job description.</b> {jdCheck.reason} If you send it anyway we will ignore it and give a general review, and your AI review will still be used. Please double-check.</p>}
           </Field>
           <Field label="Anything specific you want help with?" htmlFor="rv-notes" optional><textarea id="rv-notes" rows={3} className="rv-input" value={f.notes} onChange={set("notes")} maxLength={1500} placeholder="e.g. I'm switching from support to development" /></Field>
         </section>

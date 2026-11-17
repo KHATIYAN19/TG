@@ -15,7 +15,7 @@ const Section = ({ title, children, icon }) => (
 );
 
 /* ============================ the AI report ============================ */
-export function AiReport({ ai, includes, purchaseId, humanRequested }) {
+export function AiReport({ ai, includes, purchaseId, humanRequested, kind }) {
   if (ai.status === "failed") {
     const msg = ai.userMessage || "We couldn't generate your AI report this time.";
     return (
@@ -39,6 +39,8 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
     );
   }
   const r = ai.result;
+  const general = r.reviewMode === "general" || (r.jdCheck && r.jdCheck.status !== "valid");
+  const jdProblem = general && r.jdCheck && r.jdCheck.status !== "none";
   return (
     <div style={{ display: "grid", gap: 24 }} className="rv-ai">
       <section className="rv-card rv-card-pad rv-ai-hero">
@@ -48,6 +50,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
             <Pill>AI first look</Pill>
             <h2 className="rv-h2" style={{ fontSize: 26, marginTop: 12 }}>{r.headline}</h2>
             <p className="rv-muted" style={{ marginTop: 12, lineHeight: 1.65 }}>{r.summary}</p>
+            <p className="rv-xs rv-subtle" style={{ marginTop: 10 }}>AI can make mistakes, so please double-check the details.</p>
             {r.recruiterFirstImpression && <p className="rv-note" style={{ marginTop: 16 }}><b>A recruiter's first 10 seconds:</b> {r.recruiterFirstImpression}</p>}
           </div>
         </div>
@@ -58,11 +61,17 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
         </div>
       </section>
 
+      {general && r.jdCheck?.note && (
+        <div className="rv-note" role="status" style={jdProblem ? { borderLeft: "3px solid var(--rv-warn, #d97706)" } : undefined}>
+          <b>{jdProblem ? "We didn't use your job description. " : "General review. "}</b>{r.jdCheck.note}
+        </div>
+      )}
+
       {r.experienceCheck && (
         <Section title="Experience vs the role">
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <Pill className={r.experienceCheck.level === "below" ? "bad" : r.experienceCheck.level === "above" ? "" : "ok"}>{r.experienceCheck.level === "below" ? "Below what this role expects" : r.experienceCheck.level === "above" ? "Above what this role expects" : "In range for this role"}</Pill>
-            {r.experienceCheck.claimedYears != null && <span className="rv-sm rv-muted">You stated {r.experienceCheck.claimedYears} year{r.experienceCheck.claimedYears === 1 ? "" : "s"}</span>}
+            {kind !== "student" && r.experienceCheck.claimedYears != null && <span className="rv-sm rv-muted">You stated {r.experienceCheck.claimedYears} year{r.experienceCheck.claimedYears === 1 ? "" : "s"}</span>}
           </div>
           {r.experienceCheck.expectedForRole && <p className="rv-sm" style={{ marginTop: 14 }}><b>What the role usually expects:</b> {r.experienceCheck.expectedForRole}</p>}
           <p className="rv-muted rv-sm" style={{ marginTop: 10, lineHeight: 1.7 }}>{r.experienceCheck.assessment}</p>
@@ -101,7 +110,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
 
       <div className="rv-two" style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))" }}>
         {r.strengths?.length > 0 && <Section title="What's working"><ul style={{ display: "grid", gap: 14 }}>{r.strengths.map((x) => <li key={x} className="rv-sm" style={{ display: "flex", gap: 10 }}><Tick />{x}</li>)}</ul></Section>}
-        {r.missingKeywords?.length > 0 && <Section title="Keywords to add"><p className="rv-muted rv-sm">Recruiters search for these, and they're missing.</p><div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>{r.missingKeywords.map((k) => <Pill key={k} className="warn">+ {k}</Pill>)}</div></Section>}
+        {r.missingKeywords?.length > 0 && <Section title={general ? `Common keywords for this role` : "Keywords from the job description"}><p className="rv-muted rv-sm">{general ? "Not taken from a specific job. These are terms recruiters commonly search for in this kind of role, and we couldn't find them in your resume. Only add what you truly know." : "These appear in the job description you pasted and we couldn't find them in your resume. Only add what you truly know."}</p><div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>{r.missingKeywords.map((k) => <Pill key={k} className="warn">+ {k}</Pill>)}</div></Section>}
       </div>
 
       {r.improvements?.length > 0 && (
@@ -176,6 +185,7 @@ export function AiReport({ ai, includes, purchaseId, humanRequested }) {
           </ol>
         </Section>
       )}
+      <p className="rv-xs rv-subtle" role="note" style={{ textAlign: "center" }}>{r.aiNote || "AI can make mistakes. Please double-check anything important before you act on it."}</p>
     </div>
   );
 }
@@ -313,7 +323,7 @@ export function ReviewView({ r, canAsk, pool, asking = false, onAsk, sent = fals
               <Btn loading={asking} onClick={preview ? () => toast("This is a sample.") : onAsk}>Get a human review</Btn>
             </div>
           )}
-          <AiReport ai={r.ai} includes={r.package.includes} purchaseId={r.purchaseId} humanRequested={r.humanRequested} />
+          <AiReport ai={r.ai} includes={r.package.includes} purchaseId={r.purchaseId} humanRequested={r.humanRequested} kind={r.profile?.kind} />
         </div>
         <aside className="rv-dx-aside" style={{ display: "grid", gap: 24, alignContent: "start" }}>
           <div className="rv-card" style={{ padding: 24 }}><h2 className="rv-kicker" style={{ marginBottom: 20 }}>Progress</h2><Timeline r={r} preview={preview} /></div>

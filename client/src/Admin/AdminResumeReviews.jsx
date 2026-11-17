@@ -182,7 +182,7 @@ function ReviewDesk({ id, role, onBack, onChanged }) {
             {r.jobDescription && <details className="rv-note"><summary style={{ cursor: "pointer", fontWeight: 600 }}>Job description ({r.jobDescription.length} characters)</summary><p style={{ marginTop: 12, whiteSpace: "pre-wrap" }}>{r.jobDescription}</p></details>}
             {r.plan && <p className="rv-xs rv-subtle">Plan: {r.plan.package.terms} · AI {r.plan.ai.unlimited ? "unlimited" : `${r.plan.ai.used} of ${r.plan.ai.allowed} used`}{r.plan.human.enabled && ` · human ${r.plan.human.used} of ${r.plan.human.allowed} used`} · {r.plan.payment.gateway === "admin" ? "given free" : `paid ${formatINR(r.plan.payment.amount)}`}</p>}
           </section>
-          <AiReport ai={r.ai} includes={inc} />
+          <AiReport ai={r.ai} includes={inc} kind={r.profile?.kind} />
           {r.ai.error && <p className="rv-hint">AI error: {r.ai.error}</p>}
           {r.ai.result && <div><button type="button" className="rv-link" onClick={() => setRawOpen(!rawOpen)}>{rawOpen ? "Hide" : "Show"} the AI's raw reply</button>{rawOpen && <pre className="rv-note rv-mono" style={{ marginTop: 12, whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 12, maxHeight: 420, overflow: "auto" }}>{JSON.stringify(r.ai.result, null, 2)}</pre>}</div>}
         </div>
