@@ -88,10 +88,38 @@ export async function getTemplate(req) {
   return null;
 }
 
+// route -> { css, js } chunk URLs, written by scripts/prerender.mjs. Linking a page's own
+// CSS in the HTML means it is styled on first paint instead of after the entry JS runs.
+let routeAssetsCache = null;
+export async function getRouteAssets(req) {
+  if (routeAssetsCache) return routeAssetsCache;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  try {
+    const res = await fetch(`${proto}://${host}/route-assets.json`, { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      routeAssetsCache = await res.json();
+      return routeAssetsCache;
+    }
+  } catch {
+    /* unstyled-until-JS is the old behaviour; never fail the page for this */
+  }
+  return {};
+}
+
+export const assetLinkTags = (assets, route) => {
+  const a = assets?.[route];
+  if (!a) return "";
+  return [
+    ...a.css.map((href) => `<link rel="stylesheet" crossorigin href="${href}">`),
+    ...a.js.map((href) => `<link rel="modulepreload" crossorigin href="${href}">`),
+  ].join("\n");
+};
+
 // Swap the SPA's generic head tags for page-specific ones and pre-render
 // content into #root. React replaces the content once it boots, and
 // react-helmet-async replaces every tag marked data-rh="true".
-export function renderPage(template, { head, bodyHtml }) {
+export function renderPage(template, { head, bodyHtml, assetLinks = "" }) {
   let html = template
     .replace(/<title>[\s\S]*?<\/title>/i, "")
     .replace(
@@ -100,7 +128,7 @@ export function renderPage(template, { head, bodyHtml }) {
     )
     .replace(/<link\s+rel="canonical"[\s\S]*?>/gi, "");
 
-  html = html.replace(/<\/head>/i, `${head}\n</head>`);
+  html = html.replace(/<\/head>/i, `${assetLinks}\n${head}\n</head>`);
   html = html.replace(
     /<div id="root">\s*<\/div>/i,
     `<div id="root">${bodyHtml}</div>`

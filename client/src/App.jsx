@@ -3,6 +3,7 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useRef,
   useState,
@@ -441,23 +442,51 @@ const AdminBookReviews = lazy(() =>
 /* ============================================================
    LOADER
 ============================================================ */
-const RouteLoader = () => (
-  <div className="flex min-h-screen w-full items-center justify-center px-4">
-    <div className="flex flex-col items-center gap-4">
+const RouteLoader = ({ noNav = false }) => {
+  // The navbar is position:fixed (64px, 76px from 1280px), so a loader that starts at the top of
+  // the page sits underneath it. Measure the real bar so the spinner is centred in the visible
+  // area below it on every device; the CSS fallbacks in index.css cover the first paint.
+  const [navH, setNavH] = useState(null);
+  useLayoutEffect(() => {
+    if (noNav) return undefined;
+    const measure = () => {
+      const h = document.querySelector("header.tt-nav")?.getBoundingClientRect().height;
+      setNavH(h ? Math.ceil(h) : null);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [noNav]);
+
+  // First load of a prerendered page: keep showing that page (styled by its own <link>s)
+  // while the route's code loads, instead of replacing it with a spinner.
+  const pre = typeof window !== "undefined" ? window.__PRERENDER__ : null;
+  if (pre?.html && pre.path === (window.location.pathname.replace(/\/+$/, "") || "/")) {
+    return <div dangerouslySetInnerHTML={{ __html: pre.html }} />;
+  }
+
+  return (
+    <>
+      {/* keeps the page one screen tall while loading, so the scroll position and footer don't jump */}
+      <div className="tt-route-hold" aria-hidden="true" />
       <div
-        className="
-          h-9 w-9 animate-spin
-          rounded-full border-[3px]
-          border-orange-100
-          border-t-orange-600
-        "
-      />
-      <p className="text-sm font-semibold text-stone-500">
-        Loading...
-      </p>
-    </div>
-  </div>
-);
+        className="tt-route-loader"
+        role="status"
+        aria-live="polite"
+        style={noNav ? { top: 0 } : navH ? { top: navH } : undefined}
+      >
+        <div className="tt-route-loader-in">
+          <div className="tt-route-spinner" />
+          <p className="tt-route-loader-text">Loading...</p>
+        </div>
+      </div>
+    </>
+  );
+};
 /* ============================================================
    AUTHENTICATION HELPERS
 ============================================================ */
@@ -630,6 +659,11 @@ function App() {
   const hideNavbar = matchesLayoutRoute(location.pathname, NO_NAVBAR_ROUTES);
   const hideFooter = matchesLayoutRoute(location.pathname, NO_FOOTER_ROUTES);
   const onMemories = location.pathname === "/memories" || location.pathname.startsWith("/memories/");
+  // The prerendered snapshot is only for the first page view.
+  const firstPath = useRef(location.pathname);
+  useEffect(() => {
+    if (location.pathname !== firstPath.current) window.__PRERENDER__ = null;
+  }, [location.pathname]);
   // Capture referral codes globally for every frontend route.
   // Existing checkout continues reading localStorage.getItem("referralCode").
   useEffect(() => {
@@ -920,8 +954,8 @@ function App() {
         </Suspense>
       )}
       <div className={hideNavbar ? "" : "mt-16 md:mt-0"}>
-      <Suspense fallback={<RouteLoader />}>
-        {!authReady ? <RouteLoader /> : <Routes>
+      <Suspense fallback={<RouteLoader noNav={hideNavbar} />}>
+        {!authReady ? <RouteLoader noNav={hideNavbar} /> : <div style={{ minHeight: "70vh" }}><Routes>
           {/* ========================================
               PUBLIC PAGES
           ======================================== */}
@@ -1640,7 +1674,7 @@ function App() {
             path="*"
             element={<NotFoundPage />}
           />
-        </Routes>}
+        </Routes></div>}
         {/* Inside the boundary: while a lazy page loads, React hides the footer
             too, so users never see (or get scrolled to) a footer-only screen. */}
         {!hideFooter && <Footer />}

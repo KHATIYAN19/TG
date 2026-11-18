@@ -48,9 +48,11 @@ import "./styles/forms.css";
 
 // Components
 import ScrollTop from "./component/ScrollTop.jsx";
+import NavProgress from "./component/NavProgress.jsx";
 import MetaPageTracker from "./component/MetaPageTracker.jsx";
 import ClarityTracker from "./component/ClarityTracker.jsx";
 import { initClarity } from "./lib/clarity.js";
+import { installRoutePrefetch } from "./lib/routePrefetch.js";
 
 // React Router
 import { BrowserRouter } from "react-router-dom";
@@ -103,14 +105,24 @@ if (!rootElement) {
 // ============================================
 
 initDeviceHint();
+installRoutePrefetch();
+
+// A prerendered page already sits in #root. Keep its HTML so the app can show it (styled, via the
+// page's own <link>s) while the route's code loads, instead of wiping it for a spinner.
+if (rootElement.firstElementChild) {
+  window.__PRERENDER__ = { path: window.location.pathname.replace(/\/+$/, "") || "/", html: rootElement.innerHTML };
+}
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <HelmetProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true }}>
 
         {/* Scroll to top on route changes */}
         <ScrollTop />
+
+        {/* Top progress bar while the next page's code loads */}
+        <NavProgress />
 
         {/* Meta Pixel SPA navigation tracking */}
         <MetaPageTracker />

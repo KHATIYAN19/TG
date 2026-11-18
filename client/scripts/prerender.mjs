@@ -77,6 +77,77 @@ const write = (route, html) => {
   fs.writeFileSync(file, html);
 };
 
+/* ------------------------------------------------------------------ route -> chunk map
+   Every lazy page lives in its own JS + CSS chunk. Without links to them in the HTML,
+   the browser paints the prerendered body unstyled until the entry JS has run, the
+   router has picked the route and the chunk's CSS has been fetched. So:
+     - prerendered pages get the page's <link rel="stylesheet"> + <link rel="modulepreload">
+     - dist/route-assets.json lets the serverless book pages and the client's hover/tap
+       prefetch do the same for any route. */
+const manifestFile = path.join(dist, ".vite", "manifest.json");
+const manifest = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, "utf8")) : {};
+
+const resolveSrc = (spec) => {
+  const base = path.posix.join("src", spec.replace(/^\.\//, ""));
+  return [base, `${base}.jsx`, `${base}.js`].find((k) => manifest[k]);
+};
+
+const collect = (key, seen = new Set()) => {
+  const out = { css: new Set(), js: new Set() };
+  const walk = (k) => {
+    if (!manifest[k] || seen.has(k)) return;
+    seen.add(k);
+    out.js.add(manifest[k].file);
+    (manifest[k].css || []).forEach((c) => out.css.add(c));
+    (manifest[k].imports || []).forEach(walk);
+  };
+  walk(key);
+  return out;
+};
+
+const buildRouteAssets = () => {
+  const entryKey = Object.keys(manifest).find((k) => manifest[k].isEntry);
+  if (!entryKey) return {};
+  const base = collect(entryKey); // already linked by the shell
+  const app = fs.readFileSync(path.join(root, "src/App.jsx"), "utf8");
+
+  const lazyFiles = {};
+  for (const m of app.matchAll(/const\s+(\w+)\s*=\s*lazy\(\s*\(\)\s*=>\s*import\(\s*"([^"]+)"\s*\)/g)) {
+    const key = resolveSrc(m[2]);
+    if (key) lazyFiles[m[1]] = key;
+  }
+
+  const map = {};
+  for (const m of app.matchAll(/path="([^"]+)"\s+element=\{\s*<(\w+)/g)) {
+    const [, route, comp] = m;
+    if (!lazyFiles[comp] || route.includes(":") || route.includes("*") || map[route]) continue;
+    const { css, js } = collect(lazyFiles[comp]);
+    const cssNeeded = [...css].filter((c) => !base.css.has(c));
+    const jsNeeded = [...js].filter((j) => !base.js.has(j));
+    map[route] = { css: cssNeeded.map((f) => `/${f}`), js: jsNeeded.map((f) => `/${f}`) };
+  }
+  return map;
+};
+
+const routeAssetsFile = path.join(dist, "route-assets.json");
+let routeAssets = buildRouteAssets();
+if (Object.keys(routeAssets).length) {
+  fs.writeFileSync(routeAssetsFile, JSON.stringify(routeAssets));
+} else if (fs.existsSync(routeAssetsFile)) {
+  // re-run without a fresh `vite build` (the manifest is deleted after use): keep the existing map
+  routeAssets = JSON.parse(fs.readFileSync(routeAssetsFile, "utf8"));
+}
+console.log(`route-assets.json: ${Object.keys(routeAssets).length} routes`);
+
+const assetLinks = (route) => {
+  const a = routeAssets[route];
+  if (!a) return "";
+  return [
+    ...a.css.map((href) => `<link rel="stylesheet" crossorigin href="${href}">`),
+    ...a.js.map((href) => `<link rel="modulepreload" crossorigin href="${href}">`),
+  ].join("\n");
+};
+
 const vite = await createServer({
   root,
   logLevel: "error",
@@ -105,7 +176,7 @@ try {
       }
 
       let html = strip(template);
-      html = html.replace(/<\/head>/i, `${head}\n</head>`);
+      html = html.replace(/<\/head>/i, `${assetLinks(route)}\n${head}\n</head>`);
       html = html.replace(/<div id="root">\s*<\/div>/i, `<div id="root">${body}</div>`);
       write(route, html);
       ok += 1;
@@ -122,3 +193,6 @@ try {
 
 console.log(`Prerendered ${ok}/${Object.keys(ROUTES).length} pages`);
 if (failed.length) console.log("Fell back to SPA shell:", failed.join(", "));
+
+// the manifest was only needed above; route-assets.json is what the site serves
+fs.rmSync(path.join(dist, ".vite"), { recursive: true, force: true });

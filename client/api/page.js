@@ -14,6 +14,8 @@ import {
   absoluteUrl,
   fetchApi,
   getTemplate,
+  getRouteAssets,
+  assetLinkTags,
   renderPage,
   metaTags,
   send,
@@ -325,7 +327,9 @@ ${faqHtml(faqs)}
   const faq = faqSchema(faqs);
   if (faq) graph.push(faq);
 
+  const routeAssets = await getRouteAssets(req);
   const html = renderPage(template, {
+    assetLinks: assetLinkTags(routeAssets, route),
     head: metaTags({
       title,
       description,
