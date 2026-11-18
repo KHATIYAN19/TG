@@ -1,4378 +1,805 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  Link,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
-
+/* eslint-disable react/prop-types */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import { Helmet } from "react-helmet-async";
-
+import { AnimatePresence, motion, MotionConfig, useScroll, useSpring } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   BookOpen,
   CalendarDays,
   Check,
+  ChevronDown,
   Clock3,
-  Copy,
-  Edit3,
   Eye,
   EyeOff,
-  FileText,
-  FolderOpen,
-  Hash,
-  Image as ImageIcon,
-  KeyRound,
-  Loader2,
+  Facebook,
+  Library,
+  Link2,
+  Linkedin,
+  ListTree,
+  MessageCircle,
   RefreshCw,
-  Search,
+  Settings2,
   Share2,
   Sparkles,
   Star,
-  Tag,
   Trash2,
-  User,
-  X,
+  Twitter,
 } from "lucide-react";
 
-import toast, {
-  Toaster,
-} from "react-hot-toast";
+import {
+  API,
+  BLOG_URL,
+  FONT_URL,
+  LOGO_URL,
+  SITE_NAME,
+  SITE_URL,
+  absoluteUrl,
+  errText,
+  extractFaqs,
+  fmtDate,
+  fmtViews,
+  getVisitorId,
+  initials,
+  isoDate,
+  postUrl,
+  stripHtml,
+  titleCase,
+  truncate,
+  useSiteTheme,
+  wordCount,
+} from "../blog/blogUtils.js";
+import { Media, PostCard } from "../blog/BlogCards.jsx";
+import "../blog/blog.css";
 
-import BASE_URL from "../utils/Url.js";
+/* =====================================================
+   ARTICLE (/blog/:slug)
+   The body HTML is sanitised by the backend before it is stored and
+   comes back with ids on every h2/h3 plus a `toc` array. Here it is
+   only decorated: copy buttons on code, scrollable tables, anchor
+   links on headings, lazy images and safe external links.
+===================================================== */
 
-/*
-|--------------------------------------------------------------------------
-| CONSTANTS
-|--------------------------------------------------------------------------
-*/
+const EASE = [0.22, 1, 0.36, 1];
 
-const SITE_URL =
-  "https://www.targettrek.in";
+/* Decorate the article HTML once per post (browser only). */
+function enhanceHtml(html = "") {
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") return html;
+  const doc = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html");
+  const root = doc.getElementById("root");
+  if (!root) return html;
 
-const BLOG_LIST_URL =
-  `${SITE_URL}/blogs`;
+  root.querySelectorAll("h2[id], h3[id]").forEach((h) => {
+    const a = doc.createElement("a");
+    a.className = "bl-anchor";
+    a.href = `#${h.id}`;
+    a.setAttribute("aria-label", `Link to section: ${h.textContent.trim()}`);
+    a.textContent = "#";
+    h.appendChild(a);
+  });
 
-const THEME_KEY =
-  "theme";
+  root.querySelectorAll("pre").forEach((pre) => {
+    if (pre.parentElement?.classList.contains("bl-code")) return;
+    const code = pre.querySelector("code");
+    const cls = `${pre.className} ${code?.className || ""}`;
+    const lang = (/(?:language|lang)-([\w+#-]+)/i.exec(cls)?.[1] || "").replace(/^js$/i, "javascript");
+    const wrap = doc.createElement("div");
+    wrap.className = "bl-code";
+    wrap.innerHTML = `<div class="bl-code-bar"><span>${lang ? lang.toLowerCase() : "code"}</span><button type="button" class="bl-code-copy" data-copy>Copy</button></div>`;
+    pre.replaceWith(wrap);
+    wrap.appendChild(pre);
+    pre.setAttribute("tabindex", "0");
+  });
 
-const THEME_EVENT =
-  "targettrek-theme-change";
+  root.querySelectorAll("table").forEach((t) => {
+    if (t.parentElement?.classList.contains("bl-table")) return;
+    const wrap = doc.createElement("div");
+    wrap.className = "bl-table";
+    wrap.setAttribute("role", "region");
+    wrap.setAttribute("tabindex", "0");
+    wrap.setAttribute("aria-label", "Scrollable table");
+    t.replaceWith(wrap);
+    wrap.appendChild(t);
+  });
 
-const BLOG_VISITOR_KEY =
-  "targettrek_blog_visitor_id";
+  root.querySelectorAll("img").forEach((img) => {
+    img.setAttribute("loading", "lazy");
+    img.setAttribute("decoding", "async");
+    if (!img.getAttribute("alt")) img.setAttribute("alt", "");
+  });
 
-/*
-|--------------------------------------------------------------------------
-| THEME
-|--------------------------------------------------------------------------
-*/
-
-const readTheme = () => {
-  if (
-    typeof window ===
-    "undefined"
-  ) {
-    return "light";
-  }
-
-  const saved =
-    window.localStorage.getItem(
-      THEME_KEY
-    );
-
-  return saved === "dark"
-    ? "dark"
-    : "light";
-};
-
-/*
-|--------------------------------------------------------------------------
-| VISITOR ID
-|--------------------------------------------------------------------------
-|
-| Backend requires:
-|
-| x-blog-visitor-id
-|
-| Same browser keeps the same ID.
-|
-| Backend hashes this ID before storing anything
-| in Redis.
-|
-*/
-
-const getBlogVisitorId = () => {
-  if (
-    typeof window ===
-    "undefined"
-  ) {
-    return "";
-  }
-
-  let visitorId =
-    window.localStorage.getItem(
-      BLOG_VISITOR_KEY
-    );
-
-  if (visitorId) {
-    return visitorId;
-  }
-
-  if (
-    typeof window.crypto !==
-      "undefined" &&
-    typeof window.crypto
-      .randomUUID === "function"
-  ) {
-    visitorId =
-      window.crypto.randomUUID();
-  } else {
-    visitorId = `${
-      Date.now()
-    }-${Math.random()
-      .toString(36)
-      .slice(2)}-${Math.random()
-      .toString(36)
-      .slice(2)}`;
-  }
-
-  window.localStorage.setItem(
-    BLOG_VISITOR_KEY,
-    visitorId
-  );
-
-  return visitorId;
-};
-
-/*
-|--------------------------------------------------------------------------
-| SAFE STRING
-|--------------------------------------------------------------------------
-*/
-
-const safeString = (
-  value,
-  fallback = ""
-) => {
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return fallback;
-  }
-
-  if (
-    typeof value ===
-    "string"
-  ) {
-    return value;
-  }
-
-  if (
-    typeof value ===
-      "number" ||
-    typeof value ===
-      "boolean"
-  ) {
-    return String(value);
-  }
-
-  return fallback;
-};
-
-/*
-|--------------------------------------------------------------------------
-| HTML HELPERS
-|--------------------------------------------------------------------------
-*/
-
-const stripHtml = (
-  html = ""
-) => {
-  if (!html) {
-    return "";
-  }
-
-  try {
-    const doc =
-      new DOMParser().parseFromString(
-        String(html),
-        "text/html"
-      );
-
-    return (
-      doc.body.textContent ||
-      ""
-    );
-  } catch {
-    return String(html).replace(
-      /<[^>]*>/g,
-      " "
-    );
-  }
-};
-
-const normalizeText = (
-  value = ""
-) => {
-  return stripHtml(value)
-    .replace(/\s+/g, " ")
-    .trim();
-};
-
-const truncateText = (
-  value,
-  maxLength = 160
-) => {
-  const text =
-    normalizeText(value);
-
-  if (
-    text.length <=
-    maxLength
-  ) {
-    return text;
-  }
-
-  return `${text
-    .slice(0, maxLength)
-    .trim()}...`;
-};
-
-/*
-|--------------------------------------------------------------------------
-| BLOG FIELD HELPERS
-|--------------------------------------------------------------------------
-*/
-
-const getPostContent = (
-  post
-) => {
-  return (
-    post?.content ||
-    post?.body ||
-    post?.articleContent ||
-    post?.excerpt ||
-    ""
-  );
-};
-
-const getPostExcerpt = (
-  post
-) => {
-  return (
-    post?.excerpt ||
-    post?.shortDescription ||
-    post?.description ||
-    truncateText(
-      getPostContent(post),
-      180
-    )
-  );
-};
-
-const getPostImage = (
-  post
-) => {
-  return (
-    post?.imageUrl ||
-    post?.featuredImage ||
-    post?.coverImage ||
-    ""
-  );
-};
-
-const getAuthorName = (
-  post
-) => {
-  if (
-    typeof post?.author ===
-    "string"
-  ) {
-    return post.author;
-  }
-
-  return (
-    post?.author?.name ||
-    post?.author?.fullName ||
-    "Target Trek"
-  );
-};
-
-const getCategoryName = (
-  post
-) => {
-  if (
-    typeof post?.category ===
-    "string"
-  ) {
-    return (
-      post.category.trim() ||
-      "Engineering"
-    );
-  }
-
-  return (
-    post?.category?.name ||
-    post?.category?.title ||
-    "Engineering"
-  );
-};
-
-const getTags = (
-  post
-) => {
-  if (
-    !Array.isArray(
-      post?.tags
-    )
-  ) {
-    return [];
-  }
-
-  return post.tags
-    .map((tag) => {
-      if (
-        typeof tag ===
-        "string"
-      ) {
-        return tag.trim();
-      }
-
-      return (
-        tag?.name ||
-        tag?.title ||
-        ""
-      );
-    })
-    .filter(Boolean);
-};
-
-const getViews = (
-  post
-) => {
-  const value =
-    post?.views ??
-    post?.viewCount ??
-    post?.stats?.views ??
-    0;
-
-  const parsed =
-    Number(value);
-
-  return Number.isFinite(
-    parsed
-  )
-    ? parsed
-    : 0;
-};
-
-const getPublishedDate = (
-  post
-) => {
-  return (
-    post?.publishedAt ||
-    post?.createdAt ||
-    null
-  );
-};
-
-const isFeaturedPost = (
-  post
-) => {
-  return Boolean(
-    post?.isFeatured ??
-      post?.featured
-  );
-};
-
-const isEditorChoicePost = (
-  post
-) => {
-  return Boolean(
-    post?.editorChoice ??
-      post?.isEditorChoice
-  );
-};
-
-const isPublishedPost = (
-  post
-) => {
-  if (
-    typeof post?.isPublished ===
-    "boolean"
-  ) {
-    return post.isPublished;
-  }
-
-  if (
-    typeof post?.published ===
-    "boolean"
-  ) {
-    return post.published;
-  }
-
-  if (
-    typeof post?.status ===
-    "string"
-  ) {
-    return (
-      post.status.toLowerCase() ===
-      "published"
-    );
-  }
-
-  return true;
-};
-
-/*
-|--------------------------------------------------------------------------
-| SEO HELPERS
-|--------------------------------------------------------------------------
-*/
-
-const getSeo = (
-  post
-) => {
-  return post?.seo &&
-    typeof post.seo ===
-      "object"
-    ? post.seo
-    : {};
-};
-
-/*
-|--------------------------------------------------------------------------
-| FORMATTING
-|--------------------------------------------------------------------------
-*/
-
-const formatDate = (
-  value
-) => {
-  if (!value) {
-    return "";
-  }
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+  root.querySelectorAll("a[href]").forEach((a) => {
+    const href = a.getAttribute("href") || "";
+    if (/^https?:\/\//i.test(href) && !href.startsWith(SITE_URL)) {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener noreferrer");
     }
-  ).format(date);
-};
+  });
 
-const formatDateTime = (
-  value
-) => {
-  if (!value) {
-    return "";
-  }
+  return root.innerHTML;
+}
 
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }
-  ).format(date);
-};
-
-const formatViews = (
-  value
-) => {
-  const views =
-    Number(value) || 0;
-
-  if (
-    views >= 1000000
-  ) {
-    return `${(
-      views / 1000000
-    ).toFixed(
-      views >= 10000000
-        ? 0
-        : 1
-    )}M`;
-  }
-
-  if (
-    views >= 1000
-  ) {
-    return `${(
-      views / 1000
-    ).toFixed(
-      views >= 10000
-        ? 0
-        : 1
-    )}K`;
-  }
-
-  return views.toLocaleString(
-    "en-IN"
-  );
-};
-
-const getWordCount = (
-  post
-) => {
-  const content =
-    normalizeText(
-      getPostContent(post)
-    );
-
-  if (!content) {
-    return 0;
-  }
-
-  return content
-    .split(/\s+/)
-    .filter(Boolean)
-    .length;
-};
-
-const getReadingTime = (
-  post
-) => {
-  /*
-   * Prefer backend-calculated
-   * readingTimeMinutes.
-   */
-
-  const backendReadingTime =
-    Number(
-      post?.readingTimeMinutes
-    );
-
-  if (
-    Number.isFinite(
-      backendReadingTime
-    ) &&
-    backendReadingTime > 0
-  ) {
-    return Math.ceil(
-      backendReadingTime
-    );
-  }
-
-  const words =
-    getWordCount(post);
-
-  return Math.max(
-    1,
-    Math.ceil(
-      words / 220
-    )
-  );
-};
-
-/*
-|--------------------------------------------------------------------------
-| DELETE MODAL
-|--------------------------------------------------------------------------
-*/
-
-const DeleteModal = ({
-  open,
-  onClose,
-  onConfirm,
-  deleting,
-  title,
-  isDark,
-}) => {
-  if (!open) {
-    return null;
-  }
-
-  const primaryText =
-    isDark
-      ? "text-[#F4F7FA]"
-      : "text-[#0B1524]";
-
-  const secondaryText =
-    isDark
-      ? "text-[#9AA9BA]"
-      : "text-[#5B6B82]";
-
-  const borderColor =
-    isDark
-      ? "border-[#1E2C3D]"
-      : "border-[#E1E9F1]";
-
+/* ---------- share ---------- */
+function ShareButtons({ url, title, onCopy, compact = false }) {
+  const enc = encodeURIComponent;
+  const links = [
+    { icon: Twitter, label: "Share on X", href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}` },
+    { icon: Linkedin, label: "Share on LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
+    { icon: MessageCircle, label: "Share on WhatsApp", href: `https://wa.me/?text=${enc(`${title} ${url}`)}` },
+    ...(compact ? [] : [{ icon: Facebook, label: "Share on Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` }]),
+  ];
+  const canNative = typeof navigator !== "undefined" && typeof navigator.share === "function";
   return (
-    <div
-      className="
-        fixed
-        inset-0
-        z-[100]
-        flex
-        items-center
-        justify-center
-        bg-black/65
-        p-4
-        backdrop-blur-sm
-      "
-      onClick={
-        deleting
-          ? undefined
-          : onClose
-      }
-    >
-      <div
-        onClick={(event) =>
-          event.stopPropagation()
+    <div className="bl-share">
+      {links.map(({ icon: Icon, label, href }) => (
+        <a key={label} className="bl-icon-btn" href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
+          <Icon size={17} />
+        </a>
+      ))}
+      <button type="button" className="bl-icon-btn" onClick={onCopy} aria-label="Copy link" title="Copy link">
+        <Link2 size={17} />
+      </button>
+      {canNative && (
+        <button
+          type="button"
+          className="bl-icon-btn"
+          aria-label="More sharing options"
+          title="Share"
+          onClick={() => navigator.share({ title, url }).catch(() => {})}
+        >
+          <Share2 size={17} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---------- table of contents with scroll spy ---------- */
+function useActiveHeading(ids) {
+  const [active, setActive] = useState(ids[0] || "");
+  useEffect(() => {
+    if (!ids.length || typeof IntersectionObserver === "undefined") return undefined;
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean);
+    const visible = new Map();
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => visible.set(e.target.id, e.isIntersecting));
+        const firstVisible = ids.find((id) => visible.get(id));
+        if (firstVisible) {
+          setActive(firstVisible);
+          return;
         }
-        className={`
-          w-full
-          max-w-md
-          overflow-hidden
-          rounded-3xl
-          border
-          shadow-2xl
-          ${borderColor}
-          ${
-            isDark
-              ? "bg-[#0C131D]"
-              : "bg-white"
-          }
-        `}
-      >
-        <div
-          className={`
-            flex
-            items-center
-            justify-between
-            border-b
-            p-5
-            ${borderColor}
-          `}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                ${
-                  isDark
-                    ? "bg-red-950/30 text-red-300"
-                    : "bg-red-50 text-red-600"
-                }
-              `}
+        // Nothing in the band: keep the last heading above the viewport.
+        const above = els.filter((el) => el.getBoundingClientRect().top < 120);
+        if (above.length) setActive(above[above.length - 1].id);
+      },
+      { rootMargin: "-90px 0px -65% 0px", threshold: 0 }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [ids]);
+  return active;
+}
+
+function Toc({ toc, active, onJump }) {
+  return (
+    <nav className="bl-toc" aria-label="Table of contents">
+      <h2>On this page</h2>
+      <ol>
+        {toc.map((t) => (
+          <li key={t.id}>
+            <a
+              href={`#${t.id}`}
+              className={`${t.level === 3 ? "is-sub" : ""} ${active === t.id ? "is-active" : ""}`}
+              aria-current={active === t.id ? "location" : undefined}
+              onClick={(e) => onJump(e, t.id)}
             >
-              <AlertTriangle
-                size={19}
-              />
-            </div>
+              {t.text}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
 
-            <div>
-              <h2
-                className={`
-                  font-bold
-                  ${primaryText}
-                `}
-              >
-                Delete article?
-              </h2>
-
-              <p
-                className={`
-                  mt-0.5
-                  text-xs
-                  ${secondaryText}
-                `}
-              >
-                This cannot be
-                undone.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={deleting}
-            className={`
-              flex
-              h-9
-              w-9
-              items-center
-              justify-center
-              rounded-xl
-              transition
-              ${secondaryText}
-              ${
-                isDark
-                  ? "hover:bg-[#172333]"
-                  : "hover:bg-slate-100"
-              }
-            `}
-          >
-            <X size={18} />
-          </button>
+/* ---------- states ---------- */
+function ArticleSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="bl-shell bl-article-head">
+        <div className="bl-head-in" style={{ display: "grid", gap: 14 }}>
+          <span className="bl-skel" style={{ width: 160, height: 14 }} />
+          <span className="bl-skel" style={{ width: 100, height: 26, borderRadius: 99 }} />
+          <span className="bl-skel" style={{ height: 44 }} />
+          <span className="bl-skel" style={{ width: "70%", height: 44 }} />
+          <span className="bl-skel" style={{ height: 18 }} />
+          <span className="bl-skel" style={{ width: "60%", height: 18 }} />
         </div>
-
-        <div className="p-5">
-          <p
-            className={`
-              text-sm
-              leading-6
-              ${secondaryText}
-            `}
-          >
-            Permanently delete{" "}
-            <strong
-              className={
-                primaryText
-              }
-            >
-              &quot;
-              {title}
-              &quot;
-            </strong>
-            ?
-          </p>
-        </div>
-
-        <div
-          className={`
-            flex
-            flex-col-reverse
-            gap-3
-            border-t
-            p-4
-            sm:flex-row
-            sm:justify-end
-            ${borderColor}
-          `}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={deleting}
-            className={`
-              rounded-xl
-              border
-              px-4
-              py-2.5
-              text-sm
-              font-semibold
-              transition
-              ${borderColor}
-              ${
-                isDark
-                  ? "bg-[#101924] text-white hover:bg-[#172333]"
-                  : "bg-white text-slate-800 hover:bg-slate-50"
-              }
-            `}
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="
-              inline-flex
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              bg-red-600
-              px-4
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              transition
-              hover:bg-red-700
-              disabled:opacity-60
-            "
-          >
-            {deleting ? (
-              <Loader2
-                size={16}
-                className="animate-spin"
-              />
-            ) : (
-              <Trash2
-                size={16}
-              />
-            )}
-
-            {deleting
-              ? "Deleting..."
-              : "Delete"}
-          </button>
+      </div>
+      <div className="bl-shell">
+        <div className="bl-cover"><span className="bl-skel" style={{ aspectRatio: "16 / 9", borderRadius: 24 }} /></div>
+        <div className="bl-main" style={{ display: "grid", gap: 12, padding: "32px 0" }}>
+          {Array.from({ length: 8 }, (_, i) => <span key={i} className="bl-skel" style={{ height: 16, width: `${90 - (i % 3) * 12}%` }} />)}
         </div>
       </div>
     </div>
   );
-};
+}
 
-/*
-|--------------------------------------------------------------------------
-| MAIN COMPONENT
-|--------------------------------------------------------------------------
-*/
-
-const BlogPostDetail = () => {
-  const { slug } =
-    useParams();
-
-  const navigate =
-    useNavigate();
-
-  /*
-  |--------------------------------------------------------------------------
-  | REDUX AUTH
-  |--------------------------------------------------------------------------
-  */
-
-  const {
-    user,
-    token,
-    isAuthenticated,
-  } = useSelector(
-    (state) =>
-      state?.auth || {}
+function StatePage({ code, title, text, onRetry }) {
+  return (
+    <div className="bl-state">
+      <div className="bl-state-in">
+        <span className="bl-state-code">{code}</span>
+        <h1>{title}</h1>
+        <p>{text}</p>
+        <div className="bl-state-actions">
+          {onRetry && <button type="button" className="bl-btn bl-btn-primary" onClick={onRetry}><RefreshCw size={16} /> Try again</button>}
+          <Link to="/blogs" className={`bl-btn ${onRetry ? "bl-btn-ghost" : "bl-btn-primary"}`}><ArrowLeft size={16} /> All articles</Link>
+        </div>
+      </div>
+    </div>
   );
+}
 
-  const isAdmin =
-    Boolean(
-      isAuthenticated &&
-        user?.role === "admin"
-    );
+/* ===================================================== */
 
-  /*
-  |--------------------------------------------------------------------------
-  | STATE
-  |--------------------------------------------------------------------------
-  */
+export default function BlogPostDetail() {
+  const { slug = "" } = useParams();
+  const navigate = useNavigate();
+  const theme = useSiteTheme();
+  const { user, token, isAuthenticated } = useSelector((s) => s?.auth || {});
+  const isAdmin = Boolean(isAuthenticated && user?.role === "admin");
 
-  const [
-    post,
-    setPost,
-  ] = useState(null);
+  const [state, setState] = useState({ post: null, loading: true, error: "", notFound: false });
+  const [reload, setReload] = useState(0);
+  const [related, setRelated] = useState([]);
+  const [views, setViews] = useState(0);
+  const [toast, setToast] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState("");
+  const proseRef = useRef(null);
+  const articleRef = useRef(null);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const { scrollYProgress } = useScroll({ target: articleRef, offset: ["start start", "end end"] });
+  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 28 });
 
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-  const [
-    deleting,
-    setDeleting,
-  ] = useState(false);
-
-  const [
-    publishing,
-    setPublishing,
-  ] = useState(false);
-
-  const [
-    deleteModal,
-    setDeleteModal,
-  ] = useState(false);
-
-  const [
-    copied,
-    setCopied,
-  ] = useState(false);
-
-  /*
-  |--------------------------------------------------------------------------
-  | THEME
-  |--------------------------------------------------------------------------
-  */
-
-  const [
-    theme,
-    setTheme,
-  ] = useState(
-    readTheme
-  );
-
-  const isDark =
-    theme === "dark";
-
-  useEffect(() => {
-    setTheme(
-      readTheme()
-    );
-
-    /*
-    |--------------------------------------------------------------------------
-    | SAME TAB
-    |--------------------------------------------------------------------------
-    */
-
-    const handleThemeChange =
-      (event) => {
-        const newTheme =
-          event?.detail
-            ?.theme;
-
-        if (
-          newTheme ===
-            "dark" ||
-          newTheme ===
-            "light"
-        ) {
-          setTheme(
-            newTheme
-          );
-
-          return;
-        }
-
-        setTheme(
-          readTheme()
-        );
-      };
-
-    /*
-    |--------------------------------------------------------------------------
-    | DIFFERENT TAB
-    |--------------------------------------------------------------------------
-    */
-
-    const handleStorageChange =
-      (event) => {
-        if (
-          event.key !==
-          THEME_KEY
-        ) {
-          return;
-        }
-
-        if (
-          event.newValue ===
-            "dark" ||
-          event.newValue ===
-            "light"
-        ) {
-          setTheme(
-            event.newValue
-          );
-        }
-      };
-
-    window.addEventListener(
-      THEME_EVENT,
-      handleThemeChange
-    );
-
-    window.addEventListener(
-      "storage",
-      handleStorageChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        THEME_EVENT,
-        handleThemeChange
-      );
-
-      window.removeEventListener(
-        "storage",
-        handleStorageChange
-      );
-    };
+  const flash = useCallback((msg) => {
+    setToast(msg);
+    window.clearTimeout(flash.t);
+    flash.t = window.setTimeout(() => setToast(""), 2200);
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | THEME CLASSES
-  |--------------------------------------------------------------------------
-  */
-
-  const pageBg =
-    isDark
-      ? "bg-[#080D14]"
-      : "bg-[#F5F9FC]";
-
-  const primaryBg =
-    isDark
-      ? "bg-[#0C131D]"
-      : "bg-white";
-
-  const cardBg =
-    isDark
-      ? "bg-[#101924]"
-      : "bg-[#F5F9FC]";
-
-  const borderColor =
-    isDark
-      ? "border-[#1E2C3D]"
-      : "border-[#E1E9F1]";
-
-  const primaryText =
-    isDark
-      ? "text-[#F4F7FA]"
-      : "text-[#0B1524]";
-
-  const secondaryText =
-    isDark
-      ? "text-[#9AA9BA]"
-      : "text-[#5B6B82]";
-
-  const mutedText =
-    isDark
-      ? "text-[#708196]"
-      : "text-[#7C8CA3]";
-
-  const blueText =
-    isDark
-      ? "text-[#FB923C]"
-      : "text-[#EA580C]";
-
-  /*
-  |--------------------------------------------------------------------------
-  | RECORD VIEW
-  |--------------------------------------------------------------------------
-  |
-  | Backend route:
-  |
-  | POST /blogs/:slug/view
-  |
-  | Required header:
-  |
-  | x-blog-visitor-id
-  |
-  | Backend returns:
-  |
-  | {
-  |   success: true,
-  |   counted: true/false,
-  |   views: number
-  | }
-  |
-  */
-
-  const recordBlogView =
-    useCallback(
-      async (
-        targetSlug
-      ) => {
-        if (
-          !targetSlug
-        ) {
-          return;
-        }
-
-        try {
-          const visitorId =
-            getBlogVisitorId();
-
-          if (!visitorId) {
-            return;
-          }
-
-          const response =
-            await axios.post(
-              `${BASE_URL}/blogs/${targetSlug}/view`,
-              null,
-              {
-                headers: {
-                  "x-blog-visitor-id":
-                    visitorId,
-
-                  Accept:
-                    "application/json",
-                },
-              }
-            );
-
-          if (
-            response?.data
-              ?.success
-          ) {
-            const updatedViews =
-              Number(
-                response.data
-                  .views
-              );
-
-            /*
-             * Backend returns latest
-             * number even when this
-             * visitor was already
-             * counted.
-             */
-
-            if (
-              Number.isFinite(
-                updatedViews
-              )
-            ) {
-              setPost(
-                (
-                  currentPost
-                ) => {
-                  if (
-                    !currentPost
-                  ) {
-                    return currentPost;
-                  }
-
-                  return {
-                    ...currentPost,
-
-                    views:
-                      updatedViews,
-                  };
-                }
-              );
-            }
-
-            console.log(
-              "Blog view response:",
-              {
-                counted:
-                  response.data
-                    .counted,
-
-                views:
-                  response.data
-                    .views,
-              }
-            );
-          }
-        } catch (
-          viewError
-        ) {
-          /*
-           * View analytics should
-           * never break article.
-           */
-
-          console.error(
-            "Failed to record blog view:",
-            viewError
-          );
-        }
-      },
-      []
-    );
-
-  /*
-  |--------------------------------------------------------------------------
-  | FETCH POST
-  |--------------------------------------------------------------------------
-  */
-
-  const fetchPost =
-    useCallback(
-      async () => {
-        if (!slug) {
-          setError(
-            "No blog slug provided."
-          );
-
-          setLoading(
-            false
-          );
-
-          return;
-        }
-
-        setLoading(true);
-        setError("");
-
-        try {
-          /*
-           * 1. FETCH BLOG
-           */
-
-          const response =
-            await axios.get(
-              `${BASE_URL}/blogs/${slug}`,
-              {
-                headers: {
-                  Accept:
-                    "application/json",
-                },
-              }
-            );
-
-          if (
-            !response?.data
-              ?.success
-          ) {
-            throw new Error(
-              response?.data
-                ?.error
-                ?.message ||
-                response?.data
-                  ?.message ||
-                "Blog post not found."
-            );
-          }
-
-          const payload =
-            response.data
-              .data;
-
-          const fetchedPost =
-            payload?.post ||
-            payload;
-
-          if (
-            !fetchedPost
-          ) {
-            throw new Error(
-              "Blog post not found."
-            );
-          }
-
-          /*
-           * 2. DISPLAY BLOG
-           */
-
-          setPost(
-            fetchedPost
-          );
-
-          /*
-           * 3. RECORD VIEW
-           *
-           * Use actual backend slug
-           * if available.
-           */
-
-          recordBlogView(
-            fetchedPost.slug ||
-              slug
-          );
-        } catch (err) {
-          console.error(
-            "Error loading blog:",
-            err
-          );
-
-          const message =
-            err?.response
-              ?.status === 404
-              ? "Blog post not found."
-              : err?.response
-                  ?.data
-                  ?.error
-                  ?.message ||
-                err?.response
-                  ?.data
-                  ?.message ||
-                err?.message ||
-                "Unable to load blog post.";
-
-          setError(
-            message
-          );
-
-          if (
-            err?.response
-              ?.status !== 404
-          ) {
-            toast.error(
-              message
-            );
-          }
-        } finally {
-          setLoading(
-            false
-          );
-        }
-      },
-      [
-        slug,
-        recordBlogView,
-      ]
-    );
-
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE LOAD
-  |--------------------------------------------------------------------------
-  */
-
+  /* ---------- load the post ---------- */
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "instant",
-    });
-
-    fetchPost();
-  }, [fetchPost]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | RELATED POSTS (internal linking for SEO)
-  |--------------------------------------------------------------------------
-  */
-
-  const [relatedPosts, setRelatedPosts] = useState([]);
-
-  useEffect(() => {
-    if (!post?.slug || !post?.category) {
-      setRelatedPosts([]);
-      return undefined;
-    }
-
-    let cancelled = false;
-
+    const ctrl = new AbortController();
+    setState({ post: null, loading: true, error: "", notFound: false });
+    setRelated([]);
     axios
-      .get(`${BASE_URL}/blogs`, {
-        params: {
-          category: post.category,
-          limit: 6,
-          sort: "latest",
-        },
+      .get(`${API}/${encodeURIComponent(slug)}`, { signal: ctrl.signal, timeout: 25000 })
+      .then((r) => {
+        const post = r.data?.data?.post || r.data?.data;
+        if (!r.data?.success || !post) throw Object.assign(new Error("Not found"), { response: { status: 404 } });
+        setState({ post, loading: false, error: "", notFound: false });
+        setViews(Number(post.views) || 0);
       })
-      .then((res) => {
-        if (cancelled) return;
-        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
-        setRelatedPosts(
-          list.filter((p) => p.slug !== post.slug).slice(0, 4)
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setRelatedPosts([]);
+      .catch((e) => {
+        if (axios.isCancel(e) || ctrl.signal.aborted) return;
+        const notFound = e?.response?.status === 404;
+        setState({ post: null, loading: false, notFound, error: notFound ? "" : errText(e, "Could not load this article.") });
       });
+    window.scrollTo({ top: 0, behavior: "instant" in document.documentElement.style ? "instant" : "auto" });
+    return () => ctrl.abort();
+  }, [slug, reload]);
 
-    return () => {
-      cancelled = true;
-    };
+  const post = state.post;
+
+  /* ---------- count one view per visitor (server de-duplicates too) ---------- */
+  useEffect(() => {
+    if (!post?.slug) return;
+    const key = `bl-viewed:${post.slug}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch { /* storage blocked: still count */ }
+    const visitorId = getVisitorId();
+    if (!visitorId) return;
+    axios
+      .post(`${API}/${encodeURIComponent(post.slug)}/view`, null, { headers: { "x-blog-visitor-id": visitorId } })
+      .then((r) => {
+        const v = Number(r.data?.data?.views ?? r.data?.views);
+        if (Number.isFinite(v) && v > 0) setViews(v);
+      })
+      .catch(() => {});
+  }, [post?.slug]);
+
+  /* ---------- related: same topic first, then latest ---------- */
+  useEffect(() => {
+    if (!post?.slug) return undefined;
+    const ctrl = new AbortController();
+    const opts = { signal: ctrl.signal, timeout: 15000 };
+    Promise.all([
+      axios.get(API, { ...opts, params: { category: post.category, limit: 6, sort: "latest" } }).catch(() => null),
+      axios.get(API, { ...opts, params: { limit: 6, sort: "trending" } }).catch(() => null),
+    ]).then(([same, popular]) => {
+      if (ctrl.signal.aborted) return;
+      const seen = new Set([post.slug]);
+      const out = [];
+      [...(same?.data?.data || []), ...(popular?.data?.data || [])].forEach((p) => {
+        if (p?.slug && !seen.has(p.slug) && out.length < 4) {
+          seen.add(p.slug);
+          out.push(p);
+        }
+      });
+      setRelated(out);
+    });
+    return () => ctrl.abort();
   }, [post?.slug, post?.category]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | DELETE
-  |--------------------------------------------------------------------------
-  */
+  /* ---------- derived ---------- */
+  const html = useMemo(() => enhanceHtml(post?.content || ""), [post?.content]);
+  const toc = useMemo(() => (Array.isArray(post?.toc) ? post.toc.filter((t) => t?.id && t?.text) : []), [post?.toc]);
+  const tocIds = useMemo(() => toc.map((t) => t.id), [toc]);
+  const active = useActiveHeading(tocIds);
+  const faqs = useMemo(() => extractFaqs(post?.content || ""), [post?.content]);
+  const words = useMemo(() => wordCount(post?.content || ""), [post?.content]);
+  const sectionCount = toc.filter((t) => t.level === 2).length;
 
-  const handleDelete =
-    async () => {
-      if (
-        !post?._id ||
-        !token ||
-        deleting
-      ) {
-        return;
-      }
-
-      setDeleting(true);
-
-      const toastId =
-        toast.loading(
-          "Deleting article..."
-        );
-
+  /* Copy buttons inside the article (event delegation). */
+  useEffect(() => {
+    const root = proseRef.current;
+    if (!root) return undefined;
+    const onClick = async (e) => {
+      const btn = e.target.closest?.("[data-copy]");
+      if (!btn) return;
+      const text = btn.closest(".bl-code")?.querySelector("pre")?.innerText || "";
       try {
-        const response =
-          await axios.delete(
-            `${BASE_URL}/blogs/${post._id}`,
-            {
-              headers: {
-                Authorization:
-                  `Bearer ${token}`,
-              },
-            }
-          );
-
-        if (
-          !response?.data
-            ?.success
-        ) {
-          throw new Error(
-            response?.data
-              ?.error
-              ?.message ||
-              "Failed to delete article."
-          );
-        }
-
-        toast.success(
-          "Article deleted successfully.",
-          {
-            id: toastId,
-          }
-        );
-
-        setDeleteModal(
-          false
-        );
-
-        navigate(
-          "/blogs"
-        );
-      } catch (err) {
-        console.error(
-          "Delete blog error:",
-          err
-        );
-
-        toast.error(
-          err?.response?.data
-            ?.error?.message ||
-            err?.response?.data
-              ?.message ||
-            err?.message ||
-            "Failed to delete article.",
-          {
-            id: toastId,
-          }
-        );
-      } finally {
-        setDeleting(
-          false
-        );
-      }
-    };
-
-  /*
-  |--------------------------------------------------------------------------
-  | TOGGLE PUBLISH
-  |--------------------------------------------------------------------------
-  */
-
-  const handleTogglePublish =
-    async () => {
-      if (
-        !post?._id ||
-        !token ||
-        publishing
-      ) {
-        return;
-      }
-
-      const currentlyPublished =
-        isPublishedPost(
-          post
-        );
-
-      setPublishing(
-        true
-      );
-
-      const toastId =
-        toast.loading(
-          currentlyPublished
-            ? "Unpublishing article..."
-            : "Publishing article..."
-        );
-
-      try {
-        const response =
-          await axios.patch(
-            `${BASE_URL}/blogs/${post._id}/toggle-publish`,
-            null,
-            {
-              headers: {
-                Authorization:
-                  `Bearer ${token}`,
-              },
-            }
-          );
-
-        if (
-          !response?.data
-            ?.success
-        ) {
-          throw new Error(
-            response?.data
-              ?.error
-              ?.message ||
-              "Failed to update publication status."
-          );
-        }
-
-        const updatedPost =
-          response.data
-            .data?.post ||
-          response.data.data;
-
-        if (
-          updatedPost
-        ) {
-          setPost(
-            updatedPost
-          );
-        }
-
-        toast.success(
-          response.data
-            .message ||
-            "Publication status updated.",
-          {
-            id: toastId,
-          }
-        );
-      } catch (err) {
-        console.error(
-          "Publish status error:",
-          err
-        );
-
-        toast.error(
-          err?.response?.data
-            ?.error?.message ||
-            err?.response?.data
-              ?.message ||
-            err?.message ||
-            "Could not update article.",
-          {
-            id: toastId,
-          }
-        );
-      } finally {
-        setPublishing(
-          false
-        );
-      }
-    };
-
-  /*
-  |--------------------------------------------------------------------------
-  | COPY LINK
-  |--------------------------------------------------------------------------
-  */
-
-  const copyArticleLink =
-    async () => {
-      try {
-        await navigator.clipboard.writeText(
-          window.location.href
-        );
-
-        setCopied(
-          true
-        );
-
-        toast.success(
-          "Article link copied."
-        );
-
-        window.setTimeout(
-          () =>
-            setCopied(
-              false
-            ),
-          1500
-        );
+        await navigator.clipboard.writeText(text);
+        btn.textContent = "Copied";
+        btn.classList.add("is-done");
       } catch {
-        toast.error(
-          "Unable to copy link."
-        );
+        btn.textContent = "Press Ctrl+C";
       }
+      window.setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("is-done");
+      }, 1800);
     };
+    root.addEventListener("click", onClick);
+    return () => root.removeEventListener("click", onClick);
+  }, [html]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | SHARE
-  |--------------------------------------------------------------------------
-  */
+  /* Deep links (#section) once the body is in the DOM. */
+  useEffect(() => {
+    if (!html || !window.location.hash) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 120);
+    return () => window.clearTimeout(t);
+  }, [html]);
 
-  const shareArticle =
-    async () => {
-      const currentUrl =
-        window.location.href;
+  const jump = (e, id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    e.preventDefault();
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.history.replaceState(null, "", `#${id}`);
+  };
 
-      if (
-        navigator.share
-      ) {
-        try {
-          await navigator.share({
-            title:
-              post?.title ||
-              "Target Trek",
+  const canonical = post?.seo?.canonicalUrl || (post ? postUrl(post.slug) : `${SITE_URL}/blog/${slug}`);
 
-            text:
-              truncateText(
-                getPostExcerpt(
-                  post
-                ),
-                120
-              ),
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(canonical);
+      flash("Link copied");
+    } catch {
+      flash("Could not copy the link");
+    }
+  };
 
-            url:
-              currentUrl,
-          });
+  /* ---------- admin ---------- */
+  const auth = { headers: { Authorization: `Bearer ${token}` } };
+  const unpublish = async () => {
+    if (!post?._id || busy) return;
+    setBusy("publish");
+    try {
+      await axios.patch(`${API}/${post._id}/toggle-publish`, null, auth);
+      flash("Moved to drafts");
+      navigate("/blog-manage");
+    } catch (e) {
+      flash(errText(e, "Could not change status"));
+    } finally {
+      setBusy("");
+    }
+  };
+  const remove = async () => {
+    if (!post?._id || busy) return;
+    setBusy("delete");
+    try {
+      await axios.delete(`${API}/admin/${post._id}`, auth);
+      setConfirmDelete(false);
+      navigate("/blogs");
+    } catch (e) {
+      flash(errText(e, "Could not delete the article"));
+    } finally {
+      setBusy("");
+    }
+  };
 
-          return;
-        } catch (err) {
-          if (
-            err?.name ===
-            "AbortError"
-          ) {
-            return;
-          }
-        }
-      }
+  /* ---------- SEO ---------- */
+  const seo = post?.seo || {};
+  const metaTitle = seo.metaTitle ? (seo.metaTitle.includes(SITE_NAME) ? seo.metaTitle : `${seo.metaTitle} | ${SITE_NAME}`) : post ? `${post.title} | ${SITE_NAME}` : `Article | ${SITE_NAME}`;
+  const metaDesc = seo.metaDescription || truncate(post?.excerpt || "", 160);
+  const image = absoluteUrl(seo.ogImageUrl || post?.imageUrl || "");
+  const keywords = useMemo(() => (seo.keywords?.length ? seo.keywords : post?.tags) || [], [seo.keywords, post?.tags]);
+  const published = isoDate(post?.publishedAt || post?.createdAt);
+  const modified = isoDate(post?.updatedAt || post?.publishedAt);
+  const updatedLater = post?.updatedAt && post?.publishedAt && new Date(post.updatedAt) - new Date(post.publishedAt) > 86400000;
+  const catName = titleCase(post?.category || "");
 
-      copyArticleLink();
-    };
+  const jsonLd = useMemo(() => {
+    if (!post) return null;
+    const out = [
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "@id": `${canonical}#article`,
+        headline: String(post.title).slice(0, 110),
+        name: post.title,
+        description: metaDesc,
+        abstract: stripHtml(post.excerpt || ""),
+        url: canonical,
+        mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+        isPartOf: { "@type": "Blog", "@id": `${BLOG_URL}#blog`, name: `${SITE_NAME} Blog`, url: BLOG_URL },
+        ...(image && { image: { "@type": "ImageObject", url: image, caption: post.altText || post.title } }),
+        author: { "@type": "Person", name: post.author || SITE_NAME, url: BLOG_URL },
+        publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL, logo: { "@type": "ImageObject", url: LOGO_URL } },
+        datePublished: published,
+        dateModified: modified,
+        articleSection: catName,
+        keywords: keywords.join(", "),
+        about: (post.tags || []).slice(0, 8).map((t) => ({ "@type": "Thing", name: titleCase(t) })),
+        wordCount: words,
+        timeRequired: `PT${post.readingTimeMinutes || 1}M`,
+        inLanguage: "en",
+        isAccessibleForFree: true,
+        ...(views > 0 && { interactionStatistic: { "@type": "InteractionCounter", interactionType: "https://schema.org/ReadAction", userInteractionCount: views } }),
+        ...((post.sources || []).length && { citation: post.sources.map((s) => ({ "@type": "CreativeWork", name: s.title || s.url, url: s.url })) }),
+        speakable: { "@type": "SpeakableSpecification", cssSelector: [".bl-title", ".bl-summary p"] },
+        ...(toc.length && { hasPart: toc.filter((t) => t.level === 2).map((t) => ({ "@type": "WebPageElement", name: t.text, url: `${canonical}#${t.id}` })) }),
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "Blog", item: BLOG_URL },
+          { "@type": "ListItem", position: 3, name: catName, item: `${BLOG_URL}?category=${encodeURIComponent(post.category)}` },
+          { "@type": "ListItem", position: 4, name: post.title, item: canonical },
+        ],
+      },
+    ];
+    if (faqs.length) {
+      out.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      });
+    }
+    return out;
+  }, [post, canonical, metaDesc, image, published, modified, catName, keywords, words, views, toc, faqs]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | COMPUTED VALUES
-  |--------------------------------------------------------------------------
-  */
+  /* ---------- render ---------- */
+  const head = (
+    <Helmet>
+      <html lang="en" />
+      <title>{metaTitle}</title>
+      <meta name="description" content={metaDesc} />
+      <link rel="canonical" href={canonical} />
+      <meta name="robots" content={!post || seo.noIndex ? "noindex, follow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"} />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="stylesheet" href={FONT_URL} />
+      {post && <link rel="alternate" type="application/rss+xml" title={`${SITE_NAME} Blog`} href={`${SITE_URL}/rss.xml`} />}
+      {post && <meta name="author" content={post.author} />}
+      {post && keywords.length > 0 && <meta name="keywords" content={keywords.join(", ")} />}
+      {post && <meta property="og:type" content="article" />}
+      {post && <meta property="og:site_name" content={SITE_NAME} />}
+      {post && <meta property="og:title" content={post.title} />}
+      {post && <meta property="og:description" content={metaDesc} />}
+      {post && <meta property="og:url" content={canonical} />}
+      {post && image && <meta property="og:image" content={image} />}
+      {post && image && <meta property="og:image:alt" content={post.altText || post.title} />}
+      {post && published && <meta property="article:published_time" content={published} />}
+      {post && modified && <meta property="article:modified_time" content={modified} />}
+      {post && <meta property="article:section" content={catName} />}
+      {post && (post.tags || []).map((t) => <meta key={t} property="article:tag" content={t} />)}
+      {post && <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />}
+      {post && <meta name="twitter:title" content={post.title} />}
+      {post && <meta name="twitter:description" content={metaDesc} />}
+      {post && image && <meta name="twitter:image" content={image} />}
+      {post && <meta name="twitter:label1" content="Reading time" />}
+      {post && <meta name="twitter:data1" content={`${post.readingTimeMinutes || 1} min read`} />}
+      {jsonLd && <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>}
+    </Helmet>
+  );
 
-  const article =
-    useMemo(() => {
-      if (!post) {
-        return null;
-      }
-
-      const seo =
-        getSeo(post);
-
-      return {
-        content:
-          getPostContent(
-            post
-          ),
-
-        excerpt:
-          getPostExcerpt(
-            post
-          ),
-
-        author:
-          getAuthorName(
-            post
-          ),
-
-        category:
-          getCategoryName(
-            post
-          ),
-
-        tags:
-          getTags(post),
-
-        views:
-          getViews(post),
-
-        image:
-          getPostImage(
-            post
-          ),
-
-        publishedDate:
-          getPublishedDate(
-            post
-          ),
-
-        readingTime:
-          getReadingTime(
-            post
-          ),
-
-        wordCount:
-          getWordCount(
-            post
-          ),
-
-        published:
-          isPublishedPost(
-            post
-          ),
-
-        featured:
-          isFeaturedPost(
-            post
-          ),
-
-        editorChoice:
-          isEditorChoicePost(
-            post
-          ),
-
-        seo,
-      };
-    }, [post]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | SEO STRUCTURED DATA
-  |--------------------------------------------------------------------------
-  */
-
-  const structuredData =
-    useMemo(() => {
-      if (
-        !post ||
-        !article
-      ) {
-        return null;
-      }
-
-      const articleUrl =
-        `${SITE_URL}/blog/${
-          post.slug ||
-          slug
-        }`;
-
-      return {
-        "@context":
-          "https://schema.org",
-
-        "@type":
-          "BlogPosting",
-
-        headline:
-          safeString(
-            article.seo
-              ?.metaTitle,
-            safeString(
-              post.title,
-              "Target Trek Article"
-            )
-          ),
-
-        name:
-          safeString(
-            post.title
-          ),
-
-        description:
-          safeString(
-            article.seo
-              ?.metaDescription,
-            truncateText(
-              article.excerpt,
-              160
-            )
-          ),
-
-        url:
-          articleUrl,
-
-        mainEntityOfPage: {
-          "@type":
-            "WebPage",
-
-          "@id":
-            articleUrl,
-        },
-
-        ...(article.image
-          ? {
-              image: [
-                article.image,
-              ],
-            }
-          : {}),
-
-        author: {
-          "@type":
-            "Person",
-
-          name:
-            safeString(
-              article.author,
-              "Target Trek"
-            ),
-        },
-
-        publisher: {
-          "@type":
-            "Organization",
-
-          name:
-            "Target Trek",
-
-          url:
-            SITE_URL,
-        },
-
-        ...(article.publishedDate
-          ? {
-              datePublished:
-                new Date(
-                  article.publishedDate
-                ).toISOString(),
-            }
-          : {}),
-
-        ...(post?.updatedAt
-          ? {
-              dateModified:
-                new Date(
-                  post.updatedAt
-                ).toISOString(),
-            }
-          : {}),
-
-        articleSection:
-          article.category,
-
-        keywords:
-          article.tags.join(
-            ", "
-          ),
-
-        wordCount:
-          article.wordCount,
-
-        timeRequired:
-          `PT${article.readingTime}M`,
-
-        inLanguage:
-          "en",
-
-        interactionStatistic: {
-          "@type":
-            "InteractionCounter",
-
-          interactionType: {
-            "@type":
-              "ViewAction",
-          },
-
-          userInteractionCount:
-            article.views,
-        },
-      };
-    }, [
-      post,
-      article,
-      slug,
-    ]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | LOADING
-  |--------------------------------------------------------------------------
-  */
-
-  if (loading) {
+  if (state.loading) {
     return (
-      <main
-        className={`
-          flex
-          min-h-screen
-          items-center
-          justify-center
-          transition-colors
-          ${pageBg}
-        `}
-      >
-        <Helmet>
-          <title>
-            Loading Article |
-            Target Trek
-          </title>
-          {/* No robots tag here: a transient "noindex" while loading
-              could be captured by a crawler's render snapshot. */}
-        </Helmet>
-
-        <div className="text-center">
-          <Loader2
-            size={38}
-            className={`
-              mx-auto
-              animate-spin
-              ${blueText}
-            `}
-          />
-
-          <p
-            className={`
-              mt-4
-              text-sm
-              ${secondaryText}
-            `}
-          >
-            Loading article...
-          </p>
-        </div>
+      <main className="bl" data-theme={theme} aria-busy="true">
+        {head}
+        <ArticleSkeleton />
       </main>
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | ERROR
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    error ||
-    !post ||
-    !article
-  ) {
+  if (!post) {
     return (
-      <main
-        className={`
-          flex
-          min-h-screen
-          items-center
-          justify-center
-          px-4
-          py-24
-          transition-colors
-          ${pageBg}
-        `}
-      >
-        <Helmet>
-          <title>
-            Article Not Found |
-            Target Trek
-          </title>
-
-          <meta
-            name="robots"
-            content="noindex, nofollow"
-          />
-        </Helmet>
-
-        <Toaster
-          position="top-center"
-        />
-
-        <div
-          className={`
-            w-full
-            max-w-lg
-            rounded-3xl
-            border
-            p-8
-            text-center
-            ${primaryBg}
-            ${borderColor}
-          `}
-        >
-          <div
-            className={`
-              mx-auto
-              flex
-              h-16
-              w-16
-              items-center
-              justify-center
-              rounded-2xl
-              ${
-                isDark
-                  ? "bg-red-950/30 text-red-300"
-                  : "bg-red-50 text-red-600"
-              }
-            `}
-          >
-            <AlertTriangle
-              size={29}
-            />
-          </div>
-
-          <h1
-            className={`
-              mt-5
-              text-2xl
-              font-black
-              ${primaryText}
-            `}
-          >
-            Article not found
-          </h1>
-
-          <p
-            className={`
-              mt-3
-              text-sm
-              leading-6
-              ${secondaryText}
-            `}
-          >
-            {error}
-          </p>
-
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <button
-              type="button"
-              onClick={
-                fetchPost
-              }
-              className={`
-                inline-flex
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                border
-                px-5
-                py-3
-                text-sm
-                font-semibold
-                ${borderColor}
-                ${
-                  isDark
-                    ? "bg-[#101924] text-white"
-                    : "bg-white text-slate-800"
-                }
-              `}
-            >
-              <RefreshCw
-                size={16}
-              />
-
-              Try Again
-            </button>
-
-            <Link
-              to="/blogs"
-              className="
-                inline-flex
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-[#EA580C]
-                px-5
-                py-3
-                text-sm
-                font-bold
-                text-white
-                transition
-                hover:bg-[#C2410C]
-              "
-            >
-              <ArrowLeft
-                size={16}
-              />
-
-              Blogs
-            </Link>
-          </div>
-        </div>
+      <main className="bl" data-theme={theme}>
+        {head}
+        {state.notFound ? (
+          <StatePage code="404" title="This article is not here" text="It may have been moved or unpublished. The rest of the blog is one click away." />
+        ) : (
+          <StatePage code=":(" title="We could not load this article" text={state.error} onRetry={() => setReload((n) => n + 1)} />
+        )}
       </main>
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | SEO VALUES
-  |--------------------------------------------------------------------------
-  */
-
-  const canonicalUrl =
-    safeString(
-      article.seo
-        ?.canonicalUrl,
-      `${SITE_URL}/blog/${
-        post.slug ||
-        slug
-      }`
-    );
-
-  const seoTitle =
-    safeString(
-      article.seo
-        ?.metaTitle,
-      `${safeString(
-        post.title,
-        "Article"
-      )} | Target Trek`
-    );
-
-  const seoDescription =
-    safeString(
-      article.seo
-        ?.metaDescription,
-      truncateText(
-        article.excerpt,
-        160
-      )
-    );
-
-  const seoImage =
-    safeString(
-      article.seo
-        ?.ogImageUrl,
-      article.image
-    );
-
-  /*
-  |--------------------------------------------------------------------------
-  | RENDER
-  |--------------------------------------------------------------------------
-  */
+  const shareTitle = post.title;
 
   return (
-    <>
-      {/* ============================================================= */}
-      {/* SEO */}
-      {/* ============================================================= */}
+    <MotionConfig reducedMotion="user">
+      {head}
+      <motion.div className="bl-progress" style={{ scaleX: progress }} aria-hidden="true" />
 
-      <Helmet>
-        <title>
-          {seoTitle}
-        </title>
+      <main className="bl" data-theme={theme}>
+        <article ref={articleRef} itemScope itemType="https://schema.org/BlogPosting">
+          <meta itemProp="mainEntityOfPage" content={canonical} />
+          {published && <meta itemProp="datePublished" content={published} />}
+          {modified && <meta itemProp="dateModified" content={modified} />}
 
-        <meta
-          name="description"
-          content={
-            seoDescription
-          }
-        />
+          {/* ================= HEADER ================= */}
+          <header className="bl-shell bl-article-head">
+            <motion.div className="bl-head-in" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+              <nav aria-label="Breadcrumb">
+                <ol className="bl-crumbs">
+                  <li><Link to="/">Home</Link></li>
+                  <li aria-hidden="true">/</li>
+                  <li><Link to="/blogs">Blog</Link></li>
+                  <li aria-hidden="true">/</li>
+                  <li><Link to={`/blogs?category=${encodeURIComponent(post.category)}`}>{catName}</Link></li>
+                  <li aria-hidden="true" className="bl-crumb-sep">/</li>
+                  <li aria-current="page">{post.title}</li>
+                </ol>
+              </nav>
 
-        <meta
-          name="author"
-          content={
-            article.author
-          }
-        />
-
-        <meta
-          name="keywords"
-          content={
-            article.seo
-              ?.keywords?.length
-              ? article.seo.keywords.join(
-                  ", "
-                )
-              : article.tags.join(
-                  ", "
-                )
-          }
-        />
-
-        <meta
-          name="robots"
-          content={
-            article.seo
-              ?.noIndex ||
-            !article.published
-              ? "noindex, nofollow"
-              : "index, follow, max-image-preview:large"
-          }
-        />
-
-        <link
-          rel="canonical"
-          href={
-            canonicalUrl
-          }
-        />
-
-        {/* OPEN GRAPH */}
-
-        <meta
-          property="og:type"
-          content="article"
-        />
-
-        <meta
-          property="og:title"
-          content={
-            seoTitle
-          }
-        />
-
-        <meta
-          property="og:description"
-          content={
-            seoDescription
-          }
-        />
-
-        <meta
-          property="og:url"
-          content={
-            canonicalUrl
-          }
-        />
-
-        <meta
-          property="og:site_name"
-          content="Target Trek"
-        />
-
-        <meta
-          property="og:locale"
-          content="en_IN"
-        />
-
-        {seoImage && (
-          <>
-            <meta
-              property="og:image"
-              content={
-                seoImage
-              }
-            />
-
-            <meta
-              property="og:image:alt"
-              content={
-                post?.altText ||
-                post.title
-              }
-            />
-          </>
-        )}
-
-        {article.publishedDate && (
-          <meta
-            property="article:published_time"
-            content={
-              new Date(
-                article.publishedDate
-              ).toISOString()
-            }
-          />
-        )}
-
-        {post?.updatedAt && (
-          <meta
-            property="article:modified_time"
-            content={
-              new Date(
-                post.updatedAt
-              ).toISOString()
-            }
-          />
-        )}
-
-        <meta
-          property="article:section"
-          content={
-            article.category
-          }
-        />
-
-        {article.tags.map(
-          (tag) => (
-            <meta
-              key={tag}
-              property="article:tag"
-              content={tag}
-            />
-          )
-        )}
-
-        {/* TWITTER */}
-
-        <meta
-          name="twitter:card"
-          content="summary_large_image"
-        />
-
-        <meta
-          name="twitter:title"
-          content={
-            seoTitle
-          }
-        />
-
-        <meta
-          name="twitter:description"
-          content={
-            seoDescription
-          }
-        />
-
-        {seoImage && (
-          <meta
-            name="twitter:image"
-            content={
-              seoImage
-            }
-          />
-        )}
-
-        <meta
-          name="theme-color"
-          content={
-            isDark
-              ? "#080D14"
-              : "#F5F9FC"
-          }
-        />
-
-        {structuredData && (
-          <script
-            type="application/ld+json"
-          >
-            {JSON.stringify(
-              structuredData
-            )}
-          </script>
-        )}
-
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-              { "@type": "ListItem", position: 2, name: "Blogs", item: BLOG_LIST_URL },
-              { "@type": "ListItem", position: 3, name: post.title, item: canonicalUrl },
-            ],
-          })}
-        </script>
-      </Helmet>
-
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-      />
-
-      <main
-        className={`
-          min-h-screen
-          pb-20
-          pt-20
-          transition-colors
-          duration-300
-          ${pageBg}
-          ${primaryText}
-        `}
-      >
-        {/* ============================================================= */}
-        {/* HERO */}
-        {/* ============================================================= */}
-
-        <section
-          className={`
-            relative
-            overflow-hidden
-            border-b
-            ${borderColor}
-            ${primaryBg}
-          `}
-        >
-          {/* BACKGROUND */}
-
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div
-              className={`
-                absolute
-                -left-32
-                -top-32
-                h-[350px]
-                w-[350px]
-                rounded-full
-                blur-[120px]
-                ${
-                  isDark
-                    ? "bg-orange-900/10"
-                    : "bg-[#FFEDD5]/80"
-                }
-              `}
-            />
-
-            <div
-              className={`
-                absolute
-                -right-32
-                top-10
-                h-[360px]
-                w-[360px]
-                rounded-full
-                blur-[120px]
-                ${
-                  isDark
-                    ? "bg-orange-900/10"
-                    : "bg-[#FFF7ED]/80"
-                }
-              `}
-            />
-
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{
-                backgroundImage:
-                  isDark
-                    ? "repeating-linear-gradient(90deg, rgba(251,146,60,0.025) 0px, rgba(251,146,60,0.025) 1px, transparent 1px, transparent 42px)"
-                    : "repeating-linear-gradient(90deg, rgba(234,88,12,0.035) 0px, rgba(234,88,12,0.035) 1px, transparent 1px, transparent 42px)",
-              }}
-            />
-          </div>
-
-          <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-7 sm:px-6 sm:pb-12 lg:px-8">
-            {/* BREADCRUMBS */}
-
-            <nav
-              aria-label="Breadcrumb"
-              className={`
-                flex
-                flex-wrap
-                items-center
-                gap-2
-                text-xs
-                ${mutedText}
-              `}
-            >
-              <Link
-                to="/"
-                className={
-                  blueText
-                }
-              >
-                Home
-              </Link>
-
-              <span>/</span>
-
-              <Link
-                to="/blogs"
-                className={
-                  blueText
-                }
-              >
-                Blogs
-              </Link>
-
-              <span>/</span>
-
-              <span className="max-w-[220px] truncate sm:max-w-md">
-                {post.title}
-              </span>
-            </nav>
-
-            {/* BACK */}
-
-            <Link
-              to="/blogs"
-              className={`
-                mt-6
-                inline-flex
-                items-center
-                gap-2
-                text-sm
-                font-semibold
-                ${blueText}
-              `}
-            >
-              <ArrowLeft
-                size={16}
-              />
-
-              Back to Blogs
-            </Link>
-
-            {/* TAGS */}
-
-            <div className="mt-8 flex flex-wrap gap-2">
-              <span
-                className={`
-                  inline-flex
-                  items-center
-                  gap-1.5
-                  rounded-full
-                  px-3
-                  py-1.5
-                  text-xs
-                  font-bold
-                  ${
-                    isDark
-                      ? "bg-orange-950/30 text-[#FB923C]"
-                      : "bg-[#FFF7ED] text-[#EA580C]"
-                  }
-                `}
-              >
-                <FolderOpen
-                  size={13}
-                />
-
-                {
-                  article.category
-                }
-              </span>
-
-              {article.featured && (
-                <span
-                  className={`
-                    inline-flex
-                    items-center
-                    gap-1.5
-                    rounded-full
-                    px-3
-                    py-1.5
-                    text-xs
-                    font-bold
-                    ${
-                      isDark
-                        ? "bg-amber-950/30 text-amber-300"
-                        : "bg-amber-50 text-amber-700"
-                    }
-                  `}
-                >
-                  <Sparkles
-                    size={13}
-                  />
-
-                  Featured
-                </span>
-              )}
-
-              {article.editorChoice && (
-                <span
-                  className={`
-                    inline-flex
-                    items-center
-                    gap-1.5
-                    rounded-full
-                    px-3
-                    py-1.5
-                    text-xs
-                    font-bold
-                    ${
-                      isDark
-                        ? "bg-violet-950/30 text-violet-300"
-                        : "bg-violet-50 text-violet-700"
-                    }
-                  `}
-                >
-                  <Star
-                    size={13}
-                  />
-
-                  Editor&apos;s
-                  Choice
-                </span>
-              )}
-
-              {/* DRAFT BADGE ONLY ADMIN */}
-
-              {isAdmin &&
-                !article.published && (
-                  <span
-                    className={`
-                      inline-flex
-                      items-center
-                      gap-1.5
-                      rounded-full
-                      px-3
-                      py-1.5
-                      text-xs
-                      font-bold
-                      ${
-                        isDark
-                          ? "bg-yellow-950/30 text-yellow-300"
-                          : "bg-yellow-50 text-yellow-700"
-                      }
-                    `}
-                  >
-                    <EyeOff
-                      size={13}
-                    />
-
-                    Draft
-                  </span>
-                )}
-            </div>
-
-            {/* TITLE */}
-
-            <h1
-              className={`
-                mt-5
-                max-w-5xl
-                text-3xl
-                font-black
-                leading-tight
-                tracking-tight
-                sm:text-4xl
-                lg:text-5xl
-                ${primaryText}
-              `}
-            >
-              {post.title}
-            </h1>
-
-            {/* EXCERPT */}
-
-            {article.excerpt && (
-              <p
-                className={`
-                  mt-5
-                  max-w-4xl
-                  text-base
-                  leading-7
-                  sm:text-lg
-                  sm:leading-8
-                  ${secondaryText}
-                `}
-              >
-                {normalizeText(
-                  article.excerpt
-                )}
-              </p>
-            )}
-
-            {/* PUBLIC META */}
-
-            <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
-              {/* AUTHOR */}
-
-              <div
-                className={`
-                  inline-flex
-                  items-center
-                  gap-2
-                  text-sm
-                  ${secondaryText}
-                `}
-              >
-                <User
-                  size={16}
-                  className={
-                    blueText
-                  }
-                />
-
-                <span
-                  className={
-                    primaryText
-                  }
-                >
-                  {
-                    article.author
-                  }
-                </span>
+              <div className="bl-head-tags">
+                <Link to={`/blogs?category=${encodeURIComponent(post.category)}`} className="bl-chip is-on" itemProp="articleSection">{catName}</Link>
+                {post.editorChoice && <span className="bl-badge"><Star size={11} fill="currentColor" /> Editor&apos;s pick</span>}
+                {post.isFeatured && <span className="bl-badge"><Sparkles size={11} /> Featured</span>}
               </div>
 
-              {/* DATE - DATE ONLY */}
+              <h1 className="bl-title" itemProp="headline">{post.title}</h1>
+              {post.excerpt && <p className="bl-dek" itemProp="description">{stripHtml(post.excerpt)}</p>}
 
-              {article.publishedDate && (
-                <div
-                  className={`
-                    inline-flex
-                    items-center
-                    gap-2
-                    text-sm
-                    ${secondaryText}
-                  `}
-                >
-                  <CalendarDays
-                    size={16}
-                    className={
-                      blueText
-                    }
-                  />
-
-                  {formatDate(
-                    article.publishedDate
-                  )}
+              <div className="bl-byline">
+                <div className="bl-byline-who">
+                  <span className="bl-avatar is-lg" aria-hidden="true">{initials(post.author)}</span>
+                  <div>
+                    <b itemProp="author" itemScope itemType="https://schema.org/Person"><span itemProp="name">{post.author}</span></b>
+                    <div className="bl-meta">
+                      {published && <span><CalendarDays size={13} /> <time dateTime={published}>{fmtDate(post.publishedAt)}</time></span>}
+                      <span><Clock3 size={13} /> {post.readingTimeMinutes || 1} min read</span>
+                      {views > 0 && <span><Eye size={13} /> {fmtViews(views)} reads</span>}
+                    </div>
+                  </div>
                 </div>
+                <ShareButtons url={canonical} title={shareTitle} onCopy={copyLink} compact />
+              </div>
+            </motion.div>
+          </header>
+
+          {/* ================= COVER ================= */}
+          {post.imageUrl && (
+            <motion.figure className="bl-shell bl-cover" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.1 }}>
+              <Media post={post} eager sizes="(min-width: 1100px) 1080px, 100vw" />
+              <meta itemProp="image" content={absoluteUrl(post.imageUrl)} />
+            </motion.figure>
+          )}
+
+          {/* ================= BODY ================= */}
+          <div className="bl-shell bl-layout">
+            <aside className="bl-aside" aria-label="Article navigation">
+              <div className="bl-sticky">
+                {toc.length > 1 && <Toc toc={toc} active={active} onJump={jump} />}
+                {toc.length > 1 && <p className="bl-toc-progress">{sectionCount || toc.length} sections · {post.readingTimeMinutes || 1} min</p>}
+                <Link to="/blogs" className="bl-link"><ArrowLeft size={15} /> All articles</Link>
+              </div>
+            </aside>
+
+            <div className="bl-main">
+              {toc.length > 1 && (
+                <details className="bl-toc-mobile">
+                  <summary><span className="bl-meta" style={{ color: "var(--text)", fontSize: 15 }}><ListTree size={17} /> On this page · {toc.length}</span><ChevronDown size={18} /></summary>
+                  <ol>
+                    {toc.map((t) => (
+                      <li key={t.id}>
+                        <a
+                          href={`#${t.id}`}
+                          className={t.level === 3 ? "is-sub" : ""}
+                          onClick={(e) => {
+                            e.currentTarget.closest("details")?.removeAttribute("open");
+                            jump(e, t.id);
+                          }}
+                        >
+                          {t.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
               )}
 
-              {/* READING TIME */}
+              {/* Answer first: the short version for skimmers, voice assistants and AI answers */}
+              {post.excerpt && (
+                <section className="bl-summary" aria-labelledby="bl-sum-h">
+                  <h2 id="bl-sum-h"><BookOpen size={15} /> The short answer</h2>
+                  <p>{stripHtml(post.excerpt)}</p>
+                  <ul>
+                    <li><Clock3 size={13} /> {post.readingTimeMinutes || 1} min read</li>
+                    {words > 0 && <li>{words.toLocaleString("en-IN")} words</li>}
+                    {sectionCount > 0 && <li>{sectionCount} sections</li>}
+                    {updatedLater && <li>Updated {fmtDate(post.updatedAt)}</li>}
+                  </ul>
+                </section>
+              )}
 
-              <div
-                className={`
-                  inline-flex
-                  items-center
-                  gap-2
-                  text-sm
-                  ${secondaryText}
-                `}
-              >
-                <Clock3
-                  size={16}
-                  className={
-                    blueText
-                  }
-                />
+              <div ref={proseRef} className="bl-prose" itemProp="articleBody" dangerouslySetInnerHTML={{ __html: html }} />
 
-                {
-                  article.readingTime
-                }{" "}
-                min read
-              </div>
+              {/* ================= AFTER THE ARTICLE ================= */}
+              <div className="bl-after">
+                {(post.tags || []).length > 0 && (
+                  <section aria-labelledby="bl-tags-h">
+                    <h2 id="bl-tags-h">Topics in this article</h2>
+                    <div className="bl-tags">
+                      {post.tags.map((t) => <Link key={t} to={`/blogs?tag=${encodeURIComponent(t)}`} className="bl-tag" itemProp="keywords">#{t}</Link>)}
+                    </div>
+                  </section>
+                )}
 
-              {/* VIEWS */}
+                {(post.sources || []).length > 0 && (
+                  <section className="bl-sources" aria-labelledby="bl-src-h">
+                    <h2 id="bl-src-h">Sources and further reading</h2>
+                    <ol>
+                      {post.sources.map((s) => {
+                        let host = "";
+                        try { host = new URL(s.url).hostname.replace(/^www\./, ""); } catch { /* keep empty */ }
+                        return (
+                          <li key={s.url}>
+                            <a href={s.url} target="_blank" rel="noopener noreferrer" itemProp="citation">{s.title || s.url}</a>
+                            {host && <small>{host}</small>}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </section>
+                )}
 
-              <div
-                className={`
-                  inline-flex
-                  items-center
-                  gap-2
-                  text-sm
-                  ${secondaryText}
-                `}
-              >
-                <Eye
-                  size={16}
-                  className={
-                    blueText
-                  }
-                />
+                <section className="bl-author" aria-label="About the author">
+                  <span className="bl-avatar is-lg" aria-hidden="true">{initials(post.author)}</span>
+                  <div>
+                    <b>Written by {post.author}</b>
+                    <p>
+                      Published on {SITE_NAME}{published ? ` on ${fmtDate(post.publishedAt, { day: "numeric", month: "long", year: "numeric" })}` : ""}
+                      {updatedLater ? `, last updated ${fmtDate(post.updatedAt, { day: "numeric", month: "long", year: "numeric" })}` : ""}.
+                      {" "}Found a mistake? <a className="bl-link" href={`mailto:supporttargettrek@gmail.com?subject=${encodeURIComponent(`Feedback: ${post.title}`)}`}>Tell us</a>
+                    </p>
+                  </div>
+                </section>
 
-                {formatViews(
-                  article.views
-                )}{" "}
-                {article.views ===
-                1
-                  ? "view"
-                  : "views"}
+                <div className="bl-share-row">
+                  <b>Helpful? Share it with a friend preparing too.</b>
+                  <ShareButtons url={canonical} title={shareTitle} onCopy={copyLink} />
+                </div>
               </div>
             </div>
+
+            <aside className="bl-rail-right" aria-label="More from Target Trek">
+              <div className="bl-sticky">
+                <div className="bl-rail-card">
+                  <h2>Share</h2>
+                  <ShareButtons url={canonical} title={shareTitle} onCopy={copyLink} compact />
+                </div>
+                <div className="bl-rail-card is-panel">
+                  <p className="bl-eyebrow" style={{ color: "#5eead4" }}><Library size={14} /> Interview books</p>
+                  <h3 style={{ marginTop: 10 }}>Go deeper than a blog post</h3>
+                  <p>Full handbooks on system design, Java and GenAI, emailed as PDFs.</p>
+                  <Link to="/books" className="bl-btn bl-btn-accent bl-btn-sm">See the books <ArrowRight size={15} /></Link>
+                </div>
+              </div>
+            </aside>
           </div>
-        </section>
+        </article>
 
-        {/* ============================================================= */}
-        {/* COVER IMAGE */}
-        {/* ============================================================= */}
-
-        {article.image && (
-          <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
-            <figure
-              className={`
-                overflow-hidden
-                rounded-2xl
-                border
-                sm:rounded-3xl
-                ${borderColor}
-                ${cardBg}
-              `}
-            >
-              <img
-                src={
-                  article.image
-                }
-                alt={
-                  post?.altText ||
-                  post.title
-                }
-                loading="eager"
-                fetchPriority="high"
-                className="
-                  max-h-[620px]
-                  w-full
-                  object-cover
-                "
-                onError={(event) => {
-                  event.currentTarget.style.display =
-                    "none";
-                }}
-              />
-            </figure>
+        {/* ================= RELATED ================= */}
+        {related.length > 0 && (
+          <section className="bl-sec bl-tint" aria-labelledby="bl-rel-h">
+            <div className="bl-shell">
+              <div className="bl-sec-head">
+                <div>
+                  <p className="bl-eyebrow">Keep reading</p>
+                  <h2 id="bl-rel-h" className="bl-h2">More on {catName} and beyond</h2>
+                </div>
+                <Link to={`/blogs?category=${encodeURIComponent(post.category)}`} className="bl-link">All {catName} articles <ArrowUpRight size={16} /></Link>
+              </div>
+              <div className="bl-related">
+                {related.map((p) => <PostCard key={p.slug} post={p} />)}
+              </div>
+            </div>
           </section>
         )}
 
-        {/* ============================================================= */}
-        {/* MAIN CONTENT */}
-        {/* ============================================================= */}
-
-        <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <div
-            className={
-              isAdmin
-                ? "grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]"
-                : "mx-auto max-w-4xl"
-            }
-          >
-            {/* ========================================================= */}
-            {/* ARTICLE */}
-            {/* ========================================================= */}
-
-            <article
-              className={`
-                min-w-0
-                overflow-hidden
-                rounded-3xl
-                border
-                ${primaryBg}
-                ${borderColor}
-              `}
-            >
-              {/* TOOLBAR */}
-
-              <div
-                className={`
-                  flex
-                  flex-wrap
-                  items-center
-                  justify-between
-                  gap-3
-                  border-b
-                  px-5
-                  py-4
-                  sm:px-7
-                  ${borderColor}
-                `}
-              >
-                <div
-                  className={`
-                    inline-flex
-                    items-center
-                    gap-2
-                    text-sm
-                    font-semibold
-                    ${secondaryText}
-                  `}
-                >
-                  <BookOpen
-                    size={17}
-                    className={
-                      blueText
-                    }
-                  />
-
-                  Article
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={
-                      copyArticleLink
-                    }
-                    className={`
-                      inline-flex
-                      h-9
-                      items-center
-                      gap-2
-                      rounded-xl
-                      border
-                      px-3
-                      text-xs
-                      font-semibold
-                      transition
-                      ${borderColor}
-                      ${
-                        isDark
-                          ? "bg-[#101924] text-[#9AA9BA] hover:bg-[#172333]"
-                          : "bg-[#F8FBFD] text-[#5B6B82] hover:bg-[#FFF7ED]"
-                      }
-                    `}
-                  >
-                    {copied ? (
-                      <Check
-                        size={14}
-                      />
-                    ) : (
-                      <Copy
-                        size={14}
-                      />
-                    )}
-
-                    <span className="hidden sm:inline">
-                      {copied
-                        ? "Copied"
-                        : "Copy link"}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={
-                      shareArticle
-                    }
-                    className={`
-                      inline-flex
-                      h-9
-                      items-center
-                      gap-2
-                      rounded-xl
-                      border
-                      px-3
-                      text-xs
-                      font-semibold
-                      transition
-                      ${borderColor}
-                      ${
-                        isDark
-                          ? "bg-[#101924] text-[#9AA9BA] hover:bg-[#172333]"
-                          : "bg-[#F8FBFD] text-[#5B6B82] hover:bg-[#FFF7ED]"
-                      }
-                    `}
-                  >
-                    <Share2
-                      size={14}
-                    />
-
-                    <span className="hidden sm:inline">
-                      Share
-                    </span>
-                  </button>
-                </div>
+        <section className="bl-sec">
+          <div className="bl-shell">
+            <div className="bl-cta">
+              <div>
+                <p className="bl-eyebrow">Next step</p>
+                <h2>Turn reading into <span className="bl-cta-hl">offers.</span></h2>
+                <p>Our interview handbooks cover what a blog post cannot: full system designs, Java deep dives and the questions that keep coming up.</p>
               </div>
-
-              {/* CONTENT */}
-
-              {Array.isArray(post.toc) &&
-                post.toc.length >= 3 && (
-                  <nav
-                    aria-label="Table of contents"
-                    className={`mx-5 mt-7 rounded-2xl border p-5 sm:mx-8 lg:mx-10 ${borderColor} ${cardBg}`}
-                  >
-                    <h2 className={`text-sm font-bold ${primaryText}`}>
-                      In this article
-                    </h2>
-
-                    <ul className="mt-3 space-y-1.5">
-                      {post.toc.map((item) => (
-                        <li
-                          key={item.id}
-                          className={item.level === 3 ? "ml-4" : ""}
-                        >
-                          <a
-                            href={`#${item.id}`}
-                            className={`text-sm font-medium hover:underline ${blueText}`}
-                          >
-                            {item.text}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                )}
-
-              <div className="px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
-                <div
-                  className="tt-blog-content"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      article.content,
-                  }}
-                />
+              <div className="bl-cta-actions">
+                <Link to="/books" className="bl-btn bl-btn-accent">Browse the books <ArrowRight size={16} /></Link>
+                <Link to="/blogs" className="bl-btn bl-btn-onpanel">More articles</Link>
               </div>
-
-              {/* TAGS */}
-
-              {article.tags.length >
-                0 && (
-                <div
-                  className={`
-                    border-t
-                    px-5
-                    py-6
-                    sm:px-8
-                    lg:px-10
-                    ${borderColor}
-                  `}
-                >
-                  <div className="flex items-center gap-2">
-                    <Tag
-                      size={16}
-                      className={
-                        blueText
-                      }
-                    />
-
-                    <h2
-                      className={`
-                        text-sm
-                        font-bold
-                        ${primaryText}
-                      `}
-                    >
-                      Topics covered
-                    </h2>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {article.tags.map(
-                      (tag) => (
-                        <span
-                          key={
-                            tag
-                          }
-                          className={`
-                            rounded-full
-                            border
-                            px-3
-                            py-1.5
-                            text-xs
-                            font-semibold
-                            ${borderColor}
-                            ${
-                              isDark
-                                ? "bg-[#101924] text-[#9AA9BA]"
-                                : "bg-[#F5F9FC] text-[#5B6B82]"
-                            }
-                          `}
-                        >
-                          #{tag}
-                        </span>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* RELATED ARTICLES */}
-
-              {relatedPosts.length > 0 && (
-                <nav
-                  aria-label="Related articles"
-                  className={`border-t px-5 py-6 sm:px-8 lg:px-10 ${borderColor}`}
-                >
-                  <h2 className={`text-sm font-bold ${primaryText}`}>
-                    Related articles
-                  </h2>
-
-                  <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {relatedPosts.map((item) => (
-                      <li key={item.slug}>
-                        <Link
-                          to={`/blog/${item.slug}`}
-                          className={`block rounded-2xl border p-4 transition hover:border-[#FDBA74] ${borderColor} ${cardBg}`}
-                        >
-                          <span className={`text-sm font-bold ${primaryText}`}>
-                            {item.title}
-                          </span>
-                          <span className={`mt-1 block text-xs leading-5 ${secondaryText}`}>
-                            {truncateText(item.excerpt, 110)}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              )}
-
-              {/* ARTICLE FOOTER */}
-
-              <div
-                className={`
-                  flex
-                  flex-col
-                  gap-4
-                  border-t
-                  px-5
-                  py-6
-                  sm:flex-row
-                  sm:items-center
-                  sm:justify-between
-                  sm:px-8
-                  lg:px-10
-                  ${borderColor}
-                `}
-              >
-                <div>
-                  <p
-                    className={`
-                      text-xs
-                      ${mutedText}
-                    `}
-                  >
-                    Written by
-                  </p>
-
-                  <p
-                    className={`
-                      mt-1
-                      text-sm
-                      font-bold
-                      ${primaryText}
-                    `}
-                  >
-                    {
-                      article.author
-                    }
-                  </p>
-                </div>
-
-                <Link
-                  to="/blogs"
-                  className={`
-                    inline-flex
-                    items-center
-                    gap-2
-                    text-sm
-                    font-bold
-                    ${blueText}
-                  `}
-                >
-                  Explore more
-                  articles
-
-                  <ArrowRight
-                    size={16}
-                  />
-                </Link>
-              </div>
-            </article>
-
-            {/* ========================================================= */}
-            {/* ADMIN SIDEBAR ONLY */}
-            {/* ========================================================= */}
-
-            {isAdmin && (
-              <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-                {/* ADMIN LABEL */}
-
-                <div
-                  className={`
-                    rounded-3xl
-                    border
-                    p-5
-                    ${primaryBg}
-                    ${borderColor}
-                  `}
-                >
-                  <div className="flex items-center gap-2">
-                    <KeyRound
-                      size={16}
-                      className={
-                        blueText
-                      }
-                    />
-
-                    <h2
-                      className={`
-                        text-sm
-                        font-bold
-                        ${primaryText}
-                      `}
-                    >
-                      Admin Information
-                    </h2>
-                  </div>
-
-                  <p
-                    className={`
-                      mt-2
-                      text-xs
-                      leading-5
-                      ${mutedText}
-                    `}
-                  >
-                    This information
-                    is visible only
-                    to administrators.
-                  </p>
-                </div>
-
-                {/* ARTICLE STATS */}
-
-                <div
-                  className={`
-                    overflow-hidden
-                    rounded-3xl
-                    border
-                    ${primaryBg}
-                    ${borderColor}
-                  `}
-                >
-                  <div
-                    className={`
-                      border-b
-                      px-5
-                      py-4
-                      ${borderColor}
-                    `}
-                  >
-                    <h2
-                      className={`
-                        flex
-                        items-center
-                        gap-2
-                        text-sm
-                        font-bold
-                        ${primaryText}
-                      `}
-                    >
-                      <FileText
-                        size={16}
-                        className={
-                          blueText
-                        }
-                      />
-
-                      Article Stats
-                    </h2>
-                  </div>
-
-                  <div className="p-5">
-                    {/* VIEWS */}
-
-                    <AdminRow
-                      icon={Eye}
-                      label="Views"
-                      value={formatViews(
-                        article.views
-                      )}
-                      primaryText={
-                        primaryText
-                      }
-                      secondaryText={
-                        secondaryText
-                      }
-                    />
-
-                    {/* READING TIME */}
-
-                    <AdminRow
-                      icon={Clock3}
-                      label="Read time"
-                      value={`${article.readingTime} min`}
-                      primaryText={
-                        primaryText
-                      }
-                      secondaryText={
-                        secondaryText
-                      }
-                    />
-
-                    {/* WORDS */}
-
-                    <AdminRow
-                      icon={
-                        FileText
-                      }
-                      label="Words"
-                      value={article.wordCount.toLocaleString(
-                        "en-IN"
-                      )}
-                      primaryText={
-                        primaryText
-                      }
-                      secondaryText={
-                        secondaryText
-                      }
-                    />
-
-                    {/* CATEGORY */}
-
-                    <AdminRow
-                      icon={
-                        FolderOpen
-                      }
-                      label="Category"
-                      value={
-                        article.category
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      secondaryText={
-                        secondaryText
-                      }
-                    />
-
-                    {/* STATUS */}
-
-                    <div className="flex items-center justify-between gap-4 py-2.5">
-                      <div
-                        className={`
-                          flex
-                          items-center
-                          gap-2
-                          text-sm
-                          ${secondaryText}
-                        `}
-                      >
-                        {article.published ? (
-                          <Eye
-                            size={15}
-                          />
-                        ) : (
-                          <EyeOff
-                            size={15}
-                          />
-                        )}
-
-                        Status
-                      </div>
-
-                      <span
-                        className={`
-                          rounded-full
-                          px-2.5
-                          py-1
-                          text-[11px]
-                          font-bold
-                          ${
-                            article.published
-                              ? isDark
-                                ? "bg-emerald-950/30 text-emerald-300"
-                                : "bg-emerald-50 text-emerald-700"
-                              : isDark
-                              ? "bg-yellow-950/30 text-yellow-300"
-                              : "bg-yellow-50 text-yellow-700"
-                          }
-                        `}
-                      >
-                        {article.published
-                          ? "Published"
-                          : "Draft"}
-                      </span>
-                    </div>
-
-                    {/* FEATURED */}
-
-                    <AdminRow
-                      icon={
-                        Sparkles
-                      }
-                      label="Featured"
-                      value={
-                        article.featured
-                          ? "Yes"
-                          : "No"
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      secondaryText={
-                        secondaryText
-                      }
-                    />
-
-                    {/* EDITOR CHOICE */}
-
-                    <AdminRow
-                      icon={Star}
-                      label="Editor's Choice"
-                      value={
-                        article.editorChoice
-                          ? "Yes"
-                          : "No"
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      secondaryText={
-                        secondaryText
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* TIMELINE - ADMIN ONLY */}
-
-                <div
-                  className={`
-                    rounded-3xl
-                    border
-                    p-5
-                    ${primaryBg}
-                    ${borderColor}
-                  `}
-                >
-                  <h2
-                    className={`
-                      flex
-                      items-center
-                      gap-2
-                      text-sm
-                      font-bold
-                      ${primaryText}
-                    `}
-                  >
-                    <CalendarDays
-                      size={16}
-                      className={
-                        blueText
-                      }
-                    />
-
-                    Internal Timeline
-                  </h2>
-
-                  <p
-                    className={`
-                      mt-2
-                      text-xs
-                      ${mutedText}
-                    `}
-                  >
-                    Exact timestamps
-                    are hidden from
-                    normal users.
-                  </p>
-
-                  <div className="mt-5 space-y-4">
-                    {post?.createdAt && (
-                      <TimelineItem
-                        label="Created"
-                        value={formatDateTime(
-                          post.createdAt
-                        )}
-                        icon={
-                          CalendarDays
-                        }
-                        blueText={
-                          blueText
-                        }
-                        primaryText={
-                          primaryText
-                        }
-                        mutedText={
-                          mutedText
-                        }
-                      />
-                    )}
-
-                    {post?.publishedAt && (
-                      <TimelineItem
-                        label="Published"
-                        value={formatDateTime(
-                          post.publishedAt
-                        )}
-                        icon={Eye}
-                        blueText={
-                          blueText
-                        }
-                        primaryText={
-                          primaryText
-                        }
-                        mutedText={
-                          mutedText
-                        }
-                      />
-                    )}
-
-                    {post?.updatedAt && (
-                      <TimelineItem
-                        label="Last Updated"
-                        value={formatDateTime(
-                          post.updatedAt
-                        )}
-                        icon={
-                          RefreshCw
-                        }
-                        blueText={
-                          blueText
-                        }
-                        primaryText={
-                          primaryText
-                        }
-                        mutedText={
-                          mutedText
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* DATABASE INFO */}
-
-                <div
-                  className={`
-                    rounded-3xl
-                    border
-                    p-5
-                    ${primaryBg}
-                    ${borderColor}
-                  `}
-                >
-                  <h2
-                    className={`
-                      flex
-                      items-center
-                      gap-2
-                      text-sm
-                      font-bold
-                      ${primaryText}
-                    `}
-                  >
-                    <Hash
-                      size={16}
-                      className={
-                        blueText
-                      }
-                    />
-
-                    Database Info
-                  </h2>
-
-                  <div className="mt-5 space-y-4">
-                    {post?._id && (
-                      <AdminMetadata
-                        label="Mongo ID"
-                        value={
-                          post._id
-                        }
-                        primaryText={
-                          primaryText
-                        }
-                        mutedText={
-                          mutedText
-                        }
-                        isDark={
-                          isDark
-                        }
-                      />
-                    )}
-
-                    {post?.slug && (
-                      <AdminMetadata
-                        label="Slug"
-                        value={
-                          post.slug
-                        }
-                        primaryText={
-                          primaryText
-                        }
-                        mutedText={
-                          mutedText
-                        }
-                        isDark={
-                          isDark
-                        }
-                      />
-                    )}
-
-                    {post?.altText && (
-                      <AdminMetadata
-                        label="Image Alt Text"
-                        value={
-                          post.altText
-                        }
-                        primaryText={
-                          primaryText
-                        }
-                        mutedText={
-                          mutedText
-                        }
-                        isDark={
-                          isDark
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* SEO INFO */}
-
-                <div
-                  className={`
-                    rounded-3xl
-                    border
-                    p-5
-                    ${primaryBg}
-                    ${borderColor}
-                  `}
-                >
-                  <h2
-                    className={`
-                      flex
-                      items-center
-                      gap-2
-                      text-sm
-                      font-bold
-                      ${primaryText}
-                    `}
-                  >
-                    <Search
-                      size={16}
-                      className={
-                        blueText
-                      }
-                    />
-
-                    SEO
-                  </h2>
-
-                  <div className="mt-5 space-y-4">
-                    <AdminMetadata
-                      label="Meta Title"
-                      value={
-                        article.seo
-                          ?.metaTitle ||
-                        "Not set"
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      mutedText={
-                        mutedText
-                      }
-                      isDark={
-                        isDark
-                      }
-                    />
-
-                    <AdminMetadata
-                      label="Meta Description"
-                      value={
-                        article.seo
-                          ?.metaDescription ||
-                        "Not set"
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      mutedText={
-                        mutedText
-                      }
-                      isDark={
-                        isDark
-                      }
-                    />
-
-                    <AdminMetadata
-                      label="Canonical URL"
-                      value={
-                        article.seo
-                          ?.canonicalUrl ||
-                        canonicalUrl
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      mutedText={
-                        mutedText
-                      }
-                      isDark={
-                        isDark
-                      }
-                    />
-
-                    <AdminMetadata
-                      label="No Index"
-                      value={
-                        article.seo
-                          ?.noIndex
-                          ? "Yes"
-                          : "No"
-                      }
-                      primaryText={
-                        primaryText
-                      }
-                      mutedText={
-                        mutedText
-                      }
-                      isDark={
-                        isDark
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* ADMIN ACTIONS */}
-
-                <div
-                  className={`
-                    rounded-3xl
-                    border
-                    p-5
-                    ${primaryBg}
-                    ${borderColor}
-                  `}
-                >
-                  <div className="flex items-center gap-2">
-                    <Edit3
-                      size={16}
-                      className={
-                        blueText
-                      }
-                    />
-
-                    <h2
-                      className={`
-                        text-sm
-                        font-bold
-                        ${primaryText}
-                      `}
-                    >
-                      Admin Controls
-                    </h2>
-                  </div>
-
-                  <div className="mt-4 space-y-2">
-                    <button
-                      type="button"
-                      onClick={
-                        handleTogglePublish
-                      }
-                      disabled={
-                        publishing
-                      }
-                      className={`
-                        inline-flex
-                        w-full
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-xl
-                        border
-                        px-4
-                        py-2.5
-                        text-sm
-                        font-semibold
-                        transition
-                        disabled:opacity-60
-                        ${borderColor}
-                        ${
-                          article.published
-                            ? isDark
-                              ? "bg-yellow-950/20 text-yellow-300"
-                              : "bg-yellow-50 text-yellow-700"
-                            : isDark
-                            ? "bg-emerald-950/20 text-emerald-300"
-                            : "bg-emerald-50 text-emerald-700"
-                        }
-                      `}
-                    >
-                      {publishing ? (
-                        <Loader2
-                          size={16}
-                          className="animate-spin"
-                        />
-                      ) : article.published ? (
-                        <EyeOff
-                          size={16}
-                        />
-                      ) : (
-                        <Eye
-                          size={16}
-                        />
-                      )}
-
-                      {publishing
-                        ? "Updating..."
-                        : article.published
-                        ? "Unpublish"
-                        : "Publish"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDeleteModal(
-                          true
-                        )
-                      }
-                      className={`
-                        inline-flex
-                        w-full
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-xl
-                        border
-                        px-4
-                        py-2.5
-                        text-sm
-                        font-semibold
-                        transition
-                        ${
-                          isDark
-                            ? "border-red-900/40 bg-red-950/20 text-red-300"
-                            : "border-red-200 bg-red-50 text-red-600"
-                        }
-                      `}
-                    >
-                      <Trash2
-                        size={16}
-                      />
-
-                      Delete Article
-                    </button>
-                  </div>
-                </div>
-              </aside>
-            )}
+            </div>
           </div>
         </section>
+
+        {/* ================= ADMIN ================= */}
+        {isAdmin && (
+          <div className="bl-admin" role="region" aria-label="Admin controls">
+            <span><Settings2 size={14} style={{ verticalAlign: "-2px" }} /> Admin</span>
+            <Link to="/blog-manage" className="bl-btn bl-btn-onpanel">Manage</Link>
+            <button type="button" className="bl-btn bl-btn-onpanel" onClick={unpublish} disabled={Boolean(busy)}>
+              <EyeOff size={14} /> {busy === "publish" ? "Saving…" : "Unpublish"}
+            </button>
+            <button type="button" className="bl-btn bl-btn-danger" onClick={() => setConfirmDelete(true)} disabled={Boolean(busy)}>
+              <Trash2 size={14} /> Delete
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {confirmDelete && (
+            <motion.div className="bl-modal-root" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <button type="button" className="bl-modal-backdrop" aria-label="Close" onClick={() => setConfirmDelete(false)} />
+              <motion.div className="bl-modal" role="alertdialog" aria-modal="true" aria-labelledby="bl-del-h" initial={{ y: 16, scale: 0.98 }} animate={{ y: 0, scale: 1 }} exit={{ y: 16, scale: 0.98 }}>
+                <h2 id="bl-del-h">Delete this article?</h2>
+                <p>“{post.title}” moves to the trash and disappears from the blog. You can restore it from Manage.</p>
+                <div className="bl-modal-actions">
+                  <button type="button" className="bl-btn bl-btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
+                  <button type="button" className="bl-btn bl-btn-danger" onClick={remove} disabled={busy === "delete"}>
+                    <Trash2 size={15} /> {busy === "delete" ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {toast && (
+            <motion.div className="bl-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}>
+              <Check size={15} style={{ verticalAlign: "-3px", marginRight: 6 }} />{toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
-
-      {/* ============================================================= */}
-      {/* DELETE MODAL */}
-      {/* ============================================================= */}
-
-      <DeleteModal
-        open={
-          deleteModal
-        }
-        onClose={() =>
-          setDeleteModal(
-            false
-          )
-        }
-        onConfirm={
-          handleDelete
-        }
-        deleting={
-          deleting
-        }
-        title={
-          post.title
-        }
-        isDark={
-          isDark
-        }
-      />
-
-      {/* ============================================================= */}
-      {/* ARTICLE CONTENT CSS */}
-      {/* ============================================================= */}
-
-      <style>
-        {`
-          .tt-blog-content h2,
-          .tt-blog-content h3 {
-            scroll-margin-top: 96px;
-          }
-
-          .tt-blog-content {
-            color: ${
-              isDark
-                ? "#C4CFDA"
-                : "#334155"
-            };
-            font-size: 16px;
-            line-height: 1.85;
-            overflow-wrap: anywhere;
-          }
-
-          .tt-blog-content > *:first-child {
-            margin-top: 0;
-          }
-
-          .tt-blog-content > *:last-child {
-            margin-bottom: 0;
-          }
-
-          .tt-blog-content p {
-            margin: 0 0 1.35rem;
-          }
-
-          .tt-blog-content h1,
-          .tt-blog-content h2,
-          .tt-blog-content h3,
-          .tt-blog-content h4,
-          .tt-blog-content h5,
-          .tt-blog-content h6 {
-            color: ${
-              isDark
-                ? "#F4F7FA"
-                : "#0B1524"
-            };
-            font-weight: 800;
-            line-height: 1.3;
-            letter-spacing: -0.02em;
-          }
-
-          .tt-blog-content h1 {
-            font-size: clamp(
-              2rem,
-              5vw,
-              2.6rem
-            );
-
-            margin:
-              2.7rem 0
-              1.25rem;
-          }
-
-          .tt-blog-content h2 {
-            font-size: clamp(
-              1.5rem,
-              4vw,
-              2rem
-            );
-
-            margin:
-              2.5rem 0
-              1rem;
-
-            padding-bottom:
-              0.7rem;
-
-            border-bottom:
-              1px solid ${
-                isDark
-                  ? "#1E2C3D"
-                  : "#E1E9F1"
-              };
-          }
-
-          .tt-blog-content h3 {
-            font-size: clamp(
-              1.25rem,
-              3vw,
-              1.55rem
-            );
-
-            margin:
-              2rem 0
-              0.9rem;
-          }
-
-          .tt-blog-content h4 {
-            font-size: 1.1rem;
-            margin:
-              1.8rem 0
-              0.8rem;
-          }
-
-          .tt-blog-content strong,
-          .tt-blog-content b {
-            color: ${
-              isDark
-                ? "#F4F7FA"
-                : "#172033"
-            };
-
-            font-weight: 700;
-          }
-
-          .tt-blog-content a {
-            color: ${
-              isDark
-                ? "#FB923C"
-                : "#EA580C"
-            };
-
-            text-decoration:
-              underline;
-
-            text-underline-offset:
-              3px;
-          }
-
-          .tt-blog-content ul,
-          .tt-blog-content ol {
-            margin:
-              1.2rem 0
-              1.5rem;
-
-            padding-left:
-              1.6rem;
-          }
-
-          .tt-blog-content ul {
-            list-style: disc;
-          }
-
-          .tt-blog-content ol {
-            list-style: decimal;
-          }
-
-          .tt-blog-content li {
-            margin:
-              0.55rem 0;
-          }
-
-          .tt-blog-content li::marker {
-            color: ${
-              isDark
-                ? "#FB923C"
-                : "#F97316"
-            };
-          }
-
-          .tt-blog-content blockquote {
-            margin:
-              1.8rem 0;
-
-            border-left:
-              4px solid ${
-                isDark
-                  ? "#F97316"
-                  : "#F97316"
-              };
-
-            border-radius:
-              0 14px 14px 0;
-
-            background: ${
-              isDark
-                ? "#101924"
-                : "#F5F9FC"
-            };
-
-            padding:
-              1.1rem
-              1.25rem;
-          }
-
-          .tt-blog-content hr {
-            border: 0;
-
-            border-top:
-              1px solid ${
-                isDark
-                  ? "#1E2C3D"
-                  : "#E1E9F1"
-              };
-
-            margin:
-              2.5rem 0;
-          }
-
-          .tt-blog-content img {
-            display: block;
-            max-width: 100%;
-            height: auto;
-
-            margin:
-              1.8rem auto;
-
-            border-radius:
-              16px;
-
-            border:
-              1px solid ${
-                isDark
-                  ? "#1E2C3D"
-                  : "#E1E9F1"
-              };
-          }
-
-          .tt-blog-content code {
-            border-radius:
-              6px;
-
-            background: ${
-              isDark
-                ? "#172333"
-                : "#EEF3F7"
-            };
-
-            color: ${
-              isDark
-                ? "#FDBA74"
-                : "#9A3412"
-            };
-
-            padding:
-              0.15rem
-              0.38rem;
-
-            font-size:
-              0.88em;
-
-            font-family:
-              ui-monospace,
-              SFMono-Regular,
-              Menlo,
-              Monaco,
-              Consolas,
-              monospace;
-          }
-
-          .tt-blog-content pre {
-            max-width: 100%;
-            overflow-x: auto;
-
-            margin:
-              1.7rem 0;
-
-            border:
-              1px solid ${
-                isDark
-                  ? "#26374A"
-                  : "#D9E3EA"
-              };
-
-            border-radius:
-              16px;
-
-            background:
-              #0F172A;
-
-            padding:
-              1.1rem
-              1.2rem;
-
-            color:
-              #E5EDF5;
-
-            font-size:
-              0.87rem;
-
-            line-height:
-              1.7;
-          }
-
-          .tt-blog-content pre code {
-            background:
-              transparent;
-
-            color:
-              inherit;
-
-            padding: 0;
-          }
-
-          .tt-blog-content table {
-            display:
-              block;
-
-            width:
-              100%;
-
-            max-width:
-              100%;
-
-            overflow-x:
-              auto;
-
-            border-collapse:
-              collapse;
-
-            margin:
-              1.8rem 0;
-          }
-
-          .tt-blog-content th,
-          .tt-blog-content td {
-            min-width:
-              120px;
-
-            border:
-              1px solid ${
-                isDark
-                  ? "#1E2C3D"
-                  : "#DDE6EE"
-              };
-
-            padding:
-              0.75rem
-              0.85rem;
-
-            text-align:
-              left;
-          }
-
-          .tt-blog-content th {
-            background: ${
-              isDark
-                ? "#101924"
-                : "#F5F9FC"
-            };
-
-            color: ${
-              isDark
-                ? "#F4F7FA"
-                : "#0B1524"
-            };
-          }
-
-          @media (
-            max-width:
-              640px
-          ) {
-            .tt-blog-content {
-              font-size:
-                15px;
-
-              line-height:
-                1.8;
-            }
-
-            .tt-blog-content h2 {
-              margin-top:
-                2rem;
-            }
-
-            .tt-blog-content pre {
-              border-radius:
-                12px;
-
-              padding:
-                0.9rem;
-
-              font-size:
-                0.78rem;
-            }
-
-            .tt-blog-content ul,
-            .tt-blog-content ol {
-              padding-left:
-                1.3rem;
-            }
-          }
-        `}
-      </style>
-    </>
+    </MotionConfig>
   );
-};
-
-/*
-|--------------------------------------------------------------------------
-| ADMIN ROW
-|--------------------------------------------------------------------------
-*/
-
-const AdminRow = ({
-  icon: Icon,
-  label,
-  value,
-  primaryText,
-  secondaryText,
-}) => {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2.5">
-      <div
-        className={`
-          flex
-          items-center
-          gap-2
-          text-sm
-          ${secondaryText}
-        `}
-      >
-        <Icon
-          size={15}
-          className="mt-0.5 shrink-0"
-        />
-
-        {label}
-      </div>
-
-      <span
-        className={`
-          max-w-[150px]
-          text-right
-          text-sm
-          font-bold
-          ${primaryText}
-        `}
-      >
-        {value}
-      </span>
-    </div>
-  );
-};
-
-/*
-|--------------------------------------------------------------------------
-| TIMELINE ITEM
-|--------------------------------------------------------------------------
-*/
-
-const TimelineItem = ({
-  icon: Icon,
-  label,
-  value,
-  blueText,
-  primaryText,
-  mutedText,
-}) => {
-  return (
-    <div className="flex items-start gap-3">
-      <Icon
-        size={16}
-        className={`
-          mt-0.5
-          shrink-0
-          ${blueText}
-        `}
-      />
-
-      <div className="min-w-0">
-        <p
-          className={`
-            text-[11px]
-            font-medium
-            ${mutedText}
-          `}
-        >
-          {label}
-        </p>
-
-        <p
-          className={`
-            mt-1
-            text-xs
-            font-semibold
-            leading-5
-            ${primaryText}
-          `}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-};
-
-/*
-|--------------------------------------------------------------------------
-| ADMIN METADATA
-|--------------------------------------------------------------------------
-*/
-
-const AdminMetadata = ({
-  label,
-  value,
-  primaryText,
-  mutedText,
-  isDark,
-}) => {
-  return (
-    <div>
-      <p
-        className={`
-          text-[10px]
-          font-semibold
-          uppercase
-          tracking-wider
-          ${mutedText}
-        `}
-      >
-        {label}
-      </p>
-
-      <div
-        className={`
-          mt-1.5
-          break-all
-          rounded-xl
-          px-3
-          py-2.5
-          text-xs
-          leading-5
-          ${primaryText}
-          ${
-            isDark
-              ? "bg-[#101924]"
-              : "bg-[#F5F9FC]"
-          }
-        `}
-      >
-        {value}
-      </div>
-    </div>
-  );
-};
-
-export default BlogPostDetail;
+}

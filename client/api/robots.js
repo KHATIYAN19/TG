@@ -22,6 +22,8 @@ const PRIVATE = [
   "/resume-review/login",
   "/resume-review/signup",
   "/resume-review/payment-result",
+  "/prep-buddy/app",
+  "/prep-buddy/signup",
   "/mock-interviews/success",
   "/mock-interviews/failed",
   "/mock-interviews/payment-status",

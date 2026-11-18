@@ -1,2583 +1,544 @@
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Helmet } from "react-helmet-async";
-
+import { Link } from "react-router-dom";
 import {
-  AlertTriangle,
-  BookOpen,
-  CheckCircle2,
-  Clock3,
+  Copyright,
   CreditCard,
-  FileCode2,
-  HelpCircle,
-  LockKeyhole,
+  Prohibit,
+  Robot,
+  Scales,
+  UserCircle,
+} from "@phosphor-icons/react";
+
+import LegalPage, {
   Mail,
-  Phone,
-  ReceiptText,
-  RefreshCcw,
-  Scale,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+  Note,
+  P,
+  PRODUCTS,
+  Products,
+  Split,
+  SUPPORT_EMAIL,
+  Table,
+  UL,
+} from "./legal/LegalKit.jsx";
 
 /* ======================================================
-   SITE
+   CONSTANTS (dates are intentionally unchanged)
 ====================================================== */
-
-const SITE_URL = "https://www.targettrek.in";
-const SITE_NAME = "Target Trek";
-
-const CANONICAL_URL = `${SITE_URL}/terms-of-service`;
-
-const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
-const GENERAL_EMAIL = "enquiry@targettrek.in";
-
-const THEME_KEY = "theme";
-const THEME_EVENT = "targettrek-theme-change";
 
 const LAST_UPDATED = "October 3, 2026";
 const DATE_MODIFIED = "2026-10-03";
 
-/* ======================================================
-   SEO
-====================================================== */
-
-const SEO_TITLE =
-  "Terms & Conditions for Ebooks & Mock Interviews | Target Trek";
-
-const SEO_DESCRIPTION =
-  "Read Target Trek terms for ebooks and mock interviews, including payments, booking responsibilities, 24-hour interview cancellation notice, ₹199 cancellation fee, and ebook refunds.";
-
-const SEO_KEYWORDS = [
-  "Target Trek terms",
-  "Target Trek terms and conditions",
-  "Target Trek ebooks",
-  "ebook terms and conditions",
-  "digital product terms",
-  "ebook refund policy",
-  "duplicate payment refund",
-  "ebook licence",
-  "digital product licence",
-  "Target Trek privacy",
-  "Target Trek payment terms",
-  "mock interview cancellation",
-  "mock interview cancellation fee 199",
-  "mock interview 24 hour cancellation",
-].join(", ");
-
-/* ======================================================
-   THEME
-====================================================== */
-
-const getStoredTheme = () => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  let storedTheme;
-  try {
-    storedTheme = window.localStorage.getItem(THEME_KEY);
-  } catch {
-    return "light";
-  }
-
-  if (storedTheme === "dark" || storedTheme === "light") {
-    return storedTheme;
-  }
-
-  return "light";
+const SEO = {
+  title: "Terms of Service | Target Trek",
+  description:
+    "The terms for using Target Trek and buying its ebooks, Resume Lab reviews, Memories, Prep Arena and mock interviews: accounts, payments, the no-refund rule, personal-use licence, acceptable use and governing law.",
+  keywords: [
+    "Target Trek terms of service",
+    "Target Trek terms and conditions",
+    "ebook licence personal use",
+    "Resume Lab terms",
+    "Memories terms",
+    "Prep Arena terms",
+    "mock interview terms",
+    "digital product terms India",
+  ].join(", "),
+  readMins: 12,
 };
 
-/* ======================================================
-   ANIMATION
-====================================================== */
+const SUPPORT_SUBJECT = "Question about the Terms - Target Trek";
+const SUPPORT_BODY = `Hello Target Trek Support,
 
-const pageVariants = {
-  initial: {
-    opacity: 0,
-    y: 14,
-  },
+I have a question about the Terms of Service.
 
-  animate: {
-    opacity: 1,
-    y: 0,
-
-    transition: {
-      duration: 0.4,
-    },
-  },
-
-  exit: {
-    opacity: 0,
-    y: -14,
-
-    transition: {
-      duration: 0.25,
-    },
-  },
-};
-
-/* ======================================================
-   QUICK LINKS
-====================================================== */
-
-const quickLinks = [
-  { id: "mock-interviews", label: "Mock interview bookings" },
-  { id: "mock-cancellation", label: "Mock interview cancellation" },
-  {
-    id: "digital-products",
-    label: "Digital products",
-  },
-  {
-    id: "payments",
-    label: "Pricing & payments",
-  },
-  {
-    id: "refund-policy",
-    label: "Refund policy",
-  },
-  {
-    id: "customer-information",
-    label: "Customer information",
-  },
-  {
-    id: "personal-use-licence",
-    label: "Personal-use licence",
-  },
-  {
-    id: "sharing-restrictions",
-    label: "Sharing restrictions",
-  },
-  {
-    id: "technical-content",
-    label: "Technical content",
-  },
-  {
-    id: "privacy",
-    label: "Privacy",
-  },
-  {
-    id: "governing-law",
-    label: "Governing law",
-  },
-  {
-    id: "ebook-support",
-    label: "Ebook support",
-  },
-];
-
-/* ======================================================
-   FAQ
-====================================================== */
-
-const termsFaqs = [
-  {
-    question: "What are the cancellation terms for a mock interview?",
-    answer: "For a candidate-requested cancellation, email supporttargettrek@gmail.com at least 24 hours before the scheduled interview start time. If approved, a cancellation fee of ₹199 is deducted from the amount paid and the balance is refunded. Requests received less than 24 hours before the session and no-shows are not eligible for refunds under the standard policy, subject to applicable law.",
-  },
-  {
-    question: "Can I cancel my mock interview through chat or by not attending?",
-    answer: "No. To request cancellation, email supporttargettrek@gmail.com with your booking reference and registered email at least 24 hours before the scheduled interview. Simply not attending is treated as a no-show and is not a cancellation request.",
-  },
-  {
-    question:
-      "Are Target Trek ebook purchases refundable?",
-
-    answer:
-      "Target Trek ebooks and digital products are generally non-refundable. Under the standard Target Trek refund policy, a refund is available for a verified duplicate or double payment for the same intended purchase, except where another remedy is required by applicable law.",
-  },
-
-  {
-    question:
-      "What happens if I accidentally pay twice?",
-
-    answer:
-      "Contact Target Trek support with proof of both successful transactions. Once an unintended duplicate payment is verified, the duplicate amount will be processed for refund within seven calendar days to the original payment method.",
-  },
-
-  {
-    question:
-      "What if I do not receive my ebook?",
-
-    answer:
-      "Contact Target Trek support with your purchase details. We can verify your payment and assist by restoring access, providing the correct ebook, resending access information, or resolving the delivery issue.",
-  },
-
-  {
-    question:
-      "Can I share a Target Trek ebook with other people?",
-
-    answer:
-      "Unless specifically stated otherwise, Target Trek ebooks are licensed for the purchaser's personal use and must not be unlawfully resold, redistributed, publicly uploaded, or shared through unauthorized access links.",
-  },
-
-  {
-    question:
-      "Does Target Trek sell my personal data?",
-
-    answer:
-      "No. Target Trek does not sell, rent, or trade customer names, email addresses, mobile numbers, purchase information, or other personal data to unrelated third parties for their independent marketing purposes.",
-  },
-];
-
-/* ======================================================
-   SUPPORT EMAIL
-====================================================== */
-
-const SUPPORT_EMAIL_SUBJECT =
-  "Ebook Purchase Support - Target Trek";
-
-const SUPPORT_EMAIL_BODY = `Hello Target Trek Support,
-
-I need help with my Target Trek purchase.
-
-Full Name:
-Email Address Used During Checkout:
-Mobile Number:
-Ebook / Product Name:
-Order ID:
-Transaction ID:
-
-Issue:
+Email address on my account:
+Product (if any):
+My question:
 
 Thank you.`;
 
-const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-  SUPPORT_EMAIL_SUBJECT
-)}&body=${encodeURIComponent(SUPPORT_EMAIL_BODY)}`;
+const REPORT_SUBJECT = "Report misuse or shared content - Target Trek";
+const REPORT_BODY = `Hello Target Trek Support,
+
+I would like to report misuse on Target Trek.
+
+What I found (link, screenshot or description):
+Where I found it:
+Your email (optional):
+
+Thank you.`;
 
 /* ======================================================
-   COMPONENTS
+   CONTENT
 ====================================================== */
 
-const Section = ({
-  id,
-  number,
-  title,
-  children,
-  isDark,
-}) => {
-  const headingId = `${id}-heading`;
-
-  return (
-    <section
-      id={id}
-      aria-labelledby={headingId}
-      className={`scroll-mt-28 border-b pb-10 last:border-b-0 ${
-        isDark
-          ? "border-[#403027]"
-          : "border-[#f7e9df]"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black sm:flex ${
-            isDark
-              ? "bg-orange-500/10 text-orange-400"
-              : "bg-orange-50 text-orange-700"
-          }`}
-        >
-          {number}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <h2
-            id={headingId}
-            className={`text-xl font-black tracking-tight sm:text-2xl ${
-              isDark
-                ? "text-white"
-                : "text-[#29201a]"
-            }`}
-          >
-            <span className="mr-2 text-orange-600 sm:hidden">
-              {number}.
-            </span>
-
-            {title}
-          </h2>
-
-          <div
-            className={`mt-5 space-y-4 text-[15px] leading-7 sm:text-base sm:leading-8 ${
-              isDark
-                ? "text-[#bca99b]"
-                : "text-[#76665a]"
-            }`}
-          >
-            {children}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+const summary = {
+  title: "The key points",
+  items: [
+    <>
+      Use Target Trek for <b>learning and career prep</b>, honestly and legally.
+    </>,
+    <>
+      What you buy is for <b>your personal use</b>. Please don’t share or resell it.
+    </>,
+    <>
+      <b>Purchases are final.</b> Refunds only for double payments or genuine issues.
+    </>,
+    <>
+      We help you prepare. We <b>can’t guarantee</b> a job or interview result.
+    </>,
+    <>
+      Questions? <b>{SUPPORT_EMAIL}</b>
+    </>,
+  ],
 };
 
-const BulletList = ({
-  items,
-  isDark,
-}) => (
-  <ul className="space-y-3">
-    {items.map((item, index) => (
-      <li
-        key={`${index}-${item}`}
-        className="flex items-start gap-3"
-      >
-        <CheckCircle2
-          size={17}
-          className="mt-1.5 shrink-0 text-orange-500"
-        />
+const glance = [
+  { Icon: UserCircle, title: "Your account", text: "Keep your details accurate and your password private.", to: "accounts" },
+  { Icon: CreditCard, title: "Payments", text: "Prices in INR, paid through a secure payment gateway.", to: "payments" },
+  { Icon: Prohibit, tone: "bad", title: "No refunds after purchase", text: "Except double payments and genuine payment or delivery issues.", to: "refunds" },
+  { Icon: Copyright, title: "Personal-use licence", text: "Read, learn and use. Don't copy, share or resell paid content.", to: "licence" },
+  { Icon: Robot, tone: "warn", title: "AI-assisted features", text: "Helpful, but not always perfect. Use your own judgement.", to: "ai" },
+  { Icon: Scales, title: "Indian law", text: "These Terms are governed by the laws of India.", to: "governing-law" },
+];
 
-        <span
-          className={
-            isDark
-              ? "text-[#bca99b]"
-              : "text-[#76665a]"
-          }
-        >
-          {item}
-        </span>
-      </li>
-    ))}
-  </ul>
-);
+const sections = [
+  {
+    id: "acceptance",
+    title: "Accepting these Terms",
+    body: (
+      <>
+        <P>
+          These Terms of Service (“Terms”) are an agreement between you and <b>Target Trek</b> (“we”, “us”, “our”). They
+          apply when you visit <b>targettrek.in</b>, create an account, or buy or use any Target Trek product.
+        </P>
+        <P>
+          By using the website or completing a purchase, you agree to these Terms, our{" "}
+          <Link className="lg-link" to="/privacy-policy">Privacy Policy</Link> and our{" "}
+          <Link className="lg-link" to="/refund-policy">Refund Policy</Link>. If you don’t agree, please don’t use Target
+          Trek.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "about",
+    title: "About Target Trek and our products",
+    body: (
+      <>
+        <P>
+          Target Trek is a learning and career platform for software engineers and students. Alongside free articles and
+          resources, we offer these paid products:
+        </P>
+        <Products items={PRODUCTS} />
+        <P>
+          Each product page shows what is included, the price and any product-specific rules before you pay. Those details
+          form part of these Terms for that purchase.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "accounts",
+    title: "Your account",
+    body: (
+      <UL
+        items={[
+          "Give accurate details when you sign up or buy, especially your email address, because that's where your access and receipts are sent.",
+          "Keep your password and sign-in codes private. You are responsible for activity on your account.",
+          "One account is for one person. Don't share your login or let others use your paid access.",
+          "Tell us straight away at " + SUPPORT_EMAIL + " if you think someone else has used your account.",
+          "If you are under 18, use Target Trek with the consent and supervision of a parent or guardian.",
+        ]}
+      />
+    ),
+  },
+  {
+    id: "payments",
+    title: "Prices and payments",
+    body: (
+      <>
+        <UL
+          items={[
+            "Prices are shown in Indian Rupees (INR) and include any applicable taxes unless stated otherwise.",
+            "Payments are processed by a third-party payment gateway. We don't see or store your full card, UPI or bank details.",
+            "An order is complete only when the payment gateway confirms the payment.",
+            "Prices, offers and coupons may change at any time. A change doesn't affect orders that are already paid.",
+            "Coupons can't be exchanged for cash and may have their own conditions and expiry dates.",
+            "If a price is shown wrongly because of an obvious error, we may cancel the order and refund what you paid.",
+          ]}
+        />
+        <Note tone="info" title="Wait before paying again">
+          If a payment looks stuck, check your bank or UPI app and wait a little before trying again. This helps avoid a
+          double payment.
+        </Note>
+      </>
+    ),
+  },
+  {
+    id: "delivery",
+    title: "Delivery of digital products",
+    body: (
+      <>
+        <P>Everything we sell is digital and is usually delivered within minutes of a confirmed payment:</P>
+        <Table
+          rows={[
+            ["Ebooks & All Access", "Unlocked in your account, or sent as an access or download link to your email."],
+            ["Resume Lab", "Plans and review credits are added to your account. Reviews are delivered in your Resume Lab space."],
+            ["Memories", "Credits, upgrades and extra room are added to your account for you to use on your pages."],
+            ["Prep Arena", "Your arena access starts and your profile can go live."],
+            ["Mock interviews", "Your booking is confirmed by email with the date, time and joining details."],
+          ]}
+        />
+        <P>
+          If something hasn’t arrived within a few hours, check your spam folder, then email{" "}
+          <Mail subject="Product not received - Target Trek" /> with your order details and we’ll fix it.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "refunds",
+    title: "Refunds and cancellations",
+    sub: "Full details are in our Refund Policy.",
+    body: (
+      <>
+        <Note tone="bad" title="No refunds after purchase">
+          All purchases of ebooks, Resume Lab, Memories and Prep Arena are <b>final and non-refundable</b> once payment is
+          confirmed.
+        </Note>
+        <P>We make a refund only when:</P>
+        <UL
+          items={[
+            "you were charged twice (a double or duplicate payment) for the same order;",
+            "money was deducted but the order failed and the bank didn't reverse it;",
+            "you were charged more than the price shown at checkout; or",
+            "we couldn't deliver or fix what you bought because of a problem on our side.",
+          ]}
+        />
+        <P>
+          To ask for a refund, email <Mail subject="Refund request - Target Trek" /> with your order and payment details.
+          Mock interviews can be cancelled by email at least 24 hours before the start time, with a ₹199 cancellation fee.
+          Read the full <Link className="lg-link" to="/refund-policy">Refund Policy</Link>.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "mock-interviews",
+    title: "Mock interview bookings",
+    body: (
+      <UL
+        items={[
+          "Check the date, time (IST), duration, topics and price before you pay.",
+          "Join on time with a working device, a stable internet connection and a quiet place.",
+          "Keep the meeting link private. Don't share it or let anyone else join in your place.",
+          "Be respectful to the interviewer. We may end a session early if someone behaves abusively.",
+          "Missed sessions (no-shows) are not refunded or rescheduled unless we agree otherwise.",
+        ]}
+      />
+    ),
+  },
+  {
+    id: "licence",
+    title: "Your personal-use licence",
+    body: (
+      <>
+        <P>
+          When you buy a product, we give you a <b>personal, non-transferable, non-exclusive licence</b> to use it for your
+          own learning and career preparation. You don’t buy ownership of the content itself.
+        </P>
+        <Split
+          yesTitle="You can"
+          yes={[
+            "Read and study the content on your own devices.",
+            "Make notes and practise with the code examples.",
+            "Use what you learn in interviews and at work.",
+            "Print pages for your own study.",
+          ]}
+          noTitle="You can't"
+          no={[
+            "Share, upload or forward the files or access links.",
+            "Resell, rent or give away paid content.",
+            "Post paid content in groups, channels, drives or forums.",
+            "Copy it into courses, books or products of your own.",
+            "Remove watermarks or copyright notices.",
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: "acceptable-use",
+    title: "Acceptable use",
+    body: (
+      <>
+        <P>When using Target Trek, please don’t:</P>
+        <UL
+          cross
+          items={[
+            "break any law or anyone else's rights;",
+            "upload content that is illegal, hateful, sexually explicit, violent, defamatory or harassing;",
+            "upload photos, videos or personal details of other people without their permission;",
+            "pretend to be someone else, or use a false name or company in Prep Arena;",
+            "spam, harass or pressure other members, or ask them for money;",
+            "try to hack, overload, scrape or reverse-engineer the website;",
+            "use bots or scripts to create accounts, claim offers or access paid content;",
+            "misuse coupons, referral offers or the refund process.",
+          ]}
+        />
+        <P>
+          If you see misuse or paid content being shared, please report it to{" "}
+          <Mail subject={REPORT_SUBJECT} body={REPORT_BODY} />.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "your-content",
+    title: "Content you upload",
+    body: (
+      <>
+        <P>
+          You keep ownership of what you upload, such as your resume, photos, videos, messages and profile details. You
+          give us permission to store, process and display that content only as needed to provide the product to you, for
+          example to review your resume, build your memory page or show your arena profile to members.
+        </P>
+        <UL
+          items={[
+            "Only upload content you own or have permission to use.",
+            "You are responsible for the content you upload and share.",
+            "We may remove content, or block a page or profile, if it breaks these Terms or the law.",
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: "ai",
+    title: "AI-assisted features",
+    body: (
+      <P>
+        Some features, such as resume scoring, job-match checks and suggested improvements, use automated and AI-assisted
+        analysis. These results are meant to help you, but they can be incomplete or wrong. Please review any suggestion
+        before you use it. You are responsible for what you finally put on your resume or say in an interview.
+      </P>
+    ),
+  },
+  {
+    id: "ip",
+    title: "Intellectual property",
+    body: (
+      <P>
+        All Target Trek content, including ebooks, articles, diagrams, code samples, designs, templates, logos and the
+        website itself, belongs to Target Trek or its licensors and is protected by copyright and other laws. Apart from the
+        personal-use licence above, no rights are given to you. The “Target Trek” name and logo may not be used without our
+        written permission.
+      </P>
+    ),
+  },
+  {
+    id: "no-guarantee",
+    title: "Learning purpose and no guarantee of results",
+    body: (
+      <>
+        <P>
+          Our products are for <b>learning and preparation</b>. They help you prepare, but we can’t control hiring
+          decisions.
+        </P>
+        <Note tone="warn" title="No job guarantee">
+          Buying an ebook, a resume review, Prep Arena access or a mock interview does <b>not guarantee</b> a job offer,
+          interview call, shortlisting, promotion, salary or any other result.
+        </Note>
+        <P>
+          Technical content and code examples are provided for learning. Technology changes quickly, so always check
+          official documentation before using code or advice in production.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "communications",
+    title: "Emails and communication",
+    body: (
+      <>
+        <P>By creating an account or making a purchase, you agree that we may email you:</P>
+        <UL
+          items={[
+            <><b>Order and account emails</b>, such as receipts, access links, booking details, refund updates and security alerts. These are always sent.</>,
+            <><b>Marketing emails</b> about new product launches, new ebooks, features and offers.</>,
+          ]}
+        />
+        <P>
+          You can stop marketing emails at any time with the unsubscribe link at the bottom of each one. You’ll still get
+          order and transaction emails. See the <Link className="lg-link" to="/privacy-policy#emails">Privacy Policy</Link>.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "availability",
+    title: "Website availability and changes",
+    body: (
+      <UL
+        items={[
+          "We try to keep Target Trek available at all times, but it may sometimes be slow or offline for maintenance or reasons outside our control.",
+          "We may update, improve, rename or stop features and products. Where a paid product is stopped, we will try to give you reasonable notice or access to its content.",
+          "New editions of ebooks may be added at our discretion.",
+        ]}
+      />
+    ),
+  },
+  {
+    id: "suspension",
+    title: "Suspending or closing accounts",
+    body: (
+      <P>
+        We may suspend or close an account, remove content or block access to paid products if these Terms are broken, for
+        example by sharing paid content, abusing other members, fraud or misuse of payments. Where it’s reasonable, we will
+        tell you why. Access taken away for breaking these Terms is not refunded. You can close your account at any time by
+        emailing {SUPPORT_EMAIL}.
+      </P>
+    ),
+  },
+  {
+    id: "third-party",
+    title: "Third-party services",
+    body: (
+      <P>
+        Target Trek uses trusted third parties for some services, such as the payment gateway, sign-in with Google, video
+        meeting tools for mock interviews and analytics. Your use of those services may also be covered by their own terms.
+        We aren’t responsible for their availability or actions.
+      </P>
+    ),
+  },
+  {
+    id: "disclaimer",
+    title: "Disclaimer",
+    body: (
+      <P>
+        Target Trek and its products are provided “as is” and “as available”. As far as the law allows, we don’t promise
+        that the website will always be error-free or uninterrupted, or that content will always be complete or up to
+        date.
+      </P>
+    ),
+  },
+  {
+    id: "liability",
+    title: "Limitation of liability",
+    body: (
+      <P>
+        As far as the law allows, Target Trek is not liable for indirect or consequential loss, such as lost job
+        opportunities, lost income or lost data. Our total liability for any claim about a product is limited to the amount
+        you paid for that product. Nothing in these Terms limits liability that cannot be limited under Indian law.
+      </P>
+    ),
+  },
+  {
+    id: "indemnity",
+    title: "Your responsibility",
+    body: (
+      <P>
+        If you break these Terms or the law, or upload content that infringes someone else’s rights, you agree to be
+        responsible for the resulting claims and losses, and not Target Trek.
+      </P>
+    ),
+  },
+  {
+    id: "governing-law",
+    title: "Governing law and disputes",
+    body: (
+      <>
+        <P>
+          These Terms are governed by the laws of <b>India</b>, subject to any consumer protection rights that apply to you.
+        </P>
+        <P>
+          If you have a problem, please email us first. Most issues are resolved quickly and directly. If a dispute can’t be
+          resolved this way, it will be handled by the competent courts in India.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "general",
+    title: "General",
+    body: (
+      <UL
+        items={[
+          "If any part of these Terms is found invalid, the rest stays in force.",
+          "If we don't enforce a right straight away, we haven't given it up.",
+          "These Terms, together with the Privacy Policy, Refund Policy and product page details, are the full agreement between you and Target Trek.",
+          "You may not transfer your account or these Terms to someone else.",
+        ]}
+      />
+    ),
+  },
+  {
+    id: "changes",
+    title: "Changes to these Terms",
+    body: (
+      <P>
+        We may update these Terms from time to time. The date at the top of this page shows when they were last updated.
+        Using Target Trek after a change means you accept the updated Terms. Purchases already made are covered by the Terms
+        in force at the time of purchase.
+      </P>
+    ),
+  },
+];
+
+const faqs = [
+  {
+    q: "Can I share an ebook I bought with a friend?",
+    a: "No. Each purchase gives a personal licence for one person. Sharing files, access links or login details isn't allowed and may lead to your access being removed.",
+  },
+  {
+    q: "Are purchases refundable?",
+    a: "No, purchases are final. We refund only double payments and genuine payment or delivery issues. Mock interviews can be cancelled at least 24 hours in advance with a ₹199 fee. See the Refund Policy for details.",
+  },
+  {
+    q: "Will buying a product get me a job?",
+    a: "Our products help you prepare, but we can't guarantee any job offer, interview call, salary or result.",
+  },
+  {
+    q: "Who owns the resume and photos I upload?",
+    a: "You do. We only use them to provide the product you're using, such as reviewing your resume or building your memory page.",
+  },
+  {
+    q: "Which law applies to these Terms?",
+    a: "The laws of India, subject to any consumer protection rights that apply to you.",
+  },
+];
+
+const contact = {
+  title: "Questions about these Terms?",
+  text: "If something here isn't clear, or you want to report misuse or shared paid content, email us. We read every message.",
+  actions: [
+    { label: "Ask about the Terms", subject: SUPPORT_SUBJECT, body: SUPPORT_BODY },
+    { label: "Report misuse", subject: REPORT_SUBJECT, body: REPORT_BODY },
+  ],
+};
 
 /* ======================================================
    PAGE
 ====================================================== */
 
-const TermsOfService = () => {
-  const [theme, setTheme] =
-    useState(getStoredTheme);
-
-  const isDark = theme === "dark";
-
-  /* ====================================================
-     THEME SYNC
-  ==================================================== */
-
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "auto",
-    });
-
-    const syncTheme = () => {
-      setTheme(getStoredTheme());
-    };
-
-    const handleStorageChange = (event) => {
-      if (event.key === THEME_KEY) {
-        syncTheme();
-      }
-    };
-
-    window.addEventListener(
-      "storage",
-      handleStorageChange
-    );
-
-    window.addEventListener(
-      THEME_EVENT,
-      syncTheme
-    );
-
-    syncTheme();
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        handleStorageChange
-      );
-
-      window.removeEventListener(
-        THEME_EVENT,
-        syncTheme
-      );
-    };
-  }, []);
-
-  /* ====================================================
-     STRUCTURED DATA
-  ==================================================== */
-
-  const structuredData = {
-    "@context": "https://schema.org",
-
-    "@graph": [
-      {
-        "@type": "Organization",
-
-        "@id": `${SITE_URL}/#organization`,
-
-        name: SITE_NAME,
-
-        url: SITE_URL,
-
-        email: SUPPORT_EMAIL,
-
-        contactPoint: {
-          "@type": "ContactPoint",
-
-          contactType:
-            "customer support",
-
-          email: SUPPORT_EMAIL,
-
-          areaServed: "Worldwide",
-
-          availableLanguage: [
-            "English",
-          ],
-        },
-      },
-
-      {
-        "@type": "WebSite",
-
-        "@id": `${SITE_URL}/#website`,
-
-        url: SITE_URL,
-
-        name: SITE_NAME,
-
-        publisher: {
-          "@id": `${SITE_URL}/#organization`,
-        },
-
-        inLanguage: "en",
-      },
-
-      {
-        "@type": "WebPage",
-
-        "@id": `${CANONICAL_URL}#webpage`,
-
-        url: CANONICAL_URL,
-
-        name: SEO_TITLE,
-
-        description: SEO_DESCRIPTION,
-
-        dateModified: DATE_MODIFIED,
-
-        inLanguage: "en",
-
-        isPartOf: {
-          "@id": `${SITE_URL}/#website`,
-        },
-
-        publisher: {
-          "@id": `${SITE_URL}/#organization`,
-        },
-
-        breadcrumb: {
-          "@id": `${CANONICAL_URL}#breadcrumb`,
-        },
-
-        about: [
-          {
-            "@type": "Thing",
-            name: "Terms and Conditions",
-          },
-
-          {
-            "@type": "Thing",
-            name: "Digital Products",
-          },
-
-          {
-            "@type": "Thing",
-            name: "Ebook Purchases",
-          },
-
-          {
-            "@type": "Thing",
-            name: "Digital Product Licence",
-          },
-        ],
-      },
-
-      {
-        "@type": "BreadcrumbList",
-
-        "@id": `${CANONICAL_URL}#breadcrumb`,
-
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: SITE_URL,
-          },
-
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Terms & Conditions",
-            item: CANONICAL_URL,
-          },
-        ],
-      },
-
-      {
-        "@type": "FAQPage",
-
-        mainEntity:
-          termsFaqs.map(
-            (faq) => ({
-              "@type": "Question",
-
-              name: faq.question,
-
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: faq.answer,
-              },
-            })
-          ),
-      },
-    ],
-  };
-
-  return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className={`min-h-screen pt-16 transition-colors duration-300 md:pt-20 ${
-        isDark
-          ? "bg-[#110e0c] text-[#fff8f0]"
-          : "bg-[#fffaf5] text-[#34271f]"
-      }`}
-    >
-      {/* =================================================
-          SEO
-      ================================================= */}
-
-      <Helmet>
-        <title>
-          {SEO_TITLE}
-        </title>
-
-        <meta
-          name="description"
-          content={SEO_DESCRIPTION}
-        />
-
-        <meta
-          name="keywords"
-          content={SEO_KEYWORDS}
-        />
-
-        <meta
-          name="robots"
-          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-        />
-
-        <meta
-          name="googlebot"
-          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-        />
-
-        <meta
-          name="author"
-          content={SITE_NAME}
-        />
-
-        <meta
-          name="application-name"
-          content={SITE_NAME}
-        />
-
-        <meta
-          name="theme-color"
-          content={
-            isDark
-              ? "#110e0c"
-              : "#fffaf5"
-          }
-        />
-
-        <link
-          rel="canonical"
-          href={CANONICAL_URL}
-        />
-
-        <meta
-          property="og:type"
-          content="website"
-        />
-
-        <meta
-          property="og:site_name"
-          content={SITE_NAME}
-        />
-
-        <meta
-          property="og:locale"
-          content="en_IN"
-        />
-
-        <meta
-          property="og:title"
-          content={SEO_TITLE}
-        />
-
-        <meta
-          property="og:description"
-          content={SEO_DESCRIPTION}
-        />
-
-        <meta
-          property="og:url"
-          content={CANONICAL_URL}
-        />
-
-        <meta
-          property="article:modified_time"
-          content={DATE_MODIFIED}
-        />
-
-        <meta
-          name="twitter:card"
-          content="summary"
-        />
-
-        <meta
-          name="twitter:title"
-          content={SEO_TITLE}
-        />
-
-        <meta
-          name="twitter:description"
-          content={SEO_DESCRIPTION}
-        />
-
-        <script
-          type="application/ld+json"
-        >
-          {JSON.stringify(
-            structuredData
-          )}
-        </script>
-      </Helmet>
-
-      <main>
-
-        {/* =================================================
-            HERO
-        ================================================= */}
-
-        <section
-          className={`relative overflow-hidden border-b ${
-            isDark
-              ? "border-[#403027] bg-[#110e0c]"
-              : "border-[#f1dfd1] bg-white"
-          }`}
-        >
-          <div
-            className={`pointer-events-none absolute -right-48 -top-48 h-[500px] w-[500px] rounded-full blur-3xl ${
-              isDark
-                ? "bg-orange-500/10"
-                : "bg-orange-100/70"
-            }`}
-          />
-
-          <div
-            className={`pointer-events-none absolute -left-32 bottom-0 h-[330px] w-[330px] rounded-full blur-3xl ${
-              isDark
-                ? "bg-orange-500/5"
-                : "bg-orange-100/50"
-            }`}
-          />
-
-          <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-
-            <nav
-              aria-label="Breadcrumb"
-              className={`mb-8 flex items-center gap-2 text-xs font-semibold ${
-                isDark
-                  ? "text-[#927d6c]"
-                  : "text-[#bca99b]"
-              }`}
-            >
-              <a
-                href="/"
-                className="transition hover:text-orange-500"
-              >
-                Home
-              </a>
-
-              <span>/</span>
-
-              <span
-                className={
-                  isDark
-                    ? "text-[#ddcfc3]"
-                    : "text-[#76665a]"
-                }
-              >
-                Terms & Conditions
-              </span>
-            </nav>
-
-            <div className="max-w-4xl">
-              <div
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.16em] ${
-                  isDark
-                    ? "border-orange-500/20 bg-orange-500/10 text-orange-300"
-                    : "border-orange-100 bg-orange-50 text-orange-700"
-                }`}
-              >
-                <Scale size={15} />
-
-                Target Trek Terms
-              </div>
-
-              <h1
-                className={`mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl ${
-                  isDark
-                    ? "text-white"
-                    : "text-[#29201a]"
-                }`}
-              >
-                Terms & Conditions
-              </h1>
-
-              <p
-                className={`mt-6 max-w-3xl text-base leading-8 sm:text-lg ${
-                  isDark
-                    ? "text-[#bca99b]"
-                    : "text-[#76665a]"
-                }`}
-              >
-                These Terms & Conditions
-                govern your use of Target
-                Trek and your purchase,
-                access, download and use of
-                our ebooks, technical
-                learning resources and other
-                digital educational products.
-              </p>
-
-              <div
-                className={`mt-6 max-w-3xl rounded-2xl border p-5 ${
-                  isDark
-                    ? "border-orange-500/20 bg-orange-500/10"
-                    : "border-orange-200 bg-orange-50"
-                }`}
-              >
-                <p
-                  className={`font-bold leading-7 ${
-                    isDark
-                      ? "text-orange-200"
-                      : "text-orange-900"
-                  }`}
-                >
-                  Target Trek primarily sells
-                  digital products. Please review
-                  the product description, price,
-                  format, refund policy and these
-                  Terms before completing a
-                  purchase.
-                </p>
-              </div>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                {[
-                  `Last updated: ${LAST_UPDATED}`,
-                  "Digital Products",
-                  "Mock Interviews",
-                  "Personal Use",
-                  "Indian Law",
-                ].map((item) => (
-                  <span
-                    key={item}
-                    className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
-                      isDark
-                        ? "border-[#403027] bg-[#211a15] text-[#bca99b]"
-                        : "border-[#f1dfd1] bg-white text-[#76665a] shadow-sm"
-                    }`}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =================================================
-            SUMMARY
-        ================================================= */}
-
-        <section
-          className={`border-b ${
-            isDark
-              ? "border-[#403027] bg-[#211a15]"
-              : "border-[#f1dfd1] bg-white"
-          }`}
-        >
-          <div className="mx-auto grid max-w-6xl gap-4 px-4 py-7 sm:grid-cols-3 sm:px-6 lg:px-8">
-
-            <div
-              className={`rounded-2xl border p-5 ${
-                isDark
-                  ? "border-[#403027] bg-[#110e0c]"
-                  : "border-[#f1dfd1] bg-[#fffaf5]"
-              }`}
-            >
-              <BookOpen
-                size={22}
-                className="text-orange-500"
-              />
-
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
-                Digital Products
-              </p>
-
-              <p
-                className={`mt-2 text-sm font-bold leading-6 ${
-                  isDark
-                    ? "text-[#f1dfd1]"
-                    : "text-[#49392e]"
-                }`}
-              >
-                Target Trek products are
-                primarily digital ebooks and
-                educational resources.
-              </p>
-            </div>
-
-            <div
-              className={`rounded-2xl border p-5 ${
-                isDark
-                  ? "border-emerald-500/20 bg-emerald-500/5"
-                  : "border-emerald-200 bg-emerald-50"
-              }`}
-            >
-              <RefreshCcw
-                size={22}
-                className="text-emerald-500"
-              />
-
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-emerald-600">
-                Refunds
-              </p>
-
-              <p
-                className={`mt-2 text-sm font-bold leading-6 ${
-                  isDark
-                    ? "text-[#f1dfd1]"
-                    : "text-[#49392e]"
-                }`}
-              >
-                Standard refunds apply only
-                to verified duplicate payments,
-                subject to applicable law.
-              </p>
-            </div>
-
-            <div
-              className={`rounded-2xl border p-5 ${
-                isDark
-                  ? "border-orange-500/20 bg-orange-500/5"
-                  : "border-orange-200 bg-orange-50"
-              }`}
-            >
-              <ShieldCheck
-                size={22}
-                className="text-orange-500"
-              />
-
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-orange-600">
-                Personal Use
-              </p>
-
-              <p
-                className={`mt-2 text-sm font-bold leading-6 ${
-                  isDark
-                    ? "text-[#f1dfd1]"
-                    : "text-[#49392e]"
-                }`}
-              >
-                Paid ebooks are generally
-                licensed to the purchaser for
-                personal use only.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* =================================================
-            LAYOUT
-        ================================================= */}
-
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8 lg:py-14">
-
-          {/* SIDEBAR */}
-
-          <aside className="hidden lg:block">
-            <div
-              className={`sticky top-28 rounded-2xl border p-5 shadow-sm ${
-                isDark
-                  ? "border-[#403027] bg-[#211a15]"
-                  : "border-[#f1dfd1] bg-white"
-              }`}
-            >
-              <p
-                className={`text-xs font-black uppercase tracking-[0.16em] ${
-                  isDark
-                    ? "text-[#927d6c]"
-                    : "text-[#bca99b]"
-                }`}
-              >
-                Quick Navigation
-              </p>
-
-              <nav
-                aria-label="Terms quick navigation"
-                className="mt-4 space-y-1"
-              >
-                {quickLinks.map((item) => (
-                  <a
-                    key={item.id}
-                    href={`#${item.id}`}
-                    className={`block rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-                      isDark
-                        ? "text-[#bca99b] hover:bg-orange-500/10 hover:text-orange-400"
-                        : "text-[#76665a] hover:bg-orange-50 hover:text-orange-700"
-                    }`}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </nav>
-
-              <div
-                className={`mt-6 border-t pt-5 ${
-                  isDark
-                    ? "border-[#403027]"
-                    : "border-[#f7e9df]"
-                }`}
-              >
-                <p className="text-xs leading-5 text-[#927d6c]">
-                  Need purchase support?
-                </p>
-
-                <a
-                  href={SUPPORT_MAILTO}
-                  className="mt-2 block break-all text-xs font-bold text-orange-500 hover:text-orange-600"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </div>
-            </div>
-          </aside>
-
-          {/* ARTICLE */}
-
-          <article className="min-w-0">
-
-            {/* DIGITAL NOTICE */}
-
-            <section
-              id="digital-products"
-              className={`scroll-mt-28 rounded-3xl border p-6 sm:p-8 ${
-                isDark
-                  ? "border-amber-500/20 bg-amber-500/5"
-                  : "border-amber-200 bg-amber-50"
-              }`}
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
-                    isDark
-                      ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                      : "border-amber-200 bg-white text-amber-600"
-                  }`}
-                >
-                  <AlertTriangle size={21} />
-                </div>
-
-                <div>
-                  <h2
-                    className={`text-xl font-black ${
-                      isDark
-                        ? "text-white"
-                        : "text-[#29201a]"
-                    }`}
-                  >
-                    Important Digital Product Notice
-                  </h2>
-
-                  <p
-                    className={`mt-3 leading-7 ${
-                      isDark
-                        ? "text-[#bca99b]"
-                        : "text-[#594a40]"
-                    }`}
-                  >
-                    Target Trek primarily sells
-                    digital educational products
-                    and ebooks. Access may be
-                    provided immediately after a
-                    successful payment.
-                  </p>
-
-                  <p
-                    className={`mt-3 leading-7 ${
-                      isDark
-                        ? "text-[#bca99b]"
-                        : "text-[#594a40]"
-                    }`}
-                  >
-                    Digital products cannot
-                    ordinarily be returned after
-                    they have been delivered,
-                    accessed, saved or downloaded.
-                    Therefore, purchases are
-                    generally final and
-                    non-refundable.
-                  </p>
-
-                  <p
-                    className={`mt-3 font-bold leading-7 ${
-                      isDark
-                        ? "text-amber-200"
-                        : "text-amber-900"
-                    }`}
-                  >
-                    Under Target Trek's standard
-                    policy, refunds are available
-                    only for verified duplicate
-                    payments for the same intended
-                    purchase, except where another
-                    remedy is required by applicable
-                    law.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* TERMS */}
-
-            <div
-              className={`mt-10 space-y-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
-                isDark
-                  ? "border-[#403027] bg-[#211a15]"
-                  : "border-[#f1dfd1] bg-white"
-              }`}
-            >
-
-              {/* 1 */}
-
-              <Section
-                id="acceptance"
-                number="1"
-                title="Acceptance of Terms"
-                isDark={isDark}
-              >
-                <p>
-                  By accessing Target Trek,
-                  purchasing an ebook,
-                  downloading digital material,
-                  accessing paid content or
-                  otherwise using the website,
-                  you agree to these Terms &
-                  Conditions.
-                </p>
-
-                <p>
-                  If you do not agree with these
-                  Terms, you should not purchase
-                  or use Target Trek products.
-                </p>
-
-                <p>
-                  These Terms should be read
-                  together with our{" "}
-                  <a
-                    href="/privacy-policy"
-                    className="font-bold text-orange-500 hover:text-orange-600"
-                  >
-                    Privacy Policy
-                  </a>
-                  ,{" "}
-                  <a
-                    href="/refund-policy"
-                    className="font-bold text-orange-500 hover:text-orange-600"
-                  >
-                    Refund & Cancellation Policy
-                  </a>{" "}
-                  and any product-specific terms
-                  shown before purchase.
-                </p>
-              </Section>
-
-              {/* 2 */}
-
-              <Section
-                id="about-target-trek"
-                number="2"
-                title="About Target Trek"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek provides digital
-                  educational resources including
-                  developer ebooks, technical
-                  guides, interview preparation
-                  materials and software
-                  engineering learning resources.
-                </p>
-
-                <p>
-                  Topics may include System
-                  Design, Low-Level Design,
-                  Backend Engineering, Generative
-                  AI, RAG, MCP, Google ADK,
-                  AI Agents and related technical
-                  subjects.
-                </p>
-
-                <p>
-                  Product availability, pricing,
-                  content, edition and features
-                  may change from time to time.
-                </p>
-              </Section>
-
-              {/* 3 */}
-
-              <Section
-                id="delivery"
-                number="3"
-                title="Digital Products and Ebook Delivery"
-                isDark={isDark}
-              >
-                <p>
-                  Unless specifically stated
-                  otherwise, Target Trek products
-                  are digital and no physical book
-                  or physical product will be
-                  shipped.
-                </p>
-
-                <p>
-                  After a successful payment,
-                  digital access may be provided
-                  through:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "A PDF or another downloadable digital file.",
-                    "A browser-based ebook or document viewer.",
-                    "A secure or purchase-specific access page.",
-                    "A temporary or secure download link.",
-                    "An email containing purchase or access information.",
-                    "Another digital delivery mechanism described during purchase.",
-                  ]}
-                />
-
-                <p>
-                  Delivery may depend on successful
-                  confirmation of payment by the
-                  applicable payment provider.
-                </p>
-              </Section>
-
-              {/* 4 */}
-
-              <Section
-                id="payments"
-                number="4"
-                title="Pricing and Payments"
-                isDark={isDark}
-              >
-                <p>
-                  The applicable product price is
-                  displayed on the product or
-                  checkout page before purchase.
-                </p>
-
-                <p>
-                  Prices, discounts, coupon offers
-                  and promotional pricing may
-                  change from time to time.
-                </p>
-
-                <p>
-                  A future price change does not
-                  generally affect a purchase that
-                  has already been successfully
-                  completed.
-                </p>
-
-                <div
-                  className={`rounded-2xl border p-5 ${
-                    isDark
-                      ? "border-orange-500/20 bg-orange-500/10"
-                      : "border-orange-200 bg-orange-50"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <CreditCard
-                      size={21}
-                      className="mt-1 shrink-0 text-orange-500"
-                    />
-
-                    <p
-                      className={`font-bold leading-7 ${
-                        isDark
-                          ? "text-orange-200"
-                          : "text-[#34271f]"
-                      }`}
-                    >
-                      Payments may be processed
-                      through third-party payment
-                      providers. The payment
-                      provider may process
-                      information necessary to
-                      complete, verify or reconcile
-                      the transaction.
-                    </p>
-                  </div>
-                </div>
-
-                <p>
-                  Depending on the provider and
-                  payment method, this may include:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Your name.",
-                    "Your email address.",
-                    "Your mobile number.",
-                    "Order or transaction reference.",
-                    "Transaction amount and currency.",
-                    "Payment status.",
-                    "Other limited information necessary to process or verify the transaction.",
-                  ]}
-                />
-
-                <div
-                  className={`rounded-2xl border p-5 ${
-                    isDark
-                      ? "border-red-500/20 bg-red-500/10"
-                      : "border-red-200 bg-red-50"
-                  }`}
-                >
-                  <p
-                    className={`font-bold ${
-                      isDark
-                        ? "text-red-200"
-                        : "text-[#34271f]"
-                    }`}
-                  >
-                    Never send Target Trek your
-                    UPI PIN, OTP, CVV, banking
-                    password or complete card
-                    credentials by email.
-                  </p>
-                </div>
-              </Section>
-
-              {/* 5 */}
-
-              <Section
-                id="refund-policy"
-                number="5"
-                title="Refund & Cancellation Policy"
-                isDark={isDark}
-              >
-                <div
-                  className={`rounded-2xl border p-5 ${
-                    isDark
-                      ? "border-red-500/20 bg-red-500/10"
-                      : "border-red-200 bg-red-50"
-                  }`}
-                >
-                  <p
-                    className={`font-bold leading-7 ${
-                      isDark
-                        ? "text-red-200"
-                        : "text-[#34271f]"
-                    }`}
-                  >
-                    Ebook and digital-product
-                    purchases are generally final,
-                    non-returnable and
-                    non-refundable once successfully
-                    purchased or delivered.
-                  </p>
-                </div>
-
-                <p>
-                  Under Target Trek's standard
-                  refund policy, a refund is
-                  available only when an unintended
-                  duplicate or double payment has
-                  been successfully received for
-                  the same intended purchase.
-                </p>
-
-                <p>
-                  If a duplicate payment is
-                  confirmed:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "The original valid transaction remains the payment for the purchased product.",
-                    "The unintended duplicate amount will be eligible for refund.",
-                    "The refund will be processed and initiated within seven calendar days after verification.",
-                    "The refund will be returned to the original payment method whenever supported by the applicable payment provider.",
-                  ]}
-                />
-
-                <div
-                  className={`rounded-2xl border p-5 ${
-                    isDark
-                      ? "border-orange-500/20 bg-orange-500/10"
-                      : "border-orange-200 bg-orange-50"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Clock3
-                      size={21}
-                      className="mt-1 shrink-0 text-orange-500"
-                    />
-
-                    <p
-                      className={`font-bold leading-7 ${
-                        isDark
-                          ? "text-orange-200"
-                          : "text-orange-900"
-                      }`}
-                    >
-                      Target Trek will initiate a
-                      verified duplicate-payment
-                      refund within 7 calendar days.
-                      Your bank or payment provider
-                      may take additional time to
-                      reflect the amount after the
-                      refund has been initiated.
-                    </p>
-                  </div>
-                </div>
-
-                <p>
-                  Change of mind, accidental
-                  purchase, finding similar
-                  information elsewhere, a later
-                  price change or failure to
-                  achieve a desired interview or
-                  career outcome does not create a
-                  standard refund entitlement.
-                </p>
-
-                <p>
-                  Nothing in these Terms is intended
-                  to exclude or restrict a remedy
-                  that cannot legally be excluded
-                  under applicable law.
-                </p>
-
-                <a
-                  href="/refund-policy"
-                  className="inline-flex font-bold text-orange-500 transition hover:text-orange-600"
-                >
-                  Read Refund & Cancellation Policy →
-                </a>
-              </Section>
-
-              {/* MOCK INTERVIEWS — separate from ebook refund terms */}
-
-              <Section
-                id="mock-interviews"
-                number="5A"
-                title="Mock Interview Bookings and Candidate Responsibilities"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek also offers bookable live technical mock interview
-                  sessions. Unlike ebooks, these services are provided at a
-                  selected date and time. The candidate must review the session
-                  date, time zone, duration, selected topics and total price
-                  before completing payment.
-                </p>
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Provide accurate name, email address and contact details when booking.",
-                    "Select the correct available interview slot and review its scheduled start time.",
-                    "Attend on time and ensure a suitable device, internet connection and quiet environment.",
-                    "Treat interview meeting links and other session access information as private.",
-                    "Use the support email if you need assistance with a booking or session access.",
-                  ]}
-                />
-                <p>
-                  A mock interview is a practice and learning service. Booking
-                  one does not guarantee a job offer, interview selection,
-                  salary increase or any particular career outcome.
-                </p>
-              </Section>
-
-              <Section
-                id="mock-cancellation"
-                number="5B"
-                title="Mock Interview Cancellation and Refund Terms"
-                isDark={isDark}
-              >
-                <div className={`rounded-2xl border p-5 ${
-                  isDark
-                    ? "border-orange-800/60 bg-orange-950/20"
-                    : "border-orange-200 bg-orange-50"
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <Clock3 size={22} className="mt-1 shrink-0 text-orange-500" />
-                    <div>
-                      <h3 className="font-black text-orange-600">
-                        24-hour notice • ₹199 cancellation fee
-                      </h3>
-                      <p className="mt-2 text-sm leading-7">
-                        If a candidate wishes to cancel a paid mock interview,
-                        the candidate must email <strong>supporttargettrek@gmail.com</strong>
-                        at least <strong>24 hours before</strong> the scheduled
-                        session start time. For an eligible, approved
-                        candidate-requested cancellation, <strong>₹199 is
-                        deducted as a cancellation fee</strong> from the amount
-                        paid; the remaining amount is refundable.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <p>
-                  Cancellation requests received fewer than 24 hours before
-                  the scheduled interview start time are not eligible for a
-                  refund under the standard cancellation policy. A candidate
-                  who does not attend the interview without an eligible
-                  cancellation request is treated as a no-show and is not
-                  eligible for a refund under the standard policy.
-                </p>
-                <p>
-                  The notice period is measured from the scheduled interview
-                  start time. Include your full name, booking ID, registered
-                  email address, session date and time, and the reason for
-                  cancellation. Merely leaving a message elsewhere or not
-                  attending does not constitute a cancellation by email.
-                </p>
-                <p>
-                  The cancellation deduction cannot exceed the amount paid.
-                  Cancellations or failures attributable to Target Trek,
-                  duplicate charges and statutory entitlements are reviewed
-                  separately; this standard candidate-cancellation rule does
-                  not override remedies required by applicable law.
-                </p>
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Mock Interview Cancellation Request - Target Trek")}&body=${encodeURIComponent("Hello Target Trek Support,\n\nI request cancellation of my mock interview.\n\nFull Name:\nRegistered Email:\nBooking ID:\nScheduled Interview Date and Time (IST):\nAmount Paid:\nReason:\n\nThank you.")}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-700"
-                >
-                  <Mail size={17} /> Email Cancellation Request
-                </a>
-              </Section>
-
-              {/* 6 */}
-
-              <Section
-                id="delivery-support"
-                number="6"
-                title="Missing, Incorrect, or Inaccessible Ebook"
-                isDark={isDark}
-              >
-                <p>
-                  If a successful payment is
-                  confirmed but you cannot access
-                  your ebook, or if the delivered
-                  file is incorrect or corrupted,
-                  please contact Target Trek
-                  support.
-                </p>
-
-                <p>
-                  Depending on the issue, we may:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Verify your successful payment.",
-                    "Restore ebook access.",
-                    "Provide a new download link.",
-                    "Provide the correct purchased ebook.",
-                    "Replace a corrupted or inaccessible file.",
-                    "Resolve the underlying delivery problem where reasonably possible.",
-                  ]}
-                />
-
-                <p>
-                  These issues are normally handled
-                  as product delivery or support
-                  matters and do not, by themselves,
-                  qualify for a refund under the
-                  standard duplicate-payment
-                  refund policy.
-                </p>
-              </Section>
-
-              {/* 7 */}
-
-              <Section
-                id="customer-information"
-                number="7"
-                title="Customer Information and Responsibilities"
-                isDark={isDark}
-              >
-                <p>
-                  When purchasing a Target Trek
-                  product, you agree to provide
-                  reasonably accurate information
-                  where requested.
-                </p>
-
-                <p>
-                  This may include:
-                </p>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {[
-                    {
-                      icon: UserRound,
-                      title: "Name",
-                      text: "Your name as provided during checkout.",
-                    },
-                    {
-                      icon: Mail,
-                      title: "Email Address",
-                      text: "A valid email address associated with your purchase.",
-                    },
-                    {
-                      icon: Phone,
-                      title: "Mobile Number",
-                      text: "A valid mobile number where requested during checkout.",
-                    },
-                  ].map((item) => {
-                    const Icon = item.icon;
-
-                    return (
-                      <div
-                        key={item.title}
-                        className={`rounded-2xl border p-5 ${
-                          isDark
-                            ? "border-[#403027] bg-[#110e0c]"
-                            : "border-[#f1dfd1] bg-[#fffaf5]"
-                        }`}
-                      >
-                        <Icon
-                          size={21}
-                          className="text-orange-500"
-                        />
-
-                        <h3
-                          className={`mt-4 font-black ${
-                            isDark
-                              ? "text-white"
-                              : "text-[#34271f]"
-                          }`}
-                        >
-                          {item.title}
-                        </h3>
-
-                        <p
-                          className={`mt-2 text-sm leading-6 ${
-                            isDark
-                              ? "text-[#bca99b]"
-                              : "text-[#76665a]"
-                          }`}
-                        >
-                          {item.text}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <p>
-                  You are also responsible for:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Reviewing the product description before purchasing.",
-                    "Providing accurate checkout information.",
-                    "Keeping purchase-specific access links reasonably secure.",
-                    "Saving or downloading your ebook where the delivery instructions recommend doing so.",
-                    "Using the purchased product in accordance with these Terms.",
-                  ]}
-                />
-
-                <p>
-                  Target Trek may not be able to
-                  correctly identify or deliver an
-                  order where materially incorrect
-                  customer information is provided.
-                </p>
-              </Section>
-
-              {/* 8 */}
-
-              <Section
-                id="personal-use-licence"
-                number="8"
-                title="Personal-Use Licence"
-                isDark={isDark}
-              >
-                <p>
-                  Unless expressly stated
-                  otherwise on the applicable
-                  product page, purchasing a Target
-                  Trek ebook gives the purchaser a{" "}
-                  <strong
-                    className={
-                      isDark
-                        ? "text-white"
-                        : "text-[#34271f]"
-                    }
-                  >
-                    limited, non-exclusive,
-                    non-transferable licence for
-                    personal use
-                  </strong>
-                  .
-                </p>
-
-                <p>
-                  Purchasing an ebook does not
-                  transfer ownership of Target
-                  Trek's copyright, branding,
-                  diagrams, source material,
-                  written content or other
-                  intellectual property.
-                </p>
-              </Section>
-
-              {/* 9 */}
-
-              <Section
-                id="sharing-restrictions"
-                number="9"
-                title="Prohibited Sharing and Redistribution"
-                isDark={isDark}
-              >
-                <p>
-                  Unless expressly authorized by
-                  Target Trek or permitted by
-                  applicable law, you must not:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Resell a Target Trek ebook.",
-                    "Upload a paid ebook to a public website, cloud folder, messaging group, repository, torrent, or file-sharing service.",
-                    "Share purchase-specific access or download links with unauthorized users.",
-                    "Commercially reproduce or distribute substantial portions of a paid ebook.",
-                    "Remove copyright or proprietary notices from a product.",
-                    "Present Target Trek paid material as your own commercial product.",
-                    "Sell, sublicense, rent or commercially redistribute purchased ebooks without authorization.",
-                  ]}
-                />
-
-                <p>
-                  Target Trek may take reasonable
-                  measures to protect its digital
-                  products and intellectual
-                  property where unauthorized
-                  redistribution or abuse is
-                  detected.
-                </p>
-              </Section>
-
-              {/* 10 */}
-
-              <Section
-                id="intellectual-property"
-                number="10"
-                title="Intellectual Property"
-                isDark={isDark}
-              >
-                <p>
-                  Unless otherwise stated, Target
-                  Trek owns or licenses the
-                  applicable content made available
-                  through its website and digital
-                  products.
-                </p>
-
-                <p>
-                  This may include:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Written educational material.",
-                    "Original diagrams and illustrations.",
-                    "Book layouts.",
-                    "Website content and design.",
-                    "Original code examples and explanations.",
-                    "Target Trek branding.",
-                    "Other proprietary learning material.",
-                  ]}
-                />
-
-                <p>
-                  Third-party names, technologies,
-                  trademarks, products and services
-                  referenced for educational
-                  purposes remain the property of
-                  their respective owners.
-                </p>
-              </Section>
-
-              {/* 11 */}
-
-              <Section
-                id="educational-purpose"
-                number="11"
-                title="Educational and Informational Purpose"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek ebooks and technical
-                  resources are provided primarily
-                  for educational and informational
-                  purposes.
-                </p>
-
-                <p>
-                  Technology, APIs, libraries,
-                  cloud services, prices,
-                  documentation and industry
-                  practices can change over time.
-                </p>
-
-                <p>
-                  Information important to a
-                  production, security, financial
-                  or other critical decision should
-                  be independently verified against
-                  appropriate current authoritative
-                  documentation.
-                </p>
-              </Section>
-
-              {/* 12 */}
-
-              <Section
-                id="no-career-guarantee"
-                number="12"
-                title="No Interview, Employment, or Career Guarantee"
-                isDark={isDark}
-              >
-                <p>
-                  Purchasing or using a Target Trek
-                  ebook does not guarantee:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "A job or internship.",
-                    "An interview call.",
-                    "Selection in an interview.",
-                    "A particular salary.",
-                    "Admission to a company or educational institution.",
-                    "A particular examination result.",
-                    "Any specific career or professional outcome.",
-                  ]}
-                />
-
-                <p>
-                  Learning and career outcomes
-                  depend on many factors including
-                  individual preparation,
-                  experience, practice and
-                  circumstances.
-                </p>
-              </Section>
-
-              {/* 13 */}
-
-              <Section
-                id="technical-content"
-                number="13"
-                title="Technical Content and Code Examples"
-                isDark={isDark}
-              >
-                <div
-                  className={`rounded-2xl border p-5 ${
-                    isDark
-                      ? "border-orange-500/20 bg-orange-500/10"
-                      : "border-orange-200 bg-orange-50"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <FileCode2
-                      size={21}
-                      className="mt-1 shrink-0 text-orange-500"
-                    />
-
-                    <p
-                      className={`font-bold leading-7 ${
-                        isDark
-                          ? "text-orange-200"
-                          : "text-orange-900"
-                      }`}
-                    >
-                      Code snippets, architecture
-                      examples, commands,
-                      configurations and system
-                      designs are primarily
-                      provided for learning and
-                      demonstration.
-                    </p>
-                  </div>
-                </div>
-
-                <p>
-                  Before using examples in a
-                  production environment, you
-                  should independently review and
-                  test them for:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Security.",
-                    "Correctness.",
-                    "Scalability.",
-                    "Compatibility.",
-                    "Licensing.",
-                    "Reliability.",
-                    "Suitability for your specific requirements.",
-                  ]}
-                />
-              </Section>
-
-              {/* 14 */}
-
-              <Section
-                id="product-updates"
-                number="14"
-                title="Product Updates and Editions"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek may periodically
-                  update, revise, correct, expand
-                  or release new editions of its
-                  ebooks and digital products.
-                </p>
-
-                <p>
-                  Purchasing one edition does not
-                  automatically guarantee access
-                  to every future edition, course,
-                  replacement product or separately
-                  released resource unless that
-                  benefit was expressly included
-                  with the purchase.
-                </p>
-              </Section>
-
-              {/* 15 */}
-
-              <Section
-                id="website-availability"
-                number="15"
-                title="Website and Digital Delivery Availability"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek aims to keep its
-                  website and digital-delivery
-                  systems reasonably available.
-                  Temporary interruptions may
-                  nevertheless occur because of:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Maintenance.",
-                    "Hosting outages.",
-                    "Network failures.",
-                    "Payment-provider outages.",
-                    "Security incidents.",
-                    "Software deployments or updates.",
-                    "Events outside our reasonable control.",
-                  ]}
-                />
-
-                <p>
-                  We do not guarantee uninterrupted
-                  availability of every website
-                  feature at all times.
-                </p>
-              </Section>
-
-              {/* 16 */}
-
-              <Section
-                id="unauthorized-access"
-                number="16"
-                title="Unauthorized Access and Abuse"
-                isDark={isDark}
-              >
-                <p>
-                  You must not attempt to:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Bypass payment or paid-product access controls.",
-                    "Obtain paid material without authorization.",
-                    "Manipulate payment callbacks, order IDs, access tokens or download URLs.",
-                    "Probe or exploit vulnerabilities in Target Trek systems.",
-                    "Interfere with normal website operation or security.",
-                    "Use automated systems to improperly scrape, overload or abuse protected services.",
-                  ]}
-                />
-              </Section>
-
-              {/* 17 */}
-
-              <Section
-                id="third-party-services"
-                number="17"
-                title="Third-Party Services"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek may rely on third-party
-                  providers for:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Payment processing.",
-                    "Website hosting.",
-                    "Cloud infrastructure.",
-                    "Database services.",
-                    "Email delivery.",
-                    "File or document hosting.",
-                    "Security and technical functionality.",
-                  ]}
-                />
-
-                <p>
-                  Independent third-party providers
-                  operate under their respective
-                  terms and privacy practices, and
-                  some aspects of their service may
-                  be outside Target Trek's direct
-                  control.
-                </p>
-              </Section>
-
-              {/* 18 */}
-
-              <Section
-                id="warranties"
-                number="18"
-                title="Disclaimer of Warranties"
-                isDark={isDark}
-              >
-                <p>
-                  To the extent permitted by
-                  applicable law, the Target Trek
-                  website and digital educational
-                  products are provided on an{" "}
-                  <strong
-                    className={
-                      isDark
-                        ? "text-white"
-                        : "text-[#34271f]"
-                    }
-                  >
-                    "as available"
-                  </strong>{" "}
-                  basis.
-                </p>
-
-                <p>
-                  While we aim to provide useful
-                  and carefully prepared material,
-                  we do not guarantee that every
-                  item of technical content will
-                  remain complete, current,
-                  error-free or suitable for every
-                  user's individual purpose.
-                </p>
-
-                <p>
-                  Nothing in this section excludes
-                  a warranty, guarantee or right
-                  that cannot legally be excluded.
-                </p>
-              </Section>
-
-              {/* 19 */}
-
-              <Section
-                id="liability"
-                number="19"
-                title="Limitation of Liability"
-                isDark={isDark}
-              >
-                <p>
-                  To the extent permitted by
-                  applicable law, Target Trek will
-                  not be responsible for indirect,
-                  incidental, special or
-                  consequential losses arising
-                  solely from the use of its website
-                  or educational digital products.
-                </p>
-
-                <p>
-                  Where liability cannot lawfully
-                  be excluded, any limitation will
-                  apply only to the maximum extent
-                  permitted by applicable law.
-                </p>
-
-                <p>
-                  Nothing in these Terms excludes
-                  liability where doing so would
-                  be prohibited by law.
-                </p>
-              </Section>
-
-              {/* 20 */}
-
-              <Section
-                id="suspension"
-                number="20"
-                title="Suspension of Protected Access"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek may restrict or
-                  suspend protected digital access
-                  where reasonably necessary to
-                  address:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Fraudulent transactions.",
-                    "Unauthorized ebook redistribution.",
-                    "Security threats.",
-                    "Abuse of access controls.",
-                    "Material violations of these Terms.",
-                  ]}
-                />
-
-                <p>
-                  Legitimate purchase or access
-                  problems can be raised with our
-                  support team.
-                </p>
-              </Section>
-
-              {/* 21 */}
-
-              <Section
-                id="privacy"
-                number="21"
-                title="Privacy and Customer Information"
-                isDark={isDark}
-              >
-                <p>
-                  Information provided when using
-                  Target Trek or completing a
-                  purchase is handled in accordance
-                  with our{" "}
-                  <a
-                    href="/privacy-policy"
-                    className="font-bold text-orange-500 hover:text-orange-600"
-                  >
-                    Privacy Policy
-                  </a>
-                  .
-                </p>
-
-                <p>
-                  Information we may process can
-                  include:
-                </p>
-
-                <BulletList
-                  isDark={isDark}
-                  items={[
-                    "Your name.",
-                    "Your email address.",
-                    "Your mobile number.",
-                    "The product purchased.",
-                    "Order and transaction references.",
-                    "Payment status and amount.",
-                    "Information voluntarily provided to customer support.",
-                  ]}
-                />
-
-                <div
-                  className={`rounded-2xl border p-5 ${
-                    isDark
-                      ? "border-emerald-500/20 bg-emerald-500/10"
-                      : "border-emerald-200 bg-emerald-50"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <LockKeyhole
-                      size={21}
-                      className="mt-1 shrink-0 text-emerald-500"
-                    />
-
-                    <div>
-                      <p
-                        className={`font-black ${
-                          isDark
-                            ? "text-emerald-200"
-                            : "text-emerald-900"
-                        }`}
-                      >
-                        We do not sell your personal data.
-                      </p>
-
-                      <p
-                        className={`mt-2 text-sm leading-7 ${
-                          isDark
-                            ? "text-emerald-200/80"
-                            : "text-emerald-800"
-                        }`}
-                      >
-                        Target Trek does not sell,
-                        rent or trade customer
-                        names, email addresses,
-                        mobile numbers, purchase
-                        history or similar personal
-                        information to data brokers,
-                        advertisers or unrelated
-                        third parties for their
-                        independent marketing.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <p>
-                  Limited information may be
-                  processed by payment, hosting,
-                  infrastructure or communication
-                  providers where reasonably
-                  necessary to complete a payment,
-                  operate the website, deliver the
-                  purchased product or provide
-                  support.
-                </p>
-              </Section>
-
-              {/* 22 */}
-
-              <Section
-                id="changes"
-                number="22"
-                title="Changes to These Terms"
-                isDark={isDark}
-              >
-                <p>
-                  Target Trek may update these
-                  Terms from time to time to reflect
-                  changes to products, payment
-                  processes, technology, business
-                  practices or applicable
-                  requirements.
-                </p>
-
-                <p>
-                  The updated Terms will be
-                  published on this page and the
-                  Last Updated date may be revised.
-                </p>
-              </Section>
-
-              {/* 23 */}
-
-              <Section
-                id="governing-law"
-                number="23"
-                title="Governing Law"
-                isDark={isDark}
-              >
-                <p>
-                  These Terms are governed by the
-                  applicable laws of{" "}
-                  <strong
-                    className={
-                      isDark
-                        ? "text-white"
-                        : "text-[#34271f]"
-                    }
-                  >
-                    India
-                  </strong>
-                  , subject to any mandatory
-                  consumer protection or other
-                  rights that may apply.
-                </p>
-
-                <p>
-                  If a purchase or product-related
-                  dispute arises, we encourage
-                  customers to contact Target Trek
-                  support first so that the matter
-                  can be reviewed and, where
-                  possible, resolved.
-                </p>
-              </Section>
-
-              {/* 24 */}
-
-              <Section
-                id="severability"
-                number="24"
-                title="Severability"
-                isDark={isDark}
-              >
-                <p>
-                  If any provision of these Terms
-                  is found to be invalid, unlawful
-                  or unenforceable, the remaining
-                  provisions will continue to apply
-                  to the extent permitted by law.
-                </p>
-              </Section>
-
-              {/* 25 */}
-
-              <Section
-                id="ebook-support"
-                number="25"
-                title="Target Trek Ebook & Payment Support"
-                isDark={isDark}
-              >
-                <div
-                  className={`rounded-2xl border p-6 ${
-                    isDark
-                      ? "border-orange-500/20 bg-orange-500/10"
-                      : "border-orange-200 bg-orange-50"
-                  }`}
-                >
-                  <Mail
-                    size={28}
-                    className="text-orange-500"
-                  />
-
-                  <h3
-                    className={`mt-4 text-xl font-black ${
-                      isDark
-                        ? "text-white"
-                        : "text-[#29201a]"
-                    }`}
-                  >
-                    Need Help With Your Purchase?
-                  </h3>
-
-                  <p
-                    className={`mt-3 leading-7 ${
-                      isDark
-                        ? "text-[#bca99b]"
-                        : "text-[#76665a]"
-                    }`}
-                  >
-                    Contact Target Trek for ebook
-                    access, payment verification,
-                    duplicate payment, incorrect
-                    file, corrupted download or
-                    another purchase-related issue.
-                  </p>
-
-                  <div className="mt-5">
-                    <p
-                      className={`text-sm font-bold ${
-                        isDark
-                          ? "text-[#ddcfc3]"
-                          : "text-[#594a40]"
-                      }`}
-                    >
-                      Ebook & Payment Support
-                    </p>
-
-                    <a
-                      href={SUPPORT_MAILTO}
-                      className="mt-1 block break-all font-black text-orange-500 underline decoration-orange-300 underline-offset-4"
-                    >
-                      {SUPPORT_EMAIL}
-                    </a>
-                  </div>
-
-                  <div className="mt-5">
-                    <p
-                      className={`text-sm font-bold ${
-                        isDark
-                          ? "text-[#ddcfc3]"
-                          : "text-[#594a40]"
-                      }`}
-                    >
-                      General Enquiries
-                    </p>
-
-                    <a
-                      href={`mailto:${GENERAL_EMAIL}`}
-                      className="mt-1 block break-all font-bold text-orange-500"
-                    >
-                      {GENERAL_EMAIL}
-                    </a>
-                  </div>
-
-                  <div
-                    className={`mt-6 rounded-2xl border p-5 ${
-                      isDark
-                        ? "border-[#5a4132] bg-[#211a15]"
-                        : "border-orange-100 bg-white"
-                    }`}
-                  >
-                    <p
-                      className={`text-sm font-bold ${
-                        isDark
-                          ? "text-[#ddcfc3]"
-                          : "text-[#594a40]"
-                      }`}
-                    >
-                      When contacting us about a
-                      purchase, include where
-                      available:
-                    </p>
-
-                    <div className="mt-4">
-                      <BulletList
-                        isDark={isDark}
-                        items={[
-                          "Your name.",
-                          "Email address used during checkout.",
-                          "Mobile number used during checkout.",
-                          "Ebook or product name.",
-                          "Order ID.",
-                          "Transaction or payment reference.",
-                          "A clear description of the issue.",
-                        ]}
-                      />
-                    </div>
-                  </div>
-
-                  <div
-                    className={`mt-5 rounded-xl border p-4 ${
-                      isDark
-                        ? "border-red-500/20 bg-red-500/5"
-                        : "border-red-100 bg-red-50"
-                    }`}
-                  >
-                    <p
-                      className={`text-sm font-bold leading-6 ${
-                        isDark
-                          ? "text-red-300"
-                          : "text-red-800"
-                      }`}
-                    >
-                      Never send your OTP, UPI PIN,
-                      CVV, banking password or
-                      complete debit/credit card
-                      information by email.
-                    </p>
-                  </div>
-                </div>
-              </Section>
-            </div>
-
-            {/* =================================================
-                FAQ
-            ================================================= */}
-
-            <section
-              className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-10 ${
-                isDark
-                  ? "border-[#403027] bg-[#211a15]"
-                  : "border-[#f1dfd1] bg-white"
-              }`}
-            >
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-orange-600">
-                Terms FAQs
-              </span>
-
-              <h2
-                className={`mt-3 text-2xl font-black tracking-tight sm:text-3xl ${
-                  isDark
-                    ? "text-white"
-                    : "text-[#29201a]"
-                }`}
-              >
-                Common Questions
-              </h2>
-
-              <div className="mt-8 space-y-4">
-                {termsFaqs.map(
-                  (item, index) => (
-                    <article
-                      key={item.question}
-                      className={`rounded-2xl border p-5 ${
-                        isDark
-                          ? "border-[#403027] bg-[#110e0c]"
-                          : "border-[#f1dfd1] bg-[#fffaf5]"
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
-                            isDark
-                              ? "bg-orange-500/10 text-orange-400"
-                              : "bg-orange-50 text-orange-700"
-                          }`}
-                        >
-                          {index + 1}
-                        </div>
-
-                        <div>
-                          <h3
-                            className={`font-black ${
-                              isDark
-                                ? "text-white"
-                                : "text-[#34271f]"
-                            }`}
-                          >
-                            {item.question}
-                          </h3>
-
-                          <p
-                            className={`mt-2 text-sm leading-7 ${
-                              isDark
-                                ? "text-[#bca99b]"
-                                : "text-[#76665a]"
-                            }`}
-                          >
-                            {item.answer}
-                          </p>
-                        </div>
-                      </div>
-                    </article>
-                  )
-                )}
-              </div>
-            </section>
-
-            {/* =================================================
-                FOOTER
-            ================================================= */}
-
-            <footer
-              className={`mt-10 rounded-3xl border p-6 shadow-sm sm:p-8 ${
-                isDark
-                  ? "border-[#403027] bg-[#211a15]"
-                  : "border-[#f1dfd1] bg-white"
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <ReceiptText
-                  size={21}
-                  className="mt-1 shrink-0 text-orange-500"
-                />
-
-                <div>
-                  <p
-                    className={`text-sm leading-7 ${
-                      isDark
-                        ? "text-[#927d6c]"
-                        : "text-[#927d6c]"
-                    }`}
-                  >
-                    By purchasing or accessing a
-                    Target Trek digital product,
-                    you acknowledge that you had
-                    an opportunity to review these
-                    Terms & Conditions, the{" "}
-                    <a
-                      href="/privacy-policy"
-                      className="font-semibold text-orange-500 hover:text-orange-600"
-                    >
-                      Privacy Policy
-                    </a>
-                    , the{" "}
-                    <a
-                      href="/refund-policy"
-                      className="font-semibold text-orange-500 hover:text-orange-600"
-                    >
-                      Refund & Cancellation Policy
-                    </a>{" "}
-                    and the applicable product
-                    information before completing
-                    the purchase.
-                  </p>
-
-                  <div
-                    className={`mt-6 flex flex-col gap-3 border-t pt-6 text-sm sm:flex-row sm:items-center sm:justify-between ${
-                      isDark
-                        ? "border-[#403027] text-[#76665a]"
-                        : "border-[#f7e9df] text-[#bca99b]"
-                    }`}
-                  >
-                    <p>
-                      ©{" "}
-                      {new Date().getFullYear()}{" "}
-                      <strong
-                        className={
-                          isDark
-                            ? "font-semibold text-[#bca99b]"
-                            : "font-semibold text-[#76665a]"
-                        }
-                      >
-                        Target Trek
-                      </strong>
-                      . All rights reserved.
-                    </p>
-
-                    <a
-                      href={SUPPORT_MAILTO}
-                      className="font-semibold text-orange-500 hover:text-orange-600"
-                    >
-                      Contact Support
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </footer>
-          </article>
-        </div>
-      </main>
-    </motion.div>
-  );
-};
+const TermsOfService = () => (
+  <LegalPage
+    slug="terms"
+    seo={SEO}
+    eyebrow="Terms of service"
+    heading={
+      <>
+        The rules, in <span className="lg-mark">plain words.</span>
+      </>
+    }
+    lead="What you can expect from Target Trek, and what we expect from you, when you use the website or buy ebooks, Resume Lab, Memories, Prep Arena or a mock interview."
+    lastUpdated={LAST_UPDATED}
+    dateModified={DATE_MODIFIED}
+    summary={summary}
+    glance={glance}
+    sections={sections}
+    faqs={faqs}
+    contact={contact}
+  />
+);
 
 export default TermsOfService;

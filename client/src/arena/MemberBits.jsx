@@ -22,10 +22,10 @@ export function BackgroundLine({ m, className = "" }) {
 
   return (
     <div className={`flex items-start gap-2 text-sm ${className}`}>
-      <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-stone-400 dk:text-[#8f7c70]" aria-hidden />
+      <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-stone-400 dk:text-[#73897f]" aria-hidden />
       <div className="min-w-0">
-        {role ? <p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{role}</p> : <p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{labelOf(COMPANY_TYPES, m.companyType)}</p>}
-        <p className="text-xs text-stone-500 dk:text-[#b9a79c]">{role ? `${labelOf(COMPANY_TYPES, m.companyType)} · ` : ""}{years}</p>
+        {role ? <p className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{role}</p> : <p className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{labelOf(COMPANY_TYPES, m.companyType)}</p>}
+        <p className="text-xs text-stone-500 dk:text-[#93aaa3]">{role ? `${labelOf(COMPANY_TYPES, m.companyType)} · ` : ""}{years}</p>
       </div>
     </div>
   );
@@ -33,7 +33,7 @@ export function BackgroundLine({ m, className = "" }) {
 
 export function PracticeFacts({ m, full = false }) {
   return (
-    <dl className="space-y-1.5 text-xs text-stone-500 dk:text-[#b9a79c]">
+    <dl className="space-y-1.5 text-xs text-stone-500 dk:text-[#93aaa3]">
       <div className="flex items-start gap-2"><Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /><dt className="sr-only">Availability</dt><dd>{m.availability.map((a) => labelOf(SLOTS, a)).join(", ")}{m.sessionsPerWeek ? ` · ${m.sessionsPerWeek}×/week` : ""}</dd></div>
       {m.languages?.length > 0 && (
         <div className="flex items-start gap-2"><Globe2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /><dt className="sr-only">Languages</dt><dd>{m.languages.map((l) => labelOf(LANGUAGES, l)).join(", ")}</dd></div>
@@ -51,8 +51,8 @@ export function PracticeFacts({ m, full = false }) {
 export function TargetCompanies({ list = [] }) {
   if (!list.length) return null;
   return (
-    <p className="text-xs text-stone-500 dk:text-[#b9a79c]">
-      <span className="font-medium text-stone-600 dk:text-[#d6c4b8]">Targeting:</span> {list.join(", ")}
+    <p className="text-xs text-stone-500 dk:text-[#93aaa3]">
+      <span className="font-medium text-stone-600 dk:text-[#a3b8b2]">Targeting:</span> {list.join(", ")}
     </p>
   );
 }
@@ -61,10 +61,10 @@ export function TargetCompanies({ list = [] }) {
 function Fact({ icon: Icon, label, children }) {
   return (
     <div className="flex gap-3">
-      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-orange-50 text-orange-700 dk:bg-orange-500/10 dk:text-orange-300"><Icon className="h-4 w-4" aria-hidden /></span>
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-800 dk:bg-teal-400/10 dk:text-teal-300"><Icon className="h-4 w-4" aria-hidden /></span>
       <div className="min-w-0">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500 dk:text-[#b9a79c]">{label}</p>
-        <div className="mt-0.5 break-words text-sm text-[#29201b] dk:text-[#fff7ed]">{children}</div>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500 dk:text-[#93aaa3]">{label}</p>
+        <div className="mt-0.5 break-words text-sm text-[#0c1a17] dk:text-[#e8f2ef]">{children}</div>
       </div>
     </div>
   );
@@ -84,22 +84,22 @@ export function MemberDetails({ m }) {
       <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         <Fact icon={Briefcase} label="Role & company">
           <p className="font-semibold">{role || labelOf(COMPANY_TYPES, m.companyType)}</p>
-          <p className="text-xs text-stone-500 dk:text-[#b9a79c]">{role ? `${labelOf(COMPANY_TYPES, m.companyType)} · ` : ""}{years}</p>
+          <p className="text-xs text-stone-500 dk:text-[#93aaa3]">{role ? `${labelOf(COMPANY_TYPES, m.companyType)} · ` : ""}{years}</p>
         </Fact>
 
         <Fact icon={Target} label="Preparing for">
           <div className="flex flex-wrap gap-1.5">{(m.topics ?? []).map((t) => <Badge key={t} tone="brand">{topicShort(t)}</Badge>)}<Badge>{labelOf(LEVELS, m.level)}</Badge></div>
-          {m.timeline && <p className="mt-1 text-xs text-stone-500 dk:text-[#b9a79c]">Interview: {labelOf(TIMELINES, m.timeline).toLowerCase()}</p>}
+          {m.timeline && <p className="mt-1 text-xs text-stone-500 dk:text-[#93aaa3]">Interview: {labelOf(TIMELINES, m.timeline).toLowerCase()}</p>}
         </Fact>
 
         <Fact icon={Clock} label="Availability">
           <p>{(m.availability ?? []).map((a) => labelOf(SLOTS, a)).join(", ") || "—"}</p>
-          {m.sessionsPerWeek ? <p className="text-xs text-stone-500 dk:text-[#b9a79c]">{m.sessionsPerWeek} session{m.sessionsPerWeek === 1 ? "" : "s"} a week</p> : null}
+          {m.sessionsPerWeek ? <p className="text-xs text-stone-500 dk:text-[#93aaa3]">{m.sessionsPerWeek} session{m.sessionsPerWeek === 1 ? "" : "s"} a week</p> : null}
         </Fact>
 
         <Fact icon={Video} label="Practice style">
           <p>{(m.sessionModes ?? []).map((s) => labelOf(SESSION_MODES, s)).join(", ") || "—"}</p>
-          {m.buddyPreference && <p className="text-xs text-stone-500 dk:text-[#b9a79c]">Looking for: {labelOf(BUDDY_PREFS, m.buddyPreference).toLowerCase()} buddy</p>}
+          {m.buddyPreference && <p className="text-xs text-stone-500 dk:text-[#93aaa3]">Looking for: {labelOf(BUDDY_PREFS, m.buddyPreference).toLowerCase()} buddy</p>}
         </Fact>
 
         <Fact icon={Globe2} label="Languages">{(m.languages ?? []).map((l) => labelOf(LANGUAGES, l)).join(", ") || "—"}</Fact>
@@ -109,8 +109,8 @@ export function MemberDetails({ m }) {
 
       {m.skills?.length > 0 && (
         <div>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-stone-500 dk:text-[#b9a79c]">Skills</p>
-          <div className="flex flex-wrap gap-1.5">{m.skills.map((s) => <span key={s} className="rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700 dk:bg-[#2c211b] dk:text-[#ead9cc]">{s}</span>)}</div>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-stone-500 dk:text-[#93aaa3]">Skills</p>
+          <div className="flex flex-wrap gap-1.5">{m.skills.map((s) => <span key={s} className="rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700 dk:bg-[#152522] dk:text-[#cfe0db]">{s}</span>)}</div>
         </div>
       )}
 

@@ -107,8 +107,8 @@ export function InfiniteFooter({ list, endLabel = "You're all caught up" }) {
       {hasMore && !error && <div ref={sentinelRef} aria-hidden className="h-px" />}
 
       {loadingMore && (
-        <p role="status" className="inline-flex items-center gap-2 text-sm text-stone-500 dk:text-[#b9a79c]">
-          <Loader2 className="h-4 w-4 animate-spin text-orange-600" aria-hidden /> Loading more…
+        <p role="status" className="inline-flex items-center gap-2 text-sm text-stone-500 dk:text-[#93aaa3]">
+          <Loader2 className="h-4 w-4 animate-spin text-teal-700" aria-hidden /> Loading more…
         </p>
       )}
 
@@ -119,7 +119,7 @@ export function InfiniteFooter({ list, endLabel = "You're all caught up" }) {
         </div>
       )}
 
-      {!hasMore && !error && items.length > 0 && <p className="text-sm text-stone-400 dk:text-[#8f7c70]">{endLabel}</p>}
+      {!hasMore && !error && items.length > 0 && <p className="text-sm text-stone-400 dk:text-[#73897f]">{endLabel}</p>}
     </div>
   );
 }
@@ -129,14 +129,14 @@ export function CardSkeletons({ count = 6, className }) {
   return (
     <div className={cx("grid gap-5 sm:grid-cols-2 lg:grid-cols-3", className)} aria-busy="true" aria-label="Loading">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="animate-pulse rounded-2xl border border-[#f0ded0] bg-white p-5 dk:border-[#443127] dk:bg-[#241b15]">
+        <div key={i} className="animate-pulse rounded-2xl border border-[#dfe8e5] bg-white p-5 dk:border-[#1f302c] dk:bg-[#101c1a]">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-full bg-orange-100 dk:bg-[#35261e]" />
-            <div className="flex-1 space-y-2"><div className="h-3.5 w-2/3 rounded bg-stone-200 dk:bg-[#35261e]" /><div className="h-3 w-1/3 rounded bg-stone-100 dk:bg-[#2c211b]" /></div>
+            <div className="h-11 w-11 rounded-full bg-teal-100 dk:bg-[#1f332f]" />
+            <div className="flex-1 space-y-2"><div className="h-3.5 w-2/3 rounded bg-stone-200 dk:bg-[#1f332f]" /><div className="h-3 w-1/3 rounded bg-stone-100 dk:bg-[#152522]" /></div>
           </div>
-          <div className="mt-5 space-y-2"><div className="h-3 rounded bg-stone-100 dk:bg-[#2c211b]" /><div className="h-3 w-5/6 rounded bg-stone-100 dk:bg-[#2c211b]" /><div className="h-3 w-2/3 rounded bg-stone-100 dk:bg-[#2c211b]" /></div>
-          <div className="mt-5 flex gap-2"><div className="h-6 w-14 rounded-md bg-stone-100 dk:bg-[#2c211b]" /><div className="h-6 w-16 rounded-md bg-stone-100 dk:bg-[#2c211b]" /></div>
-          <div className="mt-6 h-10 rounded-xl bg-stone-200 dk:bg-[#35261e]" />
+          <div className="mt-5 space-y-2"><div className="h-3 rounded bg-stone-100 dk:bg-[#152522]" /><div className="h-3 w-5/6 rounded bg-stone-100 dk:bg-[#152522]" /><div className="h-3 w-2/3 rounded bg-stone-100 dk:bg-[#152522]" /></div>
+          <div className="mt-5 flex gap-2"><div className="h-6 w-14 rounded-md bg-stone-100 dk:bg-[#152522]" /><div className="h-6 w-16 rounded-md bg-stone-100 dk:bg-[#152522]" /></div>
+          <div className="mt-6 h-10 rounded-xl bg-stone-200 dk:bg-[#1f332f]" />
         </div>
       ))}
     </div>

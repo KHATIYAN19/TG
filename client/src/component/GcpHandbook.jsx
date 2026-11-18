@@ -41,7 +41,7 @@ import {
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { trackViewContent } from "../lib/metaPixel.js";
 import { styles as baseStyles, readTheme, ScrollProgress, CountUp, ScrollScale } from "./lldLegacyBase.jsx";
-import { sqlStyles, CopyButton } from "./SqlInterviewHandbook.jsx";
+import { sqlStyles, CopyButton } from "./sqlShared.jsx";
 
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";

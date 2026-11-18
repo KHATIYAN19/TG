@@ -44,6 +44,7 @@ const ROUTES = {
   "/memories": "src/memories/MemoriesLanding.jsx",
   "/memories/birthday": "src/memories/BirthdayLanding.jsx",
   "/resume-review": "src/resume/ResumeLanding.jsx",
+  "/prep-buddy": "src/arena/ArenaLanding.jsx",
 };
 
 // Keep the pristine SPA shell: dist/index.html is overwritten below with the

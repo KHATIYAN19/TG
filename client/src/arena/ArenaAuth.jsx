@@ -84,7 +84,7 @@ function OtpInput({ value, onChange, disabled }) {
           autoComplete={i === 0 ? "one-time-code" : "off"}
           maxLength={1}
           aria-label={`Digit ${i + 1}`}
-          className="h-14 w-full min-w-0 rounded-xl border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] text-center text-xl font-semibold text-[#29201b] dk:text-[#fff7ed] focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 dk:focus:ring-orange-500/20"
+          className="h-14 w-full min-w-0 rounded-xl border border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] text-center text-xl font-semibold text-[#0c1a17] dk:text-[#e8f2ef] focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-100 dk:focus:ring-teal-400/20"
           onChange={(e) => {
             const char = e.target.value.replace(/\D/g, "").slice(-1);
             setAt(i, char);
@@ -146,7 +146,7 @@ const PasswordInput = forwardRef(function PasswordInput({ id, invalid, ...rest }
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        className="absolute inset-y-0 right-0 grid w-11 place-items-center text-stone-400 dk:text-[#8f7c70] hover:text-stone-600 dk:hover:text-[#d6c4b8]"
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center text-stone-400 dk:text-[#73897f] hover:text-stone-600 dk:hover:text-[#a3b8b2]"
         aria-label={show ? "Hide password" : "Show password"}
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -426,17 +426,17 @@ export default function ArenaAuth() {
   const waitLabel = cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : `Resend in ${cooldown}s`;
 
   return (
-    <main className="min-h-screen-safe bg-[#fff8f2] dk:bg-[#15110e] pt-[calc(var(--arena-nav-h,5rem)+0.5rem)]">
+    <main className="min-h-screen-safe bg-[#edf3f1] dk:bg-[#0a1312] pt-[calc(var(--arena-nav-h,5rem)+0.5rem)]">
       <Helmet>
         <title>Sign up – Prep Buddy Arena | Target Trek</title>
         <meta name="robots" content="noindex" />
       </Helmet>
 
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:py-16">
+      <div className="mx-auto grid max-w-6xl gap-10 px-3 py-6 sm:px-6 sm:py-10 lg:grid-cols-2 lg:py-16">
         {/* Brand panel */}
         <aside className="hidden flex-col justify-center lg:flex">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600 dk:text-orange-400">Prep Buddy Arena</p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-[#29201b] dk:text-[#fff7ed]">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700 dk:text-teal-400">Prep Buddy Arena</p>
+          <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-[#0c1a17] dk:text-[#e8f2ef]">
             Prepare with someone
             <br />
             who's just as serious.
@@ -448,12 +448,12 @@ export default function ArenaAuth() {
               [Lock, "Verified emails only", "Every member confirms their email, so the arena stays genuine."],
             ].map(([Icon, title, text]) => (
               <li key={title} className="flex gap-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-100 dk:bg-orange-500/15 text-orange-700 dk:text-orange-300">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-100 dk:bg-teal-400/15 text-teal-800 dk:text-teal-300">
                   <Icon className="h-5 w-5" aria-hidden />
                 </span>
                 <div>
-                  <p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{title}</p>
-                  <p className="mt-0.5 text-sm text-stone-600 dk:text-[#d6c4b8]">{text}</p>
+                  <p className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{title}</p>
+                  <p className="mt-0.5 text-sm text-stone-600 dk:text-[#a3b8b2]">{text}</p>
                 </div>
               </li>
             ))}
@@ -462,20 +462,20 @@ export default function ArenaAuth() {
 
         {/* Form card */}
         <section className="mx-auto w-full max-w-md">
-          <Link to="/prep-buddy" className="mb-4 inline-flex items-center gap-1.5 text-sm text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]">
+          <Link to="/prep-buddy" className="mb-4 inline-flex items-center gap-1.5 text-sm text-stone-500 dk:text-[#93aaa3] hover:text-stone-800 dk:hover:text-[#d9ebe6]">
             <ArrowLeft className="h-4 w-4" aria-hidden /> Back to Prep Buddy
           </Link>
 
-          <div className="rounded-3xl border border-[#f0ded0] dk:border-[#443127] bg-white dk:bg-[#241b15] p-6 shadow-xl shadow-orange-900/60 dk:shadow-black/40 sm:p-8">
+          <div className="rounded-3xl border border-[#dfe8e5] dk:border-[#1f302c] bg-white dk:bg-[#101c1a] p-5 shadow-xl shadow-teal-950/10 dk:shadow-black/40 sm:p-8">
             {showTabs && (
-              <div className="mb-6 grid grid-cols-2 rounded-xl bg-stone-100 dk:bg-[#2c211b] p-1 text-sm font-semibold" role="tablist">
+              <div className="mb-6 grid grid-cols-2 rounded-xl bg-stone-100 dk:bg-[#152522] p-1 text-sm font-semibold" role="tablist">
                 {[["signup", "Create account"], ["login", "Log in"]].map(([key, label]) => (
                   <button
                     key={key}
                     role="tab"
                     aria-selected={step === key}
                     onClick={() => { setStep(key); setFormError(""); }}
-                    className={cx("rounded-lg py-2 transition", step === key ? "bg-white dk:bg-[#241b15] text-[#29201b] dk:text-[#fff7ed] shadow-sm" : "text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]")}
+                    className={cx("rounded-lg py-2 transition", step === key ? "bg-white dk:bg-[#101c1a] text-[#0c1a17] dk:text-[#e8f2ef] shadow-sm" : "text-stone-500 dk:text-[#93aaa3] hover:text-stone-800 dk:hover:text-[#d9ebe6]")}
                   >
                     {label}
                   </button>
@@ -526,7 +526,7 @@ export default function ArenaAuth() {
                 <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0 || authLocked} className="w-full">
                   {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : "Send verification code"}
                 </Button>
-                <p className="text-center text-xs text-stone-500 dk:text-[#b9a79c]">
+                <p className="text-center text-xs text-stone-500 dk:text-[#93aaa3]">
                   By continuing you agree to our <Link className="underline" to="/terms-of-service">Terms</Link> and <Link className="underline" to="/privacy-policy">Privacy Policy</Link>.
                 </p>
               </form>
@@ -559,7 +559,7 @@ export default function ArenaAuth() {
                 <div className="-mt-1 text-right">
                   <button
                     type="button"
-                    className="text-sm font-semibold text-orange-600 dk:text-orange-400 hover:underline"
+                    className="text-sm font-semibold text-teal-700 dk:text-teal-400 hover:underline"
                     onClick={() => {
                       const id = loginForm.getValues("identifier") || "";
                       forgotForm.setValue("email", id.includes("@") ? id : "");
@@ -578,7 +578,7 @@ export default function ArenaAuth() {
             {/* GOOGLE: ONE MORE DETAIL */}
             {step === "google-mobile" && googleSignup && (
               <form onSubmit={onGoogleMobile} className="space-y-5" noValidate>
-                <p className="text-sm text-stone-600 dk:text-[#d6c6ba]">
+                <p className="text-sm text-stone-600 dk:text-[#c3d2cd]">
                   Signing up as <span className="font-semibold">{googleSignup.email}</span>. Add your mobile number to finish.
                 </p>
                 <Field label="Mobile number" htmlFor="g-mobile" error={mobileForm.formState.errors.mobile?.message}>
@@ -594,11 +594,11 @@ export default function ArenaAuth() {
             {step === "forgot" && (
               <form onSubmit={onForgot} className="space-y-5" noValidate>
                 <div className="text-center">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-100 dk:bg-orange-500/15 text-orange-700 dk:text-orange-300">
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-teal-100 dk:bg-teal-400/15 text-teal-800 dk:text-teal-300">
                     <KeyRound className="h-7 w-7" aria-hidden />
                   </span>
-                  <h2 className="mt-4 text-xl font-semibold text-[#29201b] dk:text-[#fff7ed]">Forgot your password?</h2>
-                  <p className="mt-1.5 text-sm text-stone-600 dk:text-[#d6c4b8]">Enter your account email and we&apos;ll send a 6-digit code to set a new one.</p>
+                  <h2 className="mt-4 text-xl font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Forgot your password?</h2>
+                  <p className="mt-1.5 text-sm text-stone-600 dk:text-[#a3b8b2]">Enter your account email and we&apos;ll send a 6-digit code to set a new one.</p>
                 </div>
                 <Field label="Email" htmlFor="forgot-email" error={forgotForm.formState.errors.email?.message}>
                   <input id="forgot-email" type="email" autoComplete="email" className={inputClass(forgotForm.formState.errors.email)} {...forgotForm.register("email")} />
@@ -606,7 +606,7 @@ export default function ArenaAuth() {
                 <Button type="submit" size="lg" loading={busy} disabled={cooldown > 0 || authLocked} className="w-full">
                   {cooldown > 0 ? waitLabel.replace("Resend", "Send again") : "Send reset code"}
                 </Button>
-                <button type="button" className="mx-auto block text-sm text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]" onClick={() => { setStep("login"); setFormError(""); }}>
+                <button type="button" className="mx-auto block text-sm text-stone-500 dk:text-[#93aaa3] hover:text-stone-800 dk:hover:text-[#d9ebe6]" onClick={() => { setStep("login"); setFormError(""); }}>
                   ← Back to log in
                 </button>
               </form>
@@ -616,12 +616,12 @@ export default function ArenaAuth() {
             {step === "reset" && (
               <form onSubmit={onReset} className="space-y-5" noValidate>
                 <div className="text-center">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-100 dk:bg-orange-500/15 text-orange-700 dk:text-orange-300">
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-teal-100 dk:bg-teal-400/15 text-teal-800 dk:text-teal-300">
                     <MailCheck className="h-7 w-7" aria-hidden />
                   </span>
-                  <h2 className="mt-4 text-xl font-semibold text-[#29201b] dk:text-[#fff7ed]">Set a new password</h2>
-                  <p className="mt-1.5 text-sm text-stone-600 dk:text-[#d6c4b8]">
-                    If an account exists for <span className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{pendingEmail}</span>, we sent it a 6-digit code. It&apos;s valid for 10 minutes.
+                  <h2 className="mt-4 text-xl font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Set a new password</h2>
+                  <p className="mt-1.5 text-sm text-stone-600 dk:text-[#a3b8b2]">
+                    If an account exists for <span className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{pendingEmail}</span>, we sent it a 6-digit code. It&apos;s valid for 10 minutes.
                   </p>
                 </div>
 
@@ -637,19 +637,19 @@ export default function ArenaAuth() {
                 <Button type="submit" size="lg" loading={busy} disabled={otp.length !== 6 || authLocked} className="w-full">Change password</Button>
 
                 <div className="flex items-center justify-between text-sm">
-                  <button type="button" className="text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]" onClick={() => { setStep("forgot"); setFormError(""); forgotForm.setValue("email", pendingEmail); }}>
+                  <button type="button" className="text-stone-500 dk:text-[#93aaa3] hover:text-stone-800 dk:hover:text-[#d9ebe6]" onClick={() => { setStep("forgot"); setFormError(""); forgotForm.setValue("email", pendingEmail); }}>
                     ← Change email
                   </button>
                   <button
                     type="button"
                     disabled={cooldown > 0 || busy || authLocked}
                     onClick={resendReset}
-                    className="font-semibold text-orange-600 dk:text-orange-400 disabled:cursor-not-allowed disabled:text-stone-400 dk:disabled:text-[#8f7c70]"
+                    className="font-semibold text-teal-700 dk:text-teal-400 disabled:cursor-not-allowed disabled:text-stone-400 dk:disabled:text-[#73897f]"
                   >
                     {cooldown > 0 ? waitLabel : "Resend code"}
                   </button>
                 </div>
-                <p className="text-center text-xs text-stone-500 dk:text-[#b9a79c]">Changing your password signs you out of every device and lifts any lock on your account.</p>
+                <p className="text-center text-xs text-stone-500 dk:text-[#93aaa3]">Changing your password signs you out of every device and lifts any lock on your account.</p>
               </form>
             )}
 
@@ -657,12 +657,12 @@ export default function ArenaAuth() {
             {isOtpStep && (
               <div className="space-y-6">
                 <div className="text-center">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-100 dk:bg-orange-500/15 text-orange-700 dk:text-orange-300">
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-teal-100 dk:bg-teal-400/15 text-teal-800 dk:text-teal-300">
                     <MailCheck className="h-7 w-7" aria-hidden />
                   </span>
-                  <h2 className="mt-4 text-xl font-semibold text-[#29201b] dk:text-[#fff7ed]">Check your email</h2>
-                  <p className="mt-1.5 text-sm text-stone-600 dk:text-[#d6c4b8]">
-                    We sent a 6-digit code to <span className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{pendingEmail}</span>
+                  <h2 className="mt-4 text-xl font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Check your email</h2>
+                  <p className="mt-1.5 text-sm text-stone-600 dk:text-[#a3b8b2]">
+                    We sent a 6-digit code to <span className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{pendingEmail}</span>
                   </p>
                 </div>
 
@@ -673,13 +673,13 @@ export default function ArenaAuth() {
                 </Button>
 
                 <div className="flex items-center justify-between text-sm">
-                  <button className="text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]" onClick={() => { setStep(step === "verify" ? "signup" : "login"); setFormError(""); }}>
+                  <button className="text-stone-500 dk:text-[#93aaa3] hover:text-stone-800 dk:hover:text-[#d9ebe6]" onClick={() => { setStep(step === "verify" ? "signup" : "login"); setFormError(""); }}>
                     ← Change details
                   </button>
                   <button
                     disabled={cooldown > 0 || busy || authLocked}
                     onClick={step === "verify" ? resend : resendLogin}
-                    className="font-semibold text-orange-600 dk:text-orange-400 disabled:cursor-not-allowed disabled:text-stone-400 dk:disabled:text-[#8f7c70]"
+                    className="font-semibold text-teal-700 dk:text-teal-400 disabled:cursor-not-allowed disabled:text-stone-400 dk:disabled:text-[#73897f]"
                   >
                     {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
                   </button>

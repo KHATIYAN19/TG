@@ -102,7 +102,7 @@ function MessageMenu({ message, canEdit, left, onReact, onEdit, onDelete, now })
         aria-haspopup="menu"
         aria-expanded={open}
         className={cx(
-          "grid h-7 w-7 shrink-0 place-items-center self-center rounded-full text-stone-400 transition hover:bg-orange-100 hover:text-orange-700 focus-visible:opacity-100 dk:text-[#8f7c70] dk:hover:bg-orange-500/15 dk:hover:text-orange-300",
+          "grid h-7 w-7 shrink-0 place-items-center self-center rounded-full text-stone-400 transition hover:bg-teal-100 hover:text-teal-800 focus-visible:opacity-100 dk:text-[#73897f] dk:hover:bg-teal-400/15 dk:hover:text-teal-300",
           open ? "opacity-100" : "opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
         )}
       >
@@ -114,7 +114,7 @@ function MessageMenu({ message, canEdit, left, onReact, onEdit, onDelete, now })
           ref={menuRef}
           role="menu"
           style={{ position: "fixed", top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 80 }}
-          className="rounded-2xl border border-[#f0ded0] bg-white p-2 shadow-xl dk:border-[#443127] dk:bg-[#241b15]"
+          className="rounded-2xl border border-[#dfe8e5] bg-white p-2 shadow-xl dk:border-[#1f302c] dk:bg-[#101c1a]"
         >
           <div className="grid grid-cols-8 gap-0.5" role="group" aria-label="React with an emoji">
             {REACTION_EMOJIS.map((emoji) => (
@@ -125,7 +125,7 @@ function MessageMenu({ message, canEdit, left, onReact, onEdit, onDelete, now })
                 aria-label={`React ${emoji}`}
                 aria-pressed={mineReaction === emoji}
                 onClick={() => { setOpen(false); onReact(emoji); }}
-                className={cx("grid h-8 place-items-center rounded-lg text-lg transition hover:scale-125 hover:bg-orange-50 dk:hover:bg-orange-500/15", mineReaction === emoji && "bg-orange-100 dk:bg-orange-500/25")}
+                className={cx("grid h-8 place-items-center rounded-lg text-lg transition hover:scale-125 hover:bg-teal-50 dk:hover:bg-teal-400/15", mineReaction === emoji && "bg-teal-100 dk:bg-teal-400/25")}
               >
                 {emoji}
               </button>
@@ -133,15 +133,15 @@ function MessageMenu({ message, canEdit, left, onReact, onEdit, onDelete, now })
           </div>
 
           {canEdit && (
-            <div className="mt-2 border-t border-[#f0ded0] pt-2 dk:border-[#443127]">
-              <p className="px-2 pb-1 text-[11px] text-stone-500 dk:text-[#b9a79c]">You can edit or delete for {minutesLeft(message.editableUntil, now)} more min</p>
-              <button type="button" role="menuitem" onClick={() => { setOpen(false); onEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-stone-700 hover:bg-orange-50 dk:text-[#ead9cc] dk:hover:bg-orange-500/10">
+            <div className="mt-2 border-t border-[#dfe8e5] pt-2 dk:border-[#1f302c]">
+              <p className="px-2 pb-1 text-[11px] text-stone-500 dk:text-[#93aaa3]">You can edit or delete for {minutesLeft(message.editableUntil, now)} more min</p>
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); onEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-stone-700 hover:bg-teal-50 dk:text-[#cfe0db] dk:hover:bg-teal-400/10">
                 <Pencil className="h-4 w-4" aria-hidden /> Edit message
               </button>
               {confirming ? (
                 <div className="flex items-center gap-2 rounded-lg bg-rose-50 px-2 py-1.5 dk:bg-rose-500/10">
                   <span className="flex-1 text-xs font-semibold text-rose-700 dk:text-rose-300">Delete for everyone?</span>
-                  <button type="button" onClick={() => setConfirming(false)} className="rounded-md px-2 py-1 text-xs text-stone-600 hover:bg-white dk:text-[#d6c4b8]">No</button>
+                  <button type="button" onClick={() => setConfirming(false)} className="rounded-md px-2 py-1 text-xs text-stone-600 hover:bg-white dk:text-[#a3b8b2]">No</button>
                   <button type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(); }} className="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700">Delete</button>
                 </div>
               ) : (
@@ -177,13 +177,13 @@ function EditBox({ initial, onSave, onCancel, saving }) {
           if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
           if (e.key === "Escape") { e.preventDefault(); onCancel(); }
         }}
-        className="w-full resize-none rounded-lg border border-orange-300 bg-white px-2.5 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+        className="w-full resize-none rounded-lg border border-teal-300 bg-white px-2.5 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-teal-300"
       />
       <div className="mt-1.5 flex justify-end gap-1.5">
-        <button type="button" onClick={onCancel} disabled={saving} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-orange-100 hover:bg-white/15"><X className="h-3 w-3" aria-hidden /> Cancel</button>
-        <button type="button" onClick={submit} disabled={saving || !value.trim()} className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-xs font-bold text-orange-700 hover:bg-orange-50 disabled:opacity-60"><Check className="h-3 w-3" aria-hidden /> Save</button>
+        <button type="button" onClick={onCancel} disabled={saving} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-teal-100 hover:bg-white/15"><X className="h-3 w-3" aria-hidden /> Cancel</button>
+        <button type="button" onClick={submit} disabled={saving || !value.trim()} className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-xs font-bold text-teal-800 hover:bg-teal-50 disabled:opacity-60"><Check className="h-3 w-3" aria-hidden /> Save</button>
       </div>
-      <p className="mt-1 text-right text-[10px] text-orange-100">Enter to save · Esc to cancel</p>
+      <p className="mt-1 text-right text-[10px] text-teal-100">Enter to save · Esc to cancel</p>
     </div>
   );
 }
@@ -347,41 +347,41 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
 
   return (
     <Card className="flex h-[70vh] min-h-[480px] flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#f0ded0] dk:border-[#443127] px-5 py-3.5">
+      <div className="flex items-center justify-between border-b border-[#dfe8e5] dk:border-[#1f302c] px-5 py-3.5">
         <div className="flex items-center gap-3">
           <Avatar seed={buddyName} className="h-9 w-9 text-xs" />
           <div>
-            <p className="text-sm font-semibold text-[#29201b] dk:text-[#fff7ed]">{buddyName}</p>
-            <p className="text-xs text-stone-500 dk:text-[#b9a79c]">{typing ? <span className="text-orange-600 dk:text-orange-400">typing…</span> : "Your prep buddy"}</p>
+            <p className="text-sm font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{buddyName}</p>
+            <p className="text-xs text-stone-500 dk:text-[#93aaa3]">{typing ? <span className="text-teal-700 dk:text-teal-400">typing…</span> : "Your prep buddy"}</p>
           </div>
         </div>
-        <span className={cx("flex items-center gap-1.5 text-xs", socketState === "open" ? "text-emerald-600 dk:text-emerald-400" : "text-stone-400 dk:text-[#8f7c70]")}>
-          <span className={cx("h-2 w-2 rounded-full", socketState === "open" ? "bg-emerald-500" : "bg-stone-300 dk:bg-[#443127]")} />
+        <span className={cx("flex items-center gap-1.5 text-xs", socketState === "open" ? "text-emerald-600 dk:text-emerald-400" : "text-stone-400 dk:text-[#73897f]")}>
+          <span className={cx("h-2 w-2 rounded-full", socketState === "open" ? "bg-emerald-500" : "bg-stone-300 dk:bg-[#1f302c]")} />
           {socketState === "open" ? "Connected" : "Connecting…"}
         </span>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto bg-[#fff8f2]/70 dk:bg-[#15110e]/70 px-4 py-5" aria-live="polite">
-        {hasMore && <div ref={topRef} className="py-1 text-center text-xs text-stone-400 dk:text-[#8f7c70]">{loadingOlder ? "Loading earlier messages…" : "Scroll up for earlier messages"}</div>}
+      <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto bg-[#edf3f1]/70 dk:bg-[#0a1312]/70 px-4 py-5" aria-live="polite">
+        {hasMore && <div ref={topRef} className="py-1 text-center text-xs text-stone-400 dk:text-[#73897f]">{loadingOlder ? "Loading earlier messages…" : "Scroll up for earlier messages"}</div>}
         {messages === null ? <Spinner label="Loading messages" /> : !grouped.length ? (
-          <div className="grid h-full place-items-center text-center text-sm text-stone-500 dk:text-[#b9a79c]">
+          <div className="grid h-full place-items-center text-center text-sm text-stone-500 dk:text-[#93aaa3]">
             <div>
               <MessageCircle className="mx-auto mb-3 h-8 w-8 text-stone-300" aria-hidden />
               Say hello and agree on your first session 👋
             </div>
           </div>
         ) : grouped.map((m) => m.divider ? (
-          <div key={m.key} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-400 dk:text-[#8f7c70]">{m.divider}</div>
+          <div key={m.key} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-400 dk:text-[#73897f]">{m.divider}</div>
         ) : (
           <div key={m.id} className={cx("group flex items-start gap-1", m.mine ? "flex-row-reverse" : "flex-row")}>
             <div className={cx("flex min-w-0 max-w-[80%] flex-col", m.mine ? "items-end" : "items-start")}>
-              <div className={cx("whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm shadow-sm", m.mine ? "rounded-br-md bg-orange-600 text-white" : "rounded-bl-md bg-white dk:bg-[#241b15] text-stone-800 dk:text-[#ffedd5] ring-1 ring-[#f0ded0] dk:ring-[#443127]", m.deleted && "italic opacity-70")}>
+              <div className={cx("whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm shadow-sm", m.mine ? "rounded-br-md bg-teal-700 text-white" : "rounded-bl-md bg-white dk:bg-[#101c1a] text-stone-800 dk:text-[#d9ebe6] ring-1 ring-[#dfe8e5] dk:ring-[#1f302c]", m.deleted && "italic opacity-70")}>
                 {editingId === m.id ? (
                   <EditBox initial={m.text} saving={savingId === m.id} onCancel={() => setEditingId(null)} onSave={(v) => saveEdit(m, v)} />
                 ) : m.deleted ? (
                   <span>🚫 {m.mine ? "You deleted this message" : "This message was deleted"}</span>
                 ) : m.text}
-                <span className={cx("mt-1 flex items-center justify-end gap-1.5 text-[10px]", m.mine ? "text-orange-200" : "text-stone-400 dk:text-[#8f7c70]")}>
+                <span className={cx("mt-1 flex items-center justify-end gap-1.5 text-[10px]", m.mine ? "text-teal-200" : "text-stone-400 dk:text-[#73897f]")}>
                   {m.edited && <span>edited</span>}
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
@@ -396,7 +396,7 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
                       aria-pressed={r.mine}
                       aria-label={`${r.emoji} ${r.count}${r.mine ? ", your reaction. Click to remove" : ""}`}
                       onClick={() => react(m, r.emoji)}
-                      className={cx("inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs shadow-sm transition", r.mine ? "border-orange-400 bg-orange-50 text-orange-800 dk:border-orange-400/60 dk:bg-orange-500/20 dk:text-orange-100" : "border-[#f0ded0] bg-white text-stone-700 hover:border-orange-300 dk:border-[#443127] dk:bg-[#241b15] dk:text-[#ead9cc]")}
+                      className={cx("inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs shadow-sm transition", r.mine ? "border-teal-400 bg-teal-50 text-teal-900 dk:border-teal-400/60 dk:bg-teal-400/20 dk:text-teal-100" : "border-[#dfe8e5] bg-white text-stone-700 hover:border-teal-300 dk:border-[#1f302c] dk:bg-[#101c1a] dk:text-[#cfe0db]")}
                     >
                       <span>{r.emoji}</span>{r.count > 1 && <span className="font-semibold tabular-nums">{r.count}</span>}
                     </button>
@@ -421,12 +421,12 @@ function Chat({ matchId, buddyName, onMatchEnded }) {
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-end gap-2 border-t border-[#f0ded0] dk:border-[#443127] bg-white dk:bg-[#241b15] p-3">
+      <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-end gap-2 border-t border-[#dfe8e5] dk:border-[#1f302c] bg-white dk:bg-[#101c1a] p-3">
         <textarea
           value={text} onChange={onChange} rows={1} maxLength={1000} aria-label="Message"
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Write a message…"
-          className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-stone-300 dk:border-[#5a4336] px-3.5 py-2.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 dk:focus:ring-orange-500/20"
+          className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-stone-300 dk:border-[#2e4641] px-3.5 py-2.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-100 dk:focus:ring-teal-400/20"
         />
         <Button type="submit" disabled={!text.trim() || socketState !== "open"} aria-label="Send message"><Send className="h-4 w-4" /></Button>
       </form>
@@ -470,7 +470,7 @@ export default function BuddyPage() {
   if (state === "none") {
     return (
       <EmptyState icon={MessageCircle} title="No buddy yet"
-        action={<Link to={me.profile?.status === "active" ? "../arena" : "../profile"} className="rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white">
+        action={<Link to={me.profile?.status === "active" ? "../arena" : "../profile"} className="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white">
           {me.profile?.status === "active" ? "Browse the arena" : "Join the arena"}
         </Link>}>
         Once you and another member accept each other, your private chat and their shared details appear here.
@@ -489,38 +489,38 @@ export default function BuddyPage() {
           <div className="flex items-center gap-3">
             <Avatar seed={displayName} className="h-14 w-14 text-base" />
             <div className="min-w-0">
-              <p className="truncate text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]">{displayName}</p>
-              <p className="text-xs text-stone-500 dk:text-[#b9a79c]">{b.alias}</p>
+              <p className="truncate text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{displayName}</p>
+              <p className="text-xs text-stone-500 dk:text-[#93aaa3]">{b.alias}</p>
             </div>
           </div>
           <div className="mt-4"><TopicBadges topics={b.topics} level={b.level} /></div>
           <BackgroundLine m={b} className="mt-4" />
-          {b.bio && <p className="mt-4 text-sm text-stone-600 dk:text-[#d6c4b8]">{b.bio}</p>}
+          {b.bio && <p className="mt-4 text-sm text-stone-600 dk:text-[#a3b8b2]">{b.bio}</p>}
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {b.skills.map((s) => <span key={s} className="rounded-md bg-stone-100 dk:bg-[#2c211b] px-2 py-0.5 text-xs font-medium text-stone-700 dk:text-[#ead9cc]">{s}</span>)}
+            {b.skills.map((s) => <span key={s} className="rounded-md bg-stone-100 dk:bg-[#152522] px-2 py-0.5 text-xs font-medium text-stone-700 dk:text-[#cfe0db]">{s}</span>)}
           </div>
           <div className="mt-4"><PracticeFacts m={b} full /></div>
           <div className="mt-2"><TargetCompanies list={b.targetCompanies} /></div>
         </Card>
 
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-[#29201b] dk:text-[#fff7ed]">Shared with you</h3>
-          <ul className="mt-3 divide-y divide-orange-100 dk:divide-orange-500/20">
+          <h3 className="text-sm font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Shared with you</h3>
+          <ul className="mt-3 divide-y divide-teal-100 dk:divide-teal-400/20">
             {SHARED_ROWS.map(([key, label, Icon]) => (
               <li key={key} className="flex items-center gap-3 py-2.5 text-sm">
-                <Icon className="h-4 w-4 shrink-0 text-stone-400 dk:text-[#8f7c70]" aria-hidden />
-                <span className="w-28 shrink-0 text-stone-500 dk:text-[#b9a79c]">{label}</span>
+                <Icon className="h-4 w-4 shrink-0 text-stone-400 dk:text-[#73897f]" aria-hidden />
+                <span className="w-28 shrink-0 text-stone-500 dk:text-[#93aaa3]">{label}</span>
                 {b.shared[key] ? (
                   key === "linkedin"
-                    ? <a href={b.shared[key]} target="_blank" rel="noopener noreferrer nofollow" className="truncate font-medium text-orange-600 dk:text-orange-400 hover:underline">View profile</a>
-                    : <span className="truncate font-medium text-[#29201b] dk:text-[#fff7ed]">{b.shared[key]}</span>
+                    ? <a href={b.shared[key]} target="_blank" rel="noopener noreferrer nofollow" className="truncate font-medium text-teal-700 dk:text-teal-400 hover:underline">View profile</a>
+                    : <span className="truncate font-medium text-[#0c1a17] dk:text-[#e8f2ef]">{b.shared[key]}</span>
                 ) : (
-                  <span className="flex items-center gap-1 text-xs text-stone-400 dk:text-[#8f7c70]"><Lock className="h-3 w-3" aria-hidden /> {hint(key)}</span>
+                  <span className="flex items-center gap-1 text-xs text-stone-400 dk:text-[#73897f]"><Lock className="h-3 w-3" aria-hidden /> {hint(key)}</span>
                 )}
               </li>
             ))}
           </ul>
-          <Link to="../settings" className="mt-3 inline-block text-xs font-semibold text-orange-600 dk:text-orange-400">Choose what you share →</Link>
+          <Link to="../settings" className="mt-3 inline-block text-xs font-semibold text-teal-700 dk:text-teal-400">Choose what you share →</Link>
         </Card>
 
         <Card className="p-3">
@@ -528,7 +528,7 @@ export default function BuddyPage() {
             <Button variant="ghost" className="justify-start" onClick={() => setModal("report")}><Flag className="h-4 w-4" /> Report</Button>
             <Button variant="ghost" className="justify-start text-rose-600 dk:text-rose-400 hover:bg-rose-50 dk:hover:bg-rose-500/10" onClick={() => setModal("block")}><ShieldBan className="h-4 w-4" /> Block & end</Button>
             <Button variant="ghost" className="justify-start" onClick={() => setModal("end")} disabled={!match.canEndNow}><LogOut className="h-4 w-4" /> End partnership</Button>
-            {!match.canEndNow && <p className="px-3 pb-2 text-xs text-stone-500 dk:text-[#b9a79c]">You can end the partnership from {new Date(match.endableAt).toLocaleDateString()}.</p>}
+            {!match.canEndNow && <p className="px-3 pb-2 text-xs text-stone-500 dk:text-[#93aaa3]">You can end the partnership from {new Date(match.endableAt).toLocaleDateString()}.</p>}
           </div>
         </Card>
       </aside>

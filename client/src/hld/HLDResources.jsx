@@ -1,1378 +1,353 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
-  ArrowRight,
-  BookOpen,
-  Boxes,
-  BrainCircuit,
-  CheckCircle2,
-  Clock3,
-  Cloud,
-  Database,
-  Gauge,
-  Globe2,
-  Layers3,
-  LockKeyhole,
-  MessageSquareMore,
-  Network,
-  Search,
-  Server,
-  ShieldCheck,
-  Sparkles,
-  Workflow,
-  X,
-  Zap,
-} from "lucide-react";
+  ArrowRight, ArrowsSplit, BookOpen, Brain, CheckCircle, Clock, Cloud, Database, Gauge, Globe, HardDrives, Lightning, Lock, MagnifyingGlass, Queue,
+  ShieldCheck, SquaresFour, TreeStructure, Users, X,
+} from "@phosphor-icons/react";
 
-const SITE_URL = "https://www.targettrek.in";
-const PAGE_URL = `${SITE_URL}/resources/hld`;
-const BOOK_URL = "/book/system-design/hld";
+import { Btn, Page, cx } from "../resume/ui";
+import { LOGO, SITE } from "../resources/kit/seo";
+import "../resources/kit/kit.css";
 
+/* =====================================================================
+   SYSTEM DESIGN (HLD) RESOURCES  (/resources/hld)
+   The hub for the six system design guides, in the order a request
+   travels: edge → services → data → async work.
+===================================================================== */
+const PATH = "/resources/hld";
+const URL = `${SITE}${PATH}`;
+const BOOK = "/book/system-design/hld";
+const UPDATED = "2026-11-18";
+const VISITED_KEY = "tt:resources:visited";
+
+const SEO = {
+  title: "System Design (HLD) Resources: Free Guides for Interviews | Target Trek",
+  description: "Free high level design guides for system design interviews, in the order to learn them: load balancing, API gateway, rate limiting, caching, database design and message queues. Diagrams, trade-offs, interview Q&A and quizzes.",
+  keywords: "system design resources, HLD, high level design, system design interview preparation, load balancing, api gateway, rate limiting, caching, database design, message queue, distributed systems, backend architecture",
+};
+
+const ANSWER = "High level design (HLD) is the big picture of a software system: which components it has (clients, load balancers, gateways, services, caches, databases, queues), what each one is responsible for, and how requests and data flow between them. A system design interview tests whether you can build that picture from vague requirements, size it for real traffic and defend the trade-offs.";
+
+/* the six live guides, in the recommended order */
 const TOPICS = [
-  {
-    id: "load-balancing",
-    title: "Load Balancing",
-    description:
-      "Understand load balancers, routing algorithms, health checks, sticky sessions, L4 vs L7 balancing, failover and high availability.",
-    path: "/resources/hld/load-balancing",
-    icon: Network,
-    category: "Scalability",
-    readTime: "30 min",
-    level: "Fundamental",
-    available: true,
-    keywords: [
-      "load balancing",
-      "load balancer",
-      "round robin",
-      "least connections",
-      "l4",
-      "l7",
-      "health check",
-      "sticky session",
-    ],
-  },
-  {
-    id: "cache",
-    title: "Caching",
-    description:
-      "Learn cache-aside, read-through, write-through, write-back, TTL, eviction strategies, cache invalidation and distributed caching.",
-    path: "/resources/hld/cache",
-    icon: Zap,
-    category: "Performance",
-    readTime: "30 min",
-    level: "Fundamental",
-    available: true,
-    keywords: [
-      "cache",
-      "caching",
-      "redis",
-      "ttl",
-      "cache aside",
-      "write through",
-      "write back",
-      "eviction",
-    ],
-  },
-  {
-    id: "database",
-    title: "Databases",
-    description:
-      "Understand SQL vs NoSQL, indexing, replication, partitioning, sharding, transactions, consistency and database scaling.",
-    path: "/resources/hld/database",
-    icon: Database,
-    category: "Database",
-    readTime: "40 min",
-    level: "Fundamental",
-    available: true,
-    keywords: [
-      "database",
-      "sql",
-      "nosql",
-      "index",
-      "replication",
-      "sharding",
-      "partitioning",
-      "transaction",
-    ],
-  },
-  {
-    id: "message-queue",
-    title: "Message Queues",
-    description:
-      "Learn Kafka, RabbitMQ, producers, consumers, partitions, consumer groups, ordering, retries, dead-letter queues and event-driven systems.",
-    path: "/resources/hld/message-queue",
-    icon: MessageSquareMore,
-    category: "Distributed Systems",
-    readTime: "35 min",
-    level: "Intermediate",
-    available: true,
-    keywords: [
-      "message queue",
-      "kafka",
-      "rabbitmq",
-      "producer",
-      "consumer",
-      "consumer group",
-      "partition",
-      "dlq",
-      "pub sub",
-    ],
-  },
-  {
-    id: "rate-limiting",
-    title: "Rate Limiting",
-    description:
-      "Learn fixed window, sliding window, token bucket, leaky bucket, Redis-based distributed rate limiting, HTTP 429 and burst handling.",
-    path: "/resources/hld/rate-limiting",
-    icon: Gauge,
-    category: "Scalability",
-    readTime: "35 min",
-    level: "Intermediate",
-    available: true,
-    featured: true,
-    keywords: [
-      "rate limiter",
-      "rate limiting",
-      "token bucket",
-      "leaky bucket",
-      "sliding window",
-      "redis",
-      "http 429",
-    ],
-  },
-  {
-    id: "api-gateway",
-    title: "API Gateway",
-    description:
-      "Understand request routing, authentication, authorization, throttling, aggregation, transformation, observability and gateway high availability.",
-    path: "/resources/hld/api-gateway",
-    icon: ShieldCheck,
-    category: "Architecture",
-    readTime: "35 min",
-    level: "Intermediate",
-    available: true,
-    keywords: [
-      "api gateway",
-      "routing",
-      "authentication",
-      "authorization",
-      "throttling",
-      "aggregation",
-      "gateway",
-    ],
-  },
-  {
-    id: "cdn",
-    title: "Content Delivery Network",
-    description:
-      "Learn CDN architecture, edge locations, origin servers, static content caching, cache invalidation and reducing latency for global users.",
-    icon: Globe2,
-    category: "Performance",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "cdn",
-      "content delivery network",
-      "edge",
-      "origin server",
-      "latency",
-      "static content",
-    ],
-  },
-  {
-    id: "database-sharding",
-    title: "Database Sharding",
-    description:
-      "Understand horizontal partitioning, shard keys, routing, resharding, hot partitions and distributed database trade-offs.",
-    icon: Boxes,
-    category: "Database",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "database sharding",
-      "sharding",
-      "horizontal partitioning",
-      "shard key",
-      "hot partition",
-    ],
-  },
-  {
-    id: "consistent-hashing",
-    title: "Consistent Hashing",
-    description:
-      "Learn hash rings, virtual nodes, node addition and removal, key redistribution and why consistent hashing is useful in distributed systems.",
-    icon: Workflow,
-    category: "Distributed Systems",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "consistent hashing",
-      "hash ring",
-      "virtual nodes",
-      "distributed cache",
-    ],
-  },
-  {
-    id: "distributed-locking",
-    title: "Distributed Locking",
-    description:
-      "Understand distributed locks, leases, fencing tokens, Redis locking, race conditions and coordination across multiple service instances.",
-    icon: LockKeyhole,
-    category: "Distributed Systems",
-    level: "Advanced",
-    available: false,
-    keywords: [
-      "distributed lock",
-      "redis lock",
-      "lease",
-      "fencing token",
-      "race condition",
-    ],
-  },
-  {
-    id: "cap-theorem",
-    title: "CAP Theorem",
-    description:
-      "Understand consistency, availability and partition tolerance and how distributed systems make trade-offs during network failures.",
-    icon: BrainCircuit,
-    category: "Distributed Systems",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "cap theorem",
-      "consistency",
-      "availability",
-      "partition tolerance",
-    ],
-  },
-  {
-    id: "idempotency",
-    title: "Idempotency",
-    description:
-      "Learn idempotency keys, duplicate request prevention, safe retries, payment processing and reliable distributed API operations.",
-    icon: CheckCircle2,
-    category: "Reliability",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "idempotency",
-      "idempotency key",
-      "retry",
-      "duplicate request",
-      "payment",
-    ],
-  },
-  {
-    id: "service-discovery",
-    title: "Service Discovery",
-    description:
-      "Learn how services discover other service instances dynamically using service registries, DNS-based discovery and health checks.",
-    icon: Network,
-    category: "Architecture",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "service discovery",
-      "service registry",
-      "microservices",
-      "consul",
-      "dns",
-    ],
-  },
-  {
-    id: "microservices",
-    title: "Microservices Architecture",
-    description:
-      "Understand service boundaries, independent deployments, service communication, data ownership and microservice architecture trade-offs.",
-    icon: Boxes,
-    category: "Architecture",
-    level: "Intermediate",
-    available: false,
-    keywords: [
-      "microservices",
-      "microservice architecture",
-      "service communication",
-      "distributed system",
-    ],
-  },
-  {
-    id: "distributed-transactions",
-    title: "Distributed Transactions",
-    description:
-      "Learn two-phase commit, Saga patterns, compensating transactions and eventual consistency across multiple services.",
-    icon: Workflow,
-    category: "Distributed Systems",
-    level: "Advanced",
-    available: false,
-    keywords: [
-      "distributed transaction",
-      "saga pattern",
-      "2pc",
-      "two phase commit",
-      "eventual consistency",
-    ],
-  },
+  { id: "lb", title: "Load Balancing", path: "/resources/hld/load-balancing", icon: ArrowsSplit, cat: "Scalability", mins: 30, level: "Fundamental", why: "Why one server is never enough, and how traffic is spread across many.", chips: ["L4 vs L7", "Round robin", "Least connections", "Health checks", "Sticky sessions"], keys: "load balancer round robin least connections l4 l7 health check sticky session failover high availability" },
+  { id: "gw", title: "API Gateway", path: "/resources/hld/api-gateway", icon: ShieldCheck, cat: "Architecture", mins: 35, level: "Intermediate", why: "One front door for routing, auth, throttling and aggregation across services.", chips: ["Routing", "Auth", "BFF", "Aggregation", "Circuit breaker"], keys: "api gateway routing authentication authorization throttling aggregation bff circuit breaker microservices" },
+  { id: "rl", title: "Rate Limiting", path: "/resources/hld/rate-limiting", icon: Gauge, cat: "Reliability", mins: 35, level: "Intermediate", why: "Protect the system from spikes and abuse, and answer with HTTP 429.", chips: ["Token bucket", "Leaky bucket", "Sliding window", "Redis", "429"], keys: "rate limiter token bucket leaky bucket fixed window sliding window redis 429 throttling burst" },
+  { id: "cache", title: "Caching", path: "/resources/hld/cache", icon: Lightning, cat: "Performance", mins: 25, level: "Intermediate", why: "Make reads fast and cheap without serving wrong data.", chips: ["Cache-aside", "Write-through", "TTL", "Stampede", "Redis"], keys: "cache caching redis ttl cache aside write through write back eviction lru lfu stampede hot key invalidation" },
+  { id: "db", title: "Database Design", path: "/resources/hld/database", icon: Database, cat: "Data", mins: 40, level: "Fundamental", why: "Choose the store, then replicate and shard it as data grows.", chips: ["SQL vs NoSQL", "Indexing", "Replication", "Sharding", "Consistency"], keys: "database sql nosql index replication sharding partitioning transaction acid consistency cap" },
+  { id: "mq", title: "Message Queues", path: "/resources/hld/message-queue", icon: Queue, cat: "Async systems", mins: 35, level: "Intermediate", why: "Move slow work off the request path, safely and in order.", chips: ["Kafka", "RabbitMQ", "Consumer groups", "Retries", "DLQ"], keys: "message queue kafka rabbitmq producer consumer consumer group partition ordering retry dead letter queue dlq pub sub event driven" },
+];
+const CATS = ["All", ...new Set(TOPICS.map((t) => t.cat))];
+
+const COMING = [
+  ["CDN", "Edge locations, origin shielding, cache keys and invalidation for global users.", Globe],
+  ["Consistent hashing", "Hash rings, virtual nodes and moving the fewest keys when nodes change.", TreeStructure],
+  ["Database sharding", "Shard keys, routing, hot partitions and resharding without downtime.", HardDrives],
+  ["Distributed locking", "Leases, fencing tokens and why Redis locks need a backstop.", Lock],
+  ["CAP theorem", "Consistency vs availability when the network splits, in practice.", Brain],
+  ["Idempotency", "Idempotency keys and safe retries for payments and bookings.", CheckCircle],
+  ["Service discovery", "Registries, DNS discovery and health-checked endpoints.", Cloud],
+  ["Microservices", "Service boundaries, data ownership and when not to split.", SquaresFour],
+  ["Distributed transactions", "Two-phase commit, sagas and compensating actions.", TreeStructure],
 ];
 
-const FAQ_DATA = [
-  {
-    question: "What is High Level Design in software engineering?",
-    answer:
-      "High Level Design describes the major components of a software system and how services, APIs, databases, caches, queues, load balancers and other infrastructure components interact.",
-  },
-  {
-    question: "What should I study for a system design interview?",
-    answer:
-      "Important topics include load balancing, caching, databases, message queues, rate limiting, API gateways, sharding, consistent hashing, distributed systems, reliability and scalability.",
-  },
-  {
-    question: "Is HLD important for backend interviews?",
-    answer:
-      "HLD is commonly discussed in backend and system design interviews because backend engineers need to understand scalability, data storage, APIs, reliability and distributed architecture.",
-  },
-  {
-    question: "How should I approach an HLD interview question?",
-    answer:
-      "Start by clarifying requirements, estimate scale, define APIs and data models, build the high-level architecture, explain important request flows and then discuss scalability, failures and trade-offs.",
-  },
+const FRAMEWORK = [
+  ["Clarify functional requirements", "What must the system do? Pin down the 3–5 core use cases and say what's out of scope.", "5 min"],
+  ["Non-functional requirements", "Scale, latency targets, availability, consistency and durability. These drive every later choice.", "3 min"],
+  ["Estimate traffic and storage", "Requests per second (peak, not average), read/write ratio, data per day and per year.", "5 min"],
+  ["Define APIs and data model", "The main endpoints and the core entities with their keys. This exposes access patterns early.", "5 min"],
+  ["Draw the high-level architecture", "Client → load balancer → gateway → services → cache → database → queue. Walk one request through it.", "10 min"],
+  ["Find bottlenecks and scale", "Where does it break at 10× traffic? Cache, replicate, shard, queue and say why for each.", "10 min"],
+  ["Failures and trade-offs", "What happens when a node, a zone or the cache dies? What did you trade for what?", "7 min"],
 ];
 
-const getStoredTheme = () => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
+const PILLARS = [
+  ["Scalability", "Keep working as traffic grows 10× and 100×.", ArrowsSplit],
+  ["Data", "Store, replicate and partition data correctly.", Database],
+  ["Distributed systems", "Coordinate services that fail independently.", Cloud],
+  ["Reliability", "Stay available and correct when parts break.", ShieldCheck],
+];
 
-  const storedTheme = window.localStorage.getItem("theme");
+const FAQ = [
+  { q: "What is high level design (HLD) in software engineering?", a: "High level design describes the major components of a system and how they interact: clients, load balancers, API gateways, services, caches, databases and message queues, plus the request and data flows between them. Low level design (LLD) then goes inside one component: classes, interfaces and algorithms." },
+  { q: "What should I study for a system design interview?", a: "Learn the core building blocks first: load balancing, API gateways, rate limiting, caching, databases (replication, sharding, consistency) and message queues. Then practise a repeatable framework (requirements, estimates, APIs, architecture, scaling, failures) on full problems like a URL shortener, chat app or ticket booking system." },
+  { q: "In what order should I learn system design topics?", a: "Follow a request from the edge to the data: load balancing, then API gateway, rate limiting, caching, database design and finally message queues for asynchronous work. That is also the order most interviewers probe in." },
+  { q: "How should I approach an HLD interview question?", a: "Clarify functional and non-functional requirements, estimate traffic and storage, define the APIs and data model, draw the high-level architecture and walk one request through it, then scale the bottlenecks and discuss failures and trade-offs. Budget roughly 45 minutes across those seven steps." },
+  { q: "Is HLD asked for freshers?", a: "Usually lightly. Freshers and juniors mostly face DSA and LLD, but many product companies include a basic design discussion. From about two to three years of experience, a dedicated system design round is standard." },
+  { q: "Are these system design guides free?", a: "Yes. Every guide is free to read with no sign-up. The Mastering System Design (HLD) book is optional and adds complete end-to-end interview designs." },
+];
 
-  if (storedTheme === "dark" || storedTheme === "light") {
-    return storedTheme;
-  }
+/* ============================ head ============================ */
+function Head() {
+  const graph = [
+    { "@type": "Organization", "@id": `${SITE}/#organization`, name: "Target Trek", url: SITE, logo: LOGO },
+    {
+      "@type": "CollectionPage", "@id": `${URL}#webpage`, url: URL, name: SEO.title, description: SEO.description, inLanguage: "en-IN",
+      isPartOf: { "@type": "WebSite", "@id": `${SITE}/#website`, url: SITE, name: "Target Trek" }, dateModified: UPDATED,
+      breadcrumb: { "@id": `${URL}#breadcrumb` }, mainEntity: { "@id": `${URL}#guides` },
+      speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1", ".rk-answer"] },
+      about: ["High level design", "System design", "Distributed systems", "Scalability"].map((name) => ({ "@type": "Thing", name })),
+    },
+    { "@type": "BreadcrumbList", "@id": `${URL}#breadcrumb`, itemListElement: [["Target Trek", ""], ["Resources", "/resources"], ["System design", PATH]].map(([name, p], i) => ({ "@type": "ListItem", position: i + 1, name, item: `${SITE}${p}` })) },
+    {
+      "@type": "ItemList", "@id": `${URL}#guides`, name: "System design guides, in learning order", numberOfItems: TOPICS.length, itemListOrder: "https://schema.org/ItemListOrderAscending",
+      itemListElement: TOPICS.map((t, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE}${t.path}`, name: t.title, description: t.why })),
+    },
+    {
+      "@type": "HowTo", "@id": `${URL}#framework`, name: "How to answer a system design interview question", totalTime: "PT45M",
+      step: FRAMEWORK.map(([name, text], i) => ({ "@type": "HowToStep", position: i + 1, name, text, url: `${URL}#framework` })),
+    },
+    { "@type": "FAQPage", "@id": `${URL}#faq`, mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
+  ];
+  const json = JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replace(/</g, "\\u003c");
+  return (
+    <Helmet>
+      <html lang="en-IN" />
+      <title>{SEO.title}</title>
+      <meta name="description" content={SEO.description} />
+      <meta name="keywords" content={SEO.keywords} />
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      <link rel="canonical" href={URL} />
+      <link rel="alternate" hrefLang="en-IN" href={URL} />
+      <link rel="alternate" hrefLang="x-default" href={URL} />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="Target Trek" />
+      <meta property="og:locale" content="en_IN" />
+      <meta property="og:title" content={SEO.title} />
+      <meta property="og:description" content={SEO.description} />
+      <meta property="og:url" content={URL} />
+      <meta property="og:image" content={LOGO} />
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:title" content={SEO.title} />
+      <meta name="twitter:description" content={SEO.description} />
+      <meta name="twitter:image" content={LOGO} />
+      <script type="application/ld+json">{json}</script>
+    </Helmet>
+  );
+}
 
-  if (document.documentElement.classList.contains("dark")) {
-    return "dark";
-  }
-
-  return "light";
-};
-
-const useNavbarTheme = () => {
-  const [theme, setTheme] = useState(getStoredTheme);
-
+/* ============================ hooks ============================ */
+function useVisited() {
+  const [v, setV] = useState([]);
   useEffect(() => {
-    const syncTheme = () => {
-      const nextTheme = getStoredTheme();
-
-      setTheme((currentTheme) =>
-        currentTheme === nextTheme ? currentTheme : nextTheme
-      );
-    };
-
-    syncTheme();
-
-    window.addEventListener("storage", syncTheme);
-    window.addEventListener("themechange", syncTheme);
-    window.addEventListener("focus", syncTheme);
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        syncTheme();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    const observer = new MutationObserver(syncTheme);
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-
-    const interval = window.setInterval(syncTheme, 300);
-
-    return () => {
-      window.removeEventListener("storage", syncTheme);
-      window.removeEventListener("themechange", syncTheme);
-      window.removeEventListener("focus", syncTheme);
-
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange
-      );
-
-      observer.disconnect();
-      window.clearInterval(interval);
-    };
+    try { const s = JSON.parse(window.localStorage.getItem(VISITED_KEY) || "[]"); if (Array.isArray(s)) setV(s); } catch { /* ignore */ }
   }, []);
+  return v;
+}
+function useNavOffset(ref) {
+  useEffect(() => {
+    const nav = document.querySelector(".tt-nav");
+    const set = () => ref.current?.style.setProperty("--rk-nav", `${nav ? Math.round(nav.getBoundingClientRect().height) : 0}px`);
+    set();
+    const ro = nav && typeof ResizeObserver !== "undefined" ? new ResizeObserver(set) : null;
+    ro?.observe(nav);
+    window.addEventListener("resize", set);
+    return () => { ro?.disconnect(); window.removeEventListener("resize", set); };
+  }, [ref]);
+}
 
-  return theme;
-};
+const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-const TopicCard = ({ topic, isDark, onOpen }) => {
-  const Icon = topic.icon;
-
-  const surfaceClass = topic.available
-    ? isDark
-      ? "border-slate-800 bg-slate-900/80 hover:border-blue-800 hover:bg-slate-900"
-      : "border-slate-200 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/60"
-    : isDark
-    ? "border-slate-800 bg-slate-900/50"
-    : "border-slate-200 bg-slate-100/70";
-
-  const cardContent = (
-    <>
-      {!topic.available && (
-        <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-              isDark
-                ? "bg-amber-950/60 text-amber-300"
-                : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            <Clock3 className="h-3 w-3" />
-            Coming Soon
-          </span>
-        </div>
-      )}
-
-      {topic.featured && topic.available && (
-        <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-              isDark
-                ? "bg-blue-950 text-blue-300"
-                : "bg-blue-50 text-blue-700"
-            }`}
-          >
-            <Sparkles className="h-3 w-3" />
-            Featured
-          </span>
-        </div>
-      )}
-
-      <div
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12 ${
-          topic.available
-            ? isDark
-              ? "bg-blue-950/60 text-blue-300"
-              : "bg-blue-50 text-blue-600"
-            : isDark
-            ? "bg-slate-800 text-slate-500"
-            : "bg-slate-200 text-slate-500"
-        }`}
-      >
-        <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <span
-          className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-            isDark
-              ? "bg-slate-800 text-slate-400"
-              : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          {topic.category}
-        </span>
-
-        <span
-          className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
-            isDark
-              ? "bg-slate-800 text-slate-400"
-              : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {topic.level}
-        </span>
-      </div>
-
-      <h2
-        className={`mt-4 text-lg font-black tracking-tight sm:text-xl ${
-          topic.available
-            ? isDark
-              ? "text-white transition-colors group-hover:text-blue-300"
-              : "text-slate-950 transition-colors group-hover:text-blue-600"
-            : isDark
-            ? "text-slate-300"
-            : "text-slate-700"
-        }`}
-      >
-        {topic.title}
-      </h2>
-
-      <p
-        className={`mt-3 flex-1 text-sm leading-6 sm:leading-7 ${
-          topic.available
-            ? isDark
-              ? "text-slate-400"
-              : "text-slate-600"
-            : isDark
-            ? "text-slate-500"
-            : "text-slate-500"
-        }`}
-      >
-        {topic.description}
-      </p>
-
-      <div
-        className={`mt-5 flex min-h-[40px] items-center justify-between border-t pt-4 ${
-          isDark ? "border-slate-800" : "border-slate-200"
-        }`}
-      >
-        {topic.available ? (
-          <>
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-bold ${
-                isDark ? "text-slate-500" : "text-slate-500"
-              }`}
-            >
-              <Clock3 className="h-3.5 w-3.5" />
-              {topic.readTime}
-            </span>
-
-            <span
-              className={`inline-flex items-center gap-1 text-sm font-black ${
-                isDark ? "text-blue-400" : "text-blue-600"
-              }`}
-            >
-              Learn
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </span>
-          </>
-        ) : (
-          <span
-            className={`inline-flex items-center gap-2 text-sm font-black ${
-              isDark ? "text-amber-400" : "text-amber-600"
-            }`}
-          >
-            <Clock3 className="h-4 w-4" />
-            Coming Soon
-          </span>
-        )}
-      </div>
-    </>
-  );
-
-  if (!topic.available) {
-    return (
-      <article
-        className={`relative flex h-full cursor-default flex-col overflow-hidden rounded-2xl border sm:rounded-3xl ${surfaceClass}`}
-        aria-label={`${topic.title} - Coming Soon`}
-      >
-        <div className="flex h-full flex-col p-5 sm:p-6">
-          {cardContent}
-        </div>
-      </article>
-    );
-  }
-
+function Section({ id, eyebrow, title, lead, tint, children }) {
   return (
-    <article
-      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-300 sm:rounded-3xl ${surfaceClass}`}
-    >
-      <button
-        type="button"
-        onClick={() => onOpen(topic.path)}
-        className="flex h-full w-full flex-col p-5 text-left sm:p-6"
-        aria-label={`Learn ${topic.title}`}
-      >
-        {cardContent}
-      </button>
-    </article>
-  );
-};
-
-const HLDResources = () => {
-  const navigate = useNavigate();
-  const theme = useNavbarTheme();
-
-  const isDark = theme === "dark";
-
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-
-  const availableTopics = useMemo(
-    () => TOPICS.filter((topic) => topic.available),
-    []
-  );
-
-  const comingSoonTopics = useMemo(
-    () => TOPICS.filter((topic) => !topic.available),
-    []
-  );
-
-  const categories = useMemo(
-    () => ["All", ...new Set(TOPICS.map((topic) => topic.category))],
-    []
-  );
-
-  const filteredTopics = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return TOPICS.filter((topic) => {
-      const matchesCategory =
-        selectedCategory === "All" ||
-        topic.category === selectedCategory;
-
-      if (!matchesCategory) {
-        return false;
-      }
-
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      const searchableText = [
-        topic.title,
-        topic.description,
-        topic.category,
-        topic.level,
-        ...topic.keywords,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return searchableText.includes(normalizedSearch);
-    });
-  }, [search, selectedCategory]);
-
-  const seoDescription =
-    "Free High Level Design resources for system design interviews. Learn load balancing, caching, databases, message queues, rate limiting, API gateways, distributed systems, scalability and backend architecture.";
-
-  const collectionSchema = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "High Level Design Resources",
-    headline:
-      "High Level Design Resources for System Design Interviews",
-    description: seoDescription,
-    url: PAGE_URL,
-    inLanguage: "en",
-    isAccessibleForFree: true,
-    about: [
-      "High Level Design",
-      "System Design",
-      "Backend Engineering",
-      "Distributed Systems",
-      "Scalability",
-      "Software Architecture",
-    ],
-    publisher: {
-      "@type": "Organization",
-      name: "TargetTrek",
-      url: SITE_URL,
-    },
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: availableTopics.length,
-      itemListElement: availableTopics.map((topic, index) => ({
-        "@type": "ListItem",
-        position: index + 1,
-        name: topic.title,
-        url: `${SITE_URL}${topic.path}`,
-      })),
-    },
-  };
-
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "TargetTrek",
-        item: SITE_URL,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Resources",
-        item: `${SITE_URL}/resources`,
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: "High Level Design",
-        item: PAGE_URL,
-      },
-    ],
-  };
-
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: FAQ_DATA.map((faq) => ({
-      "@type": "Question",
-      name: faq.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: faq.answer,
-      },
-    })),
-  };
-
-  const textPrimary = isDark
-    ? "text-white"
-    : "text-slate-950";
-
-  const textSecondary = isDark
-    ? "text-slate-400"
-    : "text-slate-600";
-
-  const surface = isDark
-    ? "border-slate-800 bg-slate-900"
-    : "border-slate-200 bg-white";
-
-  return (
-    <>
-      <Helmet>
-        <title>
-          HLD Resources - System Design Tutorials & Interview
-          Preparation | TargetTrek
-        </title>
-
-        <meta
-          name="description"
-          content={seoDescription}
-        />
-
-        <meta
-          name="keywords"
-          content="HLD, high level design, HLD system design, system design interview, backend system design, load balancing, caching, database design, message queue, rate limiting, API gateway, distributed systems, scalability, software architecture"
-        />
-
-        <meta
-          name="robots"
-          content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
-        />
-
-        <meta
-          name="author"
-          content="TargetTrek"
-        />
-
-        <meta
-          name="theme-color"
-          content={
-            isDark
-              ? "#090d14"
-              : "#ffffff"
-          }
-        />
-
-        <link
-          rel="canonical"
-          href={PAGE_URL}
-        />
-
-        <meta
-          property="og:type"
-          content="website"
-        />
-
-        <meta
-          property="og:site_name"
-          content="TargetTrek"
-        />
-
-        <meta
-          property="og:title"
-          content="High Level Design Resources - System Design Tutorials"
-        />
-
-        <meta
-          property="og:description"
-          content={seoDescription}
-        />
-
-        <meta
-          property="og:url"
-          content={PAGE_URL}
-        />
-
-        <meta
-          name="twitter:card"
-          content="summary_large_image"
-        />
-
-        <meta
-          name="twitter:title"
-          content="High Level Design Resources - System Design Tutorials"
-        />
-
-        <meta
-          name="twitter:description"
-          content={seoDescription}
-        />
-
-        <script type="application/ld+json">
-          {JSON.stringify(collectionSchema)}
-        </script>
-
-        <script type="application/ld+json">
-          {JSON.stringify(breadcrumbSchema)}
-        </script>
-
-        <script type="application/ld+json">
-          {JSON.stringify(faqSchema)}
-        </script>
-      </Helmet>
-
-      <div
-        className={`min-h-screen pt-16 transition-colors duration-300 sm:pt-20 ${
-          isDark
-            ? "bg-[#090d14] text-slate-100"
-            : "bg-slate-50 text-slate-900"
-        }`}
-      >
-        <header
-          className={`relative overflow-hidden border-b ${
-            isDark
-              ? "border-slate-800 bg-[#090d14]"
-              : "border-slate-200 bg-white"
-          }`}
-        >
-          <div
-            className={`pointer-events-none absolute left-1/2 top-0 h-[450px] w-[90%] max-w-[800px] -translate-x-1/2 rounded-full blur-3xl ${
-              isDark
-                ? "bg-blue-900/10"
-                : "bg-blue-100/70"
-            }`}
-          />
-
-          <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="flex justify-center">
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em] ${
-                    isDark
-                      ? "border-blue-900 bg-blue-950/50 text-blue-300"
-                      : "border-blue-200 bg-blue-50 text-blue-700"
-                  }`}
-                >
-                  <Layers3 className="h-3.5 w-3.5" />
-
-                  High Level Design
-                </span>
-              </div>
-
-              <h1
-                className={`mt-5 text-3xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl ${textPrimary}`}
-              >
-                Learn High Level
-                <span className="block text-blue-600">
-                  System Design
-                </span>
-              </h1>
-
-              <p
-                className={`mx-auto mt-5 max-w-3xl text-sm leading-7 sm:text-base sm:leading-8 lg:text-lg ${textSecondary}`}
-              >
-                Learn the core building blocks used to design
-                scalable, reliable and distributed systems.
-                Explore practical HLD concepts for backend
-                engineering and system design interviews.
-              </p>
-
-              <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() =>
-                    document
-                      .getElementById(
-                        "hld-topics"
-                      )
-                      ?.scrollIntoView({
-                        behavior: "smooth",
-                      })
-                  }
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700 sm:w-auto"
-                >
-                  Start Learning
-
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(BOOK_URL)
-                  }
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black transition sm:w-auto ${
-                    isDark
-                      ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-700 hover:text-blue-300"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-600"
-                  }`}
-                >
-                  <BookOpen className="h-4 w-4" />
-
-                  Mastering System Design HLD
-                </button>
-              </div>
-            </div>
-
-            <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 lg:grid-cols-4">
-              {[
-                [
-                  availableTopics.length,
-                  "Available Topics",
-                ],
-                [
-                  comingSoonTopics.length,
-                  "Coming Soon",
-                ],
-                [
-                  "Free",
-                  "Learning Resources",
-                ],
-                [
-                  "Interview",
-                  "Focused",
-                ],
-              ].map(([value, label]) => (
-                <div
-                  key={label}
-                  className={`rounded-2xl border p-4 text-center ${surface}`}
-                >
-                  <p
-                    className={`text-lg font-black sm:text-xl ${textPrimary}`}
-                  >
-                    {value}
-                  </p>
-
-                  <p
-                    className={`mt-1 text-xs font-medium ${textSecondary}`}
-                  >
-                    {label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+    <section id={id} className={cx("rl-sec rkh-sec", tint && "rl-sec-tint")} aria-labelledby={`${id}-h`}>
+      <div className="rk-shell">
+        <header className="rl-sec-head">
+          {eyebrow && <span className="rl-eyebrow">{eyebrow}</span>}
+          <h2 id={`${id}-h`} className="rl-h2">{title}</h2>
+          {lead && <p className="rl-lead">{lead}</p>}
         </header>
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <main>
-          <section
-            className={`border-b ${
-              isDark
-                ? "border-slate-800 bg-[#0c111b]"
-                : "border-slate-200 bg-slate-50"
-            }`}
-          >
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  {
-                    icon: Server,
-                    title: "Scalability",
-                    text: "Design systems that continue working as traffic grows.",
-                  },
-                  {
-                    icon: Database,
-                    title: "Data",
-                    text: "Understand storage, replication and database scaling.",
-                  },
-                  {
-                    icon: Cloud,
-                    title: "Distributed Systems",
-                    text: "Learn communication and coordination across services.",
-                  },
-                  {
-                    icon: ShieldCheck,
-                    title: "Reliability",
-                    text: "Handle failures while keeping services available.",
-                  },
-                ].map((item) => {
-                  const Icon =
-                    item.icon;
+/* ============================ hero: the path a request takes ============================ */
+function RequestMap({ visited }) {
+  const layer = (label, ids) => (
+    <div className="rkh-layer">
+      <span className="rkh-layer-k">{label}</span>
+      <div>{ids.map((id) => { const t = TOPICS.find((x) => x.id === id); const I = t.icon; return (
+        <Link key={id} to={t.path} className={cx("rkh-node", visited.includes(id) && "is-read")}>
+          <I size={18} weight="duotone" aria-hidden /><b>{t.title}</b><ArrowRight size={14} weight="bold" aria-hidden />
+        </Link>
+      ); })}</div>
+    </div>
+  );
+  return (
+    <figure className="rkh-map" aria-label="The path a request takes through a system, with a guide for each building block">
+      <figcaption>The path a request takes</figcaption>
+      <div className="rkh-client"><Users size={18} weight="duotone" aria-hidden /><b>Users</b><small>web · mobile</small></div>
+      <i className="rkh-wire" aria-hidden />
+      {layer("Edge", ["lb", "gw", "rl"])}
+      <i className="rkh-wire" aria-hidden />
+      {layer("Data", ["cache", "db"])}
+      <i className="rkh-wire" aria-hidden />
+      {layer("Async", ["mq"])}
+    </figure>
+  );
+}
 
-                  return (
-                    <div
-                      key={item.title}
-                      className={`flex gap-3 rounded-2xl border p-4 ${surface}`}
-                    >
-                      <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                          isDark
-                            ? "bg-blue-950/60 text-blue-300"
-                            : "bg-blue-50 text-blue-600"
-                        }`}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-
-                      <div className="min-w-0">
-                        <h2
-                          className={`font-black ${textPrimary}`}
-                        >
-                          {item.title}
-                        </h2>
-
-                        <p
-                          className={`mt-1 text-xs leading-5 ${textSecondary}`}
-                        >
-                          {item.text}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+function Hero({ visited }) {
+  const read = TOPICS.filter((t) => visited.includes(t.id)).length;
+  const next = TOPICS.find((t) => !visited.includes(t.id));
+  return (
+    <header className="rk-hero">
+      <div className="rk-shell">
+        <nav aria-label="Breadcrumb">
+          <ol className="rk-crumbs"><li><Link to="/">Home</Link></li><li><Link to="/resources">Resources</Link></li><li><span aria-current="page">System design</span></li></ol>
+        </nav>
+        <div className="rk-hero-grid">
+          <div className="rk-hero-copy">
+            <div className="rk-tags"><span className="rk-tag is-brand">High level design</span><span className="rk-tag">Free</span><span className="rk-tag">Interview-focused</span></div>
+            <h1 className="rk-h1">System design, <span className="rl-mark">one building block</span> at a time</h1>
+            <p className="rk-sub">Six free guides that follow a request from the edge of the system down to the data, each with diagrams, trade-offs, interview questions with answers, and a quiz.</p>
+            <p className="rk-answer"><b>What is HLD?</b>{ANSWER}</p>
+            <div className="rk-btns">
+              {next
+                ? <Btn as={Link} to={next.path} size="lg">{read ? "Continue with" : "Start with"} {next.title} <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
+                : <Btn size="lg" onClick={() => go("framework")}>Practise the framework <ArrowRight size={17} weight="bold" aria-hidden /></Btn>}
+              <Btn size="lg" variant="ghost" onClick={() => go("path")}>See all guides</Btn>
             </div>
-          </section>
+            <dl className="rl-facts">
+              <div><dt>{TOPICS.length} guides</dt><dd>live now, free</dd></div>
+              <div><dt>{TOPICS.reduce((s, t) => s + t.mins, 0) / 60 | 0}+ hours</dt><dd>of reading in total</dd></div>
+              <div><dt>{read}/{TOPICS.length}</dt><dd>read on this device</dd></div>
+              <div><dt>Q&amp;A</dt><dd>answers in every guide</dd></div>
+            </dl>
+          </div>
+          <RequestMap visited={visited} />
+        </div>
+      </div>
+    </header>
+  );
+}
 
-          <section
-            id="hld-topics"
-            className="mx-auto max-w-7xl scroll-mt-28 px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-16"
-          >
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-500">
-                  System Design Learning
-                </p>
+/* ============================ learning path ============================ */
+function LearningPath({ visited }) {
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState("All");
+  const list = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return TOPICS.map((t, i) => ({ ...t, n: i + 1 })).filter((t) => (cat === "All" || t.cat === cat) && (!s || [t.title, t.why, t.cat, t.keys, t.chips.join(" ")].join(" ").toLowerCase().includes(s)));
+  }, [q, cat]);
+  const clear = () => { setQ(""); setCat("All"); };
 
-                <h2
-                  className={`mt-2 text-2xl font-black tracking-tight sm:text-3xl ${textPrimary}`}
-                >
-                  High Level Design Topics
-                </h2>
-
-                <p
-                  className={`mt-2 max-w-2xl text-sm leading-7 ${textSecondary}`}
-                >
-                  Explore available HLD tutorials or see
-                  which system design topics are coming
-                  next.
-                </p>
-              </div>
-
-              <div className="relative w-full lg:max-w-sm">
-                <Search
-                  className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
-                    isDark
-                      ? "text-slate-500"
-                      : "text-slate-400"
-                  }`}
-                />
-
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Search HLD topics..."
-                  aria-label="Search High Level Design topics"
-                  className={`w-full rounded-xl border py-3 pl-10 pr-10 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ${
-                    isDark
-                      ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500"
-                      : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
-                  }`}
-                />
-
-                {search && (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    onClick={() =>
-                      setSearch("")
-                    }
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 transition ${
-                      isDark
-                        ? "text-slate-500 hover:text-white"
-                        : "text-slate-400 hover:text-slate-900"
-                    }`}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="-mx-4 mt-7 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-              <div className="flex min-w-max gap-2">
-                {categories.map(
-                  (category) => {
-                    const selected =
-                      selectedCategory ===
-                      category;
-
-                    return (
-                      <button
-                        key={category}
-                        type="button"
-                        onClick={() =>
-                          setSelectedCategory(
-                            category
-                          )
-                        }
-                        className={`rounded-full border px-4 py-2 text-xs font-black transition ${
-                          selected
-                            ? "border-blue-600 bg-blue-600 text-white"
-                            : isDark
-                            ? "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-white"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
-                        }`}
-                      >
-                        {category}
-                      </button>
-                    );
-                  }
-                )}
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between">
-              <p
-                className={`text-xs font-semibold ${textSecondary}`}
-              >
-                Showing{" "}
-                {filteredTopics.length}{" "}
-                {filteredTopics.length === 1
-                  ? "topic"
-                  : "topics"}
-              </p>
-
-              {(search ||
-                selectedCategory !==
-                  "All") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setSelectedCategory(
-                      "All"
-                    );
-                  }}
-                  className="text-xs font-black text-blue-600 hover:text-blue-700"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-
-            {filteredTopics.length >
-            0 ? (
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-                {filteredTopics.map(
-                  (topic) => (
-                    <TopicCard
-                      key={topic.id}
-                      topic={topic}
-                      isDark={isDark}
-                      onOpen={navigate}
-                    />
-                  )
-                )}
-              </div>
-            ) : (
-              <div
-                className={`mt-7 rounded-2xl border px-5 py-12 text-center sm:py-16 ${surface}`}
-              >
-                <Search
-                  className={`mx-auto h-9 w-9 ${
-                    isDark
-                      ? "text-slate-600"
-                      : "text-slate-300"
-                  }`}
-                />
-
-                <h3
-                  className={`mt-4 text-lg font-black ${textPrimary}`}
-                >
-                  No HLD topics found
-                </h3>
-
-                <p
-                  className={`mx-auto mt-2 max-w-md text-sm leading-6 ${textSecondary}`}
-                >
-                  Try another search term
-                  or remove the selected
-                  category filter.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setSelectedCategory(
-                      "All"
-                    );
-                  }}
-                  className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-blue-700"
-                >
-                  Show All Topics
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section
-            className={`border-y ${
-              isDark
-                ? "border-slate-800 bg-slate-900/40"
-                : "border-slate-200 bg-white"
-            }`}
-          >
-            <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-              <div className="grid items-center gap-8 lg:grid-cols-[1fr_0.8fr] lg:gap-12">
-                <div>
-                  <span
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black ${
-                      isDark
-                        ? "bg-blue-950/60 text-blue-300"
-                        : "bg-blue-50 text-blue-700"
-                    }`}
-                  >
-                    <BookOpen className="h-3.5 w-3.5" />
-
-                    Complete HLD Preparation
+  return (
+    <Section id="path" eyebrow="Learning path" title="Six guides, in the order to read them" lead="Each one takes 25 to 40 minutes. Read them in order the first time; after that, jump straight to what your interview needs.">
+      <div className="rkh-tools">
+        <label className="rkh-search">
+          <MagnifyingGlass size={18} weight="bold" aria-hidden />
+          <span className="rl-sr">Search system design guides</span>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search: Kafka, sharding, token bucket…" />
+          {q && <button type="button" onClick={() => setQ("")} aria-label="Clear search"><X size={16} weight="bold" /></button>}
+        </label>
+        <div className="rkh-cats" role="group" aria-label="Filter by area">
+          {CATS.map((c) => <button key={c} type="button" aria-pressed={cat === c} onClick={() => setCat(c)}>{c}</button>)}
+        </div>
+      </div>
+      <p className="rkh-count" aria-live="polite">{list.length === TOPICS.length ? `All ${TOPICS.length} guides` : `${list.length} of ${TOPICS.length} guides`}</p>
+      {list.length ? (
+        <ol className="rkh-list">
+          {list.map((t) => {
+            const I = t.icon;
+            const read = visited.includes(t.id);
+            return (
+              <li key={t.id}>
+                <Link to={t.path} className={cx("rkh-card", read && "is-read")}>
+                  <span className="rkh-n rv-mono">{String(t.n).padStart(2, "0")}</span>
+                  <span className="rkh-ico"><I size={24} weight="duotone" aria-hidden /></span>
+                  <span className="rkh-body">
+                    <span className="rkh-meta"><em>{t.cat}</em><span><Clock size={13} weight="bold" aria-hidden />{t.mins} min</span><span>{t.level}</span>{read && <strong>Read</strong>}</span>
+                    <h3>{t.title}</h3>
+                    <p>{t.why}</p>
+                    <span className="rkh-chips">{t.chips.map((c) => <i key={c}>{c}</i>)}</span>
                   </span>
+                  <span className="rkh-go" aria-hidden><ArrowRight size={20} weight="bold" /></span>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <div className="rl-empty"><p>No guide matches “{q}”.</p><Btn variant="ghost" onClick={clear}>Show all guides</Btn></div>
+      )}
+    </Section>
+  );
+}
 
-                  <h2
-                    className={`mt-4 text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl ${textPrimary}`}
-                  >
-                    Learn how to solve a
-                    complete system design
-                    problem
-                  </h2>
+/* ============================ page ============================ */
+export default function HLDResources() {
+  const ref = useRef(null);
+  useNavOffset(ref);
+  const visited = useVisited();
 
-                  <p
-                    className={`mt-4 max-w-2xl text-sm leading-7 sm:text-base ${textSecondary}`}
-                  >
-                    Mastering System Design
-                    – HLD covers the full
-                    design process from
-                    requirements and
-                    estimations to APIs,
-                    databases, caching,
-                    scaling, concurrency,
-                    failures and
-                    architectural
-                    trade-offs.
-                  </p>
+  return (
+    <div ref={ref} className="rk-root">
+      <Page title={SEO.title} description={SEO.description} className="rk rkh">
+        <Head />
+        <Hero visited={visited} />
+        <main>
+          <LearningPath visited={visited} />
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        BOOK_URL
-                      )
-                    }
-                    className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700 sm:w-auto"
-                  >
-                    Explore HLD Book
+          <Section id="pillars" eyebrow="What you're being tested on" title="Every design answer is judged on four things" tint>
+            <div className="rkh-pillars">
+              {PILLARS.map(([t, d, I]) => <div key={t}><I size={24} weight="duotone" aria-hidden /><h3>{t}</h3><p>{d}</p></div>)}
+            </div>
+          </Section>
 
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
+          <Section id="framework" eyebrow="Interview framework" title="How to answer any system design question in 45 minutes" lead="Use the same seven steps every time. Interviewers grade the process as much as the final diagram.">
+            <ol className="rkh-frame">
+              {FRAMEWORK.map(([t, d, time], i) => (
+                <li key={t}>
+                  <span className="rv-mono">{String(i + 1).padStart(2, "0")}</span>
+                  <div><h3>{t}</h3><p>{d}</p></div>
+                  <em>{time}</em>
+                </li>
+              ))}
+            </ol>
+            <aside className="rk-call interview" role="note">
+              <Brain size={22} weight="duotone" aria-hidden />
+              <div><b>Interview tip · think out loud</b><div>Say what you're assuming and why before you draw. “I'll assume 10 million daily users and a 100:1 read/write ratio, so reads dominate and caching matters” earns more credit than a perfect diagram drawn in silence.</div></div>
+            </aside>
+          </Section>
 
-                <div
-                  className={`rounded-2xl border p-5 sm:rounded-3xl sm:p-6 ${surface}`}
-                >
-                  <p
-                    className={`text-sm font-black uppercase tracking-wide ${
-                      isDark
-                        ? "text-blue-400"
-                        : "text-blue-600"
-                    }`}
-                  >
-                    HLD Interview Approach
-                  </p>
+          <Section id="coming" eyebrow="Coming next" title="More guides on the way" tint>
+            <ul className="rkh-coming">
+              {COMING.map(([t, d, I]) => <li key={t}><I size={20} weight="duotone" aria-hidden /><div><h3>{t}</h3><p>{d}</p></div></li>)}
+            </ul>
+          </Section>
 
-                  <div className="mt-5 space-y-4">
-                    {[
-                      "Clarify functional requirements",
-                      "Identify non-functional requirements",
-                      "Estimate traffic and storage",
-                      "Define APIs and data models",
-                      "Create the high-level architecture",
-                      "Find bottlenecks and scale components",
-                      "Discuss reliability, failures and trade-offs",
-                    ].map(
-                      (
-                        item,
-                        index
-                      ) => (
-                        <div
-                          key={item}
-                          className="flex items-start gap-3"
-                        >
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-xs font-black text-white">
-                            {index +
-                              1}
-                          </span>
-
-                          <p
-                            className={`pt-1 text-sm font-semibold leading-5 ${textSecondary}`}
-                          >
-                            {item}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
+          <section id="faq" className="rl-sec rkh-sec" aria-labelledby="faq-h">
+            <div className="rk-shell rl-faq-grid">
+              <header className="rl-faq-side">
+                <span className="rl-eyebrow">Questions</span>
+                <h2 id="faq-h" className="rl-h2">System design questions, answered</h2>
+                <p className="rl-lead">Short answers to what people ask most before their first design round.</p>
+              </header>
+              <div className="rl-faq-list">
+                {FAQ.map((f, i) => <details key={f.q} className="rl-faq" open={i === 0}><summary><h3>{f.q}</h3></summary><p>{f.a}</p></details>)}
               </div>
             </div>
           </section>
 
-          <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-            <div className="text-center">
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-500">
-                Common Questions
-              </p>
-
-              <h2
-                className={`mt-2 text-2xl font-black tracking-tight sm:text-3xl ${textPrimary}`}
-              >
-                HLD & System Design FAQ
-              </h2>
-
-              <p
-                className={`mx-auto mt-3 max-w-2xl text-sm leading-7 ${textSecondary}`}
-              >
-                Quick answers to common
-                questions about High Level
-                Design and system design
-                interview preparation.
-              </p>
-            </div>
-
-            <div className="mt-8 space-y-3">
-              {FAQ_DATA.map(
-                (faq) => (
-                  <article
-                    key={
-                      faq.question
-                    }
-                    className={`rounded-2xl border p-5 sm:p-6 ${surface}`}
-                  >
-                    <h3
-                      className={`text-base font-black sm:text-lg ${textPrimary}`}
-                    >
-                      {faq.question}
-                    </h3>
-
-                    <p
-                      className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                    >
-                      {faq.answer}
-                    </p>
-                  </article>
-                )
-              )}
+          <section className="rl-sec rkh-sec" aria-label="Go deeper">
+            <div className="rk-shell">
+              <div className="rl-final">
+                <BookOpen size={30} weight="duotone" aria-hidden style={{ color: "#5eead4" }} />
+                <h2 className="rl-h2">Ready for full problems? <span className="rl-mark">Design them end to end.</span></h2>
+                <p>Mastering System Design (HLD) walks through complete interview designs, from requirements and estimates to APIs, data, scaling, concurrency and failures.</p>
+                <div className="rl-hero-btns">
+                  <Btn as={Link} to={BOOK} size="lg">Explore the HLD book <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
+                  <Btn as={Link} to="/resources" size="lg" variant="ghost">All free resources</Btn>
+                </div>
+              </div>
             </div>
           </section>
         </main>
-      </div>
-    </>
+      </Page>
+    </div>
   );
-};
-
-export default HLDResources;
+}

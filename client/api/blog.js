@@ -88,16 +88,26 @@ export default async function handler(req, res) {
   const plain = stripHtml(post.content);
   const wordCount = plain ? plain.split(/\s+/).length : 0;
 
+  const blogUrl = `${SITE_URL}/blogs`;
+  const catName = String(post.category || "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const toc = Array.isArray(post.toc) ? post.toc : [];
+  const summary = stripHtml(post.excerpt || "");
+
   const blogPosting = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
+    "@id": `${canonical}#article`,
     headline: String(post.title).slice(0, 110),
     name: post.title,
     description,
+    abstract: summary,
     url: canonical,
     mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
-    ...(image ? { image: [image] } : {}),
-    author: { "@type": "Person", name: post.author || SITE_NAME },
+    isPartOf: { "@type": "Blog", "@id": `${blogUrl}#blog`, name: `${SITE_NAME} Blog`, url: blogUrl },
+    ...(image ? { image: { "@type": "ImageObject", url: image, caption: post.altText || post.title } } : {}),
+    author: { "@type": "Person", name: post.author || SITE_NAME, url: blogUrl },
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,
@@ -106,11 +116,20 @@ export default async function handler(req, res) {
     },
     ...(published ? { datePublished: published } : {}),
     ...(modified ? { dateModified: modified } : {}),
-    articleSection: post.category,
+    articleSection: catName,
     keywords: keywords.join(", "),
+    about: (post.tags || []).slice(0, 8).map((t) => ({ "@type": "Thing", name: t })),
     ...((post.sources || []).length
-      ? { citation: post.sources.map((s) => s.url) }
+      ? { citation: post.sources.map((s) => ({ "@type": "CreativeWork", name: s.title || s.url, url: s.url })) }
       : {}),
+    ...(toc.length
+      ? { hasPart: toc.filter((t) => t.level === 2).map((t) => ({ "@type": "WebPageElement", name: t.text, url: `${canonical}#${t.id}` })) }
+      : {}),
+    ...(Number(post.views) > 0
+      ? { interactionStatistic: { "@type": "InteractionCounter", interactionType: "https://schema.org/ReadAction", userInteractionCount: Number(post.views) } }
+      : {}),
+    speakable: { "@type": "SpeakableSpecification", cssSelector: [".bl-title", ".bl-summary p"] },
+    isAccessibleForFree: true,
     wordCount,
     timeRequired: `PT${post.readingTimeMinutes || 1}M`,
     inLanguage: "en",
@@ -121,8 +140,9 @@ export default async function handler(req, res) {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Blogs", item: `${SITE_URL}/blogs` },
-      { "@type": "ListItem", position: 3, name: post.title, item: canonical },
+      { "@type": "ListItem", position: 2, name: "Blog", item: blogUrl },
+      { "@type": "ListItem", position: 3, name: catName, item: `${blogUrl}?category=${encodeURIComponent(post.category)}` },
+      { "@type": "ListItem", position: 4, name: post.title, item: canonical },
     ],
   };
 
@@ -157,20 +177,33 @@ ${faqSchema ? jsonLd(faqSchema) : ""}`;
 
   // Pre-rendered article. `post.content` is already sanitised by the backend
   // (sanitize-html allow-list) before it is stored.
+  const updatedLater =
+    published && modified && new Date(modified) - new Date(published) > 86400000;
+  const day = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+
   const bodyHtml = `
-<style>a{color:#EA580C}a:hover{color:#C2410C}h1,h2,h3{color:#0B1524}</style>
-<main style="max-width:820px;margin:0 auto;padding:96px 16px 48px;font-family:Inter,system-ui,sans-serif;line-height:1.7">
-  <nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/blogs">Blogs</a> / <span>${esc(post.title)}</span></nav>
+<style>
+.ssr-bl{max-width:760px;margin:0 auto;padding:96px 16px 48px;font-family:Manrope,system-ui,sans-serif;line-height:1.75;color:#24342f;background:#f6f8f7}
+.ssr-bl a{color:#0f766e}.ssr-bl h1,.ssr-bl h2,.ssr-bl h3{color:#0c1a17;line-height:1.2}
+.ssr-bl .bl-summary{margin:24px 0;padding:16px 20px;border-left:4px solid #0f766e;background:#e3f3ef;border-radius:12px}
+.ssr-bl pre{overflow:auto;padding:16px;background:#0b1f1c;color:#d7ebe6;border-radius:12px}
+.ssr-bl img{max-width:100%;height:auto;border-radius:12px}
+</style>
+<main class="ssr-bl">
+  <nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/blogs">Blog</a> / <a href="/blogs?category=${esc(encodeURIComponent(post.category))}">${esc(catName)}</a></nav>
   <article itemscope itemtype="https://schema.org/BlogPosting">
-    <h1 itemprop="headline">${esc(post.title)}</h1>
-    <p itemprop="description"><strong>${esc(stripHtml(post.excerpt))}</strong></p>
-    <p>By <span itemprop="author">${esc(post.author)}</span>${published ? ` · <time datetime="${published}" itemprop="datePublished">${esc(new Date(published).toISOString().slice(0, 10))}</time>` : ""} · ${post.readingTimeMinutes || 1} min read · ${esc(post.category)}</p>
-    ${image ? `<img src="${esc(image)}" alt="${esc(post.altText || post.title)}" style="max-width:100%;height:auto" />` : ""}
-    ${(post.toc || []).length >= 3 ? `<nav aria-label="Table of contents"><h2>In this article</h2><ul>${post.toc.map((t) => `<li${t.level === 3 ? ' style="margin-left:1rem"' : ""}><a href="#${esc(t.id)}">${esc(t.text)}</a></li>`).join("")}</ul></nav>` : ""}
+    <h1 class="bl-title" itemprop="headline">${esc(post.title)}</h1>
+    <p>By <span itemprop="author">${esc(post.author)}</span>${published ? ` · Published <time datetime="${published}" itemprop="datePublished">${esc(day(published))}</time>` : ""}${updatedLater ? ` · Updated <time datetime="${modified}" itemprop="dateModified">${esc(day(modified))}</time>` : ""} · ${post.readingTimeMinutes || 1} min read · ${esc(catName)}</p>
+    ${summary ? `<section class="bl-summary"><h2>The short answer</h2><p itemprop="description">${esc(summary)}</p></section>` : ""}
+    ${image ? `<img src="${esc(image)}" alt="${esc(post.altText || post.title)}" width="1200" height="675" />` : ""}
+    ${toc.length >= 3 ? `<nav aria-label="Table of contents"><h2>On this page</h2><ol>${toc.map((t) => `<li${t.level === 3 ? ' style="margin-left:1rem"' : ""}><a href="#${esc(t.id)}">${esc(t.text)}</a></li>`).join("")}</ol></nav>` : ""}
     <div itemprop="articleBody">${post.content}</div>
-    ${(post.tags || []).length ? `<p>Topics: ${(post.tags || []).map((t) => esc(t)).join(", ")}</p>` : ""}
+    ${(post.tags || []).length ? `<p>Topics: ${(post.tags || []).map((t) => `<a href="/blogs?tag=${esc(encodeURIComponent(t))}">#${esc(t)}</a>`).join(", ")}</p>` : ""}
+    ${(post.sources || []).length ? `<section><h2>Sources and further reading</h2><ol>${post.sources.map((s) => `<li><a href="${esc(s.url)}" rel="noopener" itemprop="citation">${esc(s.title || s.url)}</a></li>`).join("")}</ol></section>` : ""}
+    <p>Written by ${esc(post.author)}, published by <a href="/">${SITE_NAME}</a>.</p>
   </article>
-  ${related.length ? `<nav aria-label="Related articles"><h2>Related articles</h2><ul>${related.map((r) => `<li><a href="/blog/${esc(r.slug)}">${esc(r.title)}</a></li>`).join("")}</ul></nav>` : ""}
+  ${related.length ? `<nav aria-label="Related articles"><h2>Keep reading</h2><ul>${related.map((r) => `<li><a href="/blog/${esc(r.slug)}">${esc(r.title)}</a> - ${esc(truncate(r.excerpt, 140))}</li>`).join("")}</ul></nav>` : ""}
+  <p><a href="/blogs">All articles</a> · <a href="/books">Interview books</a></p>
 </main>`;
 
   const html = renderPage(template, {

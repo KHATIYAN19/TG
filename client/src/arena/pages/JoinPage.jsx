@@ -37,16 +37,16 @@ function Stepper({ current }) {
               <span
                 className={cx(
                   "grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors",
-                  done && "bg-orange-600 text-white",
-                  active && "bg-orange-600 text-white ring-4 ring-orange-100 dk:ring-orange-500/20",
-                  !done && !active && "bg-stone-200 dk:bg-[#35261e] text-stone-500 dk:text-[#b9a79c]"
+                  done && "bg-teal-700 text-white",
+                  active && "bg-teal-700 text-white ring-4 ring-teal-100 dk:ring-teal-400/20",
+                  !done && !active && "bg-stone-200 dk:bg-[#1f332f] text-stone-500 dk:text-[#93aaa3]"
                 )}
               >
                 {done ? <CheckCircle2 className="h-5 w-5" aria-hidden /> : i + 1}
               </span>
-              <span className={cx("hidden text-sm font-semibold sm:block", active ? "text-[#29201b] dk:text-[#fff7ed]" : done ? "text-stone-700 dk:text-[#ead9cc]" : "text-stone-400 dk:text-[#8f7c70]")}>{label}</span>
+              <span className={cx("hidden text-sm font-semibold sm:block", active ? "text-[#0c1a17] dk:text-[#e8f2ef]" : done ? "text-stone-700 dk:text-[#cfe0db]" : "text-stone-400 dk:text-[#73897f]")}>{label}</span>
             </span>
-            {i < STEPS.length - 1 && <span className={cx("mx-3 h-0.5 flex-1 rounded", done ? "bg-orange-500" : "bg-stone-200 dk:bg-[#35261e]")} />}
+            {i < STEPS.length - 1 && <span className={cx("mx-3 h-0.5 flex-1 rounded", done ? "bg-teal-600" : "bg-stone-200 dk:bg-[#1f332f]")} />}
           </li>
         );
       })}
@@ -60,8 +60,8 @@ function DetailsRecap({ profile, onEdit }) {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]">Your saved details</h2>
-          <p className="mt-0.5 text-sm text-stone-600 dk:text-[#d6c4b8]">Saved to your account. You appear as <strong>{profile.alias}</strong>.</p>
+          <h2 className="text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Your saved details</h2>
+          <p className="mt-0.5 text-sm text-stone-600 dk:text-[#a3b8b2]">Saved to your account. You appear as <strong>{profile.alias}</strong>.</p>
         </div>
         <Button variant="outline" size="sm" onClick={onEdit}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
       </div>
@@ -69,13 +69,13 @@ function DetailsRecap({ profile, onEdit }) {
       <div className="mt-4"><TopicBadges topics={profile.topics} level={profile.level} /></div>
       <BackgroundLine m={profile} className="mt-4" />
       <div className="mt-4 flex flex-wrap gap-1.5">
-        {profile.skills.map((s) => <span key={s} className="rounded-md bg-stone-100 dk:bg-[#2c211b] px-2 py-0.5 text-xs font-medium text-stone-700 dk:text-[#ead9cc]">{s}</span>)}
+        {profile.skills.map((s) => <span key={s} className="rounded-md bg-stone-100 dk:bg-[#152522] px-2 py-0.5 text-xs font-medium text-stone-700 dk:text-[#cfe0db]">{s}</span>)}
       </div>
       <div className="mt-4"><PracticeFacts m={profile} full /></div>
       <div className="mt-2"><TargetCompanies list={profile.targetCompanies} /></div>
-      {profile.bio && <p className="mt-3 rounded-xl bg-[#fff8f2] dk:bg-[#15110e] p-3 text-sm text-stone-700 dk:text-[#ead9cc] ring-1 ring-orange-100 dk:ring-orange-500/20">{profile.bio}</p>}
+      {profile.bio && <p className="mt-3 rounded-xl bg-[#edf3f1] dk:bg-[#0a1312] p-3 text-sm text-stone-700 dk:text-[#cfe0db] ring-1 ring-teal-100 dk:ring-teal-400/20">{profile.bio}</p>}
 
-      <p className="mt-4 flex items-center gap-2 text-xs text-stone-500 dk:text-[#b9a79c]"><Lock className="h-3.5 w-3.5" aria-hidden /> Your name and contact details stay private until you match and choose to share them. Your company and job title are visible on your card.</p>
+      <p className="mt-4 flex items-center gap-2 text-xs text-stone-500 dk:text-[#93aaa3]"><Lock className="h-3.5 w-3.5" aria-hidden /> Your name and contact details stay private until you match and choose to share them. Your company and job title are visible on your card.</p>
     </Card>
   );
 }
@@ -153,7 +153,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
         checkout: data.data.checkout,
         name: "Target Trek",
         description: "Prep Buddy Arena – one-time entry",
-        theme: "#ea580c",
+        theme: "#0f766e",
         prefill: { name: me.user?.name, email: me.user?.email },
         onPaid: verifyPopupPayment,
       });
@@ -176,28 +176,28 @@ function PaymentStep({ me, refresh, onProcessing }) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="bg-gradient-to-br from-orange-600 to-amber-500 p-6 text-white">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-100">One-time entry</p>
+      <div className="bg-gradient-to-br from-teal-700 to-amber-500 p-6 text-white">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-100">One-time entry</p>
         <div className="mt-2 flex items-end gap-3">
           <span className="text-4xl font-bold">{inr(final)}</span>
-          {applied && applied.discountPaise > 0 && <span className="pb-1 text-lg text-orange-100 line-through">{inr(list)}</span>}
+          {applied && applied.discountPaise > 0 && <span className="pb-1 text-lg text-teal-100 line-through">{inr(list)}</span>}
         </div>
-        <p className="mt-1 text-sm text-orange-50">
+        <p className="mt-1 text-sm text-teal-50">
           Includes <strong>{settings.matchesPerEntry} {settings.matchesPerEntry === 1 ? "match" : "matches"}</strong>
           {settings.matchesPerEntry > 1 ? ", one after another." : "."} Want more later? Buy a new entry.
         </p>
       </div>
 
       <div className="space-y-5 p-6">
-        <ul className="space-y-2.5 text-sm text-stone-700 dk:text-[#ead9cc]">
+        <ul className="space-y-2.5 text-sm text-stone-700 dk:text-[#cfe0db]">
           {["Add your details and your profile goes live in the arena", "Browse members, send and accept buddy requests", `${settings.matchesPerEntry} ${settings.matchesPerEntry === 1 ? "partnership" : "partnerships"} with private chat${settings.matchesPerEntry > 1 ? " (one at a time)" : ""}`].map((t) => (
             <li key={t} className="flex gap-2.5"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dk:text-emerald-400" aria-hidden />{t}</li>
           ))}
         </ul>
 
         <div>
-          <label htmlFor="coupon" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-800 dk:text-[#ffedd5]">
-            <Tag className="h-4 w-4 text-stone-400 dk:text-[#8f7c70]" aria-hidden /> Coupon code
+          <label htmlFor="coupon" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-800 dk:text-[#d9ebe6]">
+            <Tag className="h-4 w-4 text-stone-400 dk:text-[#73897f]" aria-hidden /> Coupon code
           </label>
           {applied ? (
             <div className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 dk:bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-800 dk:text-emerald-200 ring-1 ring-emerald-100 dk:ring-emerald-500/20">
@@ -208,7 +208,7 @@ function PaymentStep({ me, refresh, onProcessing }) {
             <div className="flex gap-2">
               <input id="coupon" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === "Enter" && apply()}
                 placeholder="Enter code" maxLength={30}
-                className={cx("block w-full rounded-xl border bg-white dk:bg-[#241b15] px-3.5 py-2.5 text-sm uppercase focus:outline-none focus:ring-2", couponError ? "border-rose-300 dk:border-rose-500/30 focus:ring-rose-200 dk:focus:ring-rose-500/25" : "border-stone-300 dk:border-[#5a4336] focus:border-orange-500 focus:ring-orange-100 dk:focus:ring-orange-500/20")} />
+                className={cx("block w-full rounded-xl border bg-white dk:bg-[#101c1a] px-3.5 py-2.5 text-sm uppercase focus:outline-none focus:ring-2", couponError ? "border-rose-300 dk:border-rose-500/30 focus:ring-rose-200 dk:focus:ring-rose-500/25" : "border-stone-300 dk:border-[#2e4641] focus:border-teal-600 focus:ring-teal-100 dk:focus:ring-teal-400/20")} />
               <Button variant="outline" onClick={apply} loading={checking} disabled={!code.trim()}>Apply</Button>
             </div>
           )}
@@ -216,8 +216,8 @@ function PaymentStep({ me, refresh, onProcessing }) {
         </div>
 
         {settings.cancelRefundEnabled && settings.cancellationFeePercent != null && (
-        <div className="rounded-xl bg-orange-50/60 dk:bg-orange-500/10 p-4 text-sm text-stone-700 dk:text-[#ead9cc] ring-1 ring-orange-100 dk:ring-orange-500/20">
-          <p className="flex items-center gap-2 font-semibold text-[#29201b] dk:text-[#fff7ed]"><ShieldCheck className="h-4 w-4 text-orange-600 dk:text-orange-400" aria-hidden /> Cancellation policy</p>
+        <div className="rounded-xl bg-teal-50/60 dk:bg-teal-400/10 p-4 text-sm text-stone-700 dk:text-[#cfe0db] ring-1 ring-teal-100 dk:ring-teal-400/20">
+          <p className="flex items-center gap-2 font-semibold text-[#0c1a17] dk:text-[#e8f2ef]"><ShieldCheck className="h-4 w-4 text-teal-700 dk:text-teal-400" aria-hidden /> Cancellation policy</p>
           <p className="mt-1.5">
             Cancel any time <strong>before your first match</strong> and get {100 - settings.cancellationFeePercent}% back
             ({settings.cancellationFeePercent}% cancellation fee). Once a match is used, the entry isn't refundable.
@@ -230,8 +230,8 @@ function PaymentStep({ me, refresh, onProcessing }) {
         </Button>
         {!settings.enabled && <p className="text-center text-xs text-amber-700 dk:text-amber-300">New entries are paused for now. Please check back soon.</p>}
         <div className="flex justify-center"><OfferBanner offer={settings.offer} /></div>
-        <p className="flex items-center justify-center gap-1.5 text-xs text-stone-500 dk:text-[#b9a79c]"><Lock className="h-3.5 w-3.5" aria-hidden /> {gw ? `Secure payment via ${gw.name}` : "Secure payment"}{me.profile ? " · your details are saved" : ""}</p>
-        {gw && final > 0 && <p className="text-center text-xs text-stone-500 dk:text-[#b9a79c]">Pay with {gw.methods.join(", ")}.</p>}
+        <p className="flex items-center justify-center gap-1.5 text-xs text-stone-500 dk:text-[#93aaa3]"><Lock className="h-3.5 w-3.5" aria-hidden /> {gw ? `Secure payment via ${gw.name}` : "Secure payment"}{me.profile ? " · your details are saved" : ""}</p>
+        {gw && final > 0 && <p className="text-center text-xs text-stone-500 dk:text-[#93aaa3]">Pay with {gw.methods.join(", ")}.</p>}
       </div>
     </Card>
   );
@@ -283,18 +283,18 @@ function PaymentReturn({ orderId, refresh }) {
   return (
     <Card className="mx-auto max-w-lg p-8 text-center">
       {state === "checking" ? (
-        <><Spinner label="Confirming your payment" /><p className="text-sm text-stone-500 dk:text-[#b9a79c]">Please don't close this page.</p></>
+        <><Spinner label="Confirming your payment" /><p className="text-sm text-stone-500 dk:text-[#93aaa3]">Please don't close this page.</p></>
       ) : (
         <>
-          <h2 className="text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]">{state === "processing" ? "Payment still processing" : "We couldn't confirm your payment"}</h2>
-          <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">
+          <h2 className="text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{state === "processing" ? "Payment still processing" : "We couldn't confirm your payment"}</h2>
+          <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">
             {state === "processing"
               ? "Your bank hasn't confirmed the payment yet. If money was deducted, your entry activates automatically. You can also check again."
               : message}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button onClick={() => { tries.current = 0; started.current = true; check(); }}>Check again</Button>
-            <Link to="/prep-buddy/app/join" replace className="inline-flex items-center rounded-xl px-4 py-2.5 text-sm font-semibold text-stone-600 dk:text-[#d6c4b8] ring-1 ring-inset ring-stone-300 dk:ring-[#5a4336] hover:bg-orange-50 dk:hover:bg-orange-500/10">Back to payment</Link>
+            <Link to="/prep-buddy/app/join" replace className="inline-flex items-center rounded-xl px-4 py-2.5 text-sm font-semibold text-stone-600 dk:text-[#a3b8b2] ring-1 ring-inset ring-stone-300 dk:ring-[#2e4641] hover:bg-teal-50 dk:hover:bg-teal-400/10">Back to payment</Link>
           </div>
         </>
       )}
@@ -336,15 +336,15 @@ export default function JoinPage() {
         <Stepper current={step} />
         <div className="mx-auto max-w-3xl">
           <div className="mb-5">
-            <h2 className="text-xl font-bold text-[#29201b] dk:text-[#fff7ed]">{profile ? "Edit your details" : paidWithoutDetails ? "Payment received. Now tell us about you" : "Tell us about you"}</h2>
-            <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">
+            <h2 className="text-xl font-bold text-[#0c1a17] dk:text-[#e8f2ef]">{profile ? "Edit your details" : paidWithoutDetails ? "Payment received. Now tell us about you" : "Tell us about you"}</h2>
+            <p className="mt-1 text-sm text-stone-600 dk:text-[#a3b8b2]">
               {profile
                 ? "Update your details. Other members only ever see the anonymous parts."
                 : "Save your details and your profile appears in the arena straight away. Other members only ever see the anonymous parts."}
             </p>
           </div>
           {profile && (
-            <button onClick={() => setEditing(false)} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 dk:text-orange-300 hover:text-orange-600 dk:hover:text-orange-400">
+            <button onClick={() => setEditing(false)} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-800 dk:text-teal-300 hover:text-teal-700 dk:hover:text-teal-400">
               <ArrowLeft className="h-4 w-4" aria-hidden /> Back to payment
             </button>
           )}
@@ -371,8 +371,8 @@ export default function JoinPage() {
       ) : (
         <div className="mx-auto max-w-lg">
           <div className="mb-5 text-center">
-            <h2 className="text-xl font-bold text-[#29201b] dk:text-[#fff7ed]">Pay the entry fee to join</h2>
-            <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">Pay once, then add your details and your profile appears in the arena.</p>
+            <h2 className="text-xl font-bold text-[#0c1a17] dk:text-[#e8f2ef]">Pay the entry fee to join</h2>
+            <p className="mt-1 text-sm text-stone-600 dk:text-[#a3b8b2]">Pay once, then add your details and your profile appears in the arena.</p>
           </div>
           <PaymentStep me={me} refresh={refresh} onProcessing={() => setProcessing(true)} />
         </div>

@@ -79,10 +79,10 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       {entry && ["paid", "in_match"].includes(entry.status) && (
         <Card className="flex items-center gap-4 p-5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-orange-100 dk:bg-orange-500/15 text-orange-700 dk:text-orange-300"><Handshake className="h-5 w-5" aria-hidden /></span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-teal-100 dk:bg-teal-400/15 text-teal-800 dk:text-teal-300"><Handshake className="h-5 w-5" aria-hidden /></span>
           <div>
-            <p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">Your entry: {entry.matchesUsed} of {entry.matchesAllowed} {entry.matchesAllowed === 1 ? "match" : "matches"} used</p>
-            <p className="mt-0.5 text-sm text-stone-600 dk:text-[#d6c4b8]">
+            <p className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Your entry: {entry.matchesUsed} of {entry.matchesAllowed} {entry.matchesAllowed === 1 ? "match" : "matches"} used</p>
+            <p className="mt-0.5 text-sm text-stone-600 dk:text-[#a3b8b2]">
               {entry.matchesAllowed - entry.matchesUsed > 0
                 ? `${entry.matchesAllowed - entry.matchesUsed} more ${entry.matchesAllowed - entry.matchesUsed === 1 ? "partnership" : "partnerships"} available. Partnerships run one at a time.`
                 : "You've used every match in this entry. Buy a new entry to connect again."}
@@ -92,30 +92,30 @@ export default function SettingsPage() {
       )}
 
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]">What you share with your buddy</h2>
-        <p className="mt-1 text-sm text-stone-600 dk:text-[#d6c4b8]">
+        <h2 className="text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">What you share with your buddy</h2>
+        <p className="mt-1 text-sm text-stone-600 dk:text-[#a3b8b2]">
           Nothing here is visible while you're browsing or sending requests. These choices apply only to the one buddy you match with, and you can change them any time.
         </p>
-        <div className="mt-4 divide-y divide-orange-100 dk:divide-orange-500/20">
+        <div className="mt-4 divide-y divide-teal-100 dk:divide-teal-400/20">
           {ROWS.map(([key, label, description]) => (
             <Toggle key={key} label={label} description={description} checked={Boolean(share[key])} onChange={(v) => setShare((s) => ({ ...s, [key]: v }))} />
           ))}
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-xs text-stone-500 dk:text-[#b9a79c]">Turning something off hides it again, but can't un-see what your buddy already saw.</p>
+          <p className="text-xs text-stone-500 dk:text-[#93aaa3]">Turning something off hides it again, but can't un-see what your buddy already saw.</p>
           <Button onClick={save} loading={saving} disabled={!dirty}>Save</Button>
         </div>
       </Card>
 
       <Card className="p-6">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]"><ShieldBan className="h-5 w-5 text-stone-400 dk:text-[#8f7c70]" aria-hidden /> Blocked members</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]"><ShieldBan className="h-5 w-5 text-stone-400 dk:text-[#73897f]" aria-hidden /> Blocked members</h2>
         {blocks === null ? <Spinner /> : !blocks.length ? (
-          <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">You haven't blocked anyone.</p>
+          <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">You haven't blocked anyone.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-orange-100 dk:divide-orange-500/20">
+          <ul className="mt-3 divide-y divide-teal-100 dk:divide-teal-400/20">
             {blocks.map((b) => (
               <li key={b.profileId} className="flex items-center justify-between py-3 text-sm">
-                <span className="font-medium text-stone-800 dk:text-[#ffedd5]">{b.alias}</span>
+                <span className="font-medium text-stone-800 dk:text-[#d9ebe6]">{b.alias}</span>
                 <Button size="sm" variant="outline" onClick={() => unblock(b.profileId)}>Unblock</Button>
               </li>
             ))}
@@ -125,36 +125,36 @@ export default function SettingsPage() {
 
       {refundsOn && (
       <Card className="border-rose-200 dk:border-rose-500/25 p-6">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]"><AlertTriangle className="h-5 w-5 text-rose-500" aria-hidden /> Cancel my entry</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]"><AlertTriangle className="h-5 w-5 text-rose-500" aria-hidden /> Cancel my entry</h2>
         {profile.status === "matched" || matchUsed ? (
-          <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">Entries can only be cancelled <strong>before your first match</strong>. {profile.status === "matched" ? "To stop, end your partnership from the “My buddy” tab." : "You've already used a match from this entry."}</p>
+          <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">Entries can only be cancelled <strong>before your first match</strong>. {profile.status === "matched" ? "To stop, end your partnership from the “My buddy” tab." : "You've already used a match from this entry."}</p>
         ) : canCancel && preview ? (
           <>
-            <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">
+            <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">
               Leave the arena before matching. A <strong>{preview.cancellationFeePercent}% cancellation fee</strong> applies.
             </p>
-            <dl className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-[#fff8f2] dk:bg-[#15110e] p-4 text-center text-sm ring-1 ring-[#f0ded0] dk:ring-[#443127]">
-              <div><dt className="text-xs text-stone-500 dk:text-[#b9a79c]">You paid</dt><dd className="mt-1 font-semibold text-[#29201b] dk:text-[#fff7ed]">{inr(preview.paidPaise)}</dd></div>
-              <div><dt className="text-xs text-stone-500 dk:text-[#b9a79c]">Fee</dt><dd className="mt-1 font-semibold text-rose-600 dk:text-rose-400">−{inr(preview.feePaise)}</dd></div>
-              <div><dt className="text-xs text-stone-500 dk:text-[#b9a79c]">Refund</dt><dd className="mt-1 font-semibold text-emerald-600 dk:text-emerald-400">{inr(preview.refundPaise)}</dd></div>
+            <dl className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-[#edf3f1] dk:bg-[#0a1312] p-4 text-center text-sm ring-1 ring-[#dfe8e5] dk:ring-[#1f302c]">
+              <div><dt className="text-xs text-stone-500 dk:text-[#93aaa3]">You paid</dt><dd className="mt-1 font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{inr(preview.paidPaise)}</dd></div>
+              <div><dt className="text-xs text-stone-500 dk:text-[#93aaa3]">Fee</dt><dd className="mt-1 font-semibold text-rose-600 dk:text-rose-400">−{inr(preview.feePaise)}</dd></div>
+              <div><dt className="text-xs text-stone-500 dk:text-[#93aaa3]">Refund</dt><dd className="mt-1 font-semibold text-emerald-600 dk:text-emerald-400">{inr(preview.refundPaise)}</dd></div>
             </dl>
             <Button variant="danger" className="mt-4" onClick={() => setConfirmCancel(true)}>Cancel entry & refund</Button>
           </>
         ) : (
-          <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">You don't have an active entry to cancel.</p>
+          <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">You don't have an active entry to cancel.</p>
         )}
       </Card>
       )}
 
       <Card className="flex flex-wrap items-center justify-between gap-4 p-6">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-stone-100 dk:bg-[#2c211b] text-stone-600 dk:text-[#d6c4b8]"><Bug className="h-5 w-5" aria-hidden /></span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-stone-100 dk:bg-[#152522] text-stone-600 dk:text-[#a3b8b2]"><Bug className="h-5 w-5" aria-hidden /></span>
           <div>
-            <h2 className="font-semibold text-[#29201b] dk:text-[#fff7ed]">Something not working?</h2>
-            <p className="text-sm text-stone-600 dk:text-[#d6c4b8]">Tell us about a bug and we'll look into it.</p>
+            <h2 className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">Something not working?</h2>
+            <p className="text-sm text-stone-600 dk:text-[#a3b8b2]">Tell us about a bug and we'll look into it.</p>
           </div>
         </div>
-        <BugReportButton className="inline-flex items-center gap-2 rounded-xl bg-stone-900 dk:bg-[#1c1612] px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800" />
+        <BugReportButton className="inline-flex items-center gap-2 rounded-xl bg-stone-900 dk:bg-[#0f1b19] px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800" />
       </Card>
 
       {deletionOn && <DeleteAccount refundsOn={refundsOn} />}

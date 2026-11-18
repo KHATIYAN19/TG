@@ -57,14 +57,14 @@ export function useArenaChrome() {
     let raf;
 
     const measure = () => {
-      const nav = document.querySelector("nav.fixed.top-0");
+      const nav = document.querySelector(".tt-nav, nav.fixed.top-0");
       if (!nav) return;
       root.style.setProperty("--arena-nav-h", `${Math.round(nav.getBoundingClientRect().height)}px`);
     };
 
     const start = () => {
       measure();
-      const nav = document.querySelector("nav.fixed.top-0");
+      const nav = document.querySelector(".tt-nav, nav.fixed.top-0");
       if (nav && typeof ResizeObserver !== "undefined") {
         observer = new ResizeObserver(measure);
         observer.observe(nav);

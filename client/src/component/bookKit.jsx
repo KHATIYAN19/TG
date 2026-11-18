@@ -310,7 +310,7 @@ function Cover({ src, title, fallback }) {
         : (
           <div className="hb-cover-fake" role="img" aria-label={`${title} ebook cover`}>
             <span className="hb-mono">TARGET TREK</span>
-            <b>Mastering System Design</b>
+            <b>{fallback.title || "Mastering System Design"}</b>
             <i>{fallback.subtitle}</i>
             <small>{fallback.line}</small>
           </div>
@@ -321,7 +321,7 @@ function Cover({ src, title, fallback }) {
 }
 
 /* the hero: what it is, the numbers, the price and the two actions */
-export function BookHero({ heroRef, crumb, pill, title, lead, stats, info, onBuy, onPreview, providerName, cover, coverTitle, coverFallback, nav }) {
+export function BookHero({ heroRef, crumb, pill, title, lead, stats, info, onBuy, onPreview, providerName, cover, coverTitle, coverFallback, nav, previewLabel = "Read free sample" }) {
   return (
     <header ref={heroRef} className="hb-hero">
       <div className="hb-shell">
@@ -338,7 +338,7 @@ export function BookHero({ heroRef, crumb, pill, title, lead, stats, info, onBuy
               <Price info={info} />
               <div className="hb-row">
                 <button type="button" className="hb-btn hb-btn-primary hb-btn-lg" onClick={onBuy} disabled={!info.canBuy}>Get the ebook<ArrowRight size={18} weight="bold" aria-hidden /></button>
-                <button type="button" className="hb-btn hb-btn-ghost hb-btn-lg" onClick={onPreview}><BookOpen size={18} weight="bold" aria-hidden />Read free sample</button>
+                <button type="button" className="hb-btn hb-btn-ghost hb-btn-lg" onClick={onPreview}><BookOpen size={18} weight="bold" aria-hidden />{previewLabel}</button>
               </div>
               <ul className="hb-trust">
                 <li><LockKey size={14} weight="bold" aria-hidden />Secure checkout via {providerName}</li>
@@ -358,7 +358,7 @@ export function BookHero({ heroRef, crumb, pill, title, lead, stats, info, onBuy
 }
 
 /* the three books side by side (this one marked), then an optional comparison table */
-export function BookOffers({ offers, onBuy, onPreview, compare, title, lead }) {
+export function BookOffers({ offers, onBuy, onPreview, compare, title, lead, sampleLabel = "Free sample" }) {
   return (
     <Section id="bundle" eyebrow="Choose your book" title={title} lead={lead}>
       {offers.length > 0 && (
@@ -380,7 +380,7 @@ export function BookOffers({ offers, onBuy, onPreview, compare, title, lead }) {
                   <Price info={info} big={false} />
                   <div className="hb-row">
                     <button type="button" className={cx("hb-btn", o.best ? "hb-btn-primary" : "hb-btn-ghost")} onClick={() => onBuy(o.p)} disabled={!info.canBuy}>{o.cta}<ArrowRight size={16} weight="bold" aria-hidden /></button>
-                    {o.current ? <button type="button" className="hb-textlink hb-linkbtn" onClick={onPreview}>Free sample</button> : <a href={o.href} className="hb-textlink">Details</a>}
+                    {o.current ? <button type="button" className="hb-textlink hb-linkbtn" onClick={onPreview}>{sampleLabel}</button> : <a href={o.href} className="hb-textlink">Details</a>}
                   </div>
                 </div>
               </article>
@@ -422,7 +422,7 @@ export function FaqSection({ items }) {
   );
 }
 
-export function FinalSection({ title, line, info, onBuy, onPreview, children }) {
+export function FinalSection({ title, line, info, onBuy, onPreview, children, previewLabel = "Read free sample" }) {
   return (
     <section className="hb-sec" aria-labelledby="final-h">
       <div className="hb-shell">
@@ -432,7 +432,7 @@ export function FinalSection({ title, line, info, onBuy, onPreview, children }) 
           <div className="hb-final-price"><Price info={info} /></div>
           <div className="hb-row hb-row-center">
             <button type="button" className="hb-btn hb-btn-primary hb-btn-lg" onClick={onBuy} disabled={!info.canBuy}>Get the ebook<ArrowRight size={18} weight="bold" aria-hidden /></button>
-            <button type="button" className="hb-btn hb-btn-onpanel hb-btn-lg" onClick={onPreview}><BookOpen size={18} weight="bold" aria-hidden />Read free sample</button>
+            <button type="button" className="hb-btn hb-btn-onpanel hb-btn-lg" onClick={onPreview}><BookOpen size={18} weight="bold" aria-hidden />{previewLabel}</button>
           </div>
         </div>
         {children && <div className="hb-promo">{children}</div>}
@@ -452,7 +452,7 @@ export function BookFooter({ line, links }) {
 }
 
 /* phones: always docked; tablets and up: once the hero's own button has scrolled away */
-export function BuyBar({ name, info, onBuy, onPreview, hidden, heroVisible }) {
+export function BuyBar({ name, info, onBuy, onPreview, hidden, heroVisible, previewLabel = "Sample" }) {
   return (
     <div className={cx("hb-bar", hidden && "is-off", heroVisible && "is-hero")} role="region" aria-label="Buy the ebook">
       <div className="hb-bar-in">
@@ -461,7 +461,7 @@ export function BuyBar({ name, info, onBuy, onPreview, hidden, heroVisible }) {
           <div><b className="hb-mono">{info.label}</b>{info.hasMrp && <s className="hb-mono">{formatMoney(info.mrp, info.currency)}</s>}{info.discount > 0 && <em>{info.discount}% off</em>}</div>
         </div>
         <div className="hb-bar-btns">
-          <button type="button" className="hb-btn hb-btn-ghost hb-bar-sample" onClick={onPreview}><BookOpen size={16} weight="bold" aria-hidden />Sample</button>
+          <button type="button" className="hb-btn hb-btn-ghost hb-bar-sample" onClick={onPreview}><BookOpen size={16} weight="bold" aria-hidden />{previewLabel}</button>
           <button type="button" className="hb-btn hb-btn-primary" onClick={onBuy} disabled={!info.canBuy}>Get the ebook<ArrowRight size={16} weight="bold" aria-hidden /></button>
         </div>
       </div>

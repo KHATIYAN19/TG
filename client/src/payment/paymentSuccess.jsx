@@ -17,6 +17,8 @@ import JSZip from "jszip";
 import { Helmet } from "react-helmet-async";
 
 import ResumePromo from "../resume/ResumePromo.jsx";
+import { copyText, usePayFonts } from "./payShared";
+import "./payment.css";
 
 import {
   AlertCircle,
@@ -24,33 +26,20 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
-  CalendarDays,
   Check,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Clock3,
-  Code2,
+  Copy,
   Download,
-  ExternalLink,
   FileArchive,
   FileCheck2,
   FileText,
   HelpCircle,
-  Layers3,
   Loader2,
   LockKeyhole,
   Mail,
-  Network,
-  Package,
   ShieldCheck,
   Smartphone,
-  Sparkles,
-  Video,
   X,
-  BrainCircuit,
-  BriefcaseBusiness,
-  MessageSquareText,
 } from "lucide-react";
 
 import {
@@ -1026,11 +1015,6 @@ export default function PaymentSuccess() {
   const [previewError, setPreviewError] = useState("");
   const previewSectionRef = useRef(null);
 
-  const [
-    showHelp,
-    setShowHelp,
-  ] = useState(false);
-
   const downloadLockRef =
     useRef(false);
 
@@ -1636,82 +1620,49 @@ export default function PaymentSuccess() {
   }, [showPreview, selectedPreviewId]);
 
   /* ========================================================
-     LOCAL DESIGN VARIABLES
-
-     The whole page uses React's isDark value.
-     No dependency on Tailwind dark: classes.
+     UI-ONLY STATE / EFFECTS (declared before any early return)
   ======================================================== */
 
-  const pageBg = isDark
-    ? "bg-[#110e0c]"
-    : "bg-[#fffaf5]";
+  usePayFonts();
 
-  const cardBg = isDark
-    ? "bg-[#211a15]"
-    : "bg-white";
+  const [copiedRef, setCopiedRef] = useState(false);
 
-  const softBg = isDark
-    ? "bg-[#2d2119]"
-    : "bg-[#fff3e8]";
+  // Page cannot scroll behind the "ebooks are ready" dialog.
+  useEffect(() => {
+    if (!showAccessModal) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [showAccessModal]);
 
-  const border = isDark
-    ? "border-[#403027]"
-    : "border-[#f1dfd1]";
+  async function copyOrderRef() {
+    const value = purchase?.orderId || orderId;
+    if (!value) return;
+    await copyText(value);
+    setCopiedRef(true);
+    window.setTimeout(() => setCopiedRef(false), 1800);
+  }
 
-  const primaryText = isDark
-    ? "text-[#fff8f0]"
-    : "text-[#29201a]";
-
-  const secondaryText = isDark
-    ? "text-[#bca99b]"
-    : "text-[#76665a]";
-
-  const mutedText = isDark
-    ? "text-[#ddcfc3]"
-    : "text-[#594a40]";
-
-  const primaryButton = `
-    inline-flex
-    min-h-[46px]
-    items-center
-    justify-center
-    gap-2 rounded-xl
-    bg-orange-600
-    px-5 py-3
-    text-sm font-extrabold
-    text-white
-    transition
-    hover:bg-orange-700
-    disabled:cursor-not-allowed
-    disabled:opacity-50
-  `;
-
-  const secondaryButton = `
-    inline-flex
-    min-h-[46px]
-    items-center
-    justify-center
-    gap-2 rounded-xl
-    border px-5 py-3
-    text-sm font-bold
-    transition
-    disabled:cursor-not-allowed
-    disabled:opacity-50
-    ${border}
-    ${
-      isDark
-        ? "bg-[#2b211b] text-[#f8ede4] hover:bg-[#382a21]"
-        : "bg-white text-[#4c3526] hover:bg-orange-50"
+  // Locked buttons are never dead: tapping one reopens the notice so people always know what to do next.
+  function guard(action) {
+    if (!pdfUnlocked) {
+      setShowAccessModal(true);
+      return;
     }
-  `;
+    action();
+  }
 
-  const badgeBg = isDark
-    ? "bg-orange-500/15 text-orange-300"
-    : "bg-orange-100 text-orange-700";
+  const progressPercent = downloadProgress.total
+    ? (downloadProgress.current / downloadProgress.total) * 100
+    : 0;
 
-  const successBg = isDark
-    ? "border-emerald-900/60 bg-emerald-950/20"
-    : "border-emerald-200 bg-emerald-50";
+  const downloadAllLabel = downloadingAll
+    ? "Preparing ZIP..."
+    : totalBooks > 1
+      ? `Download all ${totalBooks} books`
+      : "Download my book";
 
   /* ========================================================
      LOADING VIEW
@@ -1719,45 +1670,15 @@ export default function PaymentSuccess() {
 
   if (loading) {
     return (
-      <main
-        className={`
-          flex min-h-screen
-          items-center justify-center
-          px-5 py-20
-          font-sans
-          ${pageBg}
-          ${primaryText}
-        `}
-      >
-        <div className="max-w-md text-center">
-          <div
-            className={`
-              mx-auto flex
-              h-20 w-20
-              items-center justify-center
-              rounded-3xl
-              ${softBg}
-            `}
-          >
-            <Loader2
-              size={34}
-              className="animate-spin text-orange-500"
-            />
+      <main data-theme={theme} className="tp tp-center">
+        <div className="tp-state" role="status" aria-live="polite">
+          <div className="tp-ico">
+            <Loader2 size={30} className="tp-spin" />
           </div>
 
-          <h1 className="mt-6 text-2xl font-black">
-            Preparing your purchase
-          </h1>
+          <h1 className="tp-h">Preparing your purchase</h1>
 
-          <p
-            className={`
-              mt-3 text-sm leading-7
-              ${secondaryText}
-            `}
-          >
-            Verifying your payment and
-            preparing your purchased ebooks.
-          </p>
+          <p>Verifying your payment and getting your ebooks ready. This takes a few seconds.</p>
         </div>
       </main>
     );
@@ -1767,104 +1688,45 @@ export default function PaymentSuccess() {
      ERROR VIEW
   ======================================================== */
 
-  if (
-    error ||
-    !purchase
-  ) {
+  if (error || !purchase) {
     return (
-      <main
-        className={`
-          flex min-h-screen
-          items-center justify-center
-          px-4 py-24
-          ${pageBg}
-          ${primaryText}
-        `}
-      >
-        <div
-          className={`
-            w-full max-w-lg
-            rounded-3xl border
-            p-7 text-center
-            shadow-sm
-            ${cardBg}
-            ${border}
-          `}
-        >
-          <div
-            className="
-              mx-auto flex h-16 w-16
-              items-center justify-center
-              rounded-2xl
-              bg-red-500/10
-              text-red-500
-            "
-          >
+      <main data-theme={theme} className="tp tp-center">
+        <div className="tp-state tp-card">
+          <div className="tp-ico bad">
             <AlertCircle size={30} />
           </div>
 
-          <h1 className="mt-6 text-2xl font-black">
-            Unable to open your ebooks
+          <h1 className="tp-h">
+            Unable to <span className="tp-mark">open your ebooks</span>
           </h1>
 
-          <p
-            className={`
-              mt-4 text-sm
-              leading-7
-              ${secondaryText}
-            `}
-          >
-            {error ||
-              "We couldn't load your purchase details."}
-          </p>
+          <p>{error || "We couldn't load your purchase details."}</p>
 
-          <div
-            className={`
-              mt-6 rounded-2xl
-              p-4 text-left
-              text-sm leading-7
-              ${softBg}
-              ${mutedText}
-            `}
-          >
-            <AlertTriangle
-              size={18}
-              className="mb-2 text-orange-500"
-            />
-
-            If your payment was deducted,
-            please do not make another payment.
-            Contact our support team with
-            your order reference.
+          <div className="tp-alert tp-alert-warn">
+            <AlertTriangle size={18} />
+            <span>
+              If your payment was deducted, please do not make another payment. Contact our support team with your order reference.
+            </span>
           </div>
 
           {orderId && (
-            <p
-              className={`
-                mt-5 break-all
-                text-xs
-                ${secondaryText}
-              `}
-            >
+            <p className="tp-mono" style={{ fontSize: 12, wordBreak: "break-all" }}>
               Order: {orderId}
             </p>
           )}
 
-          <div className="mt-7 grid gap-3">
+          <div className="tp-stack">
             <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className={primaryButton}
+              href={`mailto:${SUPPORT_EMAIL}${orderId ? `?subject=${encodeURIComponent(`Ebook access help - ${orderId}`)}` : ""}`}
+              className="tp-btn tp-btn-primary tp-btn-lg"
             >
-              <Mail size={17} />
-              Contact Support
+              <Mail size={18} />
+              Contact support
             </a>
 
-            <Link
-              to={BOOKS_URL}
-              className={secondaryButton}
-            >
+            <Link to={BOOKS_URL} className="tp-btn tp-btn-ghost">
               <ArrowLeft size={17} />
-              Browse Books
+              Browse books
             </Link>
           </div>
         </div>
@@ -1876,126 +1738,123 @@ export default function PaymentSuccess() {
      SUCCESS PAGE
   ======================================================== */
 
+  const statusBlock = (downloadingAll || downloadMessage || downloadError) && (
+    <div className="tp-msgs" aria-live="polite">
+      {downloadingAll && (
+        <div className="tp-progress">
+          <div className="tp-progress-top">
+            <span>Preparing download</span>
+            <span className="tp-mono">
+              {downloadProgress.current} / {downloadProgress.total}
+            </span>
+          </div>
+          <div className="tp-progress-bar">
+            <i style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+      )}
+
+      {downloadMessage && (
+        <div role="status" className="tp-alert tp-alert-ok">
+          <CheckCircle2 size={18} />
+          <span>{downloadMessage}</span>
+        </div>
+      )}
+
+      {downloadError && (
+        <div role="alert" className="tp-alert tp-alert-bad">
+          <AlertCircle size={18} />
+          <span>{downloadError}</span>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <Helmet><meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" /></Helmet>
-      <main
-        data-theme={theme}
-        className={`
-          min-h-screen
-          w-full px-4
-          pb-20 pt-[115px]
-          font-sans
-          sm:px-6
-          lg:px-8
-          ${pageBg}
-          ${primaryText}
-        `}
-      >
-        <div className="mx-auto max-w-6xl">
+
+      <main data-theme={theme} className="tp tp-page">
+        <div className="tp-wrap">
+          {/* RESUME LAB (small, at the top) */}
+          <ResumePromo variant="strip" isDark={isDark} />
 
           {/* ======================================
-              RESUME LAB (small, at the top)
+              HERO: payment confirmed + the main download button
           ====================================== */}
 
-          <ResumePromo
-            variant="strip"
-            isDark={isDark}
-          />
+          <section className="tp-hero" style={{ marginTop: 14 }}>
+            <div className="tp-hero-badge" aria-hidden="true">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <path className="draw" d="M5 12.5l4.5 4.5L19 7.5" />
+              </svg>
+            </div>
 
-          {/* ======================================
-              SUCCESS CARD (compact)
-          ====================================== */}
+            <p className="tp-eyebrow" style={{ marginTop: 20 }}>Payment successful</p>
 
-          <section
-            className={`
-              relative overflow-hidden
-              rounded-2xl border
-              p-4 sm:p-5
-              ${border}
-              ${
-                isDark
-                  ? "bg-gradient-to-r from-[#1d2a1f] via-[#231d17] to-[#211a15]"
-                  : "bg-gradient-to-r from-[#ecfdf3] via-[#fff8f0] to-white"
-              }
-            `}
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
-                  <CheckCircle2
-                    size={26}
-                    className="text-emerald-500"
-                  />
-                </div>
+            <h1 className="tp-h" style={{ marginTop: 8 }}>
+              Your {totalBooks > 1 ? "books are" : "book is"}{" "}
+              <span className="tp-mark">ready to download</span>
+            </h1>
 
-                <div className="min-w-0">
-                  <h1 className="text-lg font-black leading-tight sm:text-xl">
-                    Payment successful
-                  </h1>
+            <p className="sub">
+              {productTitle}
+              {isBundle && ` (${totalBooks} books)`}. Press the button below to save {totalBooks > 1 ? "them" : "it"} to your device. You can also preview before saving.
+            </p>
 
-                  <p
-                    className={`
-                      mt-0.5 break-words text-xs
-                      leading-5 sm:text-sm
-                      ${secondaryText}
-                    `}
-                  >
-                    {productTitle}
-                    {isBundle && ` (${totalBooks} books)`}
-                    {paymentAmount !== null && (
-                      <>
-                        {" · "}
-                        <span className="font-bold text-orange-500">
-                          {formatMoney(
-                            paymentAmount,
-                            currency
-                          )}
-                        </span>
-                      </>
-                    )}
-                    {purchase.orderId && (
-                      <>
-                        {" · "}
-                        <span className="break-all">
-                          Order {purchase.orderId}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
+            <div className="tp-hero-meta">
+              {paymentAmount !== null && (
+                <span className="tp-chip tp-chip-panel">
+                  <ShieldCheck size={15} />
+                  Paid {formatMoney(paymentAmount, currency)}
+                </span>
+              )}
 
-              <a
-                href="#downloads"
-                className={`${primaryButton} w-full shrink-0 sm:w-auto`}
+              {purchase.orderId && (
+                <button
+                  type="button"
+                  onClick={copyOrderRef}
+                  className="tp-ref"
+                  title="Copy order ID"
+                  aria-label={`Copy order ID ${purchase.orderId}`}
+                >
+                  <span>Order {purchase.orderId}</span>
+                  {copiedRef ? (
+                    <Check size={14} style={{ flex: "none", color: "#5eead4" }} />
+                  ) : (
+                    <Copy size={14} style={{ flex: "none", opacity: 0.7 }} />
+                  )}
+                </button>
+              )}
+            </div>
+            <span role="status" className="tp-sr">{copiedRef ? "Order ID copied" : ""}</span>
+
+            <div className="tp-hero-cta">
+              <button
+                type="button"
+                onClick={() => guard(handleDownloadAll)}
+                disabled={pdfUnlocked && isBusy}
+                className="tp-btn tp-btn-mark tp-btn-lg"
               >
-                <Download size={17} />
-                My downloads
+                {downloadingAll ? (
+                  <Loader2 size={19} className="tp-spin" />
+                ) : (
+                  <Download size={19} />
+                )}
+                {pdfUnlocked ? downloadAllLabel : "Unlock my downloads"}
+              </button>
+
+              <a href="#downloads" className="tp-btn tp-btn-onpanel tp-btn-lg">
+                <BookOpen size={18} />
+                See my {totalBooks > 1 ? "books" : "book"}
               </a>
             </div>
 
             {purchase.emailDelivery?.enabled && (
-              <p
-                className={`
-                  mt-3 flex items-start gap-2
-                  rounded-lg px-3 py-2
-                  text-[11px] font-semibold leading-5
-                  sm:text-xs
-                  ${
-                    isDark
-                      ? "bg-orange-500/15 text-orange-300"
-                      : "bg-orange-50 text-orange-700"
-                  }
-                `}
-              >
-                <Mail
-                  size={14}
-                  className="mt-0.5 shrink-0"
-                />
+              <p className="tp-hero-note">
+                <Mail size={15} />
                 <span>
-                  We're also emailing your
-                  {isBundle ? " PDFs" : " PDF"}
+                  We're also emailing your{isBundle ? " PDFs" : " PDF"}
                   {purchase.emailDelivery.maskedEmail
                     ? ` to ${purchase.emailDelivery.maskedEmail}`
                     : ""}
@@ -2005,899 +1864,323 @@ export default function PaymentSuccess() {
             )}
           </section>
 
+          {/* HOW IT WORKS */}
+          <ol className="tp-steps">
+            <li className="tp-step done">
+              <span className="tp-step-n"><Check size={17} /></span>
+              <div>
+                <b>Payment confirmed</b>
+                <span>Your purchase is verified and unlocked.</span>
+              </div>
+            </li>
+            <li className="tp-step">
+              <span className="tp-step-n">2</span>
+              <div>
+                <b>Tap Download</b>
+                <span>Save each PDF, or all of them in one ZIP.</span>
+              </div>
+            </li>
+            <li className="tp-step">
+              <span className="tp-step-n">3</span>
+              <div>
+                <b>Read anywhere</b>
+                <span>Open the file offline in any PDF reader.</span>
+              </div>
+            </li>
+          </ol>
 
           {/* ======================================
               PURCHASED BOOKS
           ====================================== */}
 
-          <section
-            id="downloads"
-            style={{ scrollMarginTop: "100px" }}
-            className={`
-              mt-6 overflow-hidden
-              rounded-3xl border
-              shadow-sm
-              ${border}
-              ${cardBg}
-            `}
-          >
-            <div
-              className={`
-                flex flex-col gap-4
-                border-b p-5
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-                sm:p-7
-                ${border}
-              `}
-            >
+          <section id="downloads" className="tp-sec" style={{ scrollMarginTop: 96 }}>
+            <div className="tp-sec-head">
               <div>
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`
-                      flex h-11 w-11
-                      items-center
-                      justify-center
-                      rounded-xl
-                      ${softBg}
-                    `}
-                  >
-                    <BookOpen
-                      size={22}
-                      className="text-orange-500"
-                    />
-                  </div>
-
-                  <h2 className="text-xl font-black">
-                    Your Purchased Books
-                  </h2>
-                </div>
-
-                <p
-                  className={`
-                    mt-3 text-sm
-                    leading-6
-                    ${secondaryText}
-                  `}
-                >
+                <span className="tp-eyebrow">
+                  <FileCheck2 size={15} />
+                  {totalBooks} {totalBooks === 1 ? "ebook" : "ebooks"} available
+                </span>
+                <h2 className="tp-h" style={{ marginTop: 8 }}>
+                  Your purchased <span className="tp-mark">books</span>
+                </h2>
+                <p>
                   {totalBooks === 1
                     ? "Download or preview your purchased ebook."
-                    : `You purchased ${totalBooks} ebooks. Download them individually or together as a ZIP.`}
+                    : `You purchased ${totalBooks} ebooks. Download them one by one, or all together as a ZIP.`}
                 </p>
               </div>
-
-              <span
-                className={`
-                  inline-flex w-fit
-                  items-center gap-2
-                  rounded-full px-4 py-2
-                  text-xs font-extrabold
-                  ${badgeBg}
-                `}
-              >
-                <FileCheck2 size={16} />
-                {totalBooks} available
-              </span>
             </div>
 
-            <div
-              className={`
-                divide-y
-                ${
-                  isDark
-                    ? "divide-stone-800"
-                    : "divide-orange-100"
-                }
-              `}
-            >
-              {books.map(
-                (book, index) => {
-                  const isDownloading =
-                    downloadingBookId ===
-                    book.id;
-
-                  return (
-                    <article
-                      key={`${book.id}-${index}`}
-                      className="p-5 sm:p-7"
-                    >
-                      <div
-                        className="
-                          flex flex-col
-                          gap-6 sm:flex-row
-                          sm:items-center
-                        "
-                      >
-                        {/* BOOK COVER */}
-
-                        <div
-                          className={`
-                            relative h-44 w-32
-                            shrink-0 overflow-hidden
-                            rounded-xl border
-                            shadow-sm
-                            ${border}
-                          `}
-                        >
-                          <BookCover book={book} />
-
-                          <div
-                            className="
-                              absolute bottom-0
-                              right-0 rounded-tl-lg
-                              bg-stone-950/85
-                              px-3 py-1
-                              text-[10px]
-                              font-bold text-white
-                            "
-                          >
-                            PDF
-                          </div>
-                        </div>
-
-                        {/* BOOK INFORMATION */}
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap gap-2">
-                            <span
-                              className={`
-                                rounded-full
-                                px-3 py-1
-                                text-[10px]
-                                font-extrabold
-                                ${badgeBg}
-                              `}
-                            >
-                              BOOK {index + 1}
-                            </span>
-
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-extrabold text-emerald-600">
-                              <Check size={13} />
-                              Purchased
-                            </span>
-                          </div>
-
-                          <h3
-                            className="
-                              mt-4 text-lg
-                              font-black
-                              leading-snug
-                            "
-                          >
-                            {book.title}
-                          </h3>
-
-                          {book.subtitle && (
-                            <p
-                              className={`
-                                mt-2 text-sm
-                                ${secondaryText}
-                              `}
-                            >
-                              {book.subtitle}
-                            </p>
-                          )}
-
-                          {book.description && (
-                            <p
-                              className={`
-                                mt-3 line-clamp-3
-                                text-sm leading-7
-                                ${secondaryText}
-                              `}
-                            >
-                              {book.description}
-                            </p>
-                          )}
-
-                          <div
-                            className={`
-                              mt-4 flex
-                              flex-wrap gap-4
-                              text-xs
-                              ${secondaryText}
-                            `}
-                          >
-                            <span className="inline-flex items-center gap-2">
-                              <FileText size={15} />
-                              Digital PDF
-                            </span>
-
-                            <span className="inline-flex items-center gap-2">
-                              <ShieldCheck size={15} />
-                              Purchase verified
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* BOOK ACTIONS */}
-
-                        <div
-                          className="
-                            flex w-full
-                            flex-col gap-3
-                            sm:w-auto
-                            sm:min-w-[185px]
-                          "
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDownloadBook(
-                                book
-                              )
-                            }
-                            disabled={
-                              !pdfUnlocked ||
-                              isBusy ||
-                              !book.pdfUrl
-                            }
-                            className={primaryButton}
-                          >
-                            {isDownloading ? (
-                              <Loader2
-                                size={18}
-                                className="animate-spin"
-                              />
-                            ) : (
-                              <Download size={18} />
-                            )}
-
-                            {isDownloading
-                              ? "Preparing..."
-                              : "Download PDF"}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openPreview(book)
-                            }
-                            disabled={
-                              !pdfUnlocked ||
-                              !book.pdfUrl
-                            }
-                            className={secondaryButton}
-                          >
-                            <BookOpen size={17} />
-
-                            Preview PDF
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                }
-              )}
-            </div>
-
-            {/* ==================================
-                DOWNLOAD ALL
-            ================================== */}
-
-            <div
-              className={`
-                border-t p-5
-                sm:p-7
-                ${border}
-                ${softBg}
-              `}
-            >
-              <div
-                className="
-                  flex flex-col
-                  gap-5 md:flex-row
-                  md:items-center
-                  md:justify-between
-                "
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className="
-                      flex h-12 w-12
-                      shrink-0 items-center
-                      justify-center
-                      rounded-xl
-                      bg-orange-600
-                      text-white
-                    "
-                  >
-                    <FileArchive size={23} />
-                  </div>
-
+            {totalBooks > 1 && (
+              <div className="tp-all">
+                <div className="tp-all-text">
+                  <span className="tp-ico"><FileArchive size={22} /></span>
                   <div>
-                    <h3 className="text-base font-extrabold">
-                      {totalBooks > 1
-                        ? "Download your complete collection"
-                        : "Save your ebook"}
-                    </h3>
-
-                    <p
-                      className={`
-                        mt-2 text-sm
-                        leading-7
-                        ${secondaryText}
-                      `}
-                    >
-                      {totalBooks > 1
-                        ? `Download all ${totalBooks} purchased ebooks in one ZIP file.`
-                        : "Keep a PDF copy on your device for offline reading."}
-                    </p>
+                    <b>Download your complete collection</b>
+                    <span>All {totalBooks} ebooks in one ZIP file. Fastest way to save everything.</span>
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleDownloadAll}
-                  disabled={
-                    !pdfUnlocked ||
-                    isBusy
-                  }
-                  className={`
-                    ${primaryButton}
-                    w-full md:w-auto
-                  `}
+                  onClick={() => guard(handleDownloadAll)}
+                  disabled={pdfUnlocked && isBusy}
+                  className="tp-btn tp-btn-primary tp-btn-lg"
                 >
-                  {downloadingAll ? (
-                    <Loader2
-                      size={18}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Download size={18} />
-                  )}
-
-                  {downloadingAll
-                    ? "Preparing ZIP..."
-                    : totalBooks > 1
-                      ? `Download All ${totalBooks} Books`
-                      : "Download Book"}
+                  {downloadingAll ? <Loader2 size={19} className="tp-spin" /> : <Download size={19} />}
+                  {downloadAllLabel}
                 </button>
               </div>
+            )}
 
-              {/* PROGRESS */}
+            {statusBlock}
 
-              {downloadingAll && (
-                <div className="mt-6">
-                  <div
-                    className={`
-                      flex justify-between
-                      text-xs font-bold
-                      ${secondaryText}
-                    `}
-                  >
-                    <span>
-                      Preparing download
-                    </span>
-
-                    <span>
-                      {downloadProgress.current}
-                      {" / "}
-                      {downloadProgress.total}
-                    </span>
-                  </div>
-
-                  <div
-                    className={`
-                      mt-3 h-2
-                      overflow-hidden
-                      rounded-full
-                      ${
-                        isDark
-                          ? "bg-stone-800"
-                          : "bg-orange-200"
-                      }
-                    `}
-                  >
-                    <div
-                      className="
-                        h-full
-                        rounded-full
-                        bg-orange-600
-                        transition-all
-                        duration-300
-                      "
-                      style={{
-                        width:
-                          `${
-                            downloadProgress.total
-                              ? (
-                                  downloadProgress.current /
-                                  downloadProgress.total
-                                ) * 100
-                              : 0
-                          }%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* DOWNLOAD MESSAGE */}
-
-              {downloadMessage && (
-                <div
-                  role="status"
-                  className={`
-                    mt-5 flex
-                    items-start gap-3
-                    rounded-xl border
-                    p-4 text-sm
-                    leading-6
-                    ${border}
-                    ${cardBg}
-                  `}
-                >
-                  <CheckCircle2
-                    size={19}
-                    className="mt-0.5 shrink-0 text-emerald-500"
-                  />
-
-                  <span>
-                    {downloadMessage}
-                  </span>
-                </div>
-              )}
-
-              {/* DOWNLOAD ERROR */}
-
-              {downloadError && (
-                <div
-                  role="alert"
-                  className="
-                    mt-5 flex
-                    items-start gap-3
-                    rounded-xl border
-                    border-red-500/30
-                    bg-red-500/10
-                    p-4 text-sm
-                    text-red-500
-                  "
-                >
-                  <AlertCircle size={19} />
-
-                  <span>
-                    {downloadError}
-                  </span>
-                </div>
-              )}
-
-              {/* SUPPORT */}
-
-              <p
-                className={`
-                  mt-5 flex flex-wrap
-                  items-center gap-2
-                  text-xs leading-6
-                  ${secondaryText}
-                `}
+            {!pdfUnlocked && (
+              <button
+                type="button"
+                onClick={() => setShowAccessModal(true)}
+                className="tp-lock"
+                style={{ width: "100%", marginTop: 14, border: 0, cursor: "pointer", textAlign: "left" }}
               >
-                <Mail size={15} />
-                Download problem? Email us at
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-                    `Ebook download help - ${purchase.orderId || ""}`
-                  )}`}
-                  className="font-bold text-orange-500 underline"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </p>
+                <LockKeyhole size={17} style={{ flex: "none" }} />
+                <span>Tap here to confirm and unlock your downloads.</span>
+              </button>
+            )}
+
+            <div className="tp-books">
+              {books.map((book, index) => {
+                const isDownloading = downloadingBookId === book.id;
+
+                return (
+                  <article key={`${book.id}-${index}`} className="tp-book">
+                    <div className="tp-book-cover">
+                      {book.coverPageUrl ? (
+                        <img src={book.coverPageUrl} alt={`${book.title} cover`} loading="lazy" />
+                      ) : (
+                        <div className="fallback"><BookOpen size={32} /></div>
+                      )}
+                      <span className="pdf">PDF</span>
+                    </div>
+
+                    <div className="tp-book-info">
+                      <div className="tp-book-tags">
+                        {totalBooks > 1 && <span className="tp-tag">BOOK {index + 1}</span>}
+                        <span className="tp-tag ok"><Check size={12} /> Purchased</span>
+                        <span className="tp-tag"><FileText size={12} /> Digital PDF</span>
+                      </div>
+
+                      <h3>{book.title}</h3>
+                      {book.subtitle && <p className="sub">{book.subtitle}</p>}
+                      {book.description && <p className="desc">{book.description}</p>}
+                    </div>
+
+                    <div className="tp-book-actions">
+                      <button
+                        type="button"
+                        onClick={() => guard(() => handleDownloadBook(book))}
+                        disabled={(pdfUnlocked && isBusy) || !book.pdfUrl}
+                        className="tp-btn tp-btn-primary tp-btn-lg tp-btn-block"
+                      >
+                        {isDownloading ? (
+                          <Loader2 size={19} className="tp-spin" />
+                        ) : (
+                          <Download size={19} />
+                        )}
+                        {!book.pdfUrl
+                          ? "PDF unavailable"
+                          : isDownloading
+                            ? "Preparing..."
+                            : "Download PDF"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => guard(() => openPreview(book))}
+                        disabled={!book.pdfUrl}
+                        className="tp-btn tp-btn-ghost tp-btn-block"
+                      >
+                        <BookOpen size={17} />
+                        Preview PDF
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
+
+            <p className="tp-muted" style={{ margin: "16px 0 0", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 13 }}>
+              <Mail size={15} />
+              Download problem? Email us at
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+                  `Ebook download help - ${purchase.orderId || ""}`
+                )}`}
+                className="tp-link"
+                style={{ fontWeight: 800, color: "var(--tp-brand)", textDecoration: "underline", textUnderlineOffset: 3, wordBreak: "break-all" }}
+              >
+                {SUPPORT_EMAIL}
+              </a>
+            </p>
           </section>
-
-          {/* ======================================
-              RESUME LAB PROMOTION
-          ====================================== */}
-
-          <div className="mt-8">
-            <ResumePromo
-              variant="card"
-              isDark={isDark}
-            />
-          </div>
 
           {/* ======================================
               PDF VIEWER
           ====================================== */}
 
-          {pdfUnlocked &&
-            showPreview &&
-            selectedPreview && (
-              <section
-                ref={previewSectionRef}
-                style={{ scrollMarginTop: "100px" }}
-                className={`
-                  mt-7 overflow-hidden
-                  rounded-3xl
-                  border
-                  ${border}
-                  ${cardBg}
-                `}
-              >
-                <div
-                  className={`
-                    flex flex-col gap-4
-                    border-b p-5
-                    sm:flex-row
-                    sm:items-center
-                    sm:justify-between
-                    ${border}
-                  `}
+          {pdfUnlocked && showPreview && selectedPreview && (
+            <section ref={previewSectionRef} className="tp-viewer">
+              <div className="tp-viewer-head">
+                <div style={{ minWidth: 0 }}>
+                  <h3>PDF viewer</h3>
+                  <p>{selectedPreview.title}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className="tp-btn tp-btn-ghost tp-btn-sm"
                 >
-                  <div>
-                    <h3 className="text-lg font-extrabold">
-                      PDF Viewer
-                    </h3>
+                  <X size={17} />
+                  Close viewer
+                </button>
+              </div>
 
-                    <p
-                      className={`
-                        mt-2 text-sm
-                        ${secondaryText}
-                      `}
+              {books.length > 1 && (
+                <div className="tp-viewer-tabs" role="tablist" aria-label="Choose a book to preview">
+                  {books.map((book) => (
+                    <button
+                      key={book.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={selectedPreviewId === book.id}
+                      onClick={() => setSelectedPreviewId(book.id)}
+                      className={`tp-viewer-tab${selectedPreviewId === book.id ? " on" : ""}`}
                     >
-                      {selectedPreview.title}
-                    </p>
-                  </div>
+                      {book.title}
+                    </button>
+                  ))}
+                </div>
+              )}
 
+              {previewLoading ? (
+                <div className="tp-viewer-body">
+                  <Loader2 size={26} className="tp-spin" style={{ color: "var(--tp-brand)" }} />
+                  <span>Loading your purchased PDF...</span>
+                </div>
+              ) : previewError ? (
+                <div role="alert" className="tp-viewer-body">
+                  <AlertCircle size={26} className="tp-pen" />
+                  <span className="tp-pen" style={{ fontWeight: 700 }}>{previewError}</span>
+                  <span style={{ fontSize: 13 }}>You can still use Download PDF to save it and open it in your PDF reader.</span>
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPreview(
-                        false
-                      )
-                    }
-                    className={secondaryButton}
+                    onClick={() => handleDownloadBook(selectedPreview)}
+                    disabled={isBusy}
+                    className="tp-btn tp-btn-primary"
                   >
-                    <X size={17} />
-                    Close Viewer
+                    <Download size={17} />
+                    Download PDF
                   </button>
                 </div>
-
-                {books.length > 1 && (
-                  <div
-                    className={`
-                      flex flex-wrap
-                      gap-2 border-b
-                      p-4
-                      ${border}
-                    `}
-                  >
-                    {books.map((book) => (
-                      <button
-                        key={book.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedPreviewId(
-                            book.id
-                          )
-                        }
-                        className={`
-                          rounded-xl
-                          px-4 py-2
-                          text-xs font-bold
-                          transition
-                          ${
-                            selectedPreviewId ===
-                            book.id
-                              ? "bg-orange-600 text-white"
-                              : softBg
-                          }
-                        `}
-                      >
-                        {book.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {previewLoading ? (
-                  <div className="flex min-h-[240px] items-center justify-center gap-3 p-8">
-                    <Loader2 size={22} className="animate-spin text-orange-500" />
-                    <span>Loading your purchased PDF...</span>
-                  </div>
-                ) : previewError ? (
-                  <div role="alert" className="p-8 text-center text-red-500">
-                    {previewError}
-                    <p className="mt-2 text-sm">If the PDF host blocks cross-origin access, configure CORS or proxy the PDF through your authenticated backend.</p>
-                  </div>
-                ) : previewObjectUrl ? (
-                  <iframe
-                    key={previewObjectUrl}
-                    src={`${previewObjectUrl}#toolbar=1&view=FitH`}
-                    title={selectedPreview.title}
-                    className="h-[65vh] min-h-[420px] w-full border-0 sm:h-[75vh]"
-                  />
-                ) : (
-                  <div
-                    className={`
-                      p-10 text-center
-                      ${secondaryText}
-                    `}
-                  >
-                    PDF preview unavailable.
-                  </div>
-                )}
-
-                <div
-                  className={`
-                    border-t p-4
-                    text-xs leading-6
-                    ${border}
-                    ${secondaryText}
-                  `}
-                >
-                  Preview your PDF here or
-                  use Download PDF to save
-                  a copy to your device.
-                </div>
-              </section>
-            )}
-
-          {/* ======================================
-              HOW TO SAVE
-          ====================================== */}
-
-          <section
-            className={`
-              mt-7 rounded-3xl
-              border p-6
-              sm:p-8
-              ${border}
-              ${cardBg}
-            `}
-          >
-            <div className="flex items-center gap-3">
-              <Smartphone
-                size={24}
-                className="text-orange-500"
-              />
-
-              <h2 className="text-xl font-black">
-                How to save your ebooks
-              </h2>
-            </div>
-
-            <p
-              className={`
-                mt-3 text-sm
-                leading-7
-                ${secondaryText}
-              `}
-            >
-              Follow these simple steps
-              to keep your purchased PDFs
-              available for offline learning.
-            </p>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {[
-                {
-                  number: "01",
-                  title:
-                    "Choose your books",
-                  text:
-                    "Download books individually, or use Download All for a complete bundle.",
-                },
-
-                {
-                  number: "02",
-                  title:
-                    "Save to your device",
-                  text:
-                    "On desktop, check Downloads. On iPhone or iPad, choose Save to Files.",
-                },
-
-                {
-                  number: "03",
-                  title:
-                    "Learn offline",
-                  text:
-                    "Keep your PDFs organized and open them anytime using your preferred PDF reader.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.number}
-                  className={`
-                    rounded-2xl
-                    border p-5
-                    ${border}
-                    ${softBg}
-                  `}
-                >
-                  <span className="text-sm font-black text-orange-500">
-                    {item.number}
-                  </span>
-
-                  <h3 className="mt-3 text-sm font-extrabold">
-                    {item.title}
-                  </h3>
-
-                  <p
-                    className={`
-                      mt-2 text-xs
-                      leading-7
-                      ${secondaryText}
-                    `}
-                  >
-                    {item.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ======================================
-              HELP SECTION
-          ====================================== */}
-
-          <section
-            className={`
-              mt-7 overflow-hidden
-              rounded-3xl
-              border
-              ${border}
-              ${cardBg}
-            `}
-          >
-            <button
-              type="button"
-              onClick={() =>
-                setShowHelp(
-                  !showHelp
-                )
-              }
-              aria-expanded={showHelp}
-              className="
-                flex w-full
-                items-center
-                justify-between
-                gap-4 p-6
-                text-left
-              "
-            >
-              <div className="flex items-center gap-3">
-                <HelpCircle
-                  size={23}
-                  className="text-orange-500"
+              ) : previewObjectUrl ? (
+                <iframe
+                  key={previewObjectUrl}
+                  src={`${previewObjectUrl}#toolbar=1&view=FitH`}
+                  title={selectedPreview.title}
                 />
-
-                <div>
-                  <h3 className="text-sm font-extrabold">
-                    Need help with your ebooks?
-                  </h3>
-
-                  <p
-                    className={`
-                      mt-1 text-xs
-                      ${secondaryText}
-                    `}
-                  >
-                    Download support and troubleshooting
-                  </p>
-                </div>
-              </div>
-
-              {showHelp ? (
-                <ChevronUp size={19} />
               ) : (
-                <ChevronDown size={19} />
+                <div className="tp-viewer-body">PDF preview unavailable.</div>
               )}
-            </button>
 
-            {showHelp && (
-              <div
-                className={`
-                  space-y-5
-                  border-t p-6
-                  ${border}
-                `}
-              >
-                <div>
-                  <h4 className="text-sm font-extrabold">
-                    Download isn't starting?
-                  </h4>
-
-                  <p
-                    className={`
-                      mt-2 text-sm
-                      leading-7
-                      ${secondaryText}
-                    `}
-                  >
-                    Make sure your browser
-                    allows downloads. Try
-                    saving one PDF at a time.
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-extrabold">
-                    Using an iPhone or iPad?
-                  </h4>
-
-                  <p
-                    className={`
-                      mt-2 text-sm
-                      leading-7
-                      ${secondaryText}
-                    `}
-                  >
-                    If the native share menu
-                    appears, select Save to Files.
-                    Otherwise, check your browser's
-                    Downloads section.
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-extrabold">
-                    PDF not opening?
-                  </h4>
-
-                  <p
-                    className={`
-                      mt-2 text-sm
-                      leading-7
-                      ${secondaryText}
-                    `}
-                  >
-                    Download it and open the
-                    saved file with a PDF reader.
-                  </p>
-                </div>
-
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className={secondaryButton}
-                >
-                  <Mail size={17} />
-
-                  Contact Support
-
-                  <ArrowRight size={16} />
-                </a>
+              <div className="tp-viewer-foot">
+                Preview your PDF here, or use <strong>Download PDF</strong> to save a copy to your device. Some phones can't show PDFs inline, so download works best there.
               </div>
-            )}
-          </section>
+            </section>
+          )}
 
           {/* ======================================
-              FOOTER
+              RESUME LAB PROMOTION
           ====================================== */}
 
-          <div
-            className="
-              mt-9 flex
-              flex-col gap-4
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-            "
-          >
-            <Link
-              to={BOOKS_URL}
-              className={secondaryButton}
-            >
+          <div style={{ marginTop: 36 }}>
+            <ResumePromo variant="card" isDark={isDark} />
+          </div>
+
+          {/* ======================================
+              GUIDANCE
+          ====================================== */}
+
+          <div className="tp-info">
+            <section className="tp-card tp-info-card">
+              <h3><Smartphone size={22} /> Where will my file go?</h3>
+              <ul className="tp-tips">
+                <li><Check size={16} /><span><b>Android / desktop:</b> look in your Downloads folder, or the browser's download list.</span></li>
+                <li><Check size={16} /><span><b>iPhone / iPad:</b> a share sheet opens. Choose <b>Save to Files</b>.</span></li>
+                <li><Check size={16} /><span><b>Many books?</b> The ZIP contains each PDF. Unzip it with your Files app or any unzip tool.</span></li>
+              </ul>
+            </section>
+
+            <section className="tp-card tp-info-card">
+              <h3><HelpCircle size={22} /> Download not working?</h3>
+              <ul className="tp-tips">
+                <li><Check size={16} /><span>Allow downloads for this site in your browser, then try one PDF at a time.</span></li>
+                <li><Check size={16} /><span>If a PDF won't open, save it first and open the saved file in a PDF reader.</span></li>
+                <li><Check size={16} /><span>Still stuck? Email us your order ID and we'll sort it out quickly.</span></li>
+              </ul>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+                  `Ebook download help - ${purchase.orderId || ""}`
+                )}`}
+                className="tp-btn tp-btn-ghost tp-btn-block"
+                style={{ marginTop: 16 }}
+              >
+                <Mail size={17} />
+                Contact support
+                <ArrowRight size={16} />
+              </a>
+            </section>
+          </div>
+
+          {/* FOOTER */}
+          <div className="tp-foot-row">
+            <Link to={BOOKS_URL} className="tp-btn tp-btn-ghost">
               <BookOpen size={17} />
-
-              Explore More Books
-
+              Explore more books
               <ArrowRight size={16} />
             </Link>
 
-            <p
-              className={`
-                text-center
-                text-xs
-                ${secondaryText}
-              `}
-            >
-              Thank you for choosing
-              Target Trek.
-            </p>
+            <p>Thank you for choosing Target Trek.</p>
           </div>
         </div>
+
+        {/* ======================================
+            STICKY DOWNLOAD BAR (phones only):
+            the download button is always one tap away
+        ====================================== */}
+
+        {!showAccessModal && (
+          <div className="tp-sticky">
+            <button
+              type="button"
+              onClick={() => guard(handleDownloadAll)}
+              disabled={pdfUnlocked && isBusy}
+              className="tp-btn tp-btn-primary tp-btn-lg tp-btn-block"
+            >
+              {downloadingAll || downloadingBookId ? (
+                <Loader2 size={19} className="tp-spin" />
+              ) : pdfUnlocked ? (
+                <Download size={19} />
+              ) : (
+                <LockKeyhole size={19} />
+              )}
+              {downloadingBookId
+                ? "Preparing..."
+                : pdfUnlocked
+                  ? downloadAllLabel
+                  : "Unlock my downloads"}
+            </button>
+          </div>
+        )}
       </main>
 
       {/* ======================================
@@ -2905,180 +2188,65 @@ export default function PaymentSuccess() {
       ====================================== */}
 
       {showAccessModal && (
-        <div
-          className="
-            fixed inset-0
-            z-[9999]
-            overflow-y-auto
-            overscroll-contain
-            bg-black/75
-            backdrop-blur-sm
-          "
-        >
-          <div
-            className="
-              flex min-h-full
-              items-center
-              justify-center
-              px-4 py-6
-            "
-          >
+        <div className="tp tp-gate" data-theme={theme}>
+          <div className="tp-gate-in">
             <section
               role="dialog"
               aria-modal="true"
               aria-labelledby="purchase-ready-title"
-              className={`
-                w-full max-w-md
-                rounded-3xl
-                border shadow-2xl
-                ${border}
-                ${cardBg}
-                ${primaryText}
-              `}
+              className="tp-gate-card"
             >
-              <div
-                className={`
-                  flex items-center gap-3
-                  border-b p-4 sm:p-5
-                  ${border}
-                `}
-              >
-                <div
-                  className="
-                    flex h-11 w-11
-                    shrink-0 items-center
-                    justify-center
-                    rounded-xl
-                    bg-orange-600
-                    text-white
-                  "
-                >
-                  <CheckCircle2 size={24} />
+              <div className="tp-gate-top">
+                <div className="tp-hero-badge" aria-hidden="true">
+                  <CheckCircle2 size={28} />
                 </div>
 
-                <div className="min-w-0">
-                  <h2
-                    id="purchase-ready-title"
-                    className="text-lg font-black leading-tight sm:text-xl"
-                  >
-                    Your ebooks are ready!
-                  </h2>
+                <h2 id="purchase-ready-title" className="tp-h">
+                  Your {totalBooks === 1 ? "ebook is" : "ebooks are"}{" "}
+                  <span className="tp-mark">ready!</span>
+                </h2>
 
-                  <p
-                    className={`
-                      mt-1 text-xs
-                      leading-5
-                      ${secondaryText}
-                    `}
-                  >
-                    {totalBooks === 1
-                      ? "Your ebook is ready to download."
-                      : `All ${totalBooks} ebooks are ready to download.`}
-                  </p>
-                </div>
+                <p>
+                  {totalBooks === 1
+                    ? "Your ebook is ready to download."
+                    : `All ${totalBooks} ebooks are ready to download.`}
+                </p>
               </div>
 
-              <div className="p-4 sm:p-5">
-                <div
-                  className={`
-                    flex items-start
-                    gap-3 rounded-xl
-                    border p-3
-                    ${border}
-                    ${softBg}
-                  `}
-                >
-                  <Download
-                    size={18}
-                    className="mt-0.5 shrink-0 text-orange-500"
-                  />
-
-                  <p
-                    className={`
-                      text-xs leading-6
-                      ${secondaryText}
-                    `}
-                  >
-                    Please download your
-                    book{totalBooks > 1 ? "s" : ""} as
-                    soon as possible and save
-                    {totalBooks > 1 ? " them" : " it"} to
-                    your device. You can download
-                    one book or all at once.
-                  </p>
+              <div className="tp-gate-body">
+                <div className="tp-gate-note">
+                  <Download size={18} />
+                  <span>
+                    Please download your book{totalBooks > 1 ? "s" : ""} as soon as possible and save{totalBooks > 1 ? " them" : " it"} to your device. You can download one book or all at once.
+                  </span>
                 </div>
 
-                <p
-                  className={`
-                    mt-3 flex flex-wrap
-                    items-center gap-1.5
-                    text-xs leading-5
-                    ${secondaryText}
-                  `}
-                >
-                  <Mail size={14} />
-                  Need help? Email
-                  <a
-                    href={`mailto:${SUPPORT_EMAIL}`}
-                    className="break-all font-bold text-orange-500 underline"
-                  >
-                    {SUPPORT_EMAIL}
-                  </a>
-                </p>
-
-                <label
-                  className={`
-                    mt-4 flex
-                    cursor-pointer
-                    items-start gap-3
-                    rounded-xl border
-                    p-3
-                    ${border}
-                  `}
-                >
+                <label className="tp-check">
                   <input
                     type="checkbox"
-                    checked={
-                      acceptedTerms
-                    }
-                    onChange={(event) =>
-                      setAcceptedTerms(
-                        event.target.checked
-                      )
-                    }
-                    className="
-                      mt-1 h-4 w-4
-                      shrink-0
-                      accent-orange-600
-                    "
+                    checked={acceptedTerms}
+                    onChange={(event) => setAcceptedTerms(event.target.checked)}
                   />
-
-                  <span className="text-sm leading-6">
-                    I understand that I should
-                    save my purchased PDFs to
-                    my own device.
-                  </span>
+                  <span>I understand that I should save my purchased PDFs to my own device.</span>
                 </label>
 
                 <button
                   type="button"
-                  disabled={
-                    !acceptedTerms
-                  }
-                  onClick={
-                    handleUnlock
-                  }
-                  className={`
-                    ${primaryButton}
-                    mt-4 w-full
-                  `}
+                  disabled={!acceptedTerms}
+                  onClick={handleUnlock}
+                  className="tp-btn tp-btn-primary tp-btn-lg tp-btn-block"
                 >
                   <Download size={19} />
-
-                  Access My Ebooks
-
+                  Access my ebooks
                   <ArrowRight size={17} />
                 </button>
+
+                <p className="tp-muted" style={{ margin: 0, textAlign: "center", fontSize: 12.5 }}>
+                  Need help? Email{" "}
+                  <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "var(--tp-brand)", fontWeight: 800, wordBreak: "break-all" }}>
+                    {SUPPORT_EMAIL}
+                  </a>
+                </p>
               </div>
             </section>
           </div>

@@ -63,7 +63,7 @@ function VisibilityButton({ profile, toggleEnabled }) {
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
         hidden
           ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dk:border-amber-500/40 dk:bg-amber-500/10 dk:text-amber-200"
-          : "border-stone-300 bg-white text-stone-600 hover:border-orange-400 hover:text-orange-700 dk:border-[#5a4336] dk:bg-[#241b15] dk:text-[#d6c4b8] dk:hover:text-orange-300"
+          : "border-stone-300 bg-white text-stone-600 hover:border-teal-400 hover:text-teal-800 dk:border-[#2e4641] dk:bg-[#101c1a] dk:text-[#a3b8b2] dk:hover:text-teal-300"
       )}
     >
       <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -80,7 +80,7 @@ function Shell() {
   if (error && !me) {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <p className="text-stone-700 dk:text-[#ead9cc]">{error}</p>
+        <p className="text-stone-700 dk:text-[#cfe0db]">{error}</p>
       </div>
     );
   }
@@ -124,22 +124,22 @@ function Shell() {
   const gate = (element) => (paid && !matched ? element : <Navigate to={`/prep-buddy/app/${home}`} replace />);
 
   return (
-    <div className="min-h-screen-safe bg-[#fff8f2] dk:bg-[#15110e] pt-[calc(var(--arena-nav-h,5rem)+0.5rem)]">
+    <div className="min-h-screen-safe bg-[#edf3f1] dk:bg-[#0a1312] pt-[calc(var(--arena-nav-h,5rem)+0.5rem)]">
       <Helmet>
         <title>My arena – Prep Buddy | Target Trek</title>
         <meta name="robots" content="noindex" />
       </Helmet>
 
-      <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+      <div className="mx-auto max-w-6xl px-3 pb-24 sm:px-6">
         <header className="flex flex-wrap items-end justify-between gap-3 pb-4 pt-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600 dk:text-orange-400">Prep Buddy Arena</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#29201b] dk:text-[#fff7ed]">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700 dk:text-teal-400">Prep Buddy Arena</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#0c1a17] dk:text-[#e8f2ef]">
               Hi {me?.user?.name?.split(" ")[0] ?? "there"} 👋
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <BugReportButton className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] px-3 py-1 text-xs font-semibold text-stone-600 dk:text-[#d6c4b8] hover:border-orange-400 hover:text-orange-700 dk:hover:text-orange-300" />
+            <BugReportButton className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] px-3 py-1 text-xs font-semibold text-stone-600 dk:text-[#a3b8b2] hover:border-teal-400 hover:text-teal-800 dk:hover:text-teal-300" />
             {paid && me?.profile && <VisibilityButton profile={me.profile} toggleEnabled={me.settings?.visibilityToggleEnabled !== false} />}
             {me?.profile && (
               <Badge tone={me.profile.status === "matched" ? "emerald" : me.profile.status === "active" ? "brand" : me.profile.status === "suspended" ? "rose" : "slate"}>
@@ -148,7 +148,7 @@ function Shell() {
             )}
             <span
               title={socketState === "open" ? "Live updates on" : "Reconnecting…"}
-              className={cx("hidden items-center gap-1 text-xs sm:flex", socketState === "open" ? "text-emerald-600 dk:text-emerald-400" : "text-stone-400 dk:text-[#8f7c70]")}
+              className={cx("hidden items-center gap-1 text-xs sm:flex", socketState === "open" ? "text-emerald-600 dk:text-emerald-400" : "text-stone-400 dk:text-[#73897f]")}
             >
               {socketState === "open" ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
               {socketState === "open" ? "Live" : "Offline"}
@@ -156,7 +156,7 @@ function Shell() {
           </div>
         </header>
 
-        <nav aria-label="Arena sections" className="sticky top-[var(--arena-nav-h,4rem)] z-30 -mx-4 mb-6 overflow-x-auto border-b border-[#f0ded0] dk:border-[#443127] bg-[#fff8f2]/90 dk:bg-[#15110e]/90 px-4 backdrop-blur sm:mx-0 sm:px-0">
+        <nav aria-label="Arena sections" className="sticky top-[var(--arena-nav-h,4rem)] z-30 -mx-3 mb-6 overflow-x-auto border-b border-[#dfe8e5] dk:border-[#1f302c] bg-[#edf3f1]/90 dk:bg-[#0a1312]/90 px-3 backdrop-blur sm:mx-0 sm:px-0">
           <ul className="flex min-w-max gap-1">
             {tabs.map(({ to, label, icon: Icon, badge, dot }) => (
               <li key={to}>
@@ -165,7 +165,7 @@ function Shell() {
                   className={({ isActive }) =>
                     cx(
                       "relative flex items-center gap-1.5 border-b-2 px-3 py-3 text-[13px] font-semibold transition-colors sm:gap-2 sm:px-4 sm:text-sm",
-                      isActive ? "border-orange-600 text-orange-700 dk:text-orange-300" : "border-transparent text-stone-500 dk:text-[#b9a79c] hover:text-stone-800 dk:hover:text-[#ffedd5]"
+                      isActive ? "border-teal-700 text-teal-800 dk:text-teal-300" : "border-transparent text-stone-500 dk:text-[#93aaa3] hover:text-stone-800 dk:hover:text-[#d9ebe6]"
                     )
                   }
                 >

@@ -27,14 +27,14 @@ function RequestCard({ r, box, busy, onAccept, onReject, onWithdraw }) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex flex-wrap items-start gap-3 border-b border-orange-100 bg-orange-50/50 px-5 py-4 dk:border-orange-500/20 dk:bg-orange-500/5 sm:px-6">
+      <div className="flex flex-wrap items-start gap-3 border-b border-teal-100 bg-teal-50/50 px-5 py-4 dk:border-teal-400/20 dk:bg-teal-400/5 sm:px-6">
         <Avatar seed={p.alias} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">{p.alias}</p>
+            <p className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{p.alias}</p>
             <Badge tone={STATUS_TONE[r.status] ?? "slate"}>{incoming ? "wants to be your buddy" : r.status}</Badge>
           </div>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-stone-500 dk:text-[#b9a79c]">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-stone-500 dk:text-[#93aaa3]">
             <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden /> {incoming ? "Sent" : "You sent it"} {timeAgo(r.createdAt)}</span>
             {r.status === "pending" && <span>{daysLeft(r.expiresAt)}</span>}
             {r.status !== "pending" && r.respondedAt && <span>{r.status} {timeAgo(r.respondedAt)}</span>}
@@ -44,21 +44,21 @@ function RequestCard({ r, box, busy, onAccept, onReject, onWithdraw }) {
 
       <div className="space-y-5 p-5 sm:p-6">
         {r.message ? (
-          <blockquote className="flex gap-3 rounded-xl bg-white p-4 text-sm ring-1 ring-orange-200 dk:bg-[#1c1612] dk:ring-orange-500/30">
-            <MessageSquareQuote className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" aria-hidden />
+          <blockquote className="flex gap-3 rounded-xl bg-white p-4 text-sm ring-1 ring-teal-200 dk:bg-[#0f1b19] dk:ring-teal-400/30">
+            <MessageSquareQuote className="mt-0.5 h-5 w-5 shrink-0 text-teal-600" aria-hidden />
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500 dk:text-[#b9a79c]">{incoming ? "Their message" : "Your message"}</p>
-              <p className="mt-1 whitespace-pre-wrap break-words text-[#29201b] dk:text-[#fff7ed]">{r.message}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500 dk:text-[#93aaa3]">{incoming ? "Their message" : "Your message"}</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-[#0c1a17] dk:text-[#e8f2ef]">{r.message}</p>
             </div>
           </blockquote>
         ) : (
-          <p className="text-sm italic text-stone-400 dk:text-[#8f7c70]">{incoming ? "They didn't add a message." : "You didn't add a message."}</p>
+          <p className="text-sm italic text-stone-400 dk:text-[#73897f]">{incoming ? "They didn't add a message." : "You didn't add a message."}</p>
         )}
 
         <MemberDetails m={p} />
 
         {r.status === "pending" && (
-          <div className="flex flex-col gap-3 border-t border-orange-100 pt-5 dk:border-orange-500/20 sm:flex-row">
+          <div className="flex flex-col gap-3 border-t border-teal-100 pt-5 dk:border-teal-400/20 sm:flex-row">
             {incoming ? (
               <>
                 <Button className="flex-1" size="lg" onClick={() => onAccept(r)} loading={busy === r.id}><Check className="h-4 w-4" /> Accept</Button>
@@ -70,7 +70,7 @@ function RequestCard({ r, box, busy, onAccept, onReject, onWithdraw }) {
           </div>
         )}
 
-        {r.status === "accepted" && !incoming && <Link to="../buddy" className="inline-block text-sm font-semibold text-orange-700 dk:text-orange-300">Open chat →</Link>}
+        {r.status === "accepted" && !incoming && <Link to="../buddy" className="inline-block text-sm font-semibold text-teal-800 dk:text-teal-300">Open chat →</Link>}
       </div>
     </Card>
   );
@@ -122,7 +122,7 @@ export default function RequestsPage() {
 
   if (me.profile?.status !== "active") {
     return (
-      <EmptyState icon={Inbox} title="Join the arena to use requests" action={<Link to="../profile" className="rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white">Go to profile</Link>}>
+      <EmptyState icon={Inbox} title="Join the arena to use requests" action={<Link to="../profile" className="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white">Go to profile</Link>}>
         Requests are available once your profile is live in the arena.
       </EmptyState>
     );
@@ -130,10 +130,10 @@ export default function RequestsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="mb-5 inline-flex rounded-xl bg-stone-100 p-1 text-sm font-semibold dk:bg-[#2c211b]" role="tablist">
+      <div className="mb-5 inline-flex rounded-xl bg-stone-100 p-1 text-sm font-semibold dk:bg-[#152522]" role="tablist">
         {[["incoming", "Received", Inbox, me.counts.incoming], ["outgoing", "Sent", Send, 0]].map(([key, label, Icon, count]) => (
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-            className={cx("flex items-center gap-2 rounded-lg px-4 py-2 transition", tab === key ? "bg-white text-[#29201b] shadow-sm dk:bg-[#241b15] dk:text-[#fff7ed]" : "text-stone-500 hover:text-stone-800 dk:text-[#b9a79c]")}>
+            className={cx("flex items-center gap-2 rounded-lg px-4 py-2 transition", tab === key ? "bg-white text-[#0c1a17] shadow-sm dk:bg-[#101c1a] dk:text-[#e8f2ef]" : "text-stone-500 hover:text-stone-800 dk:text-[#93aaa3]")}>
             <Icon className="h-4 w-4" aria-hidden /> {label}
             {count > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">{count}</span>}
           </button>
@@ -144,12 +144,12 @@ export default function RequestsPage() {
         <EmptyState title="Couldn't load your invitations" action={<Button onClick={list.retry}>Try again</Button>}>{error}</EmptyState>
       ) : !items.length ? (
         <EmptyState icon={tab === "incoming" ? Inbox : Send} title={tab === "incoming" ? "No invitations yet" : "You haven't sent any requests"}
-          action={tab === "outgoing" && <Link to="../arena" className="rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white">Browse the arena</Link>}>
+          action={tab === "outgoing" && <Link to="../arena" className="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white">Browse the arena</Link>}>
           {tab === "incoming" ? "When someone wants to be your buddy, you'll see their full profile here and can accept or decline." : "Browse the arena and send a request to someone who fits."}
         </EmptyState>
       ) : (
         <>
-          <p className="mb-4 text-sm text-stone-500 dk:text-[#b9a79c]">Showing {items.length} of {total} {tab === "incoming" ? "invitation" : "request"}{total === 1 ? "" : "s"}</p>
+          <p className="mb-4 text-sm text-stone-500 dk:text-[#93aaa3]">Showing {items.length} of {total} {tab === "incoming" ? "invitation" : "request"}{total === 1 ? "" : "s"}</p>
           <div className="space-y-5">
             {items.map((r) => (
               <RequestCard key={r.id} r={r} box={tab} busy={busy}

@@ -75,3 +75,9 @@ body {
 .animate-blob {
   animation: blob 7s infinite;
 }
+/* App wrapper: stop sideways scroll without creating a scroll container.
+   `clip` keeps position: sticky working inside pages; `hidden` is the fallback for old browsers. */
+.tt-app {
+  overflow-x: hidden;
+  overflow-x: clip;
+}

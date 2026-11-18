@@ -26,7 +26,7 @@ function PasswordBox({ id, value, onChange, invalid, autoComplete, label }) {
         type="button"
         onClick={() => setShow((v) => !v)}
         aria-label={show ? `Hide ${label}` : `Show ${label}`}
-        className="absolute inset-y-0 right-0 grid w-11 place-items-center text-stone-400 hover:text-stone-600 dk:text-[#8f7c70] dk:hover:text-[#d6c4b8]"
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center text-stone-400 hover:text-stone-600 dk:text-[#73897f] dk:hover:text-[#a3b8b2]"
       >
         {show ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
       </button>
@@ -98,10 +98,10 @@ export default function DeleteAccount({ refundsOn = false }) {
 
   return (
     <Card className="border-rose-200 p-6 dk:border-rose-500/25">
-      <h2 className="flex items-center gap-2 text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">
         <Trash2 className="h-5 w-5 text-rose-500" aria-hidden /> Delete my account
       </h2>
-      <p className="mt-2 text-sm text-stone-600 dk:text-[#d6c4b8]">
+      <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">
         Permanently delete your account and everything in Prep Buddy: your profile, requests, matches and chats. You can create a new account later with the same email and mobile number, but nothing here comes back.
       </p>
 
@@ -166,9 +166,9 @@ export default function DeleteAccount({ refundsOn = false }) {
             <span>I understand my account will be deleted permanently and I will <strong>not</strong> get any refund.</span>
           </label>
 
-          <ul aria-label="What is still needed" className="space-y-1 rounded-xl bg-stone-50 px-3.5 py-3 text-xs dk:bg-[#1c1612]">
+          <ul aria-label="What is still needed" className="space-y-1 rounded-xl bg-stone-50 px-3.5 py-3 text-xs dk:bg-[#0f1b19]">
             {checks.map((c) => (
-              <li key={c.label} className={cx("flex items-center gap-2", c.ok ? "text-emerald-700 dk:text-emerald-400" : "text-stone-500 dk:text-[#b9a79c]")}>
+              <li key={c.label} className={cx("flex items-center gap-2", c.ok ? "text-emerald-700 dk:text-emerald-400" : "text-stone-500 dk:text-[#93aaa3]")}>
                 {c.ok ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Circle className="h-3.5 w-3.5" aria-hidden />}
                 <span className={c.ok ? "font-semibold" : ""}>{c.label}</span>
                 <span className="sr-only">{c.ok ? " (done)" : " (still needed)"}</span>

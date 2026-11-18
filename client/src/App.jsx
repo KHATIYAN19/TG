@@ -909,7 +909,7 @@ function App() {
     </ProtectedRoute>
   );
   return (
-    <div className="min-h-screen w-full overflow-x-hidden font-inter">
+    <div className="tt-app min-h-screen w-full font-inter">
       <Toaster />
       <Analytics />
       {!hideNavbar && <Navbar />}
@@ -1044,6 +1044,11 @@ function App() {
           />
           <Route
             path="/interview/:slug"
+            element={<InterviewDetailPage />}
+          />
+          {/* Alias: same page, canonical stays /interview/:slug */}
+          <Route
+            path="/interviews/:slug"
             element={<InterviewDetailPage />}
           />
           {/* ========================================

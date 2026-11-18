@@ -3,6 +3,8 @@ import { trackInitiateCheckout } from "../lib/metaPixel";
 import { getAttribution } from "../lib/attribution";
 import { runCheckout } from "./checkoutRunner";
 import { preferredGateway, gatewayLabel } from "./gatewayConfig";
+import { usePayFonts } from "./payShared";
+import "./payment.css";
 import React, {
   useCallback,
   useEffect,
@@ -126,102 +128,6 @@ const validateField = (name, rawValue) => {
 const FIELD_ORDER = ["firstname", "email", "phone"];
 
 /* =====================================================
-   THEME TOKENS (light / dark share one structure)
-===================================================== */
-
-const getTokens = (isDark) =>
-  isDark
-    ? {
-        panel: "border-slate-700/80 bg-slate-900 text-slate-100",
-        header: "border-slate-800",
-        aside: "border-slate-800 bg-slate-950/60",
-        footer: "border-slate-800 bg-slate-900",
-        title: "text-white",
-        text: "text-slate-200",
-        muted: "text-slate-400",
-        faint: "text-slate-500",
-        label: "text-slate-300",
-        divider: "border-slate-800",
-        dashed: "border-slate-700",
-        accent: "text-orange-400",
-        chip: "bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-400/25",
-        close:
-          "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white",
-        input: "bg-slate-950 text-slate-100 placeholder:text-slate-600",
-        inputOk:
-          "border-slate-700 hover:border-slate-600 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/15",
-        inputErr:
-          "border-red-500 focus:border-red-400 focus:ring-4 focus:ring-red-500/15",
-        icon: "text-slate-500",
-        card: "border-slate-800 bg-slate-900/70",
-        success: "text-emerald-400",
-        successBox: "border-emerald-500/30 bg-emerald-500/10",
-        successText: "text-emerald-300",
-        errBox: "border-red-500/30 bg-red-500/10 text-red-300",
-        errText: "text-red-400",
-        offer: "border-amber-500/40 bg-amber-500/10",
-        offerCode: "bg-amber-500/20 text-amber-200",
-        offerHead: "text-amber-300",
-        ghostBtn:
-          "border-slate-700 text-slate-300 hover:bg-slate-800",
-        applyBtn:
-          "bg-orange-500 text-white hover:bg-orange-400 disabled:bg-slate-800 disabled:text-slate-600",
-        backdrop: "bg-black/70",
-      }
-    : {
-        panel: "border-orange-100 bg-white text-slate-900",
-        header: "border-orange-100 bg-gradient-to-r from-orange-50 via-white to-white",
-        aside: "border-orange-100 bg-orange-50/40",
-        footer: "border-orange-100 bg-white",
-        title: "text-slate-950",
-        text: "text-slate-800",
-        muted: "text-slate-500",
-        faint: "text-slate-400",
-        label: "text-slate-700",
-        divider: "border-orange-100",
-        dashed: "border-orange-200",
-        accent: "text-orange-600",
-        chip: "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200",
-        close:
-          "bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-800",
-        input: "bg-white text-slate-900 placeholder:text-slate-400",
-        inputOk:
-          "border-orange-100 hover:border-orange-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100",
-        inputErr:
-          "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100",
-        icon: "text-slate-400",
-        card: "border-orange-100 bg-white shadow-sm shadow-orange-100/60",
-        success: "text-green-600",
-        successBox: "border-green-200 bg-green-50",
-        successText: "text-green-800",
-        errBox: "border-red-200 bg-red-50 text-red-700",
-        errText: "text-red-600",
-        offer: "border-amber-300 bg-amber-50",
-        offerCode: "bg-amber-500 text-white",
-        offerHead: "text-amber-700",
-        ghostBtn: "border-orange-200 text-orange-700 hover:bg-orange-50",
-        applyBtn:
-          "bg-orange-500 text-white hover:bg-orange-600 disabled:bg-orange-200",
-        backdrop: "bg-orange-950/35",
-      };
-
-/* =====================================================
-   ANIMATIONS (respect reduced motion)
-===================================================== */
-
-const MODAL_CSS = `
-@keyframes ttCheckoutFade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes ttCheckoutSheet { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-@keyframes ttCheckoutPop { from { transform: translateY(14px) scale(.97); opacity: 0 } to { transform: translateY(0) scale(1); opacity: 1 } }
-.tt-co-backdrop { animation: ttCheckoutFade .2s ease-out both }
-.tt-co-panel { animation: ttCheckoutSheet .28s cubic-bezier(.2,.8,.2,1) both }
-@media (min-width: 640px) { .tt-co-panel { animation-name: ttCheckoutPop } }
-@media (prefers-reduced-motion: reduce) {
-  .tt-co-backdrop, .tt-co-panel { animation: none }
-}
-`;
-
-/* =====================================================
    TEXT FIELD (module-level so it never remounts
    while the user is typing)
 ===================================================== */
@@ -231,7 +137,6 @@ function Field({
   label,
   Icon,
   error,
-  t,
   prefix,
   counter,
   children,
@@ -241,58 +146,31 @@ function Field({
 
   return (
     <div>
-      <label
-        htmlFor={id}
-        className={`mb-1.5 block text-sm font-bold ${t.label}`}
-      >
+      <label htmlFor={id} className="tp-field-label">
         {label}
       </label>
 
-      <div className="relative">
-        <Icon
-          size={18}
-          aria-hidden="true"
-          className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 ${
-            error ? "text-red-400" : t.icon
-          }`}
-        />
+      <div className={`tp-input-wrap${error ? " is-bad" : ""}`}>
+        <Icon size={18} aria-hidden="true" className="tp-lead-icon" />
 
-        {prefix && (
-          <span
-            className={`pointer-events-none absolute left-11 top-1/2 -translate-y-1/2 text-base font-semibold sm:text-sm ${t.muted}`}
-          >
-            {prefix}
-          </span>
-        )}
+        {prefix && <span className="tp-prefix">{prefix}</span>}
 
         <input
           id={id}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={describedBy}
-          className={`w-full rounded-xl border py-3 pr-4 text-base outline-none transition sm:text-sm ${
-            prefix ? "pl-[4.5rem]" : "pl-11"
-          } ${t.input} ${
-            error ? t.inputErr : t.inputOk
-          } disabled:cursor-not-allowed disabled:opacity-60`}
+          className={`tp-input${prefix ? " has-prefix" : ""}${
+            error ? " is-bad" : ""
+          }`}
           {...inputProps}
         />
 
-        {counter && (
-          <span
-            className={`pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold ${t.faint}`}
-          >
-            {counter}
-          </span>
-        )}
+        {counter && <span className="tp-count">{counter}</span>}
       </div>
 
       {error && (
-        <p
-          id={`${id}-error`}
-          role="alert"
-          className={`mt-1.5 flex items-start gap-1 text-xs font-medium ${t.errText}`}
-        >
-          <AlertCircle size={13} className="mt-px shrink-0" />
+        <p id={`${id}-error`} role="alert" className="tp-field-error">
+          <AlertCircle size={14} />
           {error}
         </p>
       )}
@@ -310,6 +188,8 @@ export default function PayUCheckoutModal({
   onClose,
   product,
 }) {
+  usePayFonts();
+
   const [theme, setTheme] = useState(getStoredTheme);
 
   const [formData, setFormData] = useState({
@@ -338,7 +218,6 @@ export default function PayUCheckoutModal({
   const isOpenRef = useRef(isOpen);
 
   const isDark = theme === "dark";
-  const t = useMemo(() => getTokens(isDark), [isDark]);
 
   const originalAmount = Number(product?.price || 0);
   const mrp = Number(product?.mrp || 0);
@@ -1003,6 +882,7 @@ const handlePayment = async (event) => {
   }
 };
 
+
   if (!isOpen) {
     return null;
   }
@@ -1019,64 +899,46 @@ const handlePayment = async (event) => {
       : 0;
 
   const priceSummary = (
-    <div className={`rounded-2xl border p-4 ${t.card}`}>
-      <p
-        className={`mb-3 text-[11px] font-black uppercase tracking-widest ${t.faint}`}
-      >
-        Order summary
-      </p>
+    <div className="tp-summary">
+      <h3>Order summary</h3>
 
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className={t.muted}>Item price</span>
-
-        <span className={`font-bold ${t.text}`}>
-          {formatMoney(originalAmount)}
-        </span>
+      <div className="tp-sum-row">
+        <span className="tp-muted">Item price</span>
+        <strong>{formatMoney(originalAmount)}</strong>
       </div>
 
       {savingOnMrp > 0 && (
-        <div className="mt-2 flex items-center justify-between gap-3 text-xs">
-          <span className={t.muted}>
+        <div className="tp-sum-row small">
+          <span className="tp-muted">
             MRP <s>{formatMoney(mrp)}</s>
           </span>
-
-          <span className={`font-bold ${t.success}`}>
-            You save {formatMoney(savingOnMrp)}
-          </span>
+          <span className="ok">You save {formatMoney(savingOnMrp)}</span>
         </div>
       )}
 
       {appliedCoupon && (
-        <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-          <span
-            className={`flex min-w-0 items-center gap-1.5 font-semibold ${t.success}`}
-          >
-            <Percent size={14} className="shrink-0" />
-            <span className="truncate">Coupon {appliedCoupon.couponCode}</span>
+        <div className="tp-sum-row">
+          <span className="ok" style={{ display: "flex", gap: 6, alignItems: "center", minWidth: 0 }}>
+            <Percent size={14} style={{ flex: "none" }} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Coupon {appliedCoupon.couponCode}
+            </span>
           </span>
-
-          <span className={`shrink-0 font-bold ${t.success}`}>
-            &minus;{formatMoney(discountAmount)}
-          </span>
+          <span className="ok">&minus;{formatMoney(discountAmount)}</span>
         </div>
       )}
 
-      <div className={`my-3 border-t border-dashed ${t.dashed}`} />
+      <hr className="tp-sum-sep" />
 
-      <div className="flex items-center justify-between gap-3">
-        <span className={`text-sm font-black ${t.title}`}>Total payable</span>
-
-        <span className={`text-2xl font-black ${t.accent}`}>
-          {formatMoney(finalAmount)}
-        </span>
+      <div className="tp-sum-total">
+        <b>Total payable</b>
+        <strong>{formatMoney(finalAmount)}</strong>
       </div>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center sm:items-center sm:p-4 lg:p-6">
-      <style>{MODAL_CSS}</style>
-
+    <div className="tp tp-overlay" data-theme={isDark ? "dark" : "light"}>
       {/* BACKDROP */}
       <button
         type="button"
@@ -1084,7 +946,7 @@ const handlePayment = async (event) => {
         aria-label="Close checkout"
         disabled={busy}
         onClick={requestClose}
-        className={`tt-co-backdrop absolute inset-0 cursor-default backdrop-blur-sm ${t.backdrop}`}
+        className="tp-backdrop"
       />
 
       {/* DIALOG */}
@@ -1095,54 +957,38 @@ const handlePayment = async (event) => {
         aria-labelledby="checkout-title"
         aria-busy={busy}
         tabIndex={-1}
-        className={`tt-co-panel relative z-10 flex max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border shadow-2xl outline-none sm:max-h-[92vh] sm:rounded-3xl lg:max-w-4xl ${t.panel}`}
+        className="tp-dialog"
       >
         {/* HEADER */}
-        <div className={`shrink-0 border-b px-4 pb-3.5 pt-2.5 sm:px-6 sm:py-4 ${t.header}`}>
-          <div
-            aria-hidden="true"
-            className={`mx-auto mb-2.5 h-1 w-10 rounded-full sm:hidden ${
-              isDark ? "bg-slate-700" : "bg-slate-300"
-            }`}
-          />
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <span
-                className={`mb-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${t.chip}`}
-              >
-                <ShieldCheck size={13} className="shrink-0" />
-                Secure checkout
-              </span>
-
-              <h2
-                id="checkout-title"
-                className={`text-lg font-black leading-tight sm:text-2xl ${t.title}`}
-              >
-                Complete your purchase
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              aria-label="Close checkout"
-              disabled={busy}
-              onClick={requestClose}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${t.close}`}
-            >
-              <X size={19} />
-            </button>
+        <div className="tp-dialog-head" style={{ flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+            <span className="tp-grab" aria-hidden="true" />
+            <span className="tp-eyebrow">
+              <ShieldCheck size={14} />
+              Secure checkout
+            </span>
+            <h2 id="checkout-title" className="tp-h tp-dialog-title" style={{ marginTop: 4 }}>
+              Complete your <span className="tp-mark">purchase</span>
+            </h2>
           </div>
+
+          <button
+            type="button"
+            aria-label="Close checkout"
+            disabled={busy}
+            onClick={requestClose}
+            className="tp-close"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* SCROLLING BODY */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div className="lg:grid lg:grid-cols-[5fr_7fr]">
+        <div className="tp-dialog-scroll">
+          <div className="tp-dialog-grid">
             {/* ORDER (left on desktop, top on mobile) */}
-            <aside
-              className={`border-b px-4 py-4 sm:px-6 lg:border-b-0 lg:border-r lg:py-6 ${t.aside}`}
-            >
-              <div className="flex items-center gap-3.5">
+            <aside className="tp-aside">
+              <div className="tp-product">
                 {product?.coverPageUrl ? (
                   <img
                     src={product.coverPageUrl}
@@ -1151,23 +997,19 @@ const handlePayment = async (event) => {
                     onError={(event) => {
                       event.currentTarget.style.display = "none";
                     }}
-                    className={`h-20 w-14 shrink-0 rounded-lg border object-cover shadow-sm sm:h-24 sm:w-[68px] ${
-                      isDark ? "border-slate-700" : "border-slate-200"
-                    }`}
+                    className="tp-cover"
                   />
                 ) : null}
 
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={`line-clamp-3 text-sm font-bold leading-snug sm:text-base ${t.title}`}
-                  >
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p className="tp-product-title" style={{ margin: 0 }}>
                     {product?.title || "Target Trek Ebook"}
                   </p>
 
                   {product?.offer?.titles?.length > 0 && (
-                    <ul className={`mt-1 space-y-0.5 text-[11px] leading-snug ${t.faint}`}>
+                    <ul className="tp-product-list">
                       {product.offer.titles.slice(0, 6).map((title, i) => (
-                        <li key={i} className="line-clamp-1">• {title}</li>
+                        <li key={i}>• {title}</li>
                       ))}
                       {product.offer.titles.length > 6 && (
                         <li>+ {product.offer.titles.length - 6} more</li>
@@ -1175,91 +1017,55 @@ const handlePayment = async (event) => {
                     </ul>
                   )}
 
-                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className={`text-xl font-black ${t.accent}`}>
-                      {formatMoney(finalAmount)}
-                    </span>
+                  <div className="tp-price-row">
+                    <span className="tp-price">{formatMoney(finalAmount)}</span>
 
                     {(appliedCoupon || savingOnMrp > 0) && (
-                      <span className={`text-xs line-through ${t.faint}`}>
+                      <span className="tp-strike">
                         {formatMoney(appliedCoupon ? originalAmount : mrp)}
                       </span>
                     )}
 
                     {!appliedCoupon && discountPercent > 0 && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                          isDark
-                            ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {discountPercent}% OFF
-                      </span>
+                      <span className="tp-off">{discountPercent}% OFF</span>
                     )}
 
-                    {appliedCoupon && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                          isDark
-                            ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        Coupon applied
-                      </span>
-                    )}
+                    {appliedCoupon && <span className="tp-off">Coupon applied</span>}
                   </div>
-
                 </div>
               </div>
 
               {/* Prep Arena credits that come with this book (hidden when 0) */}
               {Number(product?.matches) > 0 && (
-                <div
-                  className={`mt-3 flex items-start gap-3 rounded-xl border p-3 ${
-                    isDark
-                      ? "border-orange-400/30 bg-orange-500/10"
-                      : "border-orange-200 bg-orange-50"
-                  }`}
-                >
-                  <span
-                    className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
-                      isDark ? "bg-orange-500/20 text-orange-300" : "bg-orange-100 text-orange-600"
-                    }`}
-                    aria-hidden="true"
-                  >
+                <div className="tp-credit">
+                  <span className="tp-ico" aria-hidden="true" style={{ width: 34, height: 34 }}>
                     <Swords size={16} />
                   </span>
-                  <div className="min-w-0">
-                    <p className={`text-[13px] font-extrabold leading-snug sm:text-sm ${isDark ? "text-orange-200" : "text-orange-800"}`}>
-                      Includes {product.matches} Prep Arena {Number(product.matches) === 1 ? "credit" : "credits"}
-                    </p>
-                    <p className={`mt-0.5 text-[11px] leading-snug sm:text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  <div style={{ minWidth: 0 }}>
+                    <b>
+                      Includes {product.matches} Prep Arena{" "}
+                      {Number(product.matches) === 1 ? "credit" : "credits"}
+                    </b>
+                    <span>
                       1 credit = 1 match = 1 buddy partnership. Added when you sign up on Prep Arena with this email.
-                    </p>
+                    </span>
                   </div>
                 </div>
               )}
 
               {/* desktop-only: breakdown + reassurance */}
-              <div className="mt-5 hidden space-y-4 lg:block">
+              <div className="tp-aside-extra">
                 {priceSummary}
 
-                <ul className={`space-y-3 text-sm ${t.muted}`}>
+                <ul className="tp-trust">
                   {[
                     [Zap, "Instant access right after payment"],
-                    [
-                      ShieldCheck,
-                      `Secure payment via ${PAYMENT_PROVIDER_NAME}`,
-                    ],
+                    [ShieldCheck, `Secure payment via ${PAYMENT_PROVIDER_NAME}`],
                     [Headphones, "Help at supporttargettrek@gmail.com"],
                   ].map(([Icon, text]) => (
-                    <li key={text} className="flex items-center gap-2.5">
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${t.chip}`}
-                      >
-                        <Icon size={14} />
+                    <li key={text}>
+                      <span className="tp-ico">
+                        <Icon size={15} />
                       </span>
                       {text}
                     </li>
@@ -1269,24 +1075,16 @@ const handlePayment = async (event) => {
             </aside>
 
             {/* FORM */}
-            <form
-              id="checkout-form"
-              noValidate
-              onSubmit={handlePayment}
-              className="space-y-4 px-4 py-5 sm:px-6 lg:py-6"
-            >
-              <p className={`text-sm ${t.muted}`}>
+            <form id="checkout-form" noValidate onSubmit={handlePayment} className="tp-form">
+              <p className="tp-lead">
                 Enter your details to continue to{" "}
-                <span className={`font-semibold ${t.text}`}>
-                  {PAYMENT_PROVIDER_NAME}
-                </span>
+                <strong>{PAYMENT_PROVIDER_NAME}</strong>
               </p>
 
               <Field
                 id="checkout-name"
                 label="Full name"
                 Icon={User}
-                t={t}
                 type="text"
                 name="firstname"
                 autoComplete="name"
@@ -1304,7 +1102,6 @@ const handlePayment = async (event) => {
                 id="checkout-email"
                 label="Email address"
                 Icon={Mail}
-                t={t}
                 type="email"
                 name="email"
                 autoComplete="email"
@@ -1321,11 +1118,7 @@ const handlePayment = async (event) => {
                 error={errors.email}
               >
                 {emailSuggestion && !errors.email && (
-                  <button
-                    type="button"
-                    onClick={applyEmailSuggestion}
-                    className={`mt-1.5 text-left text-xs font-semibold ${t.accent} underline-offset-2 hover:underline`}
-                  >
+                  <button type="button" onClick={applyEmailSuggestion} className="tp-suggest">
                     Did you mean {emailSuggestion}?
                   </button>
                 )}
@@ -1335,11 +1128,8 @@ const handlePayment = async (event) => {
                 id="checkout-phone"
                 label="Mobile number"
                 Icon={Phone}
-                t={t}
                 prefix="+91"
-                counter={
-                  formData.phone ? `${formData.phone.length}/10` : undefined
-                }
+                counter={formData.phone ? `${formData.phone.length}/10` : undefined}
                 type="tel"
                 name="phone"
                 autoComplete="tel-national"
@@ -1354,113 +1144,89 @@ const handlePayment = async (event) => {
                 error={errors.phone}
               />
 
+              <p className="tp-lead" style={{ fontSize: 12.5, marginTop: -6 }}>
+                Your books unlock on the next page right after payment, ready to download.
+              </p>
+
               {/* COUPONS (not combinable with a multi-book offer) */}
               {product?.offer ? (
-                <div className={`border-t pt-4 text-xs font-semibold ${t.divider} ${t.faint}`}>
+                <div className="tp-note">
                   Offer price applied for {product.offer.bookIds.length} books. Coupons can't be combined with this offer.
                 </div>
               ) : (
-              <div className={`border-t pt-4 ${t.divider}`}>
-                {!appliedCoupon && availableCoupons.length > 0 && (
-                  <div className="mb-4">
-                    <p
-                      className={`mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-wider ${t.offerHead}`}
-                    >
-                      <Percent size={13} />
-                      Available offers
-                    </p>
+                <div className="tp-coupon-zone">
+                  {!appliedCoupon && availableCoupons.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p className="tp-offers-head">
+                        <Percent size={14} />
+                        Available offers
+                      </p>
 
-                    <div className="space-y-2">
-                      {offersToShow.map((offer, index) => (
-                        <div
-                          key={offer.code}
-                          className={`flex items-center justify-between gap-3 rounded-xl border border-dashed p-3 ${t.offer}`}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
-                                className={`rounded-md px-2 py-0.5 font-mono text-xs font-black tracking-wide ${t.offerCode}`}
-                              >
-                                {offer.code}
-                              </span>
+                      <div>
+                        {offersToShow.map((offer, index) => (
+                          <div key={offer.code} className="tp-offer">
+                            <div style={{ minWidth: 0 }}>
+                              <div>
+                                <span className="tp-offer-code">{offer.code}</span>
+                                {index === 0 && availableCoupons.length > 1 && (
+                                  <span className="tp-offer-best">Best saving</span>
+                                )}
+                              </div>
 
-                              {index === 0 && availableCoupons.length > 1 && (
-                                <span
-                                  className={`text-[10px] font-black uppercase tracking-wide ${t.success}`}
-                                >
-                                  Best saving
-                                </span>
-                              )}
+                              <p>
+                                Save {formatMoney(offer.discountAmount)}{" "}
+                                <small>&middot; pay {formatMoney(offer.finalAmount)}</small>
+                              </p>
+
+                              <p className="tp-offer-desc">{offer.description || offer.name}</p>
                             </div>
 
-                            <p className={`mt-1 text-sm font-bold ${t.title}`}>
-                              Save {formatMoney(offer.discountAmount)}{" "}
-                              <span className={`font-medium ${t.muted}`}>
-                                &middot; pay {formatMoney(offer.finalAmount)}
-                              </span>
-                            </p>
-
-                            <p className={`mt-0.5 truncate text-xs ${t.muted}`}>
-                              {offer.description || offer.name}
-                            </p>
+                            <button
+                              type="button"
+                              disabled={couponLoading || busy}
+                              onClick={() => {
+                                setShowCouponInput(true);
+                                setCouponCode(offer.code);
+                                handleApplyCoupon(offer.code);
+                              }}
+                              className="tp-btn tp-btn-primary tp-btn-sm"
+                              style={{ flex: "none" }}
+                            >
+                              {couponLoading ? "..." : "Apply"}
+                            </button>
                           </div>
+                        ))}
+                      </div>
 
-                          <button
-                            type="button"
-                            disabled={couponLoading || busy}
-                            onClick={() => {
-                              setShowCouponInput(true);
-                              setCouponCode(offer.code);
-                              handleApplyCoupon(offer.code);
+                      {availableCoupons.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllOffers((value) => !value)}
+                          className="tp-link-btn"
+                          style={{ marginTop: 4, color: "var(--tp-warn)" }}
+                        >
+                          {showAllOffers
+                            ? "Show fewer offers"
+                            : `Show ${availableCoupons.length - 2} more`}
+                          <ChevronDown
+                            size={15}
+                            style={{
+                              transition: "transform .2s",
+                              transform: showAllOffers ? "rotate(180deg)" : "none",
                             }}
-                            className="min-h-[40px] shrink-0 rounded-lg bg-orange-500 px-4 text-xs font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {couponLoading ? "..." : "Apply"}
-                          </button>
-                        </div>
-                      ))}
+                          />
+                        </button>
+                      )}
                     </div>
+                  )}
 
-                    {availableCoupons.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAllOffers((value) => !value)}
-                        className={`mt-2 inline-flex items-center gap-1 text-xs font-bold ${t.offerHead}`}
-                      >
-                        {showAllOffers
-                          ? "Show fewer offers"
-                          : `Show ${availableCoupons.length - 2} more`}
-                        <ChevronDown
-                          size={14}
-                          className={`transition ${
-                            showAllOffers ? "rotate-180" : ""
-                          }`}
-                        />
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {appliedCoupon ? (
-                  <div className={`rounded-xl border p-3.5 ${t.successBox}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 gap-2.5">
-                        <CheckCircle2
-                          size={20}
-                          className={`mt-0.5 shrink-0 ${t.success}`}
-                        />
-
-                        <div className="min-w-0">
-                          <p
-                            className={`break-all text-sm font-black ${t.successText}`}
-                          >
-                            {appliedCoupon.couponCode}{" "}
-                            <span className="font-semibold">applied</span>
-                          </p>
-
-                          <p className={`mt-0.5 text-xs ${t.successText}`}>
-                            You save {formatMoney(discountAmount)} on this order
-                          </p>
+                  {appliedCoupon ? (
+                    <div className="tp-applied">
+                      <div style={{ display: "flex", gap: 10, minWidth: 0 }}>
+                        <CheckCircle2 size={21} style={{ flex: "none", marginTop: 1 }} />
+                        <div style={{ minWidth: 0 }}>
+                          <b>{appliedCoupon.couponCode} applied</b>
+                          <span>You save {formatMoney(discountAmount)} on this order</span>
                         </div>
                       </div>
 
@@ -1468,122 +1234,95 @@ const handlePayment = async (event) => {
                         type="button"
                         disabled={busy}
                         onClick={handleRemoveCoupon}
-                        className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${t.ghostBtn}`}
+                        className="tp-btn tp-btn-ghost tp-btn-sm"
+                        style={{ flex: "none" }}
                       >
                         Remove
                       </button>
                     </div>
-                  </div>
-                ) : !showCouponInput && !couponError ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      setShowCouponInput(true);
-                      setCouponError("");
-                    }}
-                    className={`inline-flex min-h-[40px] items-center gap-1.5 text-sm font-bold transition disabled:opacity-60 ${t.accent}`}
-                  >
-                    <Tag size={15} />
-                    Have a coupon code?
-                  </button>
-                ) : (
-                  <div>
-                    <label
-                      htmlFor="coupon-code"
-                      className={`mb-1.5 block text-sm font-bold ${t.label}`}
+                  ) : !showCouponInput && !couponError ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setShowCouponInput(true);
+                        setCouponError("");
+                      }}
+                      className="tp-link-btn"
                     >
-                      Coupon code
-                    </label>
+                      <Tag size={16} />
+                      Have a coupon code?
+                    </button>
+                  ) : (
+                    <div>
+                      <label htmlFor="coupon-code" className="tp-field-label">
+                        Coupon code
+                      </label>
 
-                    <div className="flex gap-2">
-                      <div className="relative min-w-0 flex-1">
-                        <Tag
-                          size={17}
-                          aria-hidden="true"
-                          className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 ${
-                            couponError ? "text-red-400" : t.icon
-                          }`}
-                        />
+                      <div className="tp-coupon-row">
+                        <div className={`tp-input-wrap${couponError ? " is-bad" : ""}`}>
+                          <Tag size={17} aria-hidden="true" className="tp-lead-icon" />
 
-                        <input
-                          id="coupon-code"
-                          type="text"
-                          autoCapitalize="characters"
-                          autoCorrect="off"
-                          spellCheck={false}
-                          enterKeyHint="go"
-                          value={couponCode}
-                          onChange={handleCouponChange}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              // Never submit the payment form from here.
-                              event.preventDefault();
+                          <input
+                            id="coupon-code"
+                            type="text"
+                            autoCapitalize="characters"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            enterKeyHint="go"
+                            value={couponCode}
+                            onChange={handleCouponChange}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                // Never submit the payment form from here.
+                                event.preventDefault();
 
-                              if (couponCode.trim() && !couponLoading) {
-                                handleApplyCoupon();
+                                if (couponCode.trim() && !couponLoading) {
+                                  handleApplyCoupon();
+                                }
                               }
-                            }
-                          }}
-                          disabled={busy || couponLoading}
-                          aria-invalid={couponError ? "true" : "false"}
-                          aria-describedby={
-                            couponError ? "coupon-error" : undefined
-                          }
-                          placeholder="Enter coupon code"
-                          className={`w-full min-w-0 rounded-xl border py-3 pl-10 pr-3 text-base font-bold uppercase tracking-wide outline-none transition placeholder:font-normal placeholder:normal-case placeholder:tracking-normal sm:text-sm ${
-                            t.input
-                          } ${
-                            couponError ? t.inputErr : t.inputOk
-                          } disabled:cursor-not-allowed disabled:opacity-60`}
-                        />
+                            }}
+                            disabled={busy || couponLoading}
+                            aria-invalid={couponError ? "true" : "false"}
+                            aria-describedby={couponError ? "coupon-error" : undefined}
+                            placeholder="Enter coupon code"
+                            className={`tp-input coupon${couponError ? " is-bad" : ""}`}
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={!couponCode.trim() || couponLoading || busy}
+                          onClick={() => handleApplyCoupon()}
+                          className="tp-btn tp-btn-primary"
+                          style={{ minWidth: 92, flex: "none", minHeight: 52 }}
+                        >
+                          {couponLoading ? <Loader2 size={18} className="tp-spin" /> : "Apply"}
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        disabled={!couponCode.trim() || couponLoading || busy}
-                        onClick={() => handleApplyCoupon()}
-                        className={`min-h-[46px] min-w-[84px] shrink-0 rounded-xl px-4 text-sm font-bold transition disabled:cursor-not-allowed ${t.applyBtn}`}
-                      >
-                        {couponLoading ? (
-                          <Loader2 size={17} className="mx-auto animate-spin" />
-                        ) : (
-                          "Apply"
-                        )}
-                      </button>
+                      {couponError && (
+                        <p id="coupon-error" role="alert" className="tp-alert tp-alert-bad" style={{ marginTop: 10 }}>
+                          <AlertCircle size={15} />
+                          {couponError}
+                        </p>
+                      )}
                     </div>
-
-                    {couponError && (
-                      <p
-                        id="coupon-error"
-                        role="alert"
-                        className={`mt-2 flex items-start gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold ${t.errBox}`}
-                      >
-                        <AlertCircle size={14} className="mt-px shrink-0" />
-                        {couponError}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
               )}
 
               {/* mobile / tablet: breakdown sits under the form */}
-              <div className="lg:hidden">{priceSummary}</div>
+              <div className="tp-summary-mobile">{priceSummary}</div>
             </form>
           </div>
         </div>
 
         {/* FOOTER: always visible, safe-area aware */}
-        <div
-          className={`shrink-0 border-t px-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-3.5 sm:px-6 sm:pb-5 ${t.footer}`}
-        >
+        <div className="tp-dialog-foot">
           {serverError && (
-            <div
-              role="alert"
-              className={`mb-3 flex items-start gap-2 rounded-xl border px-3.5 py-3 text-sm font-medium ${t.errBox}`}
-            >
-              <AlertCircle size={17} className="mt-px shrink-0" />
+            <div role="alert" className="tp-alert tp-alert-bad">
+              <AlertCircle size={17} />
               <span>{serverError}</span>
             </div>
           )}
@@ -1592,30 +1331,27 @@ const handlePayment = async (event) => {
             type="submit"
             form="checkout-form"
             disabled={busy || !product?._id}
-            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-base font-black text-white shadow-lg shadow-orange-400/30 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+            className="tp-btn tp-btn-primary tp-btn-block tp-pay-btn"
           >
             {busy ? (
               <>
-                <Loader2 size={19} className="animate-spin" />
+                <Loader2 size={20} className="tp-spin" />
                 Connecting to {PAYMENT_PROVIDER_NAME}...
               </>
             ) : (
               <>
-                <CreditCard size={19} />
+                <CreditCard size={20} />
                 Pay {formatMoney(finalAmount)} securely
               </>
             )}
           </button>
 
-          <p
-            className={`mt-2.5 flex items-center justify-center gap-1.5 text-center text-[11px] sm:text-xs ${t.faint}`}
-          >
-            <LockKeyhole size={13} className="shrink-0" />
+          <p className="tp-safe">
+            <LockKeyhole size={13} style={{ flex: "none" }} />
             <span>
-              Payments are encrypted and processed by{" "}
-              <strong>{PAYMENT_PROVIDER_NAME}</strong>
+              Encrypted and processed by <strong>{PAYMENT_PROVIDER_NAME}</strong>
             </span>
-            <BadgeCheck size={13} className="hidden shrink-0 sm:block" />
+            <BadgeCheck size={13} style={{ flex: "none" }} />
           </p>
         </div>
       </div>

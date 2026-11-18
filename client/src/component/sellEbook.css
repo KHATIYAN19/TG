@@ -1,0 +1,47 @@
+/*
+  HOW TO SELL EBOOKS (/others/book/how-to-sell-ebook), on top of BookPage.css + genaiBook.css + javaBook.css.
+  The site navbar is hidden on this route, so the page has no top offset and its own slim top bar.
+*/
+.hb.sx { padding-top: 0; }
+
+/* ---------- top bar ---------- */
+.sx-top { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.sx-top-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; }
+.sx-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-size: 18px; letter-spacing: -0.02em; }
+.sx-brand img { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; }
+.sx-top-r { display: flex; align-items: center; gap: 6px; }
+.sx-top-link { padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--muted); }
+.sx-top-link:hover { color: var(--brand); }
+.sx-theme { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); transition: border-color 0.2s, color 0.2s; }
+.sx-theme:hover { border-color: var(--brand); color: var(--brand); }
+.sx .hb-hero .hb-crumbs { padding-top: 20px; }
+@media (max-width: 379px) { .sx-top-link { display: none; } }
+
+/* ---------- intro video ---------- */
+.sx-video { margin: 0 auto; max-width: 960px; }
+.sx-video-frame { position: relative; display: grid; place-items: center; min-height: 200px; border-radius: 22px; overflow: hidden; background: var(--panel); border: 1px solid var(--border-strong); box-shadow: var(--shadow); }
+.sx-video video, .sx-video img { display: block; width: 100%; height: auto; max-height: 78vh; background: #000; }
+.sx-video img { width: auto; max-width: 100%; margin: 0 auto; }
+.sx-sound { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 9px 16px; border-radius: 999px; border: 0; background: var(--mark); color: var(--mark-ink); font-size: 14px; font-weight: 800; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); white-space: nowrap; }
+@media (max-width: 559px) { .sx-video-frame { border-radius: 16px; } .sx-sound { bottom: 56px; font-size: 13px; padding: 8px 14px; } }
+
+/* ---------- calculator ---------- */
+.sx-calc-wrap { display: grid; gap: 14px; justify-items: start; }
+.sx-calc { width: 100%; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .sx-calc { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 20px; } }
+.sx-calc-in { display: grid; gap: 22px; padding: 22px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); }
+.sx-range { display: grid; gap: 10px; }
+.sx-range > span { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 15px; }
+.sx-range output { font-size: 17px; font-weight: 600; color: var(--brand); }
+.sx-range input { width: 100%; accent-color: var(--brand); cursor: pointer; min-height: 28px; }
+.sx-calc-out { display: grid; gap: 14px; align-content: start; padding: 22px; border-radius: 20px; background: var(--panel); color: var(--panel-text); background-image: radial-gradient(ellipse 70% 90% at 100% 0%, rgba(45, 212, 191, 0.2), transparent 65%); }
+.sx-calc-out dl { display: grid; gap: 0; margin: 0; }
+.sx-calc-out dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(236, 246, 243, 0.12); }
+.sx-calc-out dt { font-size: 14px; color: var(--panel-muted); }
+.sx-calc-out dd { margin: 0; font-size: 18px; font-weight: 600; }
+.sx-calc-out .is-net { border-bottom: 0; }
+.sx-calc-out .is-net dt { color: var(--panel-text); font-weight: 700; }
+.sx-calc-out .is-net dd { font-size: clamp(30px, 4vw, 40px); letter-spacing: -0.03em; color: #5eead4; }
+.sx-calc-note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: rgba(253, 230, 138, 0.12); border: 1px solid rgba(253, 230, 138, 0.3); font-size: 13.5px; line-height: 1.55; color: #fde68a; }
+.sx-calc-note svg { flex: 0 0 auto; margin-top: 2px; }
+@media (max-width: 559px) { .sx-calc-in, .sx-calc-out { padding: 16px; border-radius: 16px; } }

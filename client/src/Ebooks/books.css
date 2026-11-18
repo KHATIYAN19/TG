@@ -291,7 +291,10 @@
   transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 .bx-search.is-large { height: 62px; padding: 0 8px 0 18px; border-radius: 16px; box-shadow: var(--shadow); }
-.bx-search:focus-within { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+/* No focus highlight on the search box: keep its resting border and shadow. */
+.bx-search:focus-within { border-color: var(--border-strong); }
+.bx-search:not(.is-large):focus-within { box-shadow: none; }
+.bx-search input:focus, .bx-search input:focus-visible { outline: none; box-shadow: none; }
 .bx-search-icon { flex-shrink: 0; color: var(--subtle); transition: color 0.25s var(--ease), transform 0.4s var(--ease); }
 .bx-search:focus-within .bx-search-icon { color: var(--brand); transform: scale(1.08) rotate(-8deg); }
 .bx-search input {

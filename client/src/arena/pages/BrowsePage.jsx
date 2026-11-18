@@ -20,23 +20,23 @@ function MemberCard({ m, canRequest, onRequest, onMenu }) {
       <div className="flex items-start gap-3">
         <Avatar seed={m.alias} />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-[#29201b] dk:text-[#fff7ed]">{m.alias}</p>
+          <p className="truncate font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{m.alias}</p>
           <div className="mt-1.5"><TopicBadges topics={m.topics} level={m.level} /></div>
           {m.compatible && <Badge tone="emerald" className="mt-1.5"><Sparkles className="h-3 w-3" /> Shares your topic</Badge>}
         </div>
-        <button onClick={() => onMenu(m)} className="rounded-lg p-1.5 text-stone-400 dk:text-[#8f7c70] hover:bg-orange-100/60 dk:hover:bg-orange-500/15 hover:text-stone-700 dk:hover:text-[#ead9cc]" aria-label={`Report or block ${m.alias}`}>
+        <button onClick={() => onMenu(m)} className="rounded-lg p-1.5 text-stone-400 dk:text-[#73897f] hover:bg-teal-100/60 dk:hover:bg-teal-400/15 hover:text-stone-700 dk:hover:text-[#cfe0db]" aria-label={`Report or block ${m.alias}`}>
           <Flag className="h-4 w-4" />
         </button>
       </div>
 
-      {m.bio && <p className="mt-4 line-clamp-3 text-sm text-stone-700 dk:text-[#ead9cc]">{m.bio}</p>}
+      {m.bio && <p className="mt-4 line-clamp-3 text-sm text-stone-700 dk:text-[#cfe0db]">{m.bio}</p>}
       {m.goal && (
-        <p className="mt-3 flex gap-2 text-sm text-stone-600 dk:text-[#d6c4b8]"><Target className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden /><span className="line-clamp-2">{m.goal}</span></p>
+        <p className="mt-3 flex gap-2 text-sm text-stone-600 dk:text-[#a3b8b2]"><Target className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" aria-hidden /><span className="line-clamp-2">{m.goal}</span></p>
       )}
 
       <div className="mt-4 flex flex-wrap gap-1.5">
-        {m.skills.slice(0, 6).map((s) => <span key={s} className="rounded-md bg-stone-100 dk:bg-[#2c211b] px-2 py-0.5 text-xs font-medium text-stone-700 dk:text-[#ead9cc]">{s}</span>)}
-        {m.skills.length > 6 && <span className="text-xs text-stone-500 dk:text-[#b9a79c]">+{m.skills.length - 6}</span>}
+        {m.skills.slice(0, 6).map((s) => <span key={s} className="rounded-md bg-stone-100 dk:bg-[#152522] px-2 py-0.5 text-xs font-medium text-stone-700 dk:text-[#cfe0db]">{s}</span>)}
+        {m.skills.length > 6 && <span className="text-xs text-stone-500 dk:text-[#93aaa3]">+{m.skills.length - 6}</span>}
       </div>
 
       <BackgroundLine m={m} className="mt-4" />
@@ -52,7 +52,7 @@ function MemberCard({ m, canRequest, onRequest, onMenu }) {
         (canRequest ? (
           <Button onClick={() => onRequest(m)} className="w-full"><Send className="h-4 w-4" /> Send request</Button>
         ) : (
-          <Link to="../profile" className="inline-flex w-full items-center justify-center rounded-xl bg-stone-900 dk:bg-[#1c1612] px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800">Join the arena to send requests</Link>
+          <Link to="../profile" className="inline-flex w-full items-center justify-center rounded-xl bg-stone-900 dk:bg-[#0f1b19] px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800">Join the arena to send requests</Link>
         ))}
     </Card>
   );
@@ -145,20 +145,20 @@ export default function BrowsePage() {
   return (
     <div>
 
-      <div className="relative mb-6 overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-5 dk:border-[#5a4336] dk:from-[#2a1d14] dk:via-[#241b15] dk:to-[#2a2016] sm:p-6">
-        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-400/20 blur-3xl" />
+      <div className="relative mb-6 overflow-hidden rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 via-white to-amber-50 p-5 dk:border-[#2e4641] dk:from-[#152522] dk:via-[#101c1a] dk:to-[#152522] sm:p-6">
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-teal-400/20 blur-3xl" />
         <div className="relative flex items-start gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white shadow-sm shadow-orange-600/30 dk:bg-orange-500">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white shadow-sm shadow-teal-700/30 dk:bg-teal-600">
             <ShieldCheck className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <h2 className="text-base font-extrabold text-stone-900 dk:text-[#fff7ed] sm:text-lg">Thanks for purchasing! You&apos;re one of our first members. 🧡</h2>
-            <p className="mt-1.5 text-sm leading-6 text-stone-600 dk:text-[#d9c7ba]">
+            <h2 className="text-base font-extrabold text-stone-900 dk:text-[#e8f2ef] sm:text-lg">Thanks for purchasing! You&apos;re one of our first members. 🧡</h2>
+            <p className="mt-1.5 text-sm leading-6 text-stone-600 dk:text-[#c3d2cd]">
               We&apos;re new here and still onboarding members, so you may not see many profiles yet. New people join every day, and we&apos;re working on
-              {" "}<strong className="font-bold text-orange-700 dk:text-orange-300">bringing in more members, improving matching and adding more features.</strong>
+              {" "}<strong className="font-bold text-teal-800 dk:text-teal-300">bringing in more members, improving matching and adding more features.</strong>
               {" "}Keep your profile complete and check back often, so you&apos;re ready when your buddy arrives.
             </p>
-            <p className="mt-2 text-xs font-semibold text-stone-500 dk:text-[#b9a79c]">Thank you for being one of the first to join and for helping us build this.</p>
+            <p className="mt-2 text-xs font-semibold text-stone-500 dk:text-[#93aaa3]">Thank you for being one of the first to join and for helping us build this.</p>
           </div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export default function BrowsePage() {
       )}
 
       <Card className="mb-6 p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-700 dk:text-[#ead9cc]"><Filter className="h-4 w-4" aria-hidden /> Filters</div>
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-700 dk:text-[#cfe0db]"><Filter className="h-4 w-4" aria-hidden /> Filters</div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
             ["topic", "All topics", TOPICS], ["level", "Any level", LEVELS], ["slot", "Any time", SLOTS], ["companyType", "Any background", COMPANY_TYPES], ["language", "Any language", LANGUAGES],
@@ -191,7 +191,7 @@ export default function BrowsePage() {
             </select>
           ))}
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dk:text-[#8f7c70]" aria-hidden />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dk:text-[#73897f]" aria-hidden />
             <input aria-label="Filter by skill" placeholder="Skill, e.g. kafka" value={skill} onChange={(e) => setSkill(e.target.value)} className={cx(inputClass(false), "pl-9")} />
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function BrowsePage() {
         <EmptyState
           title={sessionEnded ? "Please sign in again" : "Couldn't load the arena"}
           action={sessionEnded
-            ? <Link to="/prep-buddy/signup?mode=login" state={{ from: { pathname: "/prep-buddy/app/arena" } }} className="inline-flex items-center rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-700">Sign in</Link>
+            ? <Link to="/prep-buddy/signup?mode=login" state={{ from: { pathname: "/prep-buddy/app/arena" } }} className="inline-flex items-center rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800">Sign in</Link>
             : <Button onClick={list.retry}>Try again</Button>}
         >
           {error}
@@ -210,7 +210,7 @@ export default function BrowsePage() {
         <EmptyState icon={Users} title="No members match these filters">Try widening your filters. New members join all the time.</EmptyState>
       ) : (
         <>
-          <p className="mb-4 flex items-center gap-1.5 text-sm text-stone-500 dk:text-[#b9a79c]"><EyeOff className="h-4 w-4" aria-hidden /> Names are hidden until you both accept. Showing {items.length} of {total} member{total === 1 ? "" : "s"}.</p>
+          <p className="mb-4 flex items-center gap-1.5 text-sm text-stone-500 dk:text-[#93aaa3]"><EyeOff className="h-4 w-4" aria-hidden /> Names are hidden until you both accept. Showing {items.length} of {total} member{total === 1 ? "" : "s"}.</p>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((m) => <MemberCard key={m.id} m={m} canRequest onRequest={setTarget} onMenu={setMenu} />)}
           </div>
@@ -226,7 +226,7 @@ export default function BrowsePage() {
             <textarea id="intro" rows={4} maxLength={300} value={message} onChange={(e) => { setMessage(e.target.value); setMessageError(""); }} className={inputClass(Boolean(messageError))} placeholder="Hi! I'm also prepping for HLD rounds and can do weekday evenings. Want to try a mock this week?" />
           </Field>
         </div>
-        <p className="mt-3 text-xs text-stone-500 dk:text-[#b9a79c]">You can have up to {me.settings.maxOutgoingRequests} pending requests. Once you match with someone, you can't send or accept others.</p>
+        <p className="mt-3 text-xs text-stone-500 dk:text-[#93aaa3]">You can have up to {me.settings.maxOutgoingRequests} pending requests. Once you match with someone, you can't send or accept others.</p>
       </Modal>
 
       <Modal open={Boolean(menu)} onClose={() => setMenu(null)} title={`${menu?.alias ?? ""}`}

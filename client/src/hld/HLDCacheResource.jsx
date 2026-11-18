@@ -1,3016 +1,371 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import { Helmet } from "react-helmet-async";
-
 import {
-  useNavigate,
-} from "react-router-dom";
+  ArrowsSplit, CheckCircle, Database, Desktop, Fire, Globe, HardDrives, Key, Lightning, Lock, Rocket, ShieldCheck, Stack, Timer, Users,
+} from "@phosphor-icons/react";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  Clock3,
-  Code2,
-  Database,
-  Flame,
-  Globe2,
-  KeyRound,
-  Layers,
-  Lightbulb,
-  LockKeyhole,
-  Network,
-  RefreshCcw,
-  Rocket,
-  Server,
-  ShieldCheck,
-  Sparkles,
-  Timer,
-  TriangleAlert,
-  Users,
-  Zap,
-} from "lucide-react";
+import { Bullets, Call, Cards, Chips, Code, Compare, Flow, H3, Mark, Nots, Prose, ReaderPage, Sec, Specs, Table } from "../resources/kit/Reader";
 
-
-const SITE_URL =
-  "https://www.targettrek.in";
-
-const PAGE_URL =
-  `${SITE_URL}/resources/hld/cache`;
-
-const BOOK_URL =
-  "/book/system-design/hld";
-
-const NEXT_TOPIC = {
-  title: "Load Balancing",
-  description:
-    "Understand L4 vs L7 load balancers, algorithms, health checks, sticky sessions, consistent hashing and high availability.",
-  path: "/resources/hld/load-balancing",
+/* =====================================================================
+   CACHING IN SYSTEM DESIGN  (/resources/hld/cache)
+   Everything that isn't body copy lives in GUIDE: SEO, hero, contents,
+   interview Q&A, quiz, glossary, takeaways, FAQ. The kit renders those
+   blocks and builds the structured data from the same object.
+===================================================================== */
+const GUIDE = {
+  id: "cache",
+  path: "/resources/hld/cache",
+  short: "Caching",
+  section: "System Design",
+  seoTitle: "Caching in System Design: Strategies, Redis, Stampedes & Hot Keys | Target Trek",
+  description: "A free, complete guide to caching for system design interviews: cache-aside, read-through, write-through, write-back, TTL, LRU/LFU eviction, invalidation, cache stampede, the celebrity hot-key problem, Redis design and a seat-booking case study.",
+  keywords: ["caching in system design", "cache aside vs read through", "write through vs write back", "cache invalidation", "cache stampede", "thundering herd", "hot key problem", "redis system design", "redis distributed lock", "LRU vs LFU", "HLD interview questions"],
+  about: ["Caching", "Redis", "System design", "Distributed systems", "Cache invalidation", "Cache stampede"],
+  tags: ["System design", "Performance", "Intermediate"],
+  h1: "Caching in System Design",
+  sub: "From first principles to millions of requests per second: where to cache, how reads and writes interact with the cache, how caches fail, and how to talk about all of it in an interview.",
+  answer: "A cache is a small, fast store (usually memory) that keeps copies of data that is expensive to fetch or compute, so repeated requests skip the slow database or service. It trades freshness and extra complexity for lower latency and less load. The database stays the source of truth; the cache is an optimisation you must be able to invalidate, lose and rebuild safely.",
+  minutes: 25,
+  level: "Intermediate",
+  updated: "2026-11-18",
+  crumbs: [["Resources", "/resources"], ["System design", "/resources/hld"], ["Caching", "/resources/hld/cache"]],
+  learn: [
+    "The five caching strategies and when each one fits",
+    "LRU, LFU, FIFO and TTL, and why TTL is not eviction",
+    "How to stop a cache stampede and survive a hot key",
+    "Designing Redis keys, TTLs and safe distributed locks",
+    "A seat-booking design that never double-books",
+  ],
+  toc: [
+    { id: "what-is-cache", label: "What is a cache?" },
+    { id: "architecture", label: "Where you can cache" },
+    { id: "strategies", label: "Caching strategies" },
+    { id: "eviction", label: "Eviction policies" },
+    { id: "invalidation", label: "Cache invalidation" },
+    { id: "stampede", label: "Cache stampede" },
+    { id: "hot-key", label: "The celebrity problem" },
+    { id: "millions", label: "Millions of requests" },
+    { id: "redis", label: "Designing Redis well" },
+    { id: "bookmyshow", label: "Case study: seat booking" },
+    { id: "failures", label: "Failure scenarios" },
+    { id: "when-not", label: "When not to cache" },
+  ],
+  questions: [
+    { q: "What problem does caching solve?", a: "It cuts latency and load by serving repeated reads from a faster layer instead of the database or a remote service. That lets the same backend absorb far more traffic and smooths out spikes. The cost is possible staleness, extra memory and another component that can fail." },
+    { q: "What is the difference between cache-aside and read-through?", a: "In cache-aside the application owns the logic: it checks the cache, and on a miss it reads the database and writes the value into the cache. In read-through the application only talks to the cache, and the cache itself (or its library) loads missing values from the database. Read-through keeps application code simpler but needs a cache or library that supports loaders." },
+    { q: "When would you choose write-through over write-back?", a: "Choose write-through when the cache and database must agree after every write and you can afford the extra write latency, for example account settings or inventory counts. Choose write-back when write throughput matters more and losing the last few seconds of writes is acceptable, for example view counters or analytics." },
+    { q: "What is a cache stampede?", a: "When a popular key expires, many concurrent requests miss at the same moment and all go to the database to rebuild the same value. The database sees a sudden burst of identical expensive queries and can fall over, which is why it is also called the thundering herd problem." },
+    { q: "How would you prevent a thundering herd?", a: "Let only one request rebuild the value (a mutex or single-flight) while others wait or get the stale value; add random jitter to TTLs so keys don't expire together; serve stale-while-revalidate; refresh very hot keys ahead of expiry; and rate-limit miss traffic to the database as a last line of defence." },
+    { q: "What is TTL jitter?", a: "Adding a small random amount to each key's expiry time, for example 300 seconds plus 0 to 60 seconds. It spreads expirations out so thousands of keys written at the same time don't all expire in the same second and trigger a mass rebuild." },
+    { q: "What is the celebrity or hot-key problem?", a: "One key receives far more traffic than any other, such as a celebrity's profile or a viral post. All of that traffic lands on the single shard that owns the key, so that node saturates even though the cluster as a whole has plenty of capacity." },
+    { q: "How do you invalidate the cache after a database update?", a: "The usual pattern is: write to the database, then delete the cache key, and let the next read repopulate it. Deleting is safer than updating the cache because two concurrent updates can write cached values in the wrong order. Pair it with a TTL so any missed delete heals itself." },
+    { q: "What happens if the database update succeeds but cache invalidation fails?", a: "The cache keeps serving the old value until it expires. Defences are a short TTL as a safety net, retrying the delete from a queue, driving invalidation from the database change log (change-data-capture), or using versioned keys so new writes simply use a new key." },
+    { q: "What happens if Redis is unavailable?", a: "It depends on the data. For ordinary reads you can fail open and go to the database, but with a circuit breaker and rate limit so the database isn't flattened. For correctness-critical uses such as locks or rate limits you may need to fail closed and reject the operation. Decide this per use case before the outage, not during it." },
+    { q: "How do you cache across many application servers?", a: "Use a shared distributed cache such as a Redis cluster so every server sees the same values, optionally with a small in-process cache on each server for the hottest data. Keys are spread across shards, usually with consistent hashing or hash slots." },
+    { q: "What is the difference between an L1 local cache and an L2 distributed cache?", a: "L1 lives inside each application process: nanosecond to microsecond reads, no network hop, but each server has its own copy and keeping them in sync is hard, so TTLs are short. L2 is a shared network cache like Redis: about a millisecond away, consistent across servers, and much larger." },
+    { q: "LRU vs LFU: when would you use each?", a: "LRU evicts what hasn't been used for the longest time, which works when recent access predicts future access, like sessions or feeds. LFU evicts what is used least often, which protects long-term popular items from being pushed out by a burst of one-off reads, like a product catalogue during a scan." },
+    { q: "How would you design caching for millions of requests per second?", a: "Reduce traffic at every layer: browser and CDN for public content, an L1 cache in each server for the hottest keys, a sharded Redis cluster with replicas as L2, and only misses reaching a replicated, partitioned database. Add stampede protection, hot-key handling and monitoring of hit ratio and tail latency." },
+    { q: "How would you prevent double booking using Redis?", a: "Hold the seat with an atomic SET key token NX PX ttl so only one request can create the hold, and store a unique token so only the holder can release it. Then confirm the booking in the database with a conditional update that only succeeds if the seat is still AVAILABLE." },
+    { q: "Why must the database still protect final booking correctness?", a: "Redis locks can be lost on failover, expire while a slow request is still running, or be bypassed by a bug. The durable database is the source of truth, so a conditional update or unique constraint there is what actually guarantees one seat is sold once." },
+    { q: "How do idempotency and caching interact in a payment or booking flow?", a: "Retries are normal, so every booking request carries an idempotency key. The first request does the work and stores its result under that key; retries return the stored result instead of booking or charging again. The cache can hold that result for speed, but the record of the payment must be durable." },
+    { q: "What metrics would you monitor for Redis?", a: "Hit and miss ratio, p50/p95/p99 latency, memory use and fragmentation, eviction rate, expired keys, hot keys, connected clients, CPU and network throughput, and replication lag. A falling hit ratio or rising evictions is usually the first sign of trouble." },
+  ],
+  quiz: [
+    { q: "Your app checks Redis, and on a miss reads the database and stores the result in Redis. Which strategy is this?", options: ["Read-through", "Cache-aside", "Write-through", "Write-back"], answer: 1, why: "The application itself checks, loads and populates the cache, which is cache-aside (lazy loading). In read-through the cache would load the data for you." },
+    { q: "Which strategy risks losing data if the cache node crashes?", options: ["Cache-aside", "Write-through", "Write-back", "Read-through"], answer: 2, why: "Write-back acknowledges the write once it reaches the cache and persists to the database later, so anything not yet flushed is lost if the cache dies." },
+    { q: "A hot key expires and 20,000 requests hit the database at once. What is the most direct fix?", options: ["Increase the database's connection pool", "Let one request rebuild the value while others wait or get stale data", "Switch eviction from LRU to LFU", "Remove the TTL from every key"], answer: 1, why: "Single-flight (a mutex on rebuild) or stale-while-revalidate stops the herd at its source. Bigger pools just let more identical queries through." },
+    { q: "After updating a row, what is generally safer for the cache?", options: ["Update the cached value", "Delete the cached key", "Do nothing and wait for LRU", "Flush the whole cache"], answer: 1, why: "Deleting means the next read loads the fresh value. Updating the cache can race with another writer and leave the older value cached." },
+    { q: "Why store a random token as the value of a Redis seat lock?", options: ["To make the key shorter", "So only the request that created the lock can delete it", "Because Redis needs a value for NX", "To speed up the GET"], answer: 1, why: "If the lock expires and someone else acquires it, the first holder must not delete the new holder's lock. Comparing the token before deleting prevents that." },
+    { q: "TTL and eviction are…", options: ["The same thing", "TTL removes old data; eviction removes data when memory is full", "TTL is only for Redis; eviction only for Memcached", "Eviction removes old data; TTL removes data when memory is full"], answer: 1, why: "TTL is about freshness over time; eviction is about memory pressure. A production cache usually uses both." },
+  ],
+  glossary: [
+    ["Cache hit / miss", "A hit is served from the cache; a miss has to go to the slower source."],
+    ["Hit ratio", "Hits ÷ total reads. Below ~80% a cache often isn't paying for itself."],
+    ["TTL", "Time to live: how long a key may stay before it expires."],
+    ["Eviction", "Removing keys because memory is full, chosen by a policy such as LRU or LFU."],
+    ["Cache-aside", "The application checks the cache and loads it on a miss. Also called lazy loading."],
+    ["Write-back", "Writes go to the cache first and reach the database later, asynchronously."],
+    ["Cache stampede", "Many requests rebuilding the same expired key at once. Also: thundering herd."],
+    ["Hot key", "One key with far more traffic than the rest, overloading a single shard."],
+    ["Single-flight", "Only one caller does the expensive rebuild; the rest share its result."],
+    ["L1 / L2 cache", "L1 is in-process on each server; L2 is a shared network cache such as Redis."],
+  ],
+  takeaways: [
+    "The database is the source of truth. A cache must be safe to lose, invalidate and rebuild.",
+    "Name your strategy: cache-aside for most read-heavy systems, write-through for consistency, write-back for write throughput.",
+    "On writes, update the database and delete the cache key. Keep a TTL as a safety net for missed deletes.",
+    "Expect stampedes and hot keys at scale: single-flight, TTL jitter, local caches and key replication are the standard answers.",
+    "Redis locks are for fast temporary holds; final correctness belongs in the database with a conditional update.",
+    "Decide per use case what happens when the cache is down: fail open with protection, or fail closed.",
+  ],
+  faq: [
+    { q: "What is caching in system design?", a: "Caching stores frequently used data in a faster layer, usually memory, so repeated requests avoid the slower database or service. It lowers latency and load at the cost of possible staleness and extra complexity." },
+    { q: "Is Redis a cache or a database?", a: "Both, depending on use. Redis is an in-memory data store with optional persistence. In most system designs it is used as a cache or for short-lived shared state such as sessions, rate-limit counters and locks, with a durable database behind it." },
+    { q: "What is a cache stampede?", a: "A cache stampede happens when a popular cached value expires and many requests miss at the same time, all hitting the database to rebuild it. It is prevented with single-flight rebuilds, TTL jitter, stale-while-revalidate and refresh-ahead." },
+    { q: "What is the celebrity or hot-key problem?", a: "It occurs when one key gets far more traffic than others, overloading the single cache shard that holds it. Fixes include a local in-process cache, read replicas, replicating the key under several names, a CDN for public content and pre-warming." },
+    { q: "Can Redis prevent double booking?", a: "Redis can hold a seat briefly with an atomic SET NX and a TTL, which handles high concurrency well, but the database must still enforce correctness with a conditional update, and the flow should be idempotent." },
+    { q: "How long should a cache TTL be?", a: "As long as the data can safely be stale. Profiles might tolerate minutes, prices seconds, and static assets days. Add jitter so keys don't expire together, and rely on invalidation, not TTL alone, for data that must change immediately." },
+  ],
+  next: { title: "Database Design", path: "/resources/hld/database", text: "SQL vs NoSQL, indexing, replication, sharding, transactions and consistency: where cache misses end up." },
+  book: {
+    path: "/book/system-design/hld", label: "HLD book", title: "Master the full system design round",
+    text: "Go beyond caching: requirements, APIs, data modelling, scaling, queues, locking and complete interview designs such as BookMyShow and Uber.",
+    short: "Complete interview designs, end to end.",
+    chips: ["Caching", "Databases", "Rate limiting", "Queues", "BookMyShow", "Uber"],
+  },
 };
 
-const CONTENT_SECTIONS = [
-  {
-    id: "what-is-cache",
-    label: "What is Cache?",
-  },
-  {
-    id: "architecture",
-    label: "Cache Architecture",
-  },
-  {
-    id: "strategies",
-    label: "Caching Strategies",
-  },
-  {
-    id: "eviction",
-    label: "Eviction Policies",
-  },
-  {
-    id: "invalidation",
-    label: "Cache Invalidation",
-  },
-  {
-    id: "stampede",
-    label: "Cache Stampede",
-  },
-  {
-    id: "hot-key",
-    label: "Celebrity Problem",
-  },
-  {
-    id: "millions",
-    label: "Millions of Requests",
-  },
-  {
-    id: "redis",
-    label: "Redis Design",
-  },
-  {
-    id: "bookmyshow",
-    label: "BookMyShow Case Study",
-  },
-  {
-    id: "failures",
-    label: "Failure Handling",
-  },
-  {
-    id: "interview",
-    label: "Interview Questions",
-  },
+const STRATEGIES = [
+  { title: "Cache-aside", tag: "Lazy loading", facts: [["Read", "The app checks the cache. On a miss it reads the database and writes the result into the cache."], ["Write", "The app writes to the database and deletes the cached key."], ["Good for", "Read-heavy systems where only some rows are ever hot.", "good"], ["Trade-off", "The first read after a miss is slow, and data can be stale if a delete fails.", "cost"]] },
+  { title: "Read-through", tag: "The cache loads for you", facts: [["Read", "The app asks the cache. The cache itself loads missing data from the store."], ["Write", "Depends on the cache; usually paired with write-through or invalidation."], ["Good for", "Keeping loading logic out of application code.", "good"], ["Trade-off", "Needs a cache or library that supports loaders.", "cost"]] },
+  { title: "Write-through", tag: "Synchronous write", facts: [["Read", "Usually served straight from the cache."], ["Write", "Each write updates the cache and the database before success is returned."], ["Good for", "Data where cache and database must agree after every write.", "good"], ["Trade-off", "Slower writes, since two systems are updated each time.", "cost"]] },
+  { title: "Write-back", tag: "Write-behind", facts: [["Read", "Usually served from the cache."], ["Write", "The write lands in the cache first; the database is updated later in batches."], ["Good for", "Very high write rates where a small delay is fine.", "good"], ["Trade-off", "Writes not yet flushed are lost if the cache fails.", "cost"]] },
+  { title: "Refresh-ahead", tag: "Proactive refresh", facts: [["Read", "Hot keys are reloaded shortly before their TTL ends, so readers never see a miss."], ["Write", "Combined with another strategy, usually cache-aside."], ["Good for", "Very hot, predictable keys where an expiry would cause a spike.", "good"], ["Trade-off", "May refresh data nobody asks for again.", "cost"]] },
 ];
 
-const CACHE_STRATEGIES = [
-  {
-    title: "Cache Aside",
-    subtitle: "Lazy Loading",
-    read:
-      "Application checks cache first. On miss, it reads the database and writes the result into cache.",
-    write:
-      "Application writes directly to the database and usually invalidates the cached key.",
-    goodFor:
-      "Read-heavy systems where not every database row needs to be cached.",
-    tradeOff:
-      "First request after a miss is slower. Stale data is possible if invalidation fails.",
-  },
-  {
-    title: "Read Through",
-    subtitle: "Cache-managed reads",
-    read:
-      "Application asks the cache. The cache itself loads missing data from the underlying store.",
-    write:
-      "Depends on the cache implementation and write strategy.",
-    goodFor:
-      "Systems wanting caching logic abstracted away from application code.",
-    tradeOff:
-      "Needs cache/library support for loading data from the source.",
-  },
-  {
-    title: "Write Through",
-    subtitle: "Synchronous write",
-    read:
-      "Reads usually come from cache.",
-    write:
-      "Every write updates both the cache and persistent database before success is returned.",
-    goodFor:
-      "Systems where cache and database consistency are important.",
-    tradeOff:
-      "Higher write latency because two systems must be updated.",
-  },
-  {
-    title: "Write Back",
-    subtitle: "Write Behind",
-    read:
-      "Usually served from cache.",
-    write:
-      "Write reaches cache first. Database persistence happens asynchronously.",
-    goodFor:
-      "High write throughput where small persistence delays are acceptable.",
-    tradeOff:
-      "Data can be lost if the cache fails before the asynchronous database write.",
-  },
-  {
-    title: "Refresh Ahead",
-    subtitle: "Proactive refresh",
-    read:
-      "Frequently accessed data is refreshed before its TTL expires.",
-    write:
-      "Usually combined with another strategy such as cache-aside.",
-    goodFor:
-      "Very hot predictable keys where expiration misses would cause spikes.",
-    tradeOff:
-      "Can refresh data that nobody ends up requesting.",
-  },
-];
-
-
-const SectionHeading = ({
-  id,
-  eyebrow,
-  title,
-  description,
-  icon: Icon,
-  isDark,
-}) => {
+export default function HLDCacheResource() {
   return (
-    <div
-      id={id}
-      className="scroll-mt-36 sm:scroll-mt-40"
-    >
-      {eyebrow && (
-        <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-500">
-          {eyebrow}
-        </p>
-      )}
-
-      <div className="mt-2 flex items-start gap-3">
-        {Icon && (
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-              isDark
-                ? "bg-blue-950/50 text-blue-300"
-                : "bg-blue-50 text-blue-600"
-            }`}
-          >
-            <Icon className="h-5 w-5" />
-          </div>
-        )}
-
-        <div>
-          <h2
-            className={`text-2xl font-black tracking-tight sm:text-3xl ${
-              isDark
-                ? "text-white"
-                : "text-slate-950"
-            }`}
-          >
-            {title}
-          </h2>
-
-          {description && (
-            <p
-              className={`mt-2 max-w-3xl text-sm leading-7 sm:text-base ${
-                isDark
-                  ? "text-slate-400"
-                  : "text-slate-600"
-              }`}
-            >
-              {description}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CodeBlock = ({
-  children,
-  title,
-  isDark,
-}) => {
-  return (
-    <div
-      className={`my-5 min-w-0 overflow-hidden rounded-2xl border ${
-        isDark
-          ? "border-slate-800 bg-[#07101f]"
-          : "border-slate-800 bg-slate-950"
-      }`}
-    >
-      {title && (
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-            <Code2 className="h-3.5 w-3.5" />
-            {title}
-          </div>
-        </div>
-      )}
-
-      <pre
-        className="block w-full max-w-full overflow-x-auto whitespace-pre p-4 font-mono text-[11px] leading-5 text-slate-100 sm:text-sm sm:leading-6"
-      >
-        <code>
-          {children}
-        </code>
-      </pre>
-    </div>
-  );
-};
-
-const Callout = ({
-  type = "info",
-  title,
-  children,
-  isDark,
-}) => {
-  const config = {
-    info: {
-      icon: Lightbulb,
-
-      light:
-        "border-blue-100 bg-blue-50 text-blue-950",
-
-      dark:
-        "border-blue-900/50 bg-blue-950/20 text-blue-100",
-
-      iconColor:
-        "text-blue-500",
-    },
-
-    warning: {
-      icon: TriangleAlert,
-
-      light:
-        "border-amber-200 bg-amber-50 text-amber-950",
-
-      dark:
-        "border-amber-900/50 bg-amber-950/20 text-amber-100",
-
-      iconColor:
-        "text-amber-500",
-    },
-
-    success: {
-      icon: CheckCircle2,
-
-      light:
-        "border-emerald-200 bg-emerald-50 text-emerald-950",
-
-      dark:
-        "border-emerald-900/50 bg-emerald-950/20 text-emerald-100",
-
-      iconColor:
-        "text-emerald-500",
-    },
-  };
-
-  const selected =
-    config[type] ||
-    config.info;
-
-  const Icon =
-    selected.icon;
-
-  return (
-    <div
-      className={`my-5 rounded-2xl border p-4 sm:p-5 ${
-        isDark
-          ? selected.dark
-          : selected.light
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <Icon
-          className={`mt-0.5 h-5 w-5 shrink-0 ${selected.iconColor}`}
+    <ReaderPage guide={GUIDE}>
+      {/* 01 ─────────────────────────────────────────── */}
+      <Sec id="what-is-cache" n={1} eyebrow="Fundamentals" title="What is a cache?" lead="A faster storage layer that keeps frequently used, or expensive-to-compute, data close to whoever needs it.">
+        <Prose>
+          <p>Say your app shows a user profile. Reading it from a distributed database might take 5 to 20 milliseconds and a little database CPU. Reading the same bytes from memory in Redis takes well under a millisecond and costs the database nothing. Do that for every page view and the difference decides whether you need one database or ten.</p>
+          <p>That is the whole idea: <Mark>pay once to fetch something, then serve the copy many times</Mark>. Everything else in this guide is about the two hard parts, keeping the copy acceptably fresh and surviving when the cache misbehaves.</p>
+        </Prose>
+        <Compare
+          left={{ tone: "bad", title: "Without a cache", text: "Every request reaches the database or downstream service.", items: ["Higher latency on every read", "More load on the database", "Traffic spikes hit the database directly"] }}
+          right={{ tone: "good", title: "With a cache", text: "Repeated reads are served from memory.", items: ["Sub-millisecond reads for hot data", "Far fewer database queries", "Spikes are absorbed before the database"] }}
         />
-
-        <div className="min-w-0">
-          {title && (
-            <p className="font-black">
-              {title}
-            </p>
-          )}
-
-          <div className="mt-1 text-sm leading-7">
-            {children}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DiagramNode = ({
-  icon: Icon,
-  title,
-  subtitle,
-  isDark,
-  highlight = false,
-}) => {
-  return (
-    <div
-      className={`min-w-0 rounded-xl border p-3 text-center sm:p-4 ${
-        highlight
-          ? isDark
-            ? "border-blue-700 bg-blue-950/40"
-            : "border-blue-200 bg-blue-50"
-          : isDark
-            ? "border-slate-700 bg-slate-900"
-            : "border-slate-200 bg-white"
-      }`}
-    >
-      {Icon && (
-        <Icon
-          className={`mx-auto h-5 w-5 ${
-            highlight
-              ? "text-blue-500"
-              : isDark
-                ? "text-slate-400"
-                : "text-slate-500"
-          }`}
-        />
-      )}
-
-      <p
-        className={`mt-2 text-sm font-black ${
-          isDark
-            ? "text-white"
-            : "text-slate-900"
-        }`}
-      >
-        {title}
-      </p>
-
-      {subtitle && (
-        <p
-          className={`mt-1 text-[11px] leading-5 ${
-            isDark
-              ? "text-slate-500"
-              : "text-slate-500"
-          }`}
-        >
-          {subtitle}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const ArrowDown = ({
-  isDark,
-  label,
-}) => {
-  return (
-    <div className="flex flex-col items-center py-2">
-      {label && (
-        <span
-          className={`mb-1 text-[10px] font-bold uppercase ${
-            isDark
-              ? "text-slate-500"
-              : "text-slate-400"
-          }`}
-        >
-          {label}
-        </span>
-      )}
-
-      <ArrowRight
-        className={`h-5 w-5 rotate-90 ${
-          isDark
-            ? "text-slate-600"
-            : "text-slate-300"
-        }`}
-      />
-    </div>
-  );
-};
-
-
-const HLDCacheResource = () => {
-  const navigate =
-    useNavigate();
-
-  const readStoredTheme = () => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
-
-    return window.localStorage.getItem("theme") === "dark"
-      ? "dark"
-      : "light";
-  };
-
-  const [theme, setTheme] = useState(readStoredTheme);
-  const isDark = theme === "dark";
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-
-    const syncTheme = () => {
-      const nextTheme = readStoredTheme();
-      setTheme((currentTheme) =>
-        currentTheme === nextTheme ? currentTheme : nextTheme
-      );
-    };
-
-    syncTheme();
-
-    window.addEventListener("storage", syncTheme);
-    window.addEventListener("themechange", syncTheme);
-    window.addEventListener("theme-change", syncTheme);
-    window.addEventListener("focus", syncTheme);
-
-    const rootObserver = new MutationObserver(syncTheme);
-    rootObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-
-    const intervalId = window.setInterval(syncTheme, 250);
-
-    return () => {
-      window.removeEventListener("storage", syncTheme);
-      window.removeEventListener("themechange", syncTheme);
-      window.removeEventListener("theme-change", syncTheme);
-      window.removeEventListener("focus", syncTheme);
-      rootObserver.disconnect();
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  const seoDescription =
-    "Learn caching for system design interviews: cache-aside, read-through, write-through, write-back, TTL, eviction, cache stampede, celebrity hot-key problem, Redis scaling, distributed locking and a BookMyShow-style seat booking case study.";
-
-  const faqData =
-    useMemo(
-      () => [
-        {
-          question:
-            "What is caching in system design?",
-
-          answer:
-            "Caching stores frequently used data in a faster storage layer so future requests can avoid repeatedly accessing a slower database, service or remote resource.",
-        },
-
-        {
-          question:
-            "What is a cache stampede?",
-
-          answer:
-            "A cache stampede happens when a popular cached value expires and many requests simultaneously miss the cache and hit the underlying database or service.",
-        },
-
-        {
-          question:
-            "What is the celebrity or hot-key problem?",
-
-          answer:
-            "The celebrity problem occurs when one key receives disproportionately high traffic, causing a single cache shard, node or backend dependency to become overloaded.",
-        },
-
-        {
-          question:
-            "Why is Redis commonly used for caching?",
-
-          answer:
-            "Redis provides fast in-memory access, TTL support, atomic commands, multiple data structures and clustering capabilities, making it useful for caching and short-lived distributed state.",
-        },
-
-        {
-          question:
-            "Can Redis prevent double booking?",
-
-          answer:
-            "Redis can be used for short-lived atomic seat holds, but the persistent database should remain the source of truth and the booking flow should also use idempotency and database-level consistency protections.",
-        },
-      ],
-      []
-    );
-
-  const articleSchema = {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    headline: "Caching in System Design: Complete HLD Guide",
-    description: seoDescription,
-    url: PAGE_URL,
-    inLanguage: "en-IN",
-    isAccessibleForFree: true,
-    learningResourceType: "Technical Guide",
-    educationalUse: "Interview Preparation",
-    keywords: [
-      "caching in system design",
-      "Redis",
-      "cache-aside",
-      "cache invalidation",
-      "cache stampede",
-      "hot key problem",
-      "distributed locking",
-      "HLD interview",
-    ],
-
-    mainEntityOfPage: {
-      "@type":
-        "WebPage",
-
-      "@id":
-        PAGE_URL,
-    },
-
-    author: {
-      "@type":
-        "Organization",
-
-      name:
-        "TargetTrek",
-    },
-
-    publisher: {
-      "@type":
-        "Organization",
-
-      name:
-        "TargetTrek",
-
-      url:
-        SITE_URL,
-    },
-
-    about: [
-      "Caching",
-      "System Design",
-      "Redis",
-      "Cache Stampede",
-      "Distributed Systems",
-      "High Level Design",
-    ],
-
-    proficiencyLevel:
-      "Intermediate",
-  };
-
-  const breadcrumbSchema = {
-    "@context":
-      "https://schema.org",
-
-    "@type":
-      "BreadcrumbList",
-
-    itemListElement: [
-      {
-        "@type":
-          "ListItem",
-
-        position: 1,
-
-        name:
-          "TargetTrek",
-
-        item:
-          SITE_URL,
-      },
-
-      {
-        "@type":
-          "ListItem",
-
-        position: 2,
-
-        name:
-          "HLD Resources",
-
-        item:
-          `${SITE_URL}/resources/hld`,
-      },
-
-      {
-        "@type":
-          "ListItem",
-
-        position: 3,
-
-        name:
-          "Caching",
-
-        item:
-          PAGE_URL,
-      },
-    ],
-  };
-
-  const faqSchema = {
-    "@context":
-      "https://schema.org",
-
-    "@type":
-      "FAQPage",
-
-    mainEntity:
-      faqData.map(
-        (item) => ({
-          "@type":
-            "Question",
-
-          name:
-            item.question,
-
-          acceptedAnswer: {
-            "@type":
-              "Answer",
-
-            text:
-              item.answer,
-          },
-        })
-      ),
-  };
-
-  const surface =
-    isDark
-      ? "border-slate-800 bg-slate-900"
-      : "border-slate-200 bg-white";
-
-  const textPrimary =
-    isDark
-      ? "text-white"
-      : "text-slate-950";
-
-  const textSecondary =
-    isDark
-      ? "text-slate-400"
-      : "text-slate-600";
-
-  return (
-    <>
-      <Helmet>
-        <html lang="en" />
-
-        <title>
-          Caching in System Design: Redis, Strategies & Scaling | TargetTrek
-        </title>
-
-        <meta
-          name="description"
-          content={
-            seoDescription
-          }
-        />
-
-        <meta
-          name="keywords"
-          content="cache system design, caching strategies, redis system design, cache aside, cache stampede, celebrity problem cache, hot key problem, redis distributed lock, HLD interview, caching interview questions"
-        />
-
-        <meta
-          name="robots"
-          content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
-        />
-
-        <meta name="author" content="TargetTrek" />
-        <meta name="theme-color" content={isDark ? "#090d14" : "#ffffff"} />
-
-        <link
-          rel="canonical"
-          href={PAGE_URL}
-        />
-        <meta
-          property="og:type"
-          content="article"
-        />
-
-        <meta
-          property="og:site_name"
-          content="TargetTrek"
-        />
-
-        <meta property="og:locale" content="en_IN" />
-        <meta property="article:section" content="System Design" />
-
-        <meta
-          property="og:title"
-          content="Caching in System Design — Complete HLD Guide"
-        />
-
-        <meta
-          property="og:description"
-          content={
-            seoDescription
-          }
-        />
-
-        <meta
-          property="og:url"
-          content={
-            PAGE_URL
-          }
-        />
-        <meta
-          name="twitter:card"
-          content="summary_large_image"
-        />
-
-        <meta
-          name="twitter:title"
-          content="Caching in System Design — Complete HLD Guide"
-        />
-
-        <meta
-          name="twitter:description"
-          content={
-            seoDescription
-          }
-        />
-        <script
-          type="application/ld+json"
-        >
-          {JSON.stringify(
-            articleSchema
-          )}
-        </script>
-
-        <script
-          type="application/ld+json"
-        >
-          {JSON.stringify(
-            breadcrumbSchema
-          )}
-        </script>
-
-        <script
-          type="application/ld+json"
-        >
-          {JSON.stringify(
-            faqSchema
-          )}
-        </script>
-      </Helmet>
-
-      <div
-        className={`min-h-screen overflow-x-hidden pt-20 transition-colors duration-300 sm:pt-24 ${
-          isDark
-            ? "bg-[#090d14] text-slate-100"
-            : "bg-slate-50 text-slate-900"
-        }`}
-      >
-        <div
-          className={`border-b ${
-            isDark
-              ? "border-slate-800 bg-[#090d14]"
-              : "border-slate-200 bg-white"
-          }`}
-        >
-          <div className="mx-auto flex max-w-7xl items-center justify-start px-4 py-3 sm:px-6 lg:px-8">
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  "/resources/hld"
-                )
-              }
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold transition ${
-                isDark
-                  ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-blue-700 hover:text-blue-400"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-600"
-              }`}
-            >
-              <ArrowLeft className="h-4 w-4" />
-
-              <span className="hidden sm:inline">
-                HLD Resources
-              </span>
-
-              <span className="sm:hidden">
-                Back
-              </span>
-            </button>
-          </div>
-        </div>
-        <header
-          className={`border-b ${
-            isDark
-              ? "border-slate-800 bg-gradient-to-b from-blue-950/20 to-[#090d14]"
-              : "border-slate-200 bg-gradient-to-b from-blue-50 to-white"
-          }`}
-        >
-          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-            <div className="mx-auto max-w-4xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full border px-3 py-1 text-xs font-black ${
-                    isDark
-                      ? "border-blue-800 bg-blue-950/50 text-blue-300"
-                      : "border-blue-200 bg-blue-50 text-blue-700"
-                  }`}
-                >
-                  HLD
-                </span>
-
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    isDark
-                      ? "bg-slate-800 text-slate-300"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  System Design
-                </span>
-
-                <span
-                  className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
-                    isDark
-                      ? "bg-slate-800 text-slate-300"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  <Clock3 className="h-3 w-3" />
-                  25 min read
-                </span>
-              </div>
-
-              <h1
-                id="cache-page-title"
-                className={`mt-5 text-3xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl ${
-                  isDark
-                    ? "text-white"
-                    : "text-slate-950"
-                }`}
-              >
-                Caching in
-                System Design
-              </h1>
-
-              <p
-                className={`mt-5 max-w-3xl text-base leading-8 sm:text-lg ${
-                  isDark
-                    ? "text-slate-400"
-                    : "text-slate-600"
-                }`}
-              >
-                Learn how caching
-                works from first
-                principles to
-                production-scale
-                systems: cache-aside,
-                read-through,
-                write-through,
-                eviction, invalidation,
-                stampedes, hot keys,
-                Redis, distributed
-                locking and
-                high-traffic
-                architecture.
-              </p>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    document
-                      .getElementById(
-                        "what-is-cache"
-                      )
-                      ?.scrollIntoView({
-                        behavior:
-                          "smooth",
-                      })
-                  }
-                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700"
-                >
-                  Start Learning
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      BOOK_URL
-                    )
-                  }
-                  className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-black transition ${
-                    isDark
-                      ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-700"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
-                  }`}
-                >
-                  <BookOpen className="h-4 w-4" />
-
-                  Master HLD Book
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-        <nav
-          aria-label="Caching article sections"
-          className={`sticky top-20 z-30 border-b backdrop-blur sm:top-24 ${
-            isDark
-              ? "border-slate-800 bg-[#090d14]/95"
-              : "border-slate-200 bg-white/95"
-          }`}
-        >
-          <div className="mx-auto max-w-7xl overflow-x-auto px-4 [scrollbar-width:none] sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden">
-            <div className="flex min-w-max gap-2 py-3">
-              {CONTENT_SECTIONS.map(
-                (item) => (
-                  <a
-                    key={
-                      item.id
-                    }
-                    href={`#${item.id}`}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
-                      isDark
-                        ? "text-slate-400 hover:bg-slate-800 hover:text-white"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-                    }`}
-                  >
-                    {item.label}
-                  </a>
-                )
-              )}
-            </div>
-          </div>
-        </nav>
-
-        <main className="mx-auto max-w-5xl px-3 py-8 sm:px-6 sm:py-12 lg:px-8">
-          <article aria-labelledby="cache-page-title">
-            <section>
-            <SectionHeading
-              id="what-is-cache"
-              eyebrow="Fundamentals"
-              title="What is a Cache?"
-              description="A cache is a faster storage layer that temporarily keeps frequently accessed or expensive-to-compute data close to the consumer."
-              icon={Zap}
-              isDark={isDark}
-            />
-
-            <div
-              className={`mt-7 rounded-2xl border p-5 sm:p-7 ${surface}`}
-            >
-              <p
-                className={`leading-8 ${textSecondary}`}
-              >
-                Imagine your
-                application needs a
-                user profile. Reading
-                that profile from a
-                distributed database
-                may take significantly
-                longer than reading it
-                from an in-memory
-                cache.
-              </p>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div
-                  className={`rounded-xl border p-5 ${
-                    isDark
-                      ? "border-red-900/50 bg-red-950/20"
-                      : "border-red-100 bg-red-50"
-                  }`}
-                >
-                  <Database className="h-6 w-6 text-red-500" />
-
-                  <h3
-                    className={`mt-3 font-black ${textPrimary}`}
-                  >
-                    Without Cache
-                  </h3>
-
-                  <p
-                    className={`mt-2 text-sm leading-6 ${textSecondary}`}
-                  >
-                    Every request
-                    reaches the
-                    database or
-                    downstream
-                    service.
-                  </p>
-
-                  <div className="mt-4 space-y-2 text-sm">
-                    <p>
-                      ❌ Higher
-                      latency
-                    </p>
-
-                    <p>
-                      ❌ More database
-                      load
-                    </p>
-
-                    <p>
-                      ❌ Harder to
-                      absorb traffic
-                      spikes
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className={`rounded-xl border p-5 ${
-                    isDark
-                      ? "border-emerald-900/50 bg-emerald-950/20"
-                      : "border-emerald-100 bg-emerald-50"
-                  }`}
-                >
-                  <Zap className="h-6 w-6 text-emerald-500" />
-
-                  <h3
-                    className={`mt-3 font-black ${textPrimary}`}
-                  >
-                    With Cache
-                  </h3>
-
-                  <p
-                    className={`mt-2 text-sm leading-6 ${textSecondary}`}
-                  >
-                    Frequently used
-                    values can be
-                    served from a
-                    faster layer.
-                  </p>
-
-                  <div className="mt-4 space-y-2 text-sm">
-                    <p>
-                      ✅ Lower latency
-                    </p>
-
-                    <p>
-                      ✅ Less database
-                      pressure
-                    </p>
-
-                    <p>
-                      ✅ Better burst
-                      handling
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Callout
-              title="Caching does not make the database unnecessary"
-              type="warning"
-              isDark={isDark}
-            >
-              The persistent
-              database should usually
-              remain the source of
-              truth. Cache is an
-              optimization layer, not
-              a replacement for
-              durable storage.
-            </Callout>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="architecture"
-              eyebrow="Architecture"
-              title="Where Can We Cache?"
-              description="Caching can exist at several layers. Large systems often combine multiple cache layers rather than relying on one Redis cluster."
-              icon={Layers}
-              isDark={isDark}
-            />
-
-            <div
-              className={`mt-7 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="mx-auto max-w-xl">
-                <DiagramNode
-                  icon={Users}
-                  title="User"
-                  subtitle="Browser / Mobile App"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                  label="Request"
-                />
-
-                <DiagramNode
-                  icon={Globe2}
-                  title="Browser / CDN Cache"
-                  subtitle="Static assets, images, public content"
-                  isDark={isDark}
-                  highlight
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Server}
-                  title="Application Servers"
-                  subtitle="Local in-memory cache"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Zap}
-                  title="Distributed Cache"
-                  subtitle="Redis / Memcached"
-                  isDark={isDark}
-                  highlight
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                  label="Cache Miss"
-                />
-
-                <DiagramNode
-                  icon={Database}
-                  title="Persistent Database"
-                  subtitle="Source of truth"
-                  isDark={isDark}
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {[
-                [
-                  "Browser Cache",
-                  "CSS, JavaScript, fonts, API responses and other client-cacheable resources.",
-                ],
-
-                [
-                  "CDN / Edge Cache",
-                  "Static and public content cached geographically close to users.",
-                ],
-
-                [
-                  "Local Application Cache",
-                  "Per-instance in-memory cache with extremely low latency.",
-                ],
-
-                [
-                  "Distributed Cache",
-                  "A shared cache such as Redis accessible across application instances.",
-                ],
-
-                [
-                  "Database Cache",
-                  "Buffer pools, query caches and database-managed memory optimizations.",
-                ],
-
-                [
-                  "Computed Result Cache",
-                  "Store expensive calculations, search results, recommendations or rendered responses.",
-                ],
-              ].map(
-                (
-                  [
-                    title,
-                    description,
-                  ]
-                ) => (
-                  <div
-                    key={
-                      title
-                    }
-                    className={`rounded-xl border p-5 ${surface}`}
-                  >
-                    <h3
-                      className={`font-black ${textPrimary}`}
-                    >
-                      {title}
-                    </h3>
-
-                    <p
-                      className={`mt-2 text-sm leading-6 ${textSecondary}`}
-                    >
-                      {
-                        description
-                      }
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="strategies"
-              eyebrow="Core Interview Topic"
-              title="Caching Strategies"
-              description="An interviewer usually expects you to explain not only that you will use Redis, but how reads and writes interact with the cache."
-              icon={RefreshCcw}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 space-y-4">
-              {CACHE_STRATEGIES.map(
-                (
-                  strategy,
-                  index
-                ) => (
-                  <div
-                    key={
-                      strategy.title
-                    }
-                    className={`rounded-2xl border p-5 sm:p-6 ${surface}`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white">
-                        {index + 1}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <h3
-                          className={`text-lg font-black ${textPrimary}`}
-                        >
-                          {
-                            strategy.title
-                          }
-                        </h3>
-
-                        <p className="text-xs font-bold text-blue-500">
-                          {
-                            strategy.subtitle
-                          }
-                        </p>
-
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                          <div>
-                            <p className="text-xs font-black uppercase text-slate-500">
-                              Read
-                            </p>
-
-                            <p
-                              className={`mt-1 text-sm leading-6 ${textSecondary}`}
-                            >
-                              {
-                                strategy.read
-                              }
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-black uppercase text-slate-500">
-                              Write
-                            </p>
-
-                            <p
-                              className={`mt-1 text-sm leading-6 ${textSecondary}`}
-                            >
-                              {
-                                strategy.write
-                              }
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          className={`mt-4 border-t pt-4 ${
-                            isDark
-                              ? "border-slate-800"
-                              : "border-slate-100"
-                          }`}
-                        >
-                          <p
-                            className={`text-sm ${textSecondary}`}
-                          >
-                            <strong
-                              className={
-                                textPrimary
-                              }
-                            >
-                              Good for:
-                            </strong>{" "}
-                            {
-                              strategy.goodFor
-                            }
-                          </p>
-
-                          <p
-                            className={`mt-2 text-sm ${textSecondary}`}
-                          >
-                            <strong
-                              className={
-                                textPrimary
-                              }
-                            >
-                              Trade-off:
-                            </strong>{" "}
-                            {
-                              strategy.tradeOff
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Cache-Aside Flow
-            </h3>
-
-            <div
-              className={`mt-4 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="grid gap-3 md:grid-cols-5 md:items-center">
-                <DiagramNode
-                  icon={Users}
-                  title="Client"
-                  isDark={isDark}
-                />
-
-                <ArrowRight className="mx-auto hidden h-5 w-5 text-slate-400 md:block" />
-
-                <DiagramNode
-                  icon={Server}
-                  title="API"
-                  isDark={isDark}
-                />
-
-                <ArrowRight className="mx-auto hidden h-5 w-5 text-slate-400 md:block" />
-
-                <DiagramNode
-                  icon={Zap}
-                  title="Redis"
-                  subtitle="GET user:42"
-                  isDark={isDark}
-                  highlight
-                />
-              </div>
-
-              <div className="my-5 text-center">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    isDark
-                      ? "bg-red-950/40 text-red-300"
-                      : "bg-red-50 text-red-600"
-                  }`}
-                >
-                  CACHE MISS
-                </span>
-              </div>
-
-              <div className="mx-auto max-w-sm">
-                <DiagramNode
-                  icon={Database}
-                  title="Database"
-                  subtitle="Fetch user → populate Redis → return"
-                  isDark={isDark}
-                />
-              </div>
-            </div>
-
-            <CodeBlock
-              title="Cache Aside Pseudocode"
-              isDark={isDark}
-            >
-{`async function getUser(userId) {
-    const key = \`user:\${userId}\`;
-
-    const cached = await redis.get(key);
-
-    if (cached) {
-        return JSON.parse(cached);
-    }
-
-    const user = await database.getUser(userId);
-
-    if (!user) {
-        return null;
-    }
-
-    await redis.set(
-        key,
-        JSON.stringify(user),
-        "EX",
-        300
-    );
-
-    return user;
-}`}
-            </CodeBlock>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="eviction"
-              eyebrow="Memory Management"
-              title="Cache Eviction Policies"
-              description="Cache memory is finite. When it fills up, the system must decide what data to remove."
-              icon={Database}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 overflow-hidden rounded-2xl border">
-              <div className="overflow-x-auto">
-                <table
-                  className={`min-w-[720px] w-full ${
-                    isDark
-                      ? "bg-slate-900"
-                      : "bg-white"
-                  }`}
-                >
-                  <thead
-                    className={
-                      isDark
-                        ? "bg-slate-800"
-                        : "bg-slate-100"
-                    }
-                  >
-                    <tr>
-                      {[
-                        "Policy",
-                        "Meaning",
-                        "Useful When",
-                      ].map(
-                        (
-                          item
-                        ) => (
-                          <th
-                            key={
-                              item
-                            }
-                            className={`px-5 py-4 text-left text-xs font-black uppercase ${
-                              isDark
-                                ? "text-slate-300"
-                                : "text-slate-600"
-                            }`}
-                          >
-                            {
-                              item
-                            }
-                          </th>
-                        )
-                      )}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {[
-                      [
-                        "LRU",
-                        "Least Recently Used",
-                        "Recent access predicts future access.",
-                      ],
-
-                      [
-                        "LFU",
-                        "Least Frequently Used",
-                        "Frequently accessed objects should remain cached.",
-                      ],
-
-                      [
-                        "FIFO",
-                        "First In First Out",
-                        "Simple eviction is enough.",
-                      ],
-
-                      [
-                        "TTL",
-                        "Time To Live",
-                        "Data becomes stale after a known period.",
-                      ],
-
-                      [
-                        "Random",
-                        "Random eviction",
-                        "Very simple and low-overhead policy is acceptable.",
-                      ],
-                    ].map(
-                      (row) => (
-                        <tr
-                          key={
-                            row[0]
-                          }
-                          className={`border-t ${
-                            isDark
-                              ? "border-slate-800"
-                              : "border-slate-200"
-                          }`}
-                        >
-                          {row.map(
-                            (
-                              cell,
-                              index
-                            ) => (
-                              <td
-                                key={
-                                  index
-                                }
-                                className={`px-5 py-4 text-sm ${
-                                  index ===
-                                  0
-                                    ? `font-black ${textPrimary}`
-                                    : textSecondary
-                                }`}
-                              >
-                                {
-                                  cell
-                                }
-                              </td>
-                            )
-                          )}
-                        </tr>
-                      )
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <Callout
-              type="info"
-              title="TTL and eviction are different"
-              isDark={isDark}
-            >
-              TTL removes data
-              because it has become
-              too old. Eviction
-              removes data because
-              memory is under
-              pressure. A production
-              cache may use both.
-            </Callout>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="invalidation"
-              eyebrow="The Hard Part"
-              title="Cache Invalidation"
-              description="Caching is easy when data never changes. The difficult part is keeping cached data acceptably fresh after writes."
-              icon={RefreshCcw}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 grid gap-4 md:grid-cols-3">
-              {[
-                {
-                  title:
-                    "Delete on Write",
-
-                  text:
-                    "Update the database, then delete the related cache entry. The next read repopulates it.",
-                },
-
-                {
-                  title:
-                    "Update Cache",
-
-                  text:
-                    "Update the database and immediately update the cached copy.",
-                },
-
-                {
-                  title:
-                    "TTL Expiry",
-
-                  text:
-                    "Allow stale data for a bounded time and let the cache expire naturally.",
-                },
-              ].map(
-                (item) => (
-                  <div
-                    key={
-                      item.title
-                    }
-                    className={`rounded-2xl border p-5 ${surface}`}
-                  >
-                    <h3
-                      className={`font-black ${textPrimary}`}
-                    >
-                      {
-                        item.title
-                      }
-                    </h3>
-
-                    <p
-                      className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                    >
-                      {item.text}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-
-            <CodeBlock
-              title="Update + Invalidate"
-              isDark={isDark}
-            >
-{`async function updateUser(userId, payload) {
-
-    await database.updateUser(
-        userId,
-        payload
-    );
-
-    // Remove potentially stale data.
-    await redis.del(
-        \`user:\${userId}\`
-    );
-
-    return { success: true };
-}`}
-            </CodeBlock>
-
-            <Callout
-              type="warning"
-              title="What if DB update succeeds but cache delete fails?"
-              isDark={isDark}
-            >
-              Now the database
-              contains the new value
-              while Redis may still
-              contain the old value.
-              Possible approaches
-              include short TTLs,
-              retry queues,
-              change-data-capture,
-              event-driven
-              invalidation and
-              versioned cache keys.
-            </Callout>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="stampede"
-              eyebrow="High Traffic"
-              title="Cache Stampede / Thundering Herd"
-              description="A cache stampede happens when a hot key expires and a large number of requests simultaneously discover the cache miss."
-              icon={Flame}
-              isDark={isDark}
-            />
-
-            <div
-              className={`mt-7 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {[
-                  "Req 1",
-                  "Req 2",
-                  "Req 3",
-                  "Req 4",
-                  "Req 5",
-                ].map(
-                  (request) => (
-                    <DiagramNode
-                      key={
-                        request
-                      }
-                      icon={Users}
-                      title={
-                        request
-                      }
-                      isDark={
-                        isDark
-                      }
-                    />
-                  )
-                )}
-              </div>
-
-              <ArrowDown
-                isDark={isDark}
-              />
-
-              <DiagramNode
-                icon={Zap}
-                title="Redis"
-                subtitle="hot:key expired → MISS"
-                isDark={isDark}
-                highlight
-              />
-
-              <ArrowDown
-                label="All requests now fall through"
-                isDark={isDark}
-              />
-
-              <DiagramNode
-                icon={Database}
-                title="Database"
-                subtitle="Suddenly receives thousands of identical expensive queries"
-                isDark={isDark}
-              />
-            </div>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Ways to Stop a
-              Stampede
-            </h3>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {[
-                [
-                  "Single Flight / Mutex",
-                  "Only one request rebuilds the value. Other requests wait for that result.",
-                ],
-
-                [
-                  "TTL Jitter",
-                  "Add random variation to expiry times so thousands of keys do not expire simultaneously.",
-                ],
-
-                [
-                  "Stale While Revalidate",
-                  "Serve a slightly stale value while one background worker refreshes it.",
-                ],
-
-                [
-                  "Refresh Ahead",
-                  "Refresh a highly popular key before the TTL actually expires.",
-                ],
-
-                [
-                  "Request Coalescing",
-                  "Merge identical concurrent cache-miss requests into one backend operation.",
-                ],
-
-                [
-                  "Rate Limit / Queue",
-                  "Protect the database by controlling how much miss traffic is allowed through.",
-                ],
-              ].map(
-                (
-                  [
-                    title,
-                    text,
-                  ]
-                ) => (
-                  <div
-                    key={
-                      title
-                    }
-                    className={`rounded-xl border p-5 ${surface}`}
-                  >
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-
-                    <h4
-                      className={`mt-3 font-black ${textPrimary}`}
-                    >
-                      {title}
-                    </h4>
-
-                    <p
-                      className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                    >
-                      {text}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-
-            <CodeBlock
-              title="TTL Jitter"
-              isDark={isDark}
-            >
-{`const BASE_TTL = 300;
-
-// Random additional expiry time.
-// Keys will not all expire together.
-const jitter =
-    Math.floor(Math.random() * 60);
-
-await redis.set(
-    key,
-    value,
-    "EX",
-    BASE_TTL + jitter
-);`}
-            </CodeBlock>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="hot-key"
-              eyebrow="Hot Key Problem"
-              title="The Celebrity Problem"
-              description="Imagine a celebrity publishes a post and tens of millions of users request the same profile or post. One cache key can become far hotter than everything else."
-              icon={Users}
-              isDark={isDark}
-            />
-
-            <div
-              className={`mt-7 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  "User",
-                  "User",
-                  "User",
-                  "User",
-                ].map(
-                  (
-                    label,
-                    index
-                  ) => (
-                    <DiagramNode
-                      key={
-                        index
-                      }
-                      icon={Users}
-                      title={
-                        label
-                      }
-                      isDark={
-                        isDark
-                      }
-                    />
-                  )
-                )}
-              </div>
-
-              <ArrowDown
-                label="Millions request same key"
-                isDark={isDark}
-              />
-
-              <DiagramNode
-                icon={Flame}
-                title="celebrity:123"
-                subtitle="One extremely hot Redis key / shard"
-                isDark={isDark}
-                highlight
-              />
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {[
-                [
-                  "Local L1 Cache",
-                  "Cache the hot object inside application instances so many requests never reach Redis.",
-                ],
-
-                [
-                  "Replication",
-                  "Spread read traffic across replicas when the data can be safely read from multiple nodes.",
-                ],
-
-                [
-                  "Key Replication",
-                  "For extreme read hotspots, intentionally maintain multiple copies such as hot:123:0, hot:123:1, etc.",
-                ],
-
-                [
-                  "CDN / Edge",
-                  "For public content, move requests closer to users and keep them away from the origin entirely.",
-                ],
-
-                [
-                  "Longer TTL",
-                  "If freshness requirements allow it, avoid repeatedly rebuilding extremely popular content.",
-                ],
-
-                [
-                  "Pre-Warming",
-                  "Populate known hot data before a predictable event or traffic surge.",
-                ],
-              ].map(
-                (
-                  [
-                    title,
-                    text,
-                  ]
-                ) => (
-                  <div
-                    key={
-                      title
-                    }
-                    className={`rounded-xl border p-5 ${surface}`}
-                  >
-                    <h3
-                      className={`font-black ${textPrimary}`}
-                    >
-                      {title}
-                    </h3>
-
-                    <p
-                      className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                    >
-                      {text}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="millions"
-              eyebrow="Scale"
-              title="How Do We Handle Millions of Requests?"
-              description="One Redis node is not the architecture. At large scale we reduce traffic at every possible layer before it reaches the primary database."
-              icon={Rocket}
-              isDark={isDark}
-            />
-
-            <div
-              className={`mt-7 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="mx-auto max-w-2xl">
-                <DiagramNode
-                  icon={Users}
-                  title="Millions of Users"
-                  subtitle="Web / Mobile"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Globe2}
-                  title="CDN / Edge"
-                  subtitle="Absorb static + cacheable traffic"
-                  isDark={isDark}
-                  highlight
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Network}
-                  title="Load Balancer"
-                  subtitle="Spread traffic"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <div className="grid grid-cols-3 gap-2">
-                  <DiagramNode
-                    icon={Server}
-                    title="API 1"
-                    subtitle="L1 cache"
-                    isDark={isDark}
-                  />
-
-                  <DiagramNode
-                    icon={Server}
-                    title="API 2"
-                    subtitle="L1 cache"
-                    isDark={isDark}
-                  />
-
-                  <DiagramNode
-                    icon={Server}
-                    title="API N"
-                    subtitle="L1 cache"
-                    isDark={isDark}
-                  />
-                </div>
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Zap}
-                  title="Redis Cluster"
-                  subtitle="Distributed L2 cache"
-                  isDark={isDark}
-                  highlight
-                />
-
-                <ArrowDown
-                  label="Only misses"
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Database}
-                  title="Database Cluster"
-                  subtitle="Primary + replicas / partitions"
-                  isDark={isDark}
-                />
-              </div>
-            </div>
-
-            <Callout
-              type="success"
-              title="The goal is traffic reduction"
-              isDark={isDark}
-            >
-              If 95% of requests can
-              be served before
-              reaching the database,
-              a million incoming
-              requests do not
-              necessarily mean a
-              million database
-              queries.
-            </Callout>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="redis"
-              eyebrow="Distributed Cache"
-              title="Designing Redis Properly"
-              description="Redis is fast, but poor key design, unlimited TTLs or one hot shard can still create serious production problems."
-              icon={Zap}
-              isDark={isDark}
-            />
-
-            <h3
-              className={`mt-7 text-xl font-black ${textPrimary}`}
-            >
-              Key Naming
-            </h3>
-
-            <CodeBlock
-              title="Redis Keys"
-              isDark={isDark}
-            >
-{`user:42
+        <Call tone="warn" title="A cache does not replace the database">The persistent database stays the source of truth. Treat the cache as a disposable optimisation: you should be able to wipe it and rebuild it from the database without losing anything.</Call>
+      </Sec>
+
+      {/* 02 ─────────────────────────────────────────── */}
+      <Sec id="architecture" n={2} eyebrow="Architecture" title="Where can you cache?" lead="Almost every layer between the user and the database can cache something. Large systems combine several layers instead of relying on one Redis cluster.">
+        <Flow caption="A request, layer by layer" steps={[
+          { t: "User", s: "Browser or mobile app", i: Users },
+          { t: "Browser / CDN cache", s: "Static assets, images, public pages", i: Globe, tone: "hot", via: "request" },
+          { t: "Application servers", s: "Local in-memory (L1) cache", i: Desktop },
+          { t: "Distributed cache", s: "Redis or Memcached (L2)", i: Lightning, tone: "hot" },
+          { t: "Database", s: "Source of truth", i: Database, via: "cache miss" },
+        ]} note={<><b>Each layer you hit saves the ones below it.</b> A CDN hit never reaches your servers; a Redis hit never reaches your database.</>} />
+        <Cards items={[
+          ["Browser cache", "CSS, JavaScript, fonts and cacheable API responses, controlled with Cache-Control and ETag headers.", Desktop],
+          ["CDN / edge cache", "Static and public content stored in data centres close to users.", Globe],
+          ["Local application cache", "A small per-process cache with microsecond reads. Each server has its own copy.", HardDrives],
+          ["Distributed cache", "A shared cache such as Redis that every application server reads from.", Lightning],
+          ["Database cache", "Buffer pools and page caches the database manages itself.", Database],
+          ["Computed-result cache", "Expensive calculations: search results, recommendations, rendered pages.", Stack],
+        ]} />
+      </Sec>
+
+      {/* 03 ─────────────────────────────────────────── */}
+      <Sec id="strategies" n={3} eyebrow="Core interview topic" title="Caching strategies" lead="Saying “we'll add Redis” isn't an answer. Interviewers want to hear how reads and writes move between the cache and the database.">
+        <Specs items={STRATEGIES} />
+        <H3>Cache-aside, step by step</H3>
+        <Flow across caption="Cache-aside read path" steps={[
+          { t: "Client", i: Users },
+          { t: "API", s: "GET /users/42", i: Desktop },
+          { t: "Redis", s: "GET user:42 → miss", i: Lightning, tone: "hot" },
+          { t: "Database", s: "SELECT … then SET in Redis", i: Database },
+        ]} note="On a hit, the flow stops at Redis. On a miss, the API loads the row, stores it with a TTL, and returns it." />
+        <Code title="Cache-aside read with a TTL" lang="js">{`
+async function getUser(userId) {
+  const key = \`user:\${userId}\`;
+
+  const cached = await redis.get(key);
+  if (cached) return JSON.parse(cached);           // hit
+
+  const user = await db.getUser(userId);           // miss: go to the source
+  if (!user) return null;
+
+  await redis.set(key, JSON.stringify(user), "EX", 300); // keep for 5 minutes
+  return user;
+}`}</Code>
+        <Call tone="interview" title="pick one out loud">Say which strategy you're using and why: “Cache-aside, because reads outnumber writes 100 to 1 and a few seconds of staleness on profiles is fine.” That one sentence shows you understand the trade-off.</Call>
+      </Sec>
+
+      {/* 04 ─────────────────────────────────────────── */}
+      <Sec id="eviction" n={4} eyebrow="Memory management" title="Cache eviction policies" lead="Cache memory is finite. When it fills up, something has to go. The eviction policy decides what.">
+        <Table head={["Policy", "Evicts", "Works well when"]} rows={[
+          ["LRU", "The least recently used key", "Recent access predicts future access: sessions, feeds."],
+          ["LFU", "The least frequently used key", "Long-term popular items must survive bursts of one-off reads."],
+          ["FIFO", "The oldest inserted key", "You want the simplest possible policy."],
+          ["TTL", "Keys whose time is up", "Data goes stale after a known period."],
+          ["Random", "Any key", "Overhead matters more than precision."],
+        ]} />
+        <Call tone="info" title="TTL and eviction are different things">TTL removes data because it is <strong>too old</strong>. Eviction removes data because memory is <strong>full</strong>. Redis does both: keys expire by TTL, and a <code>maxmemory-policy</code> such as <code>allkeys-lru</code> decides what goes when memory runs out.</Call>
+      </Sec>
+
+      {/* 05 ─────────────────────────────────────────── */}
+      <Sec id="invalidation" n={5} eyebrow="The hard part" title="Cache invalidation" lead="Caching is easy when data never changes. The hard part is keeping cached data fresh enough after writes.">
+        <Cards cols={3} items={[
+          ["Delete on write", "Update the database, then delete the key. The next read loads the fresh value. The usual default."],
+          ["Update the cache", "Update the database, then overwrite the cached copy. Faster next read, but concurrent writers can race."],
+          ["Let the TTL expire", "Accept stale data for a bounded time and let keys expire naturally. Simple, but never immediate."],
+        ]} />
+        <Code title="Update, then invalidate" lang="js">{`
+async function updateUser(userId, changes) {
+  await db.updateUser(userId, changes);   // 1. the source of truth first
+  await redis.del(\`user:\${userId}\`);     // 2. drop the stale copy
+  return { ok: true };
+}`}</Code>
+        <Call tone="warn" title="What if the database write succeeds but the delete fails?">Now Redis serves the old value until it expires. Protect yourself with a short TTL as a safety net, a retry queue for failed deletes, invalidation driven by the database change log (change-data-capture), or versioned keys such as <code>user:42:v7</code> so new writes simply use a new key.</Call>
+      </Sec>
+
+      {/* 06 ─────────────────────────────────────────── */}
+      <Sec id="stampede" n={6} eyebrow="High traffic" title="Cache stampede (thundering herd)" lead="A hot key expires, and thousands of requests discover the miss in the same instant.">
+        <Flow caption="What a stampede looks like" steps={[
+          { row: [{ t: "Req 1", i: Users }, { t: "Req 2", i: Users }, { t: "Req 3", i: Users }, { t: "Req N", i: Users }] },
+          { t: "Redis", s: "hot:key expired → miss for everyone", i: Lightning, tone: "hot" },
+          { t: "Database", s: "Thousands of identical expensive queries at once", i: Database, tone: "bad", via: "all fall through" },
+        ]} />
+        <H3>Six ways to stop it</H3>
+        <Cards items={[
+          ["Single-flight / mutex", "Only one request rebuilds the value; the others wait for it or get the old one.", CheckCircle],
+          ["TTL jitter", "Add a random offset to expiry times so keys don't all expire together.", CheckCircle],
+          ["Stale-while-revalidate", "Serve the slightly stale value while one background job refreshes it.", CheckCircle],
+          ["Refresh-ahead", "Reload very popular keys before their TTL runs out.", CheckCircle],
+          ["Request coalescing", "Merge identical concurrent misses into one backend call.", CheckCircle],
+          ["Rate-limit the misses", "Cap how much miss traffic may reach the database.", CheckCircle],
+        ]} />
+        <Code title="TTL jitter" lang="js">{`
+const BASE_TTL = 300;                              // 5 minutes
+const jitter = Math.floor(Math.random() * 60);     // + 0 to 59 seconds
+
+// keys written together now expire across a whole minute, not one second
+await redis.set(key, value, "EX", BASE_TTL + jitter);`}</Code>
+      </Sec>
+
+      {/* 07 ─────────────────────────────────────────── */}
+      <Sec id="hot-key" n={7} eyebrow="Hot keys" title="The celebrity problem" lead="A celebrity posts, and tens of millions of people request the same profile. One key becomes far hotter than everything else, and its shard melts.">
+        <Flow caption="One key, one shard, all the traffic" steps={[
+          { row: [{ t: "User", i: Users }, { t: "User", i: Users }, { t: "User", i: Users }, { t: "User", i: Users }] },
+          { t: "celebrity:123", s: "A single Redis key on a single shard", i: Fire, tone: "bad", via: "millions ask for the same key" },
+        ]} note="The cluster has spare capacity overall, but sharding sends every request for this key to one node." />
+        <Cards items={[
+          ["Local L1 cache", "Keep the hot object inside each app server for a few seconds, so most requests never reach Redis.", HardDrives],
+          ["Read replicas", "Spread reads for the key across replicas of its shard.", Stack],
+          ["Key replication", "Store copies as hot:123:0 … hot:123:9 and read a random one, spreading load across shards.", Key],
+          ["CDN / edge", "For public content, serve it from the edge and keep it away from your origin.", Globe],
+          ["Longer TTL", "If freshness allows, don't rebuild extremely popular content often.", Timer],
+          ["Pre-warming", "Load known hot data before a predictable event such as a sale or a match.", Rocket],
+        ]} />
+      </Sec>
+
+      {/* 08 ─────────────────────────────────────────── */}
+      <Sec id="millions" n={8} eyebrow="Scale" title="How do you handle millions of requests?" lead="One Redis node is not an architecture. At scale you shave traffic off at every layer before it can reach the primary database.">
+        <Flow caption="Traffic shrinks at every layer" steps={[
+          { t: "Millions of users", s: "Web and mobile", i: Users },
+          { t: "CDN / edge", s: "Absorbs static and cacheable traffic", i: Globe, tone: "hot" },
+          { t: "Load balancer", s: "Spreads requests across servers", i: ArrowsSplit },
+          { row: [{ t: "API 1", s: "L1 cache", i: Desktop }, { t: "API 2", s: "L1 cache", i: Desktop }, { t: "API N", s: "L1 cache", i: Desktop }] },
+          { t: "Redis cluster", s: "Sharded, replicated L2 cache", i: Lightning, tone: "hot" },
+          { t: "Database cluster", s: "Primary, replicas, partitions", i: Database, via: "only misses" },
+        ]} />
+        <Call tone="ok" title="The goal is traffic reduction">If 95% of requests are answered before the database, a million requests per second means fifty thousand database reads, not a million. Quote the hit ratio you're designing for.</Call>
+      </Sec>
+
+      {/* 09 ─────────────────────────────────────────── */}
+      <Sec id="redis" n={9} eyebrow="Distributed cache" title="Designing Redis well" lead="Redis is fast, but poor key design, missing TTLs or one hot shard still cause real outages.">
+        <H3>Name keys like paths</H3>
+        <Code title="Redis key naming" lang="text">{`
+user:42
 user:42:profile
 product:1001
 movie:778:show:992
 show:992:seat:A10
 show:992:seat:A10:lock
-feed:user:42:v3`}
-            </CodeBlock>
+feed:user:42:v3`}</Code>
+        <Cards items={[
+          ["Use namespaces", "user:42 and product:42 never collide, and keys are easy to scan and debug."],
+          ["Always set a TTL", "Keys without one go stale and use memory forever."],
+          ["Keep values small", "Huge serialised objects cost network, CPU and memory on every read."],
+          ["Watch the hit ratio", "A cache that rarely hits adds complexity for little gain."],
+          ["Find hot keys early", "One popular key can overload a shard while the cluster looks healthy."],
+          ["Plan for Redis being down", "Decide in advance what the app does without it."],
+        ]} />
+      </Sec>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                [
-                  "Use Namespaces",
-                  "Keys such as user:42 and product:42 avoid collisions and are easier to inspect.",
-                ],
+      {/* 10 ─────────────────────────────────────────── */}
+      <Sec id="bookmyshow" n={10} eyebrow="Case study" title="Seat booking with Redis locks" lead="Apply caching and distributed locking to a ticketing system where 100 people tap the same seat in the same second.">
+        <Call tone="info" title="About this example">This is an interview-style design for a BookMyShow-like platform, showing how Redis can hold seats temporarily. It is not a description of any company's private production code.</Call>
+        <H3>Seat states</H3>
+        <Flow across steps={[
+          { t: "AVAILABLE", s: "Can be selected", i: CheckCircle, tone: "good" },
+          { t: "HELD", s: "Temporary Redis lock", i: Lock, tone: "hot" },
+          { t: "BOOKED", s: "Saved in the database", i: ShieldCheck },
+        ]} note={<>If payment fails, checkout is abandoned or the hold expires: <b>HELD → AVAILABLE</b>.</>} />
+        <H3>The booking flow</H3>
+        <Flow steps={[
+          { t: "User selects seat A10", i: Users },
+          { t: "Seat reservation API", s: "Validate the show and the seat", i: Desktop },
+          { t: "Atomic Redis lock", s: "SET show:992:seat:A10:lock <token> NX PX 300000", i: Lock, tone: "hot" },
+          { t: "5-minute hold", s: "Everyone else sees the seat as taken", i: Timer, via: "lock acquired" },
+          { t: "Payment", s: "Idempotent, safe to retry", i: ShieldCheck },
+          { t: "Database", s: "Conditionally mark the seat BOOKED", i: Database, via: "payment succeeded" },
+        ]} />
+        <Code title="Acquire a temporary seat hold" lang="js">{`
+const lockKey = \`show:\${showId}:seat:\${seatId}:lock\`;
+const token = crypto.randomUUID();          // proves who owns the lock
 
-                [
-                  "Always Think About TTL",
-                  "Permanent cache entries often become stale or consume memory indefinitely.",
-                ],
-
-                [
-                  "Avoid Giant Values",
-                  "Huge serialized objects increase network, CPU and memory cost.",
-                ],
-
-                [
-                  "Monitor Hit Ratio",
-                  "A cache with a very low hit ratio may add complexity without meaningful benefit.",
-                ],
-
-                [
-                  "Watch Hot Keys",
-                  "One disproportionately popular key can overload a shard even when total cluster capacity looks healthy.",
-                ],
-
-                [
-                  "Plan Failure Mode",
-                  "Ask what your application does when Redis is unavailable.",
-                ],
-              ].map(
-                (
-                  [
-                    title,
-                    text,
-                  ]
-                ) => (
-                  <div
-                    key={
-                      title
-                    }
-                    className={`rounded-xl border p-5 ${surface}`}
-                  >
-                    <h3
-                      className={`font-black ${textPrimary}`}
-                    >
-                      {title}
-                    </h3>
-
-                    <p
-                      className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                    >
-                      {text}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="bookmyshow"
-              eyebrow="System Design Case Study"
-              title="BookMyShow-Style Seat Locking with Redis"
-              description="Let's apply caching and distributed locking concepts to a high-concurrency ticket booking system."
-              icon={LockKeyhole}
-              isDark={isDark}
-            />
-
-            <Callout
-              type="info"
-              title="Important"
-              isDark={isDark}
-            >
-              This is an
-              interview-style
-              architecture for a
-              BookMyShow-like
-              ticketing platform. It
-              illustrates how Redis
-              can be used for
-              temporary seat holds;
-              it is not a claim about
-              BookMyShow's private
-              production code.
-            </Callout>
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Seat State Machine
-            </h3>
-
-            <div
-              className={`mt-4 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="grid gap-3 md:grid-cols-5 md:items-center">
-                <DiagramNode
-                  icon={CheckCircle2}
-                  title="AVAILABLE"
-                  subtitle="Seat can be selected"
-                  isDark={isDark}
-                />
-
-                <ArrowRight className="mx-auto hidden h-5 w-5 text-slate-400 md:block" />
-
-                <DiagramNode
-                  icon={LockKeyhole}
-                  title="HELD"
-                  subtitle="Temporary Redis lock"
-                  isDark={isDark}
-                  highlight
-                />
-
-                <ArrowRight className="mx-auto hidden h-5 w-5 text-slate-400 md:block" />
-
-                <DiagramNode
-                  icon={ShieldCheck}
-                  title="BOOKED"
-                  subtitle="Persisted after successful booking"
-                  isDark={isDark}
-                />
-              </div>
-
-              <div
-                className={`mt-5 rounded-xl border border-dashed p-4 text-center text-sm ${
-                  isDark
-                    ? "border-slate-700 text-slate-400"
-                    : "border-slate-300 text-slate-600"
-                }`}
-              >
-                If payment fails,
-                checkout is abandoned
-                or the hold expires:
-                <strong>
-                  {" "}
-                  HELD → AVAILABLE
-                </strong>
-              </div>
-            </div>
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Booking Flow
-            </h3>
-
-            <div
-              className={`mt-4 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="mx-auto max-w-xl">
-                <DiagramNode
-                  icon={Users}
-                  title="User selects A10"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Server}
-                  title="Seat Reservation API"
-                  subtitle="Validate show + seat"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={LockKeyhole}
-                  title="Atomic Redis Lock"
-                  subtitle="SET seat:992:A10:lock token NX PX 300000"
-                  isDark={isDark}
-                  highlight
-                />
-
-                <ArrowDown
-                  label="Lock acquired"
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Timer}
-                  title="5 Minute Seat Hold"
-                  subtitle="Other users see seat as unavailable"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={ShieldCheck}
-                  title="Payment"
-                  subtitle="Idempotent booking flow"
-                  isDark={isDark}
-                />
-
-                <ArrowDown
-                  label="Success"
-                  isDark={isDark}
-                />
-
-                <DiagramNode
-                  icon={Database}
-                  title="Persistent DB"
-                  subtitle="Atomically mark seat BOOKED"
-                  isDark={isDark}
-                />
-              </div>
-            </div>
-
-            <CodeBlock
-              title="Acquire Temporary Seat Hold"
-              isDark={isDark}
-            >
-{`const lockKey =
-    \`show:\${showId}:seat:\${seatId}:lock\`;
-
-const token = crypto.randomUUID();
-
-const acquired = await redis.set(
-    lockKey,
-    token,
-    "NX",
-    "PX",
-    5 * 60 * 1000
-);
-
+const acquired = await redis.set(lockKey, token, "NX", "PX", 5 * 60 * 1000);
 if (!acquired) {
-    throw new Error(
-        "Seat already held by another user"
-    );
+  throw new Error("Seat is already held by another user");
 }
-
-// Continue checkout...
-`}
-            </CodeBlock>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Why Store a Unique
-              Token?
-            </h3>
-
-            <p
-              className={`mt-3 leading-8 ${textSecondary}`}
-            >
-              Imagine User A obtains
-              a lock. The lock
-              expires. Then User B
-              obtains a new lock for
-              the same seat. User A
-              must not accidentally
-              delete User B's lock
-              during cleanup.
-            </p>
-
-            <CodeBlock
-              title="Safe Redis Unlock"
-              isDark={isDark}
-            >
-{`if redis.call("get", KEYS[1]) == ARGV[1] then
-    return redis.call("del", KEYS[1])
+// continue to checkout…`}</Code>
+        <H3>Why store a unique token?</H3>
+        <Prose><p>User A gets the lock, then stalls. The lock expires and User B gets a new one for the same seat. When A finally cleans up, a plain <code>DEL</code> would delete <strong>B's</strong> lock. Checking the token first, atomically, prevents that.</p></Prose>
+        <Code title="Safe unlock (Lua script, runs atomically in Redis)" lang="lua">{`
+if redis.call("get", KEYS[1]) == ARGV[1] then
+  return redis.call("del", KEYS[1])
 else
-    return 0
-end`}
-            </CodeBlock>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              What Happens When 100
-              People Click A10?
-            </h3>
-
-            <div
-              className={`mt-4 rounded-2xl border p-4 sm:p-7 ${surface}`}
-            >
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {[
-                  "U1",
-                  "U2",
-                  "U3",
-                  "U4",
-                  "U100",
-                ].map(
-                  (user) => (
-                    <DiagramNode
-                      key={user}
-                      icon={Users}
-                      title={user}
-                      isDark={isDark}
-                    />
-                  )
-                )}
-              </div>
-
-              <ArrowDown
-                label="Same seat"
-                isDark={isDark}
-              />
-
-              <DiagramNode
-                icon={LockKeyhole}
-                title="Redis Atomic SET NX"
-                subtitle="Only one request creates the lock"
-                isDark={isDark}
-                highlight
-              />
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div
-                  className={`rounded-xl border p-4 ${
-                    isDark
-                      ? "border-emerald-900 bg-emerald-950/20"
-                      : "border-emerald-100 bg-emerald-50"
-                  }`}
-                >
-                  <p className="font-black text-emerald-500">
-                    Winner
-                  </p>
-
-                  <p
-                    className={`mt-1 text-sm ${textSecondary}`}
-                  >
-                    One request
-                    acquires the seat
-                    hold and proceeds
-                    to checkout.
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-xl border p-4 ${
-                    isDark
-                      ? "border-red-900 bg-red-950/20"
-                      : "border-red-100 bg-red-50"
-                  }`}
-                >
-                  <p className="font-black text-red-500">
-                    Everyone Else
-                  </p>
-
-                  <p
-                    className={`mt-1 text-sm ${textSecondary}`}
-                  >
-                    Redis refuses the
-                    `NX` operation and
-                    the API returns
-                    seat unavailable.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              But Redis Must Not Be
-              Your Only Protection
-            </h3>
-
-            <p
-              className={`mt-3 leading-8 ${textSecondary}`}
-            >
-              The cache lock protects
-              the high-concurrency
-              checkout experience,
-              but the final booking
-              should still be
-              protected by the
-              persistent data layer.
-            </p>
-
-            <CodeBlock
-              title="Final DB Guard"
-              isDark={isDark}
-            >
-{`UPDATE seats
-
-SET
-    status = 'BOOKED',
-    booking_id = :bookingId
-
-WHERE
-    show_id = :showId
-    AND seat_id = :seatId
-    AND status = 'AVAILABLE';`}
-            </CodeBlock>
-
-            <Callout
-              type="success"
-              title="Defense in depth"
-              isDark={isDark}
-            >
-              Redis gives you a fast
-              temporary hold. The
-              database gives you
-              durable correctness.
-              Idempotency protects
-              retries. TTL protects
-              abandoned checkouts.
-            </Callout>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Payment Success vs
-              Failure
-            </h3>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div
-                className={`rounded-2xl border p-5 ${
-                  isDark
-                    ? "border-emerald-900/50 bg-emerald-950/20"
-                    : "border-emerald-100 bg-emerald-50"
-                }`}
-              >
-                <h4 className="font-black text-emerald-500">
-                  Payment Success
-                </h4>
-
-                <div
-                  className={`mt-4 space-y-2 text-sm leading-6 ${textSecondary}`}
-                >
-                  <p>
-                    1. Verify payment
-                  </p>
-
-                  <p>
-                    2. Idempotently
-                    create booking
-                  </p>
-
-                  <p>
-                    3. Persist seat as
-                    BOOKED
-                  </p>
-
-                  <p>
-                    4. Remove
-                    temporary lock
-                  </p>
-
-                  <p>
-                    5. Publish booking
-                    event
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className={`rounded-2xl border p-5 ${
-                  isDark
-                    ? "border-red-900/50 bg-red-950/20"
-                    : "border-red-100 bg-red-50"
-                }`}
-              >
-                <h4 className="font-black text-red-500">
-                  Payment Failure
-                </h4>
-
-                <div
-                  className={`mt-4 space-y-2 text-sm leading-6 ${textSecondary}`}
-                >
-                  <p>
-                    1. Mark payment
-                    attempt failed
-                  </p>
-
-                  <p>
-                    2. Safely release
-                    the Redis lock
-                  </p>
-
-                  <p>
-                    3. Or allow TTL to
-                    expire
-                  </p>
-
-                  <p>
-                    4. Seat becomes
-                    available again
-                  </p>
-
-                  <p>
-                    5. Notify active
-                    clients
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="failures"
-              eyebrow="Production Engineering"
-              title="Caching Failure Scenarios"
-              description="A strong system design answer explains what happens when the happy path fails."
-              icon={TriangleAlert}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 space-y-4">
-              {[
-                {
-                  problem:
-                    "Redis Goes Down",
-
-                  answer:
-                    "Fail open or fail closed depending on the use case. Normal profile reads may temporarily fall back to the DB with strict rate limiting. Seat locks require much stricter correctness handling.",
-                },
-
-                {
-                  problem:
-                    "Cache and DB Disagree",
-
-                  answer:
-                    "Treat the database as authoritative. Use TTL, invalidation retries, versioning or events to repair stale cache state.",
-                },
-
-                {
-                  problem:
-                    "All Keys Expire Together",
-
-                  answer:
-                    "Use TTL jitter, proactive refresh and staggered warm-up.",
-                },
-
-                {
-                  problem:
-                    "One Key Becomes Extremely Hot",
-
-                  answer:
-                    "Use local cache, replicas, CDN, key replication or precomputed responses depending on the workload.",
-                },
-
-                {
-                  problem:
-                    "Redis Memory Is Full",
-
-                  answer:
-                    "Configure appropriate max-memory policy, TTLs and alerts. Monitor eviction rate and memory fragmentation.",
-                },
-
-                {
-                  problem:
-                    "Network Partition",
-
-                  answer:
-                    "Define whether stale cached reads are acceptable and avoid assuming every distributed lock is an absolute correctness guarantee.",
-                },
-              ].map(
-                (item) => (
-                  <div
-                    key={
-                      item.problem
-                    }
-                    className={`rounded-2xl border p-5 sm:p-6 ${surface}`}
-                  >
-                    <div className="flex gap-3">
-                      <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-
-                      <div>
-                        <h3
-                          className={`font-black ${textPrimary}`}
-                        >
-                          {
-                            item.problem
-                          }
-                        </h3>
-
-                        <p
-                          className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                        >
-                          {
-                            item.answer
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
-
-            <h3
-              className={`mt-8 text-xl font-black ${textPrimary}`}
-            >
-              Important Metrics
-            </h3>
-
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {[
-                "Hit Ratio",
-                "Miss Ratio",
-                "P50 / P95 / P99",
-                "Memory Usage",
-                "Evictions",
-                "Hot Keys",
-                "Connection Count",
-                "CPU",
-                "Network I/O",
-              ].map(
-                (metric) => (
-                  <div
-                    key={
-                      metric
-                    }
-                    className={`rounded-xl border p-4 text-center text-sm font-bold ${surface}`}
-                  >
-                    {metric}
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              eyebrow="Trade-offs"
-              title="When Should You Not Cache?"
-              description="Adding Redis to every system is not automatically good system design."
-              icon={TriangleAlert}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 grid gap-4 md:grid-cols-2">
-              {[
-                "Data changes extremely frequently and stale reads are unacceptable.",
-
-                "The underlying database query is already cheap and traffic is low.",
-
-                "The expected cache hit ratio is extremely small.",
-
-                "The additional operational complexity is greater than the performance benefit.",
-
-                "The value is highly sensitive and should not be duplicated without a clear security model.",
-
-                "Strong transactional consistency is required on every read.",
-              ].map(
-                (
-                  text,
-                  index
-                ) => (
-                  <div
-                    key={
-                      index
-                    }
-                    className={`flex gap-3 rounded-xl border p-4 ${surface}`}
-                  >
-                    <span className="font-black text-red-500">
-                      ×
-                    </span>
-
-                    <p
-                      className={`text-sm leading-6 ${textSecondary}`}
-                    >
-                      {text}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              id="interview"
-              eyebrow="Interview Preparation"
-              title="Caching Questions You Should Be Able to Answer"
-              description="If you can explain these clearly, including trade-offs, you are in a strong position for most HLD interviews."
-              icon={Sparkles}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 space-y-3">
-              {[
-                "What problem does caching solve?",
-
-                "What is the difference between cache-aside and read-through?",
-
-                "When would you choose write-through over write-back?",
-
-                "What is a cache stampede?",
-
-                "How would you prevent a thundering herd?",
-
-                "What is TTL jitter?",
-
-                "What is the celebrity / hot-key problem?",
-
-                "How do you invalidate cache after a database update?",
-
-                "What happens if the database update succeeds but cache invalidation fails?",
-
-                "What happens if Redis is unavailable?",
-
-                "How do you cache data across multiple application servers?",
-
-                "What is the difference between an L1 local cache and an L2 distributed cache?",
-
-                "LRU vs LFU — when would you use each?",
-
-                "How would you design a cache for millions of requests per second?",
-
-                "How would you prevent double booking using Redis?",
-
-                "Why should the database still protect final booking correctness?",
-
-                "How do idempotency and caching interact in a payment or booking system?",
-
-                "What metrics would you monitor for Redis?",
-              ].map(
-                (
-                  question,
-                  index
-                ) => (
-                  <div
-                    key={
-                      question
-                    }
-                    className={`flex gap-3 rounded-xl border p-4 ${surface}`}
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white">
-                      {index + 1}
-                    </span>
-
-                    <p
-                      className={`pt-1 text-sm font-semibold ${textPrimary}`}
-                    >
-                      {question}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <SectionHeading
-              eyebrow="Quick Revision"
-              title="Frequently Asked Questions"
-              description="Short answers to some of the most common caching questions."
-              icon={Lightbulb}
-              isDark={isDark}
-            />
-
-            <div className="mt-7 space-y-4">
-              {faqData.map(
-                (item) => (
-                  <div
-                    key={
-                      item.question
-                    }
-                    className={`rounded-2xl border p-5 ${surface}`}
-                  >
-                    <h3
-                      className={`font-black ${textPrimary}`}
-                    >
-                      {
-                        item.question
-                      }
-                    </h3>
-
-                    <p
-                      className={`mt-2 text-sm leading-7 ${textSecondary}`}
-                    >
-                      {
-                        item.answer
-                      }
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-          <section className="mt-16">
-            <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 text-white shadow-xl sm:p-9">
-              <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-blue-100">
-                    <BookOpen className="h-3.5 w-3.5" />
-
-                    TargetTrek HLD
-                  </div>
-
-                  <h2 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">
-                    Want to master
-                    complete System
-                    Design?
-                  </h2>
-
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-blue-100 sm:text-base">
-                    Go beyond caching.
-                    Learn requirements,
-                    APIs, databases,
-                    scaling, queues,
-                    locking,
-                    concurrency,
-                    failure handling
-                    and complete
-                    interview-style
-                    designs such as
-                    BookMyShow and
-                    other large-scale
-                    systems.
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-blue-100">
-                    {[
-                      "Caching",
-                      "Databases",
-                      "Rate Limiting",
-                      "Queues",
-                      "Concurrency",
-                      "BookMyShow",
-                      "Uber",
-                      "Scaling",
-                    ].map(
-                      (item) => (
-                        <span
-                          key={
-                            item
-                          }
-                          className="rounded-full bg-white/10 px-3 py-1.5"
-                        >
-                          {item}
-                        </span>
-                      )
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      BOOK_URL
-                    )
-                  }
-                  className="inline-flex min-h-[48px] w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-50 md:w-auto"
-                >
-                  Explore HLD Book
-
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </section>
-          <section
-            className={`mt-8 border-t pt-8 ${
-              isDark
-                ? "border-slate-800"
-                : "border-slate-200"
-            }`}
-          >
-            <p
-              className={`text-xs font-black uppercase tracking-[0.14em] ${
-                isDark
-                  ? "text-slate-500"
-                  : "text-slate-400"
-              }`}
-            >
-              Continue Learning
-            </p>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  NEXT_TOPIC.path
-                )
-              }
-              className={`group mt-3 w-full rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 sm:p-6 ${
-                isDark
-                  ? "border-slate-800 bg-slate-900 hover:border-blue-700"
-                  : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-lg"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-5">
-                <div>
-                  <p className="text-xs font-bold text-blue-500">
-                    NEXT TOPIC
-                  </p>
-
-                  <h2
-                    className={`mt-1 text-xl font-black sm:text-2xl ${
-                      isDark
-                        ? "text-white"
-                        : "text-slate-950"
-                    }`}
-                  >
-                    {
-                      NEXT_TOPIC.title
-                    }
-                  </h2>
-
-                  <p
-                    className={`mt-2 max-w-2xl text-sm leading-6 ${textSecondary}`}
-                  >
-                    {
-                      NEXT_TOPIC.description
-                    }
-                  </p>
-                </div>
-
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </div>
-            </button>
-          </section>
-          </article>
-        </main>
-      </div>
-    </>
+  return 0
+end`}</Code>
+        <H3>What happens when 100 people tap A10?</H3>
+        <Flow steps={[
+          { row: [{ t: "U1", i: Users }, { t: "U2", i: Users }, { t: "U3", i: Users }, { t: "U100", i: Users }] },
+          { t: "Redis SET … NX", s: "Atomic: only one request can create the key", i: Lock, tone: "hot", via: "same seat" },
+          { row: [{ t: "1 winner", s: "Gets the hold, goes to checkout", i: CheckCircle, tone: "good" }, { t: "99 others", s: "NX fails → “seat unavailable”", i: Users, tone: "bad" }] },
+        ]} />
+        <H3>Redis must not be your only protection</H3>
+        <Prose><p>The Redis hold makes checkout fast under heavy concurrency, but locks can be lost on failover or expire mid-request. The final write must be guarded by the database itself:</p></Prose>
+        <Code title="Final guard in the database" lang="sql">{`
+UPDATE seats
+SET    status = 'BOOKED', booking_id = :bookingId
+WHERE  show_id = :showId
+  AND  seat_id = :seatId
+  AND  status  = 'AVAILABLE';   -- 0 rows updated means someone else won`}</Code>
+        <Call tone="ok" title="Defence in depth">Redis gives a fast temporary hold. The database gives durable correctness. Idempotency keys make retries safe. The TTL cleans up abandoned checkouts.</Call>
+        <Compare
+          left={{ tone: "good", ordered: true, title: "Payment succeeds", items: ["Verify the payment", "Create the booking idempotently", "Mark the seat BOOKED in the database", "Release the Redis lock", "Publish a booking event"] }}
+          right={{ tone: "bad", ordered: true, title: "Payment fails", items: ["Record the failed attempt", "Release the lock safely, using the token", "Or simply let the TTL expire", "The seat becomes AVAILABLE again", "Notify other viewers of the seat map"] }}
+        />
+      </Sec>
+
+      {/* 11 ─────────────────────────────────────────── */}
+      <Sec id="failures" n={11} eyebrow="Production engineering" title="Caching failure scenarios" lead="A strong design answer explains what happens when the happy path breaks.">
+        <Table head={["What goes wrong", "What you do"]} rows={[
+          ["Redis goes down", "Fail open or closed per use case. Profile reads can fall back to the database behind a circuit breaker and rate limit; seat locks need strict handling."],
+          ["Cache and database disagree", "The database wins. Repair with TTLs, invalidation retries, versioned keys or change events."],
+          ["Many keys expire together", "TTL jitter, refresh-ahead and staggered warm-up."],
+          ["One key gets extremely hot", "Local cache, replicas, CDN, key replication or precomputed responses."],
+          ["Redis memory is full", "Set a maxmemory policy, give every key a TTL, alert on evictions and fragmentation."],
+          ["Network partition", "Decide if stale reads are acceptable; never treat a distributed lock as an absolute guarantee."],
+        ]} />
+        <H3>Metrics worth a dashboard</H3>
+        <Chips label="Cache metrics" items={["Hit ratio", "Miss ratio", "p50 / p95 / p99 latency", "Memory used", "Evictions", "Hot keys", "Connections", "CPU", "Network I/O", "Replication lag"]} />
+      </Sec>
+
+      {/* 12 ─────────────────────────────────────────── */}
+      <Sec id="when-not" n={12} eyebrow="Trade-offs" title="When should you not cache?" lead="Adding Redis to every design is not automatically good design. Skip the cache when:">
+        <Nots items={[
+          "The data changes constantly and stale reads are unacceptable.",
+          "The query is already cheap and traffic is low.",
+          "The expected hit ratio is tiny, because every request is unique.",
+          "The operational cost of another system outweighs the speed-up.",
+          "The data is sensitive and copying it needs a security model you don't have.",
+          "Every read needs strong transactional consistency.",
+        ]} />
+        <Bullets items={[<>Rule of thumb: <strong>measure first</strong>. Add a cache when a specific read path is slow or expensive, and know the hit ratio you expect.</>]} />
+      </Sec>
+    </ReaderPage>
   );
-};
-
-export default HLDCacheResource;
+}

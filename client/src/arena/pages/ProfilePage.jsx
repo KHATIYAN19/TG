@@ -79,11 +79,11 @@ function TagInput({ value, onChange, max, placeholder, lowercase, entity, label,
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 rounded-xl border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] p-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-100 dk:focus-within:ring-orange-500/20">
+      <div className="flex flex-wrap gap-2 rounded-xl border border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] p-2 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-100 dk:focus-within:ring-teal-400/20">
         {value.map((s) => (
-          <span key={s} className="inline-flex items-center gap-1 rounded-lg bg-orange-50 dk:bg-orange-500/10 px-2.5 py-1 text-sm font-medium text-orange-800 dk:text-orange-200">
+          <span key={s} className="inline-flex items-center gap-1 rounded-lg bg-teal-50 dk:bg-teal-400/10 px-2.5 py-1 text-sm font-medium text-teal-900 dk:text-teal-200">
             {s}
-            <button type="button" onClick={() => onChange(value.filter((x) => x !== s))} aria-label={`Remove ${s}`} className="rounded p-0.5 hover:bg-orange-100 dk:hover:bg-orange-500/15">
+            <button type="button" onClick={() => onChange(value.filter((x) => x !== s))} aria-label={`Remove ${s}`} className="rounded p-0.5 hover:bg-teal-100 dk:hover:bg-teal-400/15">
               <X className="h-3.5 w-3.5" />
             </button>
           </span>
@@ -99,15 +99,15 @@ function TagInput({ value, onChange, max, placeholder, lowercase, entity, label,
             }}
             onBlur={() => add(draft)}
             placeholder={value.length ? "Add another…" : placeholder}
-            className="min-w-[6rem] flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-stone-400 dk:placeholder:text-[#8f7c70]"
+            className="min-w-[6rem] flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-stone-400 dk:placeholder:text-[#73897f]"
           />
         )}
       </div>
       {open.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-stone-500 dk:text-[#b9a79c]">Suggestions:</span>
+          <span className="text-xs text-stone-500 dk:text-[#93aaa3]">Suggestions:</span>
           {open.map((s) => (
-            <button key={s} type="button" onClick={() => add(s)} className="rounded-full border border-dashed border-stone-300 dk:border-[#5a4336] px-2.5 py-0.5 text-xs text-stone-600 dk:text-[#d6c4b8] hover:border-orange-400 hover:text-orange-700 dk:hover:text-orange-300">
+            <button key={s} type="button" onClick={() => add(s)} className="rounded-full border border-dashed border-stone-300 dk:border-[#2e4641] px-2.5 py-0.5 text-xs text-stone-600 dk:text-[#a3b8b2] hover:border-teal-400 hover:text-teal-800 dk:hover:text-teal-300">
               + {s}
             </button>
           ))}
@@ -137,13 +137,13 @@ function YearsStepper({ value, onChange }) {
   const set = (v) => onChange(Math.min(40, Math.max(0, v)));
   return (
     <div className="flex items-center gap-3">
-      <button type="button" onClick={() => set(n - 1)} aria-label="Fewer years" className="grid h-10 w-10 place-items-center rounded-xl border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] text-stone-700 dk:text-[#ead9cc] hover:bg-orange-50 dk:hover:bg-orange-500/10"><Minus className="h-4 w-4" /></button>
+      <button type="button" onClick={() => set(n - 1)} aria-label="Fewer years" className="grid h-10 w-10 place-items-center rounded-xl border border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] text-stone-700 dk:text-[#cfe0db] hover:bg-teal-50 dk:hover:bg-teal-400/10"><Minus className="h-4 w-4" /></button>
       <div className="min-w-[5.5rem] text-center">
-        <span className="text-2xl font-bold text-[#29201b] dk:text-[#fff7ed]">{n}</span>
-        <span className="ml-1 text-sm text-stone-500 dk:text-[#b9a79c]">{n === 1 ? "year" : "years"}</span>
+        <span className="text-2xl font-bold text-[#0c1a17] dk:text-[#e8f2ef]">{n}</span>
+        <span className="ml-1 text-sm text-stone-500 dk:text-[#93aaa3]">{n === 1 ? "year" : "years"}</span>
       </div>
-      <button type="button" onClick={() => set(n + 1)} aria-label="More years" className="grid h-10 w-10 place-items-center rounded-xl border border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] text-stone-700 dk:text-[#ead9cc] hover:bg-orange-50 dk:hover:bg-orange-500/10"><Plus className="h-4 w-4" /></button>
-      <input type="range" min="0" max="20" value={Math.min(n, 20)} onChange={(e) => set(Number(e.target.value))} aria-label="Years of experience" className="ml-2 hidden h-2 flex-1 cursor-pointer accent-orange-600 sm:block" />
+      <button type="button" onClick={() => set(n + 1)} aria-label="More years" className="grid h-10 w-10 place-items-center rounded-xl border border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] text-stone-700 dk:text-[#cfe0db] hover:bg-teal-50 dk:hover:bg-teal-400/10"><Plus className="h-4 w-4" /></button>
+      <input type="range" min="0" max="20" value={Math.min(n, 20)} onChange={(e) => set(Number(e.target.value))} aria-label="Years of experience" className="ml-2 hidden h-2 flex-1 cursor-pointer accent-teal-700 sm:block" />
     </div>
   );
 }
@@ -156,15 +156,15 @@ function Strength({ form }) {
   ];
   const pct = Math.round((checks.filter(Boolean).length / checks.length) * 100);
   return (
-    <div className="rounded-2xl border border-orange-200 dk:border-orange-500/25 bg-gradient-to-r from-orange-50 dk:from-orange-500/10 to-amber-50 dk:to-amber-500/10 p-4 sm:p-5">
+    <div className="rounded-2xl border border-teal-200 dk:border-teal-400/25 bg-gradient-to-r from-teal-50 dk:from-teal-400/10 to-amber-50 dk:to-amber-500/10 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-sm font-semibold text-[#29201b] dk:text-[#fff7ed]"><Sparkles className="h-4 w-4 text-orange-600 dk:text-orange-400" aria-hidden /> Profile strength</p>
-        <span className="text-sm font-bold text-orange-700 dk:text-orange-300">{pct}%</span>
+        <p className="flex items-center gap-2 text-sm font-semibold text-[#0c1a17] dk:text-[#e8f2ef]"><Sparkles className="h-4 w-4 text-teal-700 dk:text-teal-400" aria-hidden /> Profile strength</p>
+        <span className="text-sm font-bold text-teal-800 dk:text-teal-300">{pct}%</span>
       </div>
-      <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white dk:bg-[#241b15] ring-1 ring-orange-100 dk:ring-orange-500/20" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all" style={{ width: `${pct}%` }} />
+      <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white dk:bg-[#101c1a] ring-1 ring-teal-100 dk:ring-teal-400/20" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-gradient-to-r from-teal-600 to-amber-500 transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-2 text-xs text-stone-600 dk:text-[#d6c4b8]">Detailed profiles get accepted more often. Add a job title, your company and a short intro.</p>
+      <p className="mt-2 text-xs text-stone-600 dk:text-[#a3b8b2]">Detailed profiles get accepted more often. Add a job title, your company and a short intro.</p>
     </div>
   );
 }
@@ -298,8 +298,8 @@ export function ProfileForm({ me, refresh, onSaved, saveLabel }) {
             <Field label="When can you practise?" error={errors.availability}>
               <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Availability">
                 {SLOTS.map((s) => (
-                  <label key={s.value} className={cx("flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors", form.availability.includes(s.value) ? "border-orange-500 bg-orange-50 dk:bg-orange-500/10 text-orange-900 dk:text-orange-100" : "border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] text-stone-700 dk:text-[#ead9cc] hover:bg-orange-50 dk:hover:bg-orange-500/10")}>
-                    <input type="checkbox" className="h-4 w-4 accent-orange-600" checked={form.availability.includes(s.value)} onChange={() => set("availability")(toggleIn(form.availability, s.value))} />
+                  <label key={s.value} className={cx("flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors", form.availability.includes(s.value) ? "border-teal-600 bg-teal-50 dk:bg-teal-400/10 text-teal-950 dk:text-teal-100" : "border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] text-stone-700 dk:text-[#cfe0db] hover:bg-teal-50 dk:hover:bg-teal-400/10")}>
+                    <input type="checkbox" className="h-4 w-4 accent-teal-700" checked={form.availability.includes(s.value)} onChange={() => set("availability")(toggleIn(form.availability, s.value))} />
                     {s.label}
                   </label>
                 ))}
@@ -367,9 +367,9 @@ export function ProfileForm({ me, refresh, onSaved, saveLabel }) {
       </Section>
 
       {/* Sticky action bar: always reachable on phones */}
-      <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#f0ded0] dk:border-[#443127] bg-white/95 dk:bg-[#241b15]/95 p-3 shadow-lg shadow-orange-900/40 dk:shadow-black/40 backdrop-blur sm:px-5">
-        <p className="hidden text-sm text-stone-600 dk:text-[#d6c4b8] sm:block">
-          Your entry includes <strong className="text-orange-700 dk:text-orange-300">{matchesPerEntry} {matchesPerEntry === 1 ? "match" : "matches"}</strong>, one after another.
+      <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e5] dk:border-[#1f302c] bg-white/95 dk:bg-[#101c1a]/95 p-3 shadow-lg shadow-teal-950/15 dk:shadow-black/40 backdrop-blur sm:px-5">
+        <p className="hidden text-sm text-stone-600 dk:text-[#a3b8b2] sm:block">
+          Your entry includes <strong className="text-teal-800 dk:text-teal-300">{matchesPerEntry} {matchesPerEntry === 1 ? "match" : "matches"}</strong>, one after another.
         </p>
         <Button type="submit" size="lg" loading={saving} disabled={profile?.status === "suspended"} className="w-full sm:w-auto">
           {saveLabel || (profile ? "Save changes" : "Save details")}
@@ -393,15 +393,15 @@ export default function ProfilePage() {
         {inArena && (
           <Card className="p-6">
             <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 dk:bg-emerald-500/15 text-emerald-700 dk:text-emerald-300"><BadgeCheck className="h-6 w-6" aria-hidden /></span>
-            <h3 className="mt-4 text-lg font-semibold text-[#29201b] dk:text-[#fff7ed]">You're in the arena</h3>
-            <p className="mt-1.5 text-sm text-stone-600 dk:text-[#d6c4b8]">Your profile is live. Changes you save here show up on your card straight away.</p>
-            <Link to="../arena" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-500">Find a buddy</Link>
+            <h3 className="mt-4 text-lg font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">You're in the arena</h3>
+            <p className="mt-1.5 text-sm text-stone-600 dk:text-[#a3b8b2]">Your profile is live. Changes you save here show up on your card straight away.</p>
+            <Link to="../arena" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600">Find a buddy</Link>
           </Card>
         )}
         {matched && (
-          <Card className="p-6 text-sm text-stone-600 dk:text-[#d6c4b8]">
-            <p className="font-semibold text-[#29201b] dk:text-[#fff7ed]">You're matched 🎉</p>
-            <Link to="../buddy" className="mt-3 inline-block font-semibold text-orange-700 dk:text-orange-300">Open my buddy →</Link>
+          <Card className="p-6 text-sm text-stone-600 dk:text-[#a3b8b2]">
+            <p className="font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">You're matched 🎉</p>
+            <Link to="../buddy" className="mt-3 inline-block font-semibold text-teal-800 dk:text-teal-300">Open my buddy →</Link>
           </Card>
         )}
       </aside>

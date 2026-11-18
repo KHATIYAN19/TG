@@ -90,10 +90,10 @@ export function BugReportModal({ open, onClose }) {
                 role="radio"
                 aria-checked={form.severity === v}
                 onClick={() => setForm((f) => ({ ...f, severity: v }))}
-                className={`rounded-xl border p-2.5 text-left transition-colors ${form.severity === v ? "border-orange-500 bg-orange-50 dk:bg-orange-500/10 ring-1 ring-orange-500" : "border-stone-300 dk:border-[#5a4336] bg-white dk:bg-[#241b15] hover:bg-orange-50 dk:hover:bg-[#35261e]"}`}
+                className={`rounded-xl border p-2.5 text-left transition-colors ${form.severity === v ? "border-teal-600 bg-teal-50 dk:bg-teal-400/10 ring-1 ring-teal-600" : "border-stone-300 dk:border-[#2e4641] bg-white dk:bg-[#101c1a] hover:bg-teal-50 dk:hover:bg-[#1f332f]"}`}
               >
-                <span className={`block text-sm font-semibold ${form.severity === v ? "text-orange-800 dk:text-orange-200" : "text-[#29201b] dk:text-[#fff7ed]"}`}>{l}</span>
-                <span className="mt-0.5 hidden text-[11px] leading-tight text-stone-500 dk:text-[#b9a79c] sm:block">{hint}</span>
+                <span className={`block text-sm font-semibold ${form.severity === v ? "text-teal-900 dk:text-teal-200" : "text-[#0c1a17] dk:text-[#e8f2ef]"}`}>{l}</span>
+                <span className="mt-0.5 hidden text-[11px] leading-tight text-stone-500 dk:text-[#93aaa3] sm:block">{hint}</span>
               </button>
             ))}
           </div>

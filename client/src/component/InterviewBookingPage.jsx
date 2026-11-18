@@ -10,51 +10,49 @@ import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
 import {
   AnimatePresence,
-  animate,
+  MotionConfig,
   motion,
   useInView,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
-  useTransform,
 } from "framer-motion";
 import {
-  AlertCircle,
+  ArrowClockwise,
   ArrowLeft,
   ArrowRight,
-  BadgeCheck,
-  BrainCircuit,
+  Brain,
   Briefcase,
-  BriefcaseBusiness,
-  Building2,
-  CalendarDays,
+  Buildings,
+  CalendarBlank,
+  CaretRight,
+  ChatCircleText,
   Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Clock3,
-  Code2,
+  CheckCircle,
+  Clock,
+  Code,
   CreditCard,
+  EnvelopeSimple,
   GraduationCap,
-  HelpCircle,
-  Layers3,
-  Link2,
-  LoaderCircle,
-  LockKeyhole,
-  Mail,
-  MessageSquareText,
-  Network,
+  Lightning,
+  LinkSimple,
+  LockKey,
   Phone,
-  RefreshCw,
-  Send,
-  ServerCog,
+  Plus,
+  SealCheck,
   ShieldCheck,
-  Sparkles,
+  SpinnerGap,
+  Stack,
   Target,
+  TreeStructure,
   User,
-  Video,
+  VideoCamera,
+  WarningCircle,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
+
+import "./mockInterviews.css";
 
 /* =========================================================
    CONFIGURATION
@@ -74,7 +72,18 @@ const DEFAULT_CASHFREE_MODE =
     ? "production"
     : "sandbox";
 
-const EASE = [0.25, 0.1, 0.25, 1];
+const EASE = [0.22, 1, 0.36, 1];
+
+const SITE_URL = "https://www.targettrek.in";
+const PAGE_URL = `${SITE_URL}/mock-interviews`;
+const SEO_TITLE = "Book Mock Interviews: DSA, HLD, LLD & Java | Target Trek";
+const SEO_DESCRIPTION =
+  "Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and find your weak spots before the real interview.";
+
+const FONT_URL =
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap";
+
+const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 /* =========================================================
    INTERVIEW TOPICS
@@ -83,33 +92,38 @@ const EASE = [0.25, 0.1, 0.25, 1];
 const TOPIC_INFO = {
   DSA: {
     title: "Data Structures & Algorithms",
+    short: "DSA",
     description:
       "Coding questions, problem solving, complexity analysis and edge cases.",
-    Icon: Code2,
+    Icon: Code,
   },
   LLD: {
     title: "Low-Level Design",
+    short: "LLD",
     description:
       "Object-oriented design, SOLID, design patterns and concurrency.",
-    Icon: Layers3,
+    Icon: Stack,
   },
   HLD: {
     title: "High-Level System Design",
+    short: "System Design",
     description:
       "Distributed systems, scalability, caching, databases and architecture.",
-    Icon: Network,
+    Icon: TreeStructure,
   },
   GENAI: {
     title: "Generative AI Engineering",
+    short: "GenAI",
     description:
       "RAG, AI agents, LLMs, evaluation and production GenAI systems.",
-    Icon: BrainCircuit,
+    Icon: Brain,
   },
   PROJECTS: {
     title: "Backend Engineering & Projects",
+    short: "Backend & Projects",
     description:
       "Java, Spring Boot, microservices, API design, databases, projects and trade-offs.",
-    Icon: BriefcaseBusiness,
+    Icon: Briefcase,
   },
 };
 
@@ -157,16 +171,15 @@ const DISPLAY_TIMEZONES = [
 
 // Marketing statistics supplied by the site owner. Update when verified.
 const PAGE_STATS = [
-  { value: "25+", label: "Mock interviews conducted", Icon: Video },
-  { value: "1:1", label: "Working engineer-led sessions", Icon: ServerCog },
-  { value: "Live", label: "Technical questions & feedback", Icon: Layers3 },
-  { value: "5", label: "Interview preparation tracks", Icon: Target },
+  { value: "25+", label: "Mock interviews conducted" },
+  { value: "1:1", label: "Live with a working engineer" },
+  { value: "5", label: "Interview tracks" },
+  { value: "0", label: "Accounts needed to book" },
 ];
 
 const CURRICULUM = [
   {
     key: "DSA",
-    Icon: Code2,
     title: "DSA & live coding",
     tagline: "From problem statement to optimal approach",
     points: [
@@ -178,7 +191,6 @@ const CURRICULUM = [
   },
   {
     key: "LLD",
-    Icon: Layers3,
     title: "Java & Low-Level Design",
     tagline: "Build maintainable, interview-ready designs",
     points: [
@@ -190,7 +202,6 @@ const CURRICULUM = [
   },
   {
     key: "HLD",
-    Icon: Network,
     title: "High-Level System Design",
     tagline: "Explain trade-offs, not just diagrams",
     points: [
@@ -202,7 +213,6 @@ const CURRICULUM = [
   },
   {
     key: "GENAI",
-    Icon: BrainCircuit,
     title: "Generative AI Engineering",
     tagline: "Real-world LLM and agentic system discussions",
     points: [
@@ -214,7 +224,6 @@ const CURRICULUM = [
   },
   {
     key: "PROJECTS",
-    Icon: BriefcaseBusiness,
     title: "Backend & project deep dives",
     tagline: "Defend your engineering decisions",
     points: [
@@ -228,40 +237,70 @@ const CURRICULUM = [
 
 const SESSION_BENEFITS = [
   {
-    Icon: Video,
-    title: "Real 1:1 technical discussion",
+    Icon: VideoCamera,
+    title: "A real 1:1 interview",
     description:
-      "Practice explaining your approach live to an engineer instead of solving problems silently.",
+      "Explain your approach out loud to an engineer, the way you will on the day, instead of solving problems in silence.",
   },
   {
-    Icon: MessageSquareText,
-    title: "Detailed interview feedback",
+    Icon: Brain,
+    title: "The follow-ups that catch people out",
     description:
-      "Receive an interviewer-led breakdown of your technical approach, communication, problem-solving gaps, and priority areas to improve. Written feedback is provided when included in the selected session.",
-  },
-  {
-    Icon: BrainCircuit,
-    title: "Deeper follow-up questions",
-    description:
-      "Discuss edge cases, scalability, alternatives and trade-offs that interviewers often probe.",
+      "Edge cases, scale, alternatives and trade-offs: the questions interviewers ask after your first answer.",
   },
   {
     Icon: Target,
-    title: "Tailored to your target role",
+    title: "Built around your target role",
     description:
-      "Share your experience and upcoming interview so the available session topics can reflect your goals.",
+      "Tell us your experience and upcoming interview, and the session focuses on what matters for it.",
   },
   {
-    Icon: Clock3,
-    title: "Choose your duration",
+    Icon: Clock,
+    title: "Pick the length you need",
     description:
-      "Pick a listed slot that matches the depth of practice you need, with pricing shown before payment.",
+      "Choose a listed slot that fits the depth of practice you want. The price is shown before you pay.",
+  },
+];
+
+const FEEDBACK_POINTS = [
+  "How you approached the problem",
+  "How clearly you explained your thinking",
+  "Gaps in problem solving and design",
+  "The few areas to work on first",
+];
+
+const SESSION_FLOW = [
+  ["01", "Introduction", "Your experience, target role, upcoming interviews and what you want from the session.", "~5 min"],
+  ["02", "Technical round", "Live coding, system design, GenAI or a project discussion, based on the topics you picked.", "Main part"],
+  ["03", "Follow-ups", "Edge cases, optimisations, other designs and the deeper “why” questions.", "Where it gets real"],
+  ["04", "Feedback", "Your strengths, what to improve and what to practise next, talked through with you.", "Last few min"],
+];
+
+const AUDIENCE = [
+  ["Students & freshers", "Get comfortable with live coding, explaining your solution and core CS questions.", "Campus & off-campus"],
+  ["SDE-1 candidates", "Sharpen DSA, backend basics, project walkthroughs and how you communicate.", "0–2 years"],
+  ["SDE-2 candidates", "Practise design depth, scalability, concurrency and trade-off decisions.", "2–5 years"],
+  ["Backend & GenAI engineers", "Discuss APIs, microservices, RAG, agents and production architecture.", "Specialists"],
+];
+
+const HOW_IT_WORKS = [
+  {
+    title: "Pick a date and time",
+    description:
+      "Choose an open slot below, then select the topics you want to practise.",
+    Icon: CalendarBlank,
   },
   {
-    Icon: ShieldCheck,
-    title: "Clear booking workflow",
+    title: "Add your details and pay",
     description:
-      "Book as a guest, pay through Cashfree and receive confirmation after server-side payment verification.",
+      "Share your name, email, background and goals. Pay securely through Cashfree. No account needed.",
+    Icon: CreditCard,
+  },
+  {
+    title: "Join your interview",
+    description:
+      "Once the payment is verified you get a confirmation. Meeting details are sent by email.",
+    Icon: VideoCamera,
   },
 ];
 
@@ -308,6 +347,15 @@ const FAQ_ITEMS = [
   },
 ];
 
+const TABS = [
+  { id: "interview-slots", label: "Book a slot" },
+  { id: "what-you-get", label: "What you get" },
+  { id: "interview-topics", label: "Topics" },
+  { id: "session-experience", label: "The session" },
+  { id: "how-it-works", label: "How it works" },
+  { id: "mock-faq", label: "FAQ" },
+];
+
 /* =========================================================
    THEME — uses the theme from the Navbar (no duplicate toggle)
 ========================================================= */
@@ -332,13 +380,18 @@ function useNavbarTheme() {
   const [theme, setTheme] = useState(readTheme);
 
   useEffect(() => {
-    const sync = () => setTheme(readTheme());
+    const sync = (event) => {
+      const next = event?.detail?.theme;
+
+      if (next === "dark" || next === "light") setTheme(next);
+      else setTheme(readTheme());
+    };
 
     window.addEventListener("storage", sync);
     window.addEventListener("themechange", sync);
     window.addEventListener("targettrek-theme-change", sync);
 
-    const observer = new MutationObserver(sync);
+    const observer = new MutationObserver(() => setTheme(readTheme()));
 
     observer.observe(document.documentElement, {
       attributes: true,
@@ -379,7 +432,7 @@ function fmtTime(value, timeZone = TIMEZONE, timeFormat = "12") {
     hour: timeFormat === "24" ? "2-digit" : "numeric",
     minute: "2-digit",
     hour12: timeFormat !== "24",
-  });
+  }).replace(/\b(am|pm)\b/i, (part) => part.toUpperCase());
 }
 
 function fmtSlotDate(value, timeZone = TIMEZONE) {
@@ -401,6 +454,7 @@ function fmtMoney(value, currency = "INR") {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: currency || "INR",
+      minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
@@ -716,697 +770,103 @@ function validateCandidate(candidate) {
 }
 
 /* =========================================================
-   SCOPED STYLES (light + dark, orange theme)
+   SMALL SHARED PIECES
 ========================================================= */
 
-const styles = `
-.tt-ib {
-  --ib-bg: #fffaf5;
-  --ib-surface: #ffffff;
-  --ib-alt: #fff1e3;
-  --ib-text: #2a1f18;
-  --ib-muted: #7a6a5e;
-  --ib-border: #f1dcc8;
-  --ib-orange: #ea580c;
-  --ib-orange-light: #ffedd5;
-  --ib-input: #ffffff;
-  --ib-green: #166534;
-  --ib-green-bg: #ecfdf3;
-  --ib-red: #dc2626;
-  --ib-red-bg: #fef2f2;
-  --ib-grid: rgba(234,88,12,.07);
-  --ib-glow: rgba(249,115,22,.22);
+function scrollToId(id) {
+  if (typeof document === "undefined") return;
 
-  background: var(--ib-bg);
-  color: var(--ib-text);
-  font-family: Inter, system-ui, sans-serif;
-  color-scheme: light;
-  min-height: 100vh;
+  const node = document.getElementById(id);
+
+  if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-.tt-ib[data-ib-theme="dark"] {
-  --ib-bg: #0f0b08;
-  --ib-surface: #1b1511;
-  --ib-alt: #17110d;
-  --ib-text: #fff6ee;
-  --ib-muted: #bfae9f;
-  --ib-border: #3a2a1f;
-  --ib-orange: #fb923c;
-  --ib-orange-light: #3a2314;
-  --ib-input: #20180f;
-  --ib-green: #86efac;
-  --ib-green-bg: #153424;
-  --ib-red: #f87171;
-  --ib-red-bg: #3b1e20;
-  --ib-grid: rgba(251,146,60,.07);
-  --ib-glow: rgba(249,115,22,.18);
-
-  color-scheme: dark;
-}
-
-.tt-ib *, .tt-ib *::before, .tt-ib *::after { box-sizing: border-box; }
-
-.tt-ib .ib-card {
-  background: var(--ib-surface);
-  border: 1px solid var(--ib-border);
-  color: var(--ib-text);
-  transition: border-color .25s, box-shadow .25s;
-}
-.tt-ib .ib-card-hover:hover {
-  border-color: var(--ib-orange);
-  box-shadow: 0 18px 45px -18px var(--ib-glow);
-}
-.tt-ib .ib-panel { background: var(--ib-alt); }
-.tt-ib .ib-muted { color: var(--ib-muted); }
-.tt-ib .ib-orange { color: var(--ib-orange); }
-.tt-ib .ib-req { color: var(--ib-red); }
-
-.tt-ib .ib-grad-text {
-  background-image: linear-gradient(90deg,#ea580c,#f59e0b,#ea580c);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: ib-shine 6s linear infinite;
-}
-
-.tt-ib .ib-field {
-  width: 100%;
-  background: var(--ib-input);
-  color: var(--ib-text);
-  border: 1px solid var(--ib-border);
-  border-radius: 12px;
-  padding: 12px 13px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color .2s, box-shadow .2s;
-}
-.tt-ib .ib-field.has-icon { padding-left: 40px; }
-.tt-ib .ib-field.has-status { padding-right: 38px; }
-.tt-ib .ib-field:hover { border-color: color-mix(in srgb, var(--ib-orange) 45%, var(--ib-border)); }
-.tt-ib .ib-field:focus {
-  border-color: var(--ib-orange);
-  box-shadow: 0 0 0 3px rgba(234,88,12,.15);
-}
-.tt-ib .ib-field[aria-invalid="true"] {
-  border-color: var(--ib-red);
-  box-shadow: 0 0 0 3px rgba(220,38,38,.10);
-}
-.tt-ib .ib-field[data-valid="true"] { border-color: #22c55e; }
-.tt-ib .ib-field::placeholder { color: var(--ib-muted); opacity: .7; }
-
-.tt-ib .ib-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  background: linear-gradient(135deg,#f97316,#ea580c);
-  color: #fff !important;
-  border: 1px solid #ea580c;
-  border-radius: 12px;
-  padding: 12px 18px;
-  font-size: 13px; font-weight: 800;
-  cursor: pointer; text-decoration: none;
-  box-shadow: 0 10px 24px -10px rgba(234,88,12,.7);
-  transition: transform .2s, box-shadow .2s, filter .2s;
-}
-.tt-ib .ib-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 30px -12px rgba(234,88,12,.8);
-  filter: brightness(1.05);
-}
-
-.tt-ib .ib-outline {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--ib-surface); color: var(--ib-text);
-  border: 1px solid var(--ib-border);
-  border-radius: 12px; padding: 11px 15px;
-  font-size: 13px; font-weight: 750;
-  cursor: pointer; text-decoration: none;
-  transition: border-color .2s, transform .2s;
-}
-.tt-ib .ib-outline:hover:not(:disabled) { border-color: var(--ib-orange); transform: translateY(-1px); }
-
-.tt-ib button:disabled { opacity: .5; cursor: not-allowed; }
-
-.tt-ib .ib-selected {
-  border-color: var(--ib-orange) !important;
-  background: var(--ib-orange-light) !important;
-}
-
-.tt-ib .ib-status-available { background: var(--ib-green-bg); color: var(--ib-green); }
-.tt-ib .ib-status-unavailable { background: var(--ib-red-bg); color: var(--ib-red); }
-.tt-ib .ib-status-held { background: var(--ib-orange-light); color: var(--ib-orange); }
-
-.tt-ib .ib-input-label { display: block; font-size: 12px; font-weight: 750; margin-bottom: 7px; }
-
-.tt-ib .ib-overlay { background: rgba(10,6,3,.78) !important; backdrop-filter: blur(5px); }
-.tt-ib .ib-modal-surface {
-  background: var(--ib-surface) !important;
-  color: var(--ib-text) !important;
-  isolation: isolate;
-  box-shadow: 0 35px 115px rgba(0,0,0,.5);
-}
-.tt-ib .ib-error { background: var(--ib-red-bg); color: var(--ib-red); border: 1px solid var(--ib-border); }
-.tt-ib .ib-recovery { background: var(--ib-orange-light); border: 1px solid var(--ib-border); }
-.tt-ib .ib-notice { background: var(--ib-orange-light); border: 1px solid var(--ib-orange); color: var(--ib-text); }
-
-.tt-ib .ib-modal-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--ib-border) transparent;
-  overscroll-behavior: contain;
-}
-
-.tt-ib a { text-decoration: none; }
-.tt-ib button, .tt-ib input, .tt-ib textarea, .tt-ib select { font: inherit; }
-
-.tt-ib .ib-grid-bg {
-  background-image:
-    linear-gradient(var(--ib-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--ib-grid) 1px, transparent 1px);
-  background-size: 56px 56px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 20%, transparent 75%);
-  mask-image: radial-gradient(ellipse at 50% 30%, #000 20%, transparent 75%);
-}
-
-.tt-ib .ib-ring {
-  background: conic-gradient(from 0deg, transparent 0 55%, #f97316 75%, #f59e0b 90%, transparent 100%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-  animation: ib-spin 9s linear infinite;
-}
-.tt-ib .ib-ring-slow { animation-duration: 16s; animation-direction: reverse; opacity: .55; }
-
-.tt-ib .ib-marquee { overflow: hidden; }
-.tt-ib .ib-marquee-track { display: flex; width: max-content; gap: 28px; animation: ib-marquee 48s linear infinite; }
-.tt-ib .ib-marquee:hover .ib-marquee-track { animation-play-state: paused; }
-
-.tt-ib .ib-icon-spin:hover svg { transform: rotate(12deg) scale(1.1); }
-.tt-ib .ib-icon-spin svg { transition: transform .3s; }
-
-@keyframes ib-spin { to { transform: rotate(360deg); } }
-@keyframes ib-marquee { to { transform: translateX(-50%); } }
-@keyframes ib-shine { to { background-position: -200% 0; } }
-
-@media (max-width: 640px) {
-  .tt-ib .ib-modal-surface { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tt-ib *, .tt-ib *::before, .tt-ib *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
-  .tt-ib .ib-ring, .tt-ib .ib-marquee-track, .tt-ib .ib-grad-text { animation: none !important; }
-}
-`;
-
-/* =========================================================
-   ANIMATION HELPERS
-========================================================= */
-
-/** Soft, quick fade in / out as sections enter and leave the viewport. */
-function Reveal({
-  children,
-  className = "",
-  delay = 0,
-  x = 0,
-  y = 28,
-  rotate = 0,
-  amount = 0.15,
-}) {
-  const reduce = useReducedMotion();
-
-  if (reduce) return <div className={className}>{children}</div>;
+/** Fades content up once as it enters the viewport. */
+function Reveal({ children, className, delay = 0, y = 22, as = "div" }) {
+  const Tag = motion[as] || motion.div;
 
   return (
-    <motion.div
+    <Tag
       className={className}
-      initial={{ opacity: 0, x, y, rotate, filter: "blur(4px)" }}
-      whileInView={{ opacity: 1, x: 0, y: 0, rotate: 0, filter: "blur(0px)" }}
-      viewport={{ once: false, amount }}
-      transition={{ duration: 0.45, delay, ease: EASE }}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.6, delay, ease: EASE }}
     >
       {children}
-    </motion.div>
+    </Tag>
   );
 }
 
-function StatValue({ value }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: false, amount: 0.6 });
-  const reduce = useReducedMotion();
-  const match = /^(\d+)(\+?)$/.exec(value);
-  const target = match ? Number(match[1]) : null;
-  const [display, setDisplay] = useState(target ?? 0);
-
-  useEffect(() => {
-    if (target === null) return undefined;
-
-    if (reduce || !inView) {
-      setDisplay(reduce ? target : 0);
-      return undefined;
-    }
-
-    const controls = animate(0, target, {
-      duration: 1.2,
-      ease: "easeOut",
-      onUpdate: (latest) => setDisplay(Math.round(latest)),
-    });
-
-    return () => controls.stop();
-  }, [inView, target, reduce]);
-
-  if (target === null) return <span ref={ref}>{value}</span>;
-
+function SectionHead({ eyebrow, title, lead, center = false, aside = null, id }) {
   return (
-    <span ref={ref}>
-      {display}
-      {match[2]}
-    </span>
-  );
-}
-
-/* ---------- Paper plane flight (used on every step change) ---------- */
-
-const FLIGHT_POINTS = [
-  [-8, 84],
-  [22, 6],
-  [58, 102],
-  [108, 10],
-];
-
-function bezier(t, a, b, c, d) {
-  const u = 1 - t;
-  return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
-}
-
-function buildFlight(direction) {
-  const mirror = direction < 0;
-  const pts = FLIGHT_POINTS.map(([x, y]) => [mirror ? 100 - x : x, y]);
-  const at = (t, mirrored) => {
-    const source = FLIGHT_POINTS;
-    const index = mirrored ? source : pts;
-    return [
-      bezier(t, index[0][0], index[1][0], index[2][0], index[3][0]),
-      bezier(t, index[0][1], index[1][1], index[2][1], index[3][1]),
-    ];
-  };
-
-  const samples = 18;
-  const left = [];
-  const top = [];
-  const rotate = [];
-  const times = [];
-  const smooth = (t) => t * t * (3 - 2 * t);
-
-  for (let i = 0; i <= samples; i++) {
-    const t = smooth(i / samples);
-    const [x, y] = at(t, false);
-    // Heading is measured on the un-mirrored curve, then reflected.
-    const [x1, y1] = at(Math.max(0, t - 0.02), true);
-    const [x2, y2] = at(Math.min(1, t + 0.02), true);
-    const heading = (Math.atan2(y2 - y1, (x2 - x1) * 1.3) * 180) / Math.PI;
-    const finalHeading = mirror ? 180 - heading : heading;
-
-    left.push(`${x}%`);
-    top.push(`${y}%`);
-    // The Send icon points up-right (-45°), so offset by +45°.
-    rotate.push(finalHeading + 45);
-    times.push(i / samples);
-  }
-
-  const path = `M ${pts[0][0]} ${pts[0][1]} C ${pts[1][0]} ${pts[1][1]}, ${pts[2][0]} ${pts[2][1]}, ${pts[3][0]} ${pts[3][1]}`;
-
-  return { left, top, rotate, times, path };
-}
-
-function PaperPlaneFlight({ direction, onDone }) {
-  const reduce = useReducedMotion();
-  const flight = useMemo(() => buildFlight(direction), [direction]);
-
-  useEffect(() => {
-    if (reduce) onDone?.();
-  }, [reduce, onDone]);
-
-  if (reduce) return null;
-
-  const duration = 1.15;
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-30 overflow-hidden"
-    >
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        <motion.path
-          d={flight.path}
-          fill="none"
-          stroke="#f97316"
-          strokeWidth="2"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0, opacity: 0.9 }}
-          animate={{ pathLength: 1, opacity: [0.9, 0.9, 0] }}
-          transition={{
-            pathLength: { duration, ease: "easeInOut" },
-            opacity: { duration, times: [0, 0.75, 1] },
-          }}
-        />
-      </svg>
-
-      <motion.div
-        className="absolute"
-        style={{ x: "-50%", y: "-50%" }}
-        initial={{
-          left: flight.left[0],
-          top: flight.top[0],
-          rotate: flight.rotate[0],
-          opacity: 0,
-          scale: 0.6,
-        }}
-        animate={{
-          left: flight.left,
-          top: flight.top,
-          rotate: flight.rotate,
-          opacity: [0, 1, 1, 0],
-          scale: [0.6, 1.15, 1.15, 0.7],
-        }}
-        transition={{
-          left: { duration, times: flight.times, ease: "linear" },
-          top: { duration, times: flight.times, ease: "linear" },
-          rotate: { duration, times: flight.times, ease: "linear" },
-          opacity: { duration, times: [0, 0.1, 0.85, 1], ease: "linear" },
-          scale: { duration, times: [0, 0.15, 0.85, 1], ease: "linear" },
-        }}
-        onAnimationComplete={onDone}
-      >
-        <span
-          className="flex h-11 w-11 items-center justify-center rounded-full text-white shadow-xl"
-          style={{
-            background: "linear-gradient(135deg,#f97316,#ea580c)",
-            boxShadow: "0 10px 25px -5px rgba(234,88,12,.7)",
-          }}
-        >
-          <Send size={20} fill="currentColor" fillOpacity={0.25} />
-        </span>
-      </motion.div>
-    </div>
-  );
-}
-
-/* =========================================================
-   SHARED COMPONENTS
-========================================================= */
-
-function SectionIntro({ eyebrow, title, description, center = false }) {
-  return (
-    <div className={center ? "mx-auto max-w-3xl text-center" : "max-w-3xl"}>
-      <span
-        className={`ib-orange inline-flex items-center gap-2 text-xs font-black uppercase tracking-[.17em] ${
-          center ? "justify-center" : ""
-        }`}
-      >
-        <span className="h-px w-8 bg-gradient-to-r from-orange-500 to-transparent" />
-        {eyebrow}
-      </span>
-
-      <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-4xl">
-        {title}
-      </h2>
-
-      {description && (
-        <p className="ib-muted mt-4 text-sm leading-7 sm:text-base">
-          {description}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function CompanyLogo({ company, compact = false }) {
-  if (compact) {
-    return (
-      <div
-        className="group flex min-w-[88px] flex-col items-center gap-2 text-center"
-        title={company.name}
-      >
-        <div className="ib-card flex h-14 w-14 items-center justify-center overflow-hidden rounded-full p-3 shadow-sm transition-transform duration-300 group-hover:-translate-y-1 group-hover:rotate-6 group-hover:border-orange-500 sm:h-16 sm:w-16">
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(
-              company.domain
-            )}&sz=128`}
-            alt={`${company.name} logo`}
-            loading="lazy"
-            className="h-full w-full object-contain"
-            onError={(event) => {
-              event.currentTarget.style.opacity = "0";
-            }}
-          />
-        </div>
-
-        <span className="ib-muted max-w-[104px] text-[11px] font-bold leading-4">
-          {company.name}
-        </span>
+    <Reveal className={cn("mi-head", center && "is-center")}>
+      <div className="mi-head-main">
+        <span className="mi-eyebrow">{eyebrow}</span>
+        <h2 id={id} className="mi-h2">{title}</h2>
+        {lead && <p className="mi-lead">{lead}</p>}
       </div>
-    );
-  }
-
-  return (
-    <div className="ib-card ib-card-hover flex min-h-[68px] items-center justify-center gap-3 rounded-xl px-3 py-3 text-center transition-transform duration-300 hover:-translate-y-1">
-      <img
-        src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(
-          company.domain
-        )}&sz=64`}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        className="h-7 w-7 shrink-0 object-contain"
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-        }}
-      />
-
-      <span className="text-xs font-extrabold leading-5 sm:text-sm">
-        {company.name}
-      </span>
-    </div>
+      {aside}
+    </Reveal>
   );
 }
 
-function TimeDisplayControls({
-  timeZone,
-  setTimeZone,
-  timeFormat,
-  setTimeFormat,
-}) {
-  return (
-    <div className="flex flex-wrap items-end gap-2">
-      <label className="min-w-[220px] flex-1 sm:flex-none">
-        <span className="ib-muted mb-1 block text-[11px] font-bold">
-          Display time zone
-        </span>
-
-        <select
-          className="ib-field !py-2.5 !text-xs"
-          aria-label="Display time zone"
-          value={timeZone}
-          onChange={(event) => setTimeZone(event.target.value)}
-        >
-          {DISPLAY_TIMEZONES.map((zone) => (
-            <option key={zone.value} value={zone.value}>
-              {zone.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="min-w-[120px]">
-        <span className="ib-muted mb-1 block text-[11px] font-bold">
-          Clock format
-        </span>
-
-        <select
-          className="ib-field !py-2.5 !text-xs"
-          aria-label="Clock format"
-          value={timeFormat}
-          onChange={(event) => setTimeFormat(event.target.value)}
-        >
-          <option value="12">12-hour (AM/PM)</option>
-          <option value="24">24-hour</option>
-        </select>
-      </label>
-    </div>
-  );
+function favicon(domain, size = 64) {
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${size}`;
 }
 
-function StatusPill({ slot }) {
+function StatusBadge({ slot }) {
   const status = String(slot.status || "AVAILABLE").toUpperCase();
 
   let label = "Unavailable";
-  let className = "ib-status-unavailable";
+  let tone = "is-off";
 
   if (status === "AVAILABLE") {
-    label = "Available";
-    className = "ib-status-available";
+    label = "Open";
+    tone = "is-ok";
   } else if (status === "BOOKED") {
     label = "Booked";
   } else if (status === "HELD") {
     label = "Reserved";
-    className = "ib-status-held";
+    tone = "is-held";
   } else if (status === "BLOCKED") {
     label = "Blocked";
   }
 
   return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold ${className}`}
-    >
+    <span className={cn("mi-status", tone)}>
+      <i aria-hidden="true" />
       {label}
     </span>
   );
 }
 
-/** Step tracker with a little paper plane that glides to the active step. */
-function Progress({ step }) {
-  const steps = ["Topics", "Your details", "Payment"];
-  const percent = (step / (steps.length - 1)) * 100;
+/** Animated score bar used in the hero's sample feedback card. */
+function ScoreBar({ label, value, focus = false, delay = 0 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: 0.6 });
 
   return (
-    <div className="px-5">
-      <div className="relative h-9">
-        <div
-          className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full"
-          style={{ background: "var(--ib-border)" }}
-        />
-
-        <motion.div
-          className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 0.6, ease: EASE }}
-        />
-
-        {steps.map((name, index) => {
-          const done = index < step;
-          const active = index === step;
-
-          return (
-            <div
-              key={name}
-              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${(index / (steps.length - 1)) * 100}%` }}
-            >
-              <motion.span
-                className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-black ${
-                  done || active
-                    ? "border-orange-600 bg-orange-600 text-white"
-                    : "ib-muted"
-                }`}
-                style={
-                  done || active
-                    ? undefined
-                    : {
-                        background: "var(--ib-surface)",
-                        borderColor: "var(--ib-border)",
-                      }
-                }
-                animate={{ scale: active ? 1.12 : 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              >
-                {done ? <Check size={14} /> : index + 1}
-              </motion.span>
-            </div>
-          );
-        })}
-
-        <motion.span
-          aria-hidden="true"
-          className="absolute -top-1 z-10 flex h-5 w-5 items-center justify-center text-orange-500"
-          style={{ x: "-50%" }}
-          animate={{ left: `${percent}%`, y: [0, -3, 0] }}
-          transition={{
-            left: { type: "spring", stiffness: 140, damping: 18 },
-            y: { duration: 1.6, repeat: Infinity, ease: "easeInOut" },
-          }}
-        >
-          <Send size={14} fill="currentColor" fillOpacity={0.3} />
-        </motion.span>
+    <div className="mi-bar-row" ref={ref}>
+      <div className="mi-bar-label">
+        <span>{label}</span>
+        <span>{value}/10</span>
       </div>
-
-      <div className="mt-1 grid grid-cols-3 text-[11px]">
-        {steps.map((name, index) => (
-          <span
-            key={name}
-            className={`${
-              index === 0 ? "text-left" : index === 2 ? "text-right" : "text-center"
-            } ${index === step ? "ib-orange font-extrabold" : "ib-muted"}`}
-          >
-            {name}
-          </span>
-        ))}
+      <div className={cn("mi-bar", focus && "is-focus")}>
+        <motion.i
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: inView ? value / 10 : 0 }}
+          transition={{ duration: 1.1, delay, ease: EASE }}
+        />
       </div>
     </div>
   );
 }
 
-function TopicCard({ topic, selected, order, replaceNext, onClick }) {
-  const info = TOPIC_INFO[topic];
+/* =========================================================
+   FORM FIELD (live validation)
+========================================================= */
 
-  if (!info) return null;
-
-  const Icon = info.Icon;
-
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      whileTap={{ scale: 0.97 }}
-      whileHover={{ y: -3 }}
-      animate={selected ? { scale: [1, 1.03, 1] } : { scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className={`ib-card ib-card-hover ib-icon-spin relative flex items-start gap-3 rounded-xl p-4 text-left ${
-        selected ? "ib-selected" : ""
-      }`}
-    >
-      <span className="ib-panel rounded-lg p-2">
-        <Icon size={18} className="ib-orange" />
-      </span>
-
-      <span className="min-w-0 flex-1">
-        <strong className="block text-sm">{info.title}</strong>
-
-        <span className="ib-muted mt-1 block text-xs leading-5">
-          {info.description}
-        </span>
-
-        {replaceNext && (
-          <span className="ib-orange mt-2 inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider">
-            <RefreshCw size={11} />
-            Replaced next
-          </span>
-        )}
-      </span>
-
-      <AnimatePresence>
-        {selected && (
-          <motion.span
-            initial={{ scale: 0, rotate: -90 }}
-            animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 0, rotate: 90 }}
-            transition={{ type: "spring", stiffness: 380, damping: 20 }}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[11px] font-black text-white"
-          >
-            {order}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </motion.button>
-  );
-}
-
-/** Form field with live validation, error text shown below the input. */
 function Field({
   id,
   label,
@@ -1420,35 +880,31 @@ function Field({
   hint,
   inputRef,
   required = false,
+  optional = false,
   type = "text",
   inputMode,
   autoComplete,
   placeholder,
   maxLength,
-  className = "",
+  className,
 }) {
-  const reduce = useReducedMotion();
   const invalid = Boolean(showError && error);
   const valid = Boolean(showValid && value.trim() && !error);
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="ib-input-label">
+      <label htmlFor={id} className="mi-label">
         {label}
-        {required && <span className="ib-req"> *</span>}
+        {required && <em> *</em>}
+        {optional && <small> (optional)</small>}
       </label>
 
       <motion.div
-        className="relative"
-        animate={invalid && !reduce ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+        className="mi-input-wrap"
+        animate={invalid ? { x: [0, -5, 5, -3, 3, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
       >
-        {Icon && (
-          <Icon
-            size={16}
-            className="ib-muted pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"
-          />
-        )}
+        {Icon && <Icon size={18} aria-hidden="true" />}
 
         <input
           id={id}
@@ -1456,7 +912,7 @@ function Field({
           type={type}
           inputMode={inputMode}
           autoComplete={autoComplete}
-          className={`ib-field ${Icon ? "has-icon" : ""} has-status`}
+          className="mi-input"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
@@ -1467,81 +923,42 @@ function Field({
           data-valid={valid ? "true" : "false"}
         />
 
-        <AnimatePresence>
-          {(invalid || valid) && (
-            <motion.span
-              key={invalid ? "bad" : "ok"}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-            >
-              {invalid ? (
-                <AlertCircle size={17} style={{ color: "var(--ib-red)" }} />
-              ) : (
-                <CheckCircle2 size={17} className="text-green-500" />
-              )}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {(invalid || valid) && (
+          <span className={cn("mi-input-state", invalid ? "is-bad" : "is-ok")} aria-hidden="true">
+            {invalid ? <WarningCircle size={18} weight="fill" /> : <CheckCircle size={18} weight="fill" />}
+          </span>
+        )}
       </motion.div>
 
       <div id={`${id}-msg`} aria-live="polite">
-        <AnimatePresence initial={false} mode="wait">
-          {invalid ? (
-            <motion.p
-              key={error}
-              role="alert"
-              initial={{ opacity: 0, height: 0, y: -4 }}
-              animate={{ opacity: 1, height: "auto", y: 0 }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="mt-1.5 flex items-start gap-1.5 text-xs font-semibold leading-5"
-              style={{ color: "var(--ib-red)" }}
-            >
-              <AlertCircle size={13} className="mt-1 shrink-0" />
-              {error}
-            </motion.p>
-          ) : hint ? (
-            <motion.p
-              key="hint"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="ib-muted mt-1.5 text-[11px] leading-5"
-            >
-              {hint}
-            </motion.p>
-          ) : null}
-        </AnimatePresence>
+        {invalid ? (
+          <p role="alert" className="mi-field-msg is-err">
+            <WarningCircle size={14} weight="bold" />
+            {error}
+          </p>
+        ) : hint ? (
+          <p className="mi-field-msg is-hint">{hint}</p>
+        ) : null}
       </div>
     </div>
   );
 }
 
 /* =========================================================
-   BOOKING MODAL
+   BOOKING DIALOG
 
    Step 1: Topics (oldest selection is replaced when the limit is hit)
    Step 2: Candidate details (live validation)
    Step 3: Review + payment
-
-   A paper plane flies across the dialog on every step change.
    NO LOGIN OR TOKEN REQUIRED.
 ========================================================= */
 
+const STEPS = ["Topics", "Your details", "Review & pay"];
+
 const stepVariants = {
-  enter: (direction) => ({
-    opacity: 0,
-    x: direction > 0 ? 50 : -50,
-    filter: "blur(4px)",
-  }),
-  center: { opacity: 1, x: 0, filter: "blur(0px)" },
-  exit: (direction) => ({
-    opacity: 0,
-    x: direction > 0 ? -50 : 50,
-    filter: "blur(4px)",
-  }),
+  enter: (direction) => ({ opacity: 0, x: direction > 0 ? 40 : -40 }),
+  center: { opacity: 1, x: 0 },
+  exit: (direction) => ({ opacity: 0, x: direction > 0 ? -40 : 40 }),
 };
 
 function BookingModal({
@@ -1554,7 +971,6 @@ function BookingModal({
 }) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [flight, setFlight] = useState(null);
   const [topics, setTopics] = useState([]);
   const [topicNotice, setTopicNotice] = useState(null);
   const [candidate, setCandidate] = useState(emptyCandidate);
@@ -1567,6 +983,7 @@ function BookingModal({
   const processingRef = useRef(false);
   const bodyRef = useRef(null);
   const fieldRefs = useRef({});
+  const dialogRef = useRef(null);
 
   const availableTopics = (
     Array.isArray(slot.allowedTopics) && slot.allowedTopics.length > 0
@@ -1602,7 +1019,7 @@ function BookingModal({
   };
 
   const fieldProps = (key) => ({
-    id: `ib-${key}`,
+    id: `mi-${key}`,
     error: fieldErrors[key],
     showError: Boolean(touched[key]),
     onBlur: () => blur(key),
@@ -1641,15 +1058,12 @@ function BookingModal({
     return () => clearTimeout(timer);
   }, [topicNotice]);
 
-  /* ---------- Step navigation with paper-plane flight ---------- */
+  /* ---------- Step navigation ---------- */
 
   const goTo = (nextStep) => {
     if (nextStep === step) return;
 
-    const dir = nextStep > step ? 1 : -1;
-
-    setDirection(dir);
-    setFlight({ id: Date.now(), dir });
+    setDirection(nextStep > step ? 1 : -1);
     setStep(nextStep);
     bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1695,6 +1109,7 @@ function BookingModal({
     const previousOverflow = document.body.style.overflow;
 
     document.body.style.overflow = "hidden";
+    dialogRef.current?.focus({ preventScroll: true });
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -1918,48 +1333,68 @@ function BookingModal({
     }
   }
 
+  const reviewRows = [
+    ["Name", candidate.name],
+    ["Email", candidate.email],
+    ["Phone", candidate.phone],
+    [
+      "Date",
+      fmtDate(slot.startTime, {
+        timeZone,
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+    ],
+    [
+      "Time",
+      `${fmtTime(slot.startTime, timeZone, timeFormat)} – ${fmtTime(
+        slot.endTime,
+        timeZone,
+        timeFormat
+      )} ${zoneShort}`,
+    ],
+    ["Duration", `${slot.durationMinutes || 45} minutes`],
+  ];
+
   const modal = (
     <motion.div
-      data-ib-theme={theme}
-      className="tt-ib !min-h-0 fixed inset-0 !m-0 z-[2147483000] flex items-end justify-center sm:items-center sm:p-5"
-      style={{ background: "transparent", isolation: "isolate" }}
+      className="mi-portal"
+      data-theme={theme}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
     >
       <button
         type="button"
         aria-label="Close booking dialog"
+        tabIndex={-1}
         disabled={busy}
         onClick={onClose}
-        className="ib-overlay absolute inset-0 z-0 w-full"
+        className="mi-overlay"
       />
 
       <motion.section
         role="dialog"
         aria-modal="true"
-        aria-label="Book mock interview"
-        className="ib-card ib-modal-surface relative z-10 flex max-h-[96dvh] w-full max-w-[730px] flex-col overflow-hidden rounded-t-3xl sm:max-h-[91dvh] sm:rounded-3xl"
-        initial={{ y: 40, opacity: 0, scale: 0.97 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 30, opacity: 0, scale: 0.97 }}
-        transition={{ duration: 0.35, ease: EASE }}
+        aria-labelledby="mi-dlg-title"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="mi-dialog"
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={{ duration: 0.4, ease: EASE }}
       >
-        <div className="h-1 w-full shrink-0 bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600" />
+        <div className="mi-grab" aria-hidden="true" />
 
         {/* HEADER */}
-        <div
-          className="flex shrink-0 items-center justify-between gap-3 border-b px-5 py-4 sm:px-7"
-          style={{ borderColor: "var(--ib-border)" }}
-        >
+        <div className="mi-dlg-head">
           <div>
-            <div className="ib-orange text-[10px] font-black uppercase tracking-widest">
-              Target Trek · Live 1:1
-            </div>
-
-            <h2 className="mt-1 text-lg font-black sm:text-xl">
-              Book your mock interview
-            </h2>
+            <span className="mi-eyebrow">Live 1:1 · Step {step + 1} of 3</span>
+            <h2 id="mi-dlg-title">Book your mock interview</h2>
           </div>
 
           <button
@@ -1967,43 +1402,57 @@ function BookingModal({
             onClick={onClose}
             disabled={busy}
             aria-label="Close"
-            className="ib-outline !p-2"
+            className="mi-icon-btn"
           >
-            <X size={18} />
+            <X size={18} weight="bold" />
           </button>
         </div>
 
         {/* BODY */}
-        <div
-          ref={bodyRef}
-          className="ib-modal-scroll flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6"
-        >
-          <Progress step={step} />
+        <div ref={bodyRef} className="mi-dlg-body">
+          <ol className="mi-stepper" aria-label="Booking progress">
+            {STEPS.map((name, index) => (
+              <li
+                key={name}
+                className={cn(
+                  "mi-stepper-item",
+                  index === step && "is-on",
+                  index < step && "is-done"
+                )}
+                aria-current={index === step ? "step" : undefined}
+              >
+                <div className="mi-stepper-bar">
+                  <motion.i
+                    initial={false}
+                    animate={{ scaleX: index <= step ? 1 : 0 }}
+                    transition={{ duration: 0.5, ease: EASE }}
+                  />
+                </div>
+                <span>
+                  {index < step && <Check size={12} weight="bold" />}
+                  {name}
+                </span>
+              </li>
+            ))}
+          </ol>
 
           {/* SLOT SUMMARY */}
-          <div className="ib-panel mt-5 rounded-2xl p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <strong>
+          <div className="mi-dlg-slot">
+            <div>
+              <b>
                 {fmtDate(slot.startTime, {
                   timeZone,
                   weekday: "long",
                   day: "numeric",
                   month: "short",
                 })}
-              </strong>
-
-              <span className="ib-orange text-lg font-black">{priceText}</span>
+              </b>
+              <span>
+                {fmtTime(slot.startTime, timeZone, timeFormat)} –{" "}
+                {fmtTime(slot.endTime, timeZone, timeFormat)} · {slot.durationMinutes || 45} min · {zoneShort}
+              </span>
             </div>
-
-            <div className="ib-muted mt-2 flex flex-wrap items-center gap-2 text-sm">
-              <Clock3 size={14} />
-              {fmtTime(slot.startTime, timeZone, timeFormat)}
-              {" – "}
-              {fmtTime(slot.endTime, timeZone, timeFormat)}
-              {" · "}
-              {slot.durationMinutes} min
-              {` · ${zoneShort}`}
-            </div>
+            <strong>{priceText}</strong>
           </div>
 
           <AnimatePresence mode="wait" custom={direction} initial={false}>
@@ -2018,35 +1467,20 @@ function BookingModal({
             >
               {/* ==================== STEP 1: TOPICS ==================== */}
               {step === 0 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-extrabold">
-                    What would you like to practice?
-                  </h3>
-
-                  <p className="ib-muted mt-2 text-sm leading-7">
-                    Select up to {maxTopics} topic{maxTopics > 1 ? "s" : ""}.
+                <div className="mi-dlg-step">
+                  <h3>What do you want to practise?</h3>
+                  <p>
+                    Pick up to {maxTopics} topic{maxTopics > 1 ? "s" : ""}.
                     {maxTopics > 1 &&
-                      " Pick another once you're at the limit and your oldest choice is swapped out automatically."}
+                      " If you pick one more, your oldest choice is swapped out."}
                   </p>
 
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mi-meter" aria-hidden="true">
                     {Array.from({ length: maxTopics }).map((_, index) => (
-                      <motion.span
-                        key={index}
-                        animate={{ scaleX: index < topics.length ? 1 : 0.8 }}
-                        className={`h-2 w-8 rounded-full ${
-                          index < topics.length ? "bg-orange-600" : ""
-                        }`}
-                        style={
-                          index < topics.length
-                            ? undefined
-                            : { background: "var(--ib-border)" }
-                        }
-                      />
+                      <i key={index} className={index < topics.length ? "is-on" : ""} />
                     ))}
-
-                    <span className="ib-muted ml-1 text-xs font-bold">
-                      {topics.length}/{maxTopics} selected
+                    <span>
+                      {topics.length} of {maxTopics} selected
                     </span>
                   </div>
 
@@ -2055,49 +1489,65 @@ function BookingModal({
                       <motion.div
                         key={`${topicNotice.added}-${topicNotice.removed.join()}`}
                         role="status"
-                        initial={{ opacity: 0, height: 0, y: -6 }}
-                        animate={{ opacity: 1, height: "auto", y: 0 }}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        style={{ overflow: "hidden" }}
                       >
-                        <div className="ib-notice mt-3 flex items-start gap-2 rounded-xl p-3 text-xs font-semibold leading-5">
-                          <RefreshCw
-                            size={15}
-                            className="ib-orange mt-0.5 shrink-0"
-                          />
+                        <div className="mi-notice">
+                          <ArrowClockwise size={16} weight="bold" />
                           <span>
-                            Limit of {maxTopics} reached —{" "}
+                            Limit of {maxTopics} reached.{" "}
                             <strong>
                               {topicNotice.removed
                                 .map((topic) => TOPIC_INFO[topic]?.title)
                                 .join(", ")}
                             </strong>{" "}
-                            was replaced by{" "}
-                            <strong>{TOPIC_INFO[topicNotice.added]?.title}</strong>
-                            .
+                            was swapped for{" "}
+                            <strong>{TOPIC_INFO[topicNotice.added]?.title}</strong>.
                           </span>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="mi-topics">
                     {availableTopics.map((topic) => {
+                      const info = TOPIC_INFO[topic];
+                      const Icon = info.Icon;
                       const position = topics.indexOf(topic);
+                      const selected = position !== -1;
+                      const replaceNext =
+                        position === 0 &&
+                        topics.length >= maxTopics &&
+                        maxTopics > 1;
 
                       return (
-                        <TopicCard
+                        <motion.button
                           key={topic}
-                          topic={topic}
-                          selected={position !== -1}
-                          order={position + 1}
-                          replaceNext={
-                            position === 0 &&
-                            topics.length >= maxTopics &&
-                            maxTopics > 1
-                          }
+                          type="button"
+                          aria-pressed={selected}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => toggleTopic(topic)}
-                        />
+                          className={cn("mi-topic", selected && "is-on")}
+                        >
+                          <span className="mi-ico mi-ico-sm">
+                            <Icon size={18} weight="duotone" />
+                          </span>
+                          <span style={{ minWidth: 0 }}>
+                            <b>{info.title}</b>
+                            <small>{info.description}</small>
+                            {replaceNext && (
+                              <span className="mi-topic-next">
+                                <ArrowClockwise size={11} weight="bold" />
+                                Swapped next
+                              </span>
+                            )}
+                          </span>
+                          <span className="mi-topic-check" aria-hidden="true">
+                            {selected ? position + 1 : ""}
+                          </span>
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -2106,17 +1556,14 @@ function BookingModal({
 
               {/* ================= STEP 2: CANDIDATE DETAILS ================= */}
               {step === 1 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-extrabold">
-                    Tell us about yourself
-                  </h3>
-
-                  <p className="ib-muted mt-2 text-sm leading-7">
-                    No account is required. Enter your details so we can prepare
-                    your session and send interview information by email.
+                <div className="mi-dlg-step">
+                  <h3>Tell us about yourself</h3>
+                  <p>
+                    No account needed. We use this to prepare your session and
+                    email you the interview details.
                   </p>
 
-                  <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="mi-form">
                     <Field
                       {...fieldProps("name")}
                       label="Full name"
@@ -2131,8 +1578,8 @@ function BookingModal({
 
                     <Field
                       {...fieldProps("email")}
-                      label="Email address"
-                      icon={Mail}
+                      label="Email"
+                      icon={EnvelopeSimple}
                       required
                       type="email"
                       autoComplete="email"
@@ -2140,12 +1587,12 @@ function BookingModal({
                       onChange={(value) => change("email", value.replace(/\s/g, ""))}
                       placeholder="you@example.com"
                       maxLength={254}
-                      hint="Your confirmation and joining link are sent here."
+                      hint="Your confirmation and joining link go here."
                     />
 
                     <Field
                       {...fieldProps("phone")}
-                      label="Phone number"
+                      label="Phone"
                       icon={Phone}
                       required
                       type="tel"
@@ -2155,15 +1602,16 @@ function BookingModal({
                       onChange={(value) =>
                         change("phone", value.replace(/[^\d\s()+-]/g, ""))
                       }
-                      placeholder="+91 9876543210"
+                      placeholder="+91 98765 43210"
                       maxLength={20}
                       hint="10-digit Indian mobile, or +country code."
                     />
 
                     <Field
                       {...fieldProps("experienceYears")}
-                      label="Experience (years)"
+                      label="Experience in years"
                       icon={Briefcase}
+                      optional
                       inputMode="decimal"
                       value={candidate.experienceYears}
                       onChange={(value) =>
@@ -2172,14 +1620,17 @@ function BookingModal({
                           value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1")
                         )
                       }
-                      placeholder="2"
+                      placeholder="e.g. 2"
                       maxLength={5}
                     />
+
+                    <p className="mi-form-sep">Helps your interviewer prepare</p>
 
                     <Field
                       {...fieldProps("currentRole")}
                       label="Current role"
-                      icon={BriefcaseBusiness}
+                      icon={Briefcase}
+                      optional
                       showValid={false}
                       value={candidate.currentRole}
                       onChange={(value) => change("currentRole", value)}
@@ -2191,6 +1642,7 @@ function BookingModal({
                       {...fieldProps("targetRole")}
                       label="Target role"
                       icon={Target}
+                      optional
                       showValid={false}
                       value={candidate.targetRole}
                       onChange={(value) => change("targetRole", value)}
@@ -2201,18 +1653,20 @@ function BookingModal({
                     <Field
                       {...fieldProps("currentCompany")}
                       label="Current company"
-                      icon={Building2}
+                      icon={Buildings}
+                      optional
                       showValid={false}
                       value={candidate.currentCompany}
                       onChange={(value) => change("currentCompany", value)}
-                      placeholder="Optional"
+                      placeholder="Where you work now"
                       maxLength={120}
                     />
 
                     <Field
                       {...fieldProps("resumeUrl")}
-                      label="Resume URL"
-                      icon={Link2}
+                      label="Resume link"
+                      icon={LinkSimple}
+                      optional
                       type="url"
                       inputMode="url"
                       value={candidate.resumeUrl}
@@ -2220,33 +1674,28 @@ function BookingModal({
                       placeholder="https://drive.google.com/..."
                     />
 
-                    <label className="sm:col-span-2">
-                      <span className="ib-input-label">
-                        What should we focus on?
-                      </span>
-
+                    <div className="is-wide">
+                      <label htmlFor="mi-notes" className="mi-label">
+                        What should we focus on? <small>(optional)</small>
+                      </label>
                       <textarea
-                        className="ib-field min-h-[105px] resize-y"
+                        id="mi-notes"
+                        className="mi-input"
                         value={candidate.notes}
                         onChange={(event) => change("notes", event.target.value)}
-                        placeholder="Share your goals, upcoming interview, weaker topics or projects."
+                        placeholder="Your goals, upcoming interview, weaker topics or projects to discuss."
                         maxLength={3000}
                       />
-
-                      <span className="ib-muted mt-1 block text-right text-[11px]">
-                        {candidate.notes.length}/3000
-                      </span>
-                    </label>
+                      <span className="mi-count">{candidate.notes.length}/3000</span>
+                    </div>
                   </div>
 
-                  <div className="ib-panel mt-5 flex items-start gap-3 rounded-xl p-4">
-                    <Mail size={18} className="ib-orange mt-0.5 shrink-0" />
-
-                    <p className="ib-muted text-xs leading-6">
-                      Your interview confirmation and joining instructions will
-                      be sent to your email after payment verification. If the
-                      meeting link is not yet assigned, it will be shared
-                      separately.
+                  <div className="mi-info">
+                    <EnvelopeSimple size={18} weight="duotone" />
+                    <p>
+                      Your confirmation and joining instructions are emailed
+                      after the payment is verified. If the meeting link is
+                      assigned later, it is sent separately.
                     </p>
                   </div>
                 </div>
@@ -2254,79 +1703,45 @@ function BookingModal({
 
               {/* ============== STEP 3: REVIEW AND PAYMENT ============== */}
               {step === 2 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-extrabold">Review your booking</h3>
+                <div className="mi-dlg-step">
+                  <h3>Check and pay</h3>
+                  <p>Make sure everything is right before going to Cashfree's secure checkout.</p>
 
-                  <p className="ib-muted mt-2 text-sm leading-7">
-                    Review everything before continuing to Cashfree's secure
-                    checkout.
-                  </p>
-
-                  <div className="ib-card mt-4 overflow-hidden rounded-2xl">
-                    <div className="space-y-4 p-4 text-sm sm:p-5">
-                      <div className="flex justify-between gap-4">
-                        <span className="ib-muted">Interview topics</span>
-
-                        <div className="flex max-w-[65%] flex-wrap justify-end gap-1.5">
+                  <div className="mi-review">
+                    <dl>
+                      <div>
+                        <dt>Topics</dt>
+                        <dd className="mi-review-topics">
                           {topics.map((topic) => (
-                            <span
-                              key={topic}
-                              className="ib-panel ib-orange rounded-lg px-2.5 py-1 text-[11px] font-black"
-                            >
-                              {TOPIC_INFO[topic]?.title || topic}
-                            </span>
+                            <span key={topic}>{TOPIC_INFO[topic]?.short || topic}</span>
                           ))}
-                        </div>
+                        </dd>
                       </div>
-
-                      {[
-                        ["Candidate", candidate.name],
-                        ["Email", candidate.email],
-                        ["Phone", candidate.phone],
-                        [
-                          "Interview date",
-                          fmtDate(slot.startTime, {
-                            timeZone,
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          }),
-                        ],
-                        [
-                          "Interview time",
-                          `${fmtTime(slot.startTime, timeZone, timeFormat)} ${zoneShort}`,
-                        ],
-                        ["Duration", `${slot.durationMinutes} minutes`],
-                      ].map(([label, value]) => (
-                        <div key={label} className="flex justify-between gap-4">
-                          <span className="ib-muted">{label}</span>
-                          <strong className="break-all text-right">{value}</strong>
+                      {reviewRows.map(([label, value]) => (
+                        <div key={label}>
+                          <dt>{label}</dt>
+                          <dd>{value}</dd>
                         </div>
                       ))}
-                    </div>
+                    </dl>
 
-                    <div className="ib-panel flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
-                      <strong>Total to pay</strong>
-
-                      <div className="text-right">
+                    <div className="mi-total">
+                      <b>Total to pay</b>
+                      <div>
                         {Number(slot.mrp) > Number(slot.price) && (
-                          <span className="ib-muted mr-2 text-xs line-through">
-                            {fmtMoney(slot.mrp, slot.currency)}
-                          </span>
+                          <s>{fmtMoney(slot.mrp, slot.currency)}</s>
                         )}
-
-                        <span className="ib-orange text-2xl font-black">
-                          {priceText}
-                        </span>
+                        <strong>{priceText}</strong>
                       </div>
                     </div>
                   </div>
 
-                  <div className="ib-muted mt-4 flex items-start gap-2 text-xs leading-6">
-                    <LockKeyhole size={17} className="mt-0.5 shrink-0" />
-                    Cashfree securely processes the payment. Your interview is
-                    confirmed only after the backend verifies successful
-                    payment.
+                  <div className="mi-info">
+                    <LockKey size={18} weight="duotone" />
+                    <p>
+                      Cashfree processes the payment securely. Your interview is
+                      confirmed once we verify the payment on our side.
+                    </p>
                   </div>
                 </div>
               )}
@@ -2341,53 +1756,45 @@ function BookingModal({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="ib-error mt-5 flex items-start gap-2 rounded-xl p-4 text-sm"
+                className="mi-alert"
+                style={{ marginTop: 18 }}
               >
-                <AlertCircle size={18} className="shrink-0" />
-                <span>{error}</span>
+                <WarningCircle size={20} weight="fill" />
+                <div>{error}</div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* BOOKING RECOVERY */}
           {bookingId && (
-            <div className="ib-recovery mt-5 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <ShieldCheck size={20} className="ib-orange shrink-0" />
-
-                <div className="min-w-0">
-                  <strong className="text-sm">Booking reference created</strong>
-
-                  <p className="ib-muted mt-1 break-all text-xs">{bookingId}</p>
-
-                  <p className="ib-muted mt-2 text-xs leading-6">
-                    If checkout was interrupted, check your booking's payment
-                    status before making another payment.
-                  </p>
-
-                  <a
-                    href={paymentStatusUrl(bookingId)}
-                    className="ib-outline mt-3"
-                  >
-                    <RefreshCw size={15} />
-                    Check Payment Status
-                    <ArrowRight size={15} />
-                  </a>
-                </div>
-              </div>
+            <div className="mi-recover">
+              <b>
+                <ShieldCheck size={18} weight="duotone" />
+                Booking reference saved
+              </b>
+              <code>{bookingId}</code>
+              <p>
+                If checkout was interrupted, check your payment status before
+                paying again.
+              </p>
+              <a
+                href={paymentStatusUrl(bookingId)}
+                className="mi-btn mi-btn-ghost mi-btn-sm"
+                style={{ marginTop: 12 }}
+              >
+                <ArrowClockwise size={15} weight="bold" />
+                Check payment status
+              </a>
             </div>
           )}
         </div>
 
         {/* FOOTER */}
-        <div
-          className="flex shrink-0 items-center justify-between gap-2 border-t p-4 sm:px-7"
-          style={{ borderColor: "var(--ib-border)" }}
-        >
+        <div className="mi-dlg-foot">
           <button
             type="button"
             disabled={busy}
-            className="ib-outline"
+            className="mi-btn mi-btn-ghost"
             onClick={
               step === 0
                 ? onClose
@@ -2397,53 +1804,40 @@ function BookingModal({
                   }
             }
           >
-            <ArrowLeft size={16} />
-            {step === 0 ? "Close" : "Back"}
+            <ArrowLeft size={16} weight="bold" />
+            {step === 0 ? "Cancel" : "Back"}
           </button>
 
           {step < 2 ? (
             <button
               type="button"
-              className="ib-primary group"
+              className="mi-btn mi-btn-primary"
               disabled={step === 0 && topics.length === 0}
               onClick={handleContinue}
             >
               Continue
-              <Send
-                size={16}
-                className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-1"
-              />
+              <ArrowRight size={16} weight="bold" />
             </button>
           ) : (
             <button
               type="button"
-              className="ib-primary"
+              className="mi-btn mi-btn-primary"
               disabled={busy}
               onClick={checkout}
             >
               {busy ? (
-                <LoaderCircle size={17} className="animate-spin" />
+                <SpinnerGap size={18} weight="bold" className="mi-spin" />
               ) : (
-                <CreditCard size={17} />
+                <LockKey size={18} weight="bold" />
               )}
-
               {busy
-                ? "Processing..."
+                ? "Opening checkout..."
                 : paymentStarted
-                  ? "Check Payment"
+                  ? "Check payment"
                   : `Pay ${priceText}`}
             </button>
           )}
         </div>
-
-        {/* PAPER PLANE FLIGHT */}
-        {flight && (
-          <PaperPlaneFlight
-            key={flight.id}
-            direction={flight.dir}
-            onDone={() => setFlight(null)}
-          />
-        )}
       </motion.section>
     </motion.div>
   );
@@ -2454,459 +1848,7 @@ function BookingModal({
 }
 
 /* =========================================================
-   MARKETING SECTIONS
-========================================================= */
-
-function MarketingSections({ openFaq, setOpenFaq }) {
-  const experienceRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: experienceRef,
-    offset: ["start 80%", "end 60%"],
-  });
-  const lineScale = useSpring(scrollYProgress, { stiffness: 100, damping: 24 });
-  const reduce = useReducedMotion();
-
-  return (
-    <>
-      {/* BENEFITS */}
-      <section
-        id="what-you-get"
-        className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8"
-        style={{ background: "var(--ib-alt)" }}
-      >
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="Your interview, your growth"
-              title={
-                <>
-                  More than another{" "}
-                  <span className="ib-grad-text">practice question</span>
-                </>
-              }
-              description="A live session designed to expose blind spots before your real interview and give you concrete areas to work on."
-            />
-          </Reveal>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {SESSION_BENEFITS.map(({ Icon, title, description }, index) => (
-              <Reveal
-                key={title}
-                delay={(index % 3) * 0.06}
-                rotate={index % 2 ? 1.5 : -1.5}
-              >
-                <div className="ib-card ib-card-hover ib-icon-spin h-full rounded-2xl p-6 transition-transform duration-300 hover:-translate-y-1.5">
-                  <div className="ib-panel inline-flex rounded-xl p-3">
-                    <Icon className="ib-orange" size={23} />
-                  </div>
-
-                  <h3 className="mt-4 text-base font-extrabold">{title}</h3>
-
-                  <p className="ib-muted mt-2 text-sm leading-7">{description}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* TARGET COMPANIES */}
-      <section
-        id="top-company-prep"
-        className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8"
-      >
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="Aim higher"
-              title="Prepare for FAANG, MAANG and other leading tech interviews"
-              description="Build the core coding, backend, system design and communication skills used in challenging software engineering interview processes."
-            />
-          </Reveal>
-
-          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {TARGET_COMPANIES.map((company, index) => (
-              <Reveal key={company.name} delay={(index % 4) * 0.05} y={20}>
-                <CompanyLogo company={company} />
-              </Reveal>
-            ))}
-          </div>
-
-          <p className="ib-muted mt-4 text-xs leading-6">
-            These are preparation targets, not employers or partners of Target
-            Trek. Mock interviews do not guarantee selection or offers.
-          </p>
-        </div>
-      </section>
-
-      {/* CURRICULUM */}
-      <section
-        id="interview-topics"
-        className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8"
-      >
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="What we can cover"
-              title={
-                <>
-                  Prepare for the{" "}
-                  <span className="ib-grad-text">rounds that matter</span>
-                </>
-              }
-              description="Pick a slot supporting your chosen track. Every session is focused on depth, reasoning and clear communication—not simply memorizing answers."
-            />
-          </Reveal>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-2">
-            {CURRICULUM.map(({ key, Icon, title, tagline, points }, index) => (
-              <Reveal
-                key={key}
-                x={index % 2 ? 24 : -24}
-                rotate={index % 2 ? 1 : -1}
-              >
-                <article className="ib-card ib-card-hover ib-icon-spin h-full rounded-2xl p-5 sm:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="ib-panel rounded-xl p-3">
-                      <Icon className="ib-orange" size={22} />
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-extrabold">{title}</h3>
-                      <p className="ib-muted mt-1 text-sm">{tagline}</p>
-                    </div>
-                  </div>
-
-                  <ul className="mt-5 grid gap-3">
-                    {points.map((point) => (
-                      <li key={point} className="flex gap-2 text-sm leading-6">
-                        <Check size={16} className="ib-orange mt-1 shrink-0" />
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              </Reveal>
-            ))}
-
-            <Reveal x={24}>
-              <article
-                className="relative h-full overflow-hidden rounded-2xl p-6 text-white"
-                style={{ background: "linear-gradient(120deg,#9a3412,#ea580c)" }}
-              >
-                <GraduationCap size={29} />
-
-                <h3 className="mt-4 text-xl font-black">
-                  Preparing for a specific company or round?
-                </h3>
-
-                <p className="mt-3 text-sm leading-7 text-white/90">
-                  Share the job description, target role or topics in your
-                  booking notes. Your interviewer can use that context within
-                  the duration and selected session's supported tracks.
-                </p>
-
-                <a
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-extrabold text-orange-800 transition hover:-translate-y-0.5"
-                  href="#interview-slots"
-                >
-                  Choose your session <ArrowRight size={16} />
-                </a>
-              </article>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* SESSION EXPERIENCE */}
-      <section
-        id="session-experience"
-        ref={experienceRef}
-        className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8"
-        style={{ background: "var(--ib-alt)" }}
-      >
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="Inside the session"
-              title="Experience an interview—not a lecture"
-              description="A flexible flow built around your selected topics and session duration."
-            />
-          </Reveal>
-
-          <div className="relative mt-10">
-            <div
-              aria-hidden="true"
-              className="absolute left-[12%] right-[12%] top-[26px] hidden h-0.5 md:block"
-              style={{ background: "var(--ib-border)" }}
-            />
-            <motion.div
-              aria-hidden="true"
-              style={{ scaleX: reduce ? 1 : lineScale }}
-              className="absolute left-[12%] right-[12%] top-[26px] hidden h-0.5 origin-left bg-gradient-to-r from-orange-500 to-amber-400 md:block"
-            />
-
-            <div className="relative grid gap-4 md:grid-cols-4">
-              {[
-                ["01", "Introduction", "Your experience, target role, upcoming interviews and expectations."],
-                ["02", "Technical round", "Live coding, system design, GenAI or project discussion, depending on your selected topics."],
-                ["03", "Follow-ups", "Edge cases, optimizations, architecture alternatives and deeper why-questions."],
-                ["04", "Feedback", "Talk through strengths, improvement areas and suggested next practice steps."],
-              ].map(([number, title, description], index) => (
-                <Reveal key={number} delay={index * 0.06} y={36}>
-                  <div className="ib-card ib-card-hover h-full rounded-2xl p-6">
-                    <span
-                      className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-lg font-black text-white shadow-lg"
-                      style={{
-                        background: "linear-gradient(135deg,#f97316,#ea580c)",
-                        boxShadow: "0 10px 22px -8px rgba(234,88,12,.7)",
-                      }}
-                    >
-                      {number}
-                    </span>
-
-                    <h3 className="mt-4 text-lg font-extrabold">{title}</h3>
-
-                    <p className="ib-muted mt-2 text-sm leading-7">{description}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-
-          <p className="ib-muted mt-4 text-xs leading-6">
-            Session length controls how deeply individual topics can be covered.
-            No specific interview question or hiring result is guaranteed.
-          </p>
-        </div>
-      </section>
-
-      {/* WHO IT'S FOR */}
-      <section
-        id="who-its-for"
-        className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8"
-      >
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="Made for your next step"
-              title="Who should book a mock interview?"
-              description="Whether you're starting out or targeting your next engineering role, focused practice helps you prepare more deliberately."
-            />
-          </Reveal>
-
-          <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Students & freshers", "Get comfortable with live coding, problem explanations and fundamental CS questions."],
-              ["SDE-1 candidates", "Sharpen DSA, backend basics, project walkthroughs and communication."],
-              ["SDE-2 candidates", "Practice design depth, scalability, concurrency and decision-making trade-offs."],
-              ["Backend & GenAI engineers", "Discuss APIs, microservices, RAG, agents and production architecture."],
-            ].map(([title, description], index) => (
-              <Reveal key={title} delay={(index % 4) * 0.05} rotate={index % 2 ? 2 : -2}>
-                <div className="ib-card ib-card-hover ib-icon-spin h-full rounded-2xl p-5 transition-transform duration-300 hover:-translate-y-1.5">
-                  <BadgeCheck className="ib-orange" size={24} />
-
-                  <h3 className="mt-4 font-extrabold">{title}</h3>
-
-                  <p className="ib-muted mt-2 text-sm leading-7">{description}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section
-        id="how-it-works"
-        className="scroll-mt-36 px-4 py-16 sm:px-6 lg:px-8"
-        style={{ background: "var(--ib-alt)" }}
-      >
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="Simple Booking Process"
-              title="How your mock interview works"
-              description="Book your technical mock interview in a few simple steps. No account registration is required."
-            />
-          </Reveal>
-
-          <div className="relative mt-10">
-            {/* A little paper plane cruising along the dashed route */}
-            <div
-              aria-hidden="true"
-              className="absolute left-[6%] right-[6%] top-[-18px] hidden h-6 md:block"
-            >
-              <div
-                className="absolute inset-x-0 top-1/2 border-t-2 border-dashed"
-                style={{ borderColor: "var(--ib-border)" }}
-              />
-
-              {!reduce && (
-                <motion.span
-                  className="absolute top-1/2 text-orange-500"
-                  style={{ y: "-50%", x: "-50%" }}
-                  animate={{ left: ["0%", "100%"], opacity: [0, 1, 1, 0] }}
-                  transition={{
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    times: [0, 0.1, 0.9, 1],
-                  }}
-                >
-                  <Send size={18} fill="currentColor" fillOpacity={0.3} />
-                </motion.span>
-              )}
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {[
-                {
-                  number: "01",
-                  title: "Choose your session",
-                  description:
-                    "Select an available date and time, then choose the topics you want to practice.",
-                  Icon: CalendarDays,
-                },
-                {
-                  number: "02",
-                  title: "Enter details and pay",
-                  description:
-                    "Provide your name, email, background and interview goals. Complete payment securely through Cashfree.",
-                  Icon: CreditCard,
-                },
-                {
-                  number: "03",
-                  title: "Attend your interview",
-                  description:
-                    "After payment verification, receive your booking confirmation. Meeting details are shared by email.",
-                  Icon: Video,
-                },
-              ].map(({ number, title, description, Icon }, index) => (
-                <Reveal key={number} delay={index * 0.08} y={36}>
-                  <div className="ib-card ib-card-hover ib-icon-spin h-full rounded-2xl p-6 transition-transform duration-300 hover:-translate-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="ib-grad-text text-4xl font-black">{number}</span>
-                      <Icon size={26} className="ib-orange" />
-                    </div>
-
-                    <h3 className="mt-5 text-lg font-extrabold">{title}</h3>
-
-                    <p className="ib-muted mt-3 text-sm leading-7">{description}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section
-        id="mock-faq"
-        className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8"
-      >
-        <div className="mx-auto max-w-4xl">
-          <Reveal>
-            <SectionIntro
-              eyebrow="FAQs"
-              title="Everything to know before booking"
-              description="Clear answers about eligibility, topics, feedback, checkout and cancellations."
-            />
-          </Reveal>
-
-          <div className="mt-8 space-y-3">
-            {FAQ_ITEMS.map((item, index) => {
-              const open = openFaq === index;
-
-              return (
-                <Reveal key={item.question} delay={(index % 4) * 0.03} y={18}>
-                  <div
-                    className={`ib-card overflow-hidden rounded-2xl ${
-                      open ? "ib-selected" : ""
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-4 p-5 text-left font-bold"
-                      aria-expanded={open}
-                      onClick={() =>
-                        setOpenFaq((old) => (old === index ? -1 : index))
-                      }
-                    >
-                      <span>{item.question}</span>
-
-                      <ChevronDown
-                        size={19}
-                        className={`ib-orange shrink-0 transition-transform duration-300 ${
-                          open ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-
-                    <AnimatePresence initial={false}>
-                      {open && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: EASE }}
-                        >
-                          <p
-                            className="ib-muted border-t px-5 pb-5 pt-4 text-sm leading-7"
-                            style={{ borderColor: "var(--ib-border)" }}
-                          >
-                            {item.answer}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </Reveal>
-              );
-            })}
-          </div>
-
-          <Reveal className="mt-9">
-            <div
-              className="relative overflow-hidden rounded-3xl p-7 text-white sm:p-9"
-              style={{ background: "linear-gradient(120deg,#9a3412,#ea580c)" }}
-            >
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/15 blur-3xl"
-              />
-
-              <h3 className="relative text-2xl font-black">
-                Ready to find your weak spots before the real interview?
-              </h3>
-
-              <p className="relative mt-3 max-w-2xl text-sm leading-7 text-white/90">
-                Choose a date, pick your preferred technical areas and book your
-                live 1:1 mock interview.
-              </p>
-
-              <a
-                href="#interview-slots"
-                className="group relative mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-orange-800 transition hover:-translate-y-0.5"
-              >
-                View available sessions
-                <Send
-                  size={17}
-                  className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-1"
-                />
-              </a>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-    </>
-  );
-}
-
-/* =========================================================
    MAIN PAGE — PUBLIC GUEST BOOKING PAGE
-
    No authToken prop, no Redux user, no login redirect.
 ========================================================= */
 
@@ -2915,8 +1857,10 @@ export default function InterviewBookingPage({
 }) {
   const theme = useNavbarTheme();
   const reduce = useReducedMotion();
+  const rootRef = useRef(null);
 
   const [openFaq, setOpenFaq] = useState(0);
+  const [track, setTrack] = useState(CURRICULUM[0].key);
 
   // Display preferences only. Server availability dates remain IST and
   // checkout uses slot._id.
@@ -2928,32 +1872,50 @@ export default function InterviewBookingPage({
     timeZone;
 
   const days = useMemo(upcomingDays, []);
-
   const [selectedDay, setSelectedDay] = useState(() => days[0]?.key || "");
+
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedSlot, setSelectedSlot] = useState(null);
+
   const [viewFilter, setViewFilter] = useState("all");
   const [topicFilter, setTopicFilter] = useState("all");
 
-  /* Scroll progress + hero parallax */
-  const { scrollYProgress } = useScroll();
-  const progress = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 24,
-    mass: 0.4,
-  });
+  /* ---------- scroll progress, pinned tabs, active tab ---------- */
 
-  const heroRef = useRef(null);
-  const { scrollYProgress: heroProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
+  const { scrollY, scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 28 });
+  const tabsSlotRef = useRef(null);
+  const [pinned, setPinned] = useState(false);
+  const [activeTab, setActiveTab] = useState(TABS[0].id);
+
+  useMotionValueEvent(scrollY, "change", () => {
+    const slot = tabsSlotRef.current;
+    const root = rootRef.current;
+
+    if (!slot || !root) return;
+
+    const styles = getComputedStyle(root);
+    const navH = parseFloat(styles.getPropertyValue("--nav-h")) || 64;
+    const tabsH = parseFloat(styles.getPropertyValue("--tabs-h")) || 56;
+    const pin = slot.getBoundingClientRect().top <= navH;
+
+    setPinned((current) => (current === pin ? current : pin));
+
+    // scroll spy: the last section whose top has passed under the bars
+    let current = TABS[0].id;
+
+    for (const tab of TABS) {
+      const node = document.getElementById(tab.id);
+
+      if (node && node.getBoundingClientRect().top <= navH + tabsH + 80) {
+        current = tab.id;
+      }
+    }
+
+    setActiveTab((previous) => (previous === current ? previous : current));
   });
-  const heroTextY = useTransform(heroProgress, [0, 1], [0, 90]);
-  const heroCardY = useTransform(heroProgress, [0, 1], [0, -70]);
-  const heroFade = useTransform(heroProgress, [0, 0.9], [1, 0.2]);
-  const glowY = useTransform(heroProgress, [0, 1], [0, 200]);
 
   /* =====================================================
      GET PUBLIC SLOTS — GET /api/interviews/slots (no token)
@@ -3028,9 +1990,36 @@ export default function InterviewBookingPage({
     [slots, viewFilter, topicFilter]
   );
 
-  const countAvailable = slots.filter((slot) => slot.status === "AVAILABLE").length;
+  const openSlots = useMemo(
+    () =>
+      slots
+        .filter((slot) => slot.status === "AVAILABLE")
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
+    [slots]
+  );
+
+  const countAvailable = openSlots.length;
   const countBooked = slots.filter((slot) => slot.status === "BOOKED").length;
   const countHeld = slots.filter((slot) => slot.status === "HELD").length;
+
+  const nextSlot = openSlots[0] || null;
+
+  const fromPrice = useMemo(() => {
+    const prices = openSlots
+      .map((slot) => Number(slot.price))
+      .filter((value) => Number.isFinite(value));
+
+    if (!prices.length) return null;
+
+    const min = Math.min(...prices);
+    const slot = openSlots.find((item) => Number(item.price) === min);
+
+    return fmtMoney(min, slot?.currency);
+  }, [openSlots]);
+
+  const dayIndex = days.findIndex((day) => day.key === selectedDay);
+  const dayWord =
+    dayIndex === 0 ? "today" : dayIndex === 1 ? "tomorrow" : `on ${fmtDate(`${selectedDay}T12:00:00+05:30`, { weekday: "short", day: "numeric", month: "short" })}`;
 
   const handleBook = (slot) => {
     if (slot.status !== "AVAILABLE") return;
@@ -3039,725 +2028,1108 @@ export default function InterviewBookingPage({
     setSelectedSlot(slot);
   };
 
-  const heroWords = ["Your", "next", "technical", "interview", "starts"];
+  const pickDay = (key) => {
+    setSelectedDay(key);
+    setViewFilter("all");
+  };
+
+  const goToNextDay = () => {
+    const next = days[dayIndex + 1];
+
+    if (next) pickDay(next.key);
+  };
+
+  const activeTrack = CURRICULUM.find((item) => item.key === track) || CURRICULUM[0];
+  const ActiveTrackIcon = TOPIC_INFO[activeTrack.key]?.Icon || Code;
+
+  const faqSchema = useMemo(
+    () =>
+      JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: FAQ_ITEMS.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: item.answer },
+        })),
+      }),
+    []
+  );
+
+  /* ---------- flow line on scroll ---------- */
+
+  const flowRef = useRef(null);
+  const { scrollYProgress: flowProgress } = useScroll({
+    target: flowRef,
+    offset: ["start 85%", "end 55%"],
+  });
+  const flowScale = useSpring(flowProgress, { stiffness: 100, damping: 24 });
 
   return (
-    <div
-      className="tt-ib overflow-x-clip pb-20 pt-[116px] sm:pb-0 xl:pt-[76px]"
-      data-ib-theme={theme}
-    >
+    <MotionConfig reducedMotion="user">
       <Helmet>
-              <title>Book Mock Interviews: DSA, HLD, LLD &amp; Java | Target Trek</title>
-              <meta name="description" content="Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and fix your weak points." />
-              <meta name="keywords" content="mock interview, system design mock interview, DSA mock interview, Java mock interview, backend interview practice, GenAI interview preparation" />
-              <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-              <link rel="canonical" href="https://www.targettrek.in/mock-interviews" />
-              <meta property="og:type" content="website" />
-              <meta property="og:site_name" content="Target Trek" />
-              <meta property="og:locale" content="en_IN" />
-              <meta property="og:title" content="Book Mock Interviews: DSA, HLD, LLD &amp; Java | Target Trek" />
-              <meta property="og:description" content="Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and fix your weak points." />
-              <meta property="og:url" content="https://www.targettrek.in/mock-interviews" />
-              <meta name="twitter:card" content="summary" />
-              <meta name="twitter:title" content="Book Mock Interviews: DSA, HLD, LLD &amp; Java | Target Trek" />
-              <meta name="twitter:description" content="Book realistic 1:1 mock interviews in DSA, backend, Java, Spring Boot, System Design and GenAI. Get honest feedback and fix your weak points." />
-            </Helmet>
+        <title>{SEO_TITLE}</title>
+        <meta name="description" content={SEO_DESCRIPTION} />
+        <meta
+          name="keywords"
+          content="mock interview, system design mock interview, DSA mock interview, Java mock interview, backend interview practice, GenAI interview, LLD mock interview, HLD mock interview"
+        />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+        <link rel="canonical" href={PAGE_URL} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Target Trek" />
+        <meta property="og:locale" content="en_IN" />
+        <meta property="og:title" content={SEO_TITLE} />
+        <meta property="og:description" content={SEO_DESCRIPTION} />
+        <meta property="og:url" content={PAGE_URL} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={SEO_TITLE} />
+        <meta name="twitter:description" content={SEO_DESCRIPTION} />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={FONT_URL} />
+        <script type="application/ld+json">{faqSchema}</script>
+      </Helmet>
 
-      <style>{styles}</style>
+      <motion.div className="mi-progress" style={{ scaleX: progress }} aria-hidden="true" />
 
-      {/* Scroll progress */}
-      <motion.div
-        aria-hidden="true"
-        style={{ scaleX: progress }}
-        className="fixed inset-x-0 top-0 z-[100] h-[3px] origin-left bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600"
-      />
+      <main ref={rootRef} className="mi" data-theme={theme === "dark" ? "dark" : "light"}>
+        {/* ===================================== */}
+        {/* HERO                                  */}
+        {/* ===================================== */}
 
-      <main>
-        {/* ==========================================
-            HERO
-        ========================================== */}
-        <section
-          ref={heroRef}
-          className="relative overflow-hidden px-4 pb-16 pt-12 sm:px-6 sm:pt-16 lg:px-8"
-        >
-          <div aria-hidden="true" className="ib-grid-bg pointer-events-none absolute inset-0" />
+        <section className="mi-hero" aria-labelledby="mi-title">
+          <div className="mi-hero-bg" aria-hidden="true" />
 
-          <motion.div
-            aria-hidden="true"
-            style={{ ...(reduce ? {} : { y: glowY }), background: "var(--ib-glow)" }}
-            className="pointer-events-none absolute -right-24 -top-16 h-80 w-80 rounded-full blur-[100px]"
-          />
-
-          <motion.div
-            aria-hidden="true"
-            animate={reduce ? undefined : { scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full blur-[100px]"
-            style={{ background: "rgba(245,158,11,.14)" }}
-          />
-
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.15fr_.85fr]">
-            <motion.div style={reduce ? undefined : { y: heroTextY, opacity: heroFade }}>
-              <motion.div
-                initial={reduce ? false : { opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
+          <div className="mi-shell mi-hero-grid">
+            <div>
+              <motion.p
+                className="mi-pill"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: EASE }}
-                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-widest"
-                style={{
-                  background: "var(--ib-orange-light)",
-                  color: "var(--ib-orange)",
-                }}
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500 opacity-70" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
-                </span>
-                Target Trek Mock Interviews
-              </motion.div>
+                <span className="mi-ping" aria-hidden="true" />
+                <b>Live 1:1 mock interviews</b> with working engineers
+              </motion.p>
 
-              <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl lg:text-[58px] lg:leading-[1.12]">
-                {heroWords.map((word, index) => (
-                  <motion.span
-                    key={word}
-                    initial={reduce ? false : { opacity: 0, y: 26 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 + index * 0.07, ease: EASE }}
-                    className="mr-3 inline-block"
-                  >
-                    {word}
-                  </motion.span>
-                ))}
-
-                <motion.span
-                  initial={reduce ? false : { opacity: 0, y: 26 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.55, delay: 0.5, ease: EASE }}
-                  className="ib-grad-text inline-block"
-                >
-                  with better practice.
-                </motion.span>
-              </h1>
+              <motion.h1
+                id="mi-title"
+                className="mi-h1 mi-hero-title"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.08, ease: EASE }}
+              >
+                Find your weak spots <span className="mi-hl">before the real interview</span> does.
+              </motion.h1>
 
               <motion.p
-                initial={reduce ? false : { opacity: 0, y: 20 }}
+                className="mi-lead mi-hero-lead"
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-                className="ib-muted mt-5 max-w-2xl text-base leading-8 sm:text-lg"
+                transition={{ duration: 0.6, delay: 0.18, ease: EASE }}
               >
-                Get realistic 1:1 interview practice in DSA, backend
-                engineering, Java, Spring Boot, System Design and GenAI. Discuss
-                real engineering trade-offs, identify weak points and become
-                more confident explaining your solutions.
+                Practise a real technical round in DSA, System Design, Java,
+                Spring Boot or GenAI. Get honest feedback on how you think and
+                how you explain it, so the actual interview feels familiar.
               </motion.p>
 
               <motion.div
-                initial={reduce ? false : { opacity: 0, y: 20 }}
+                className="mi-hero-actions"
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.7, ease: EASE }}
-                className="mt-7 flex flex-wrap items-center gap-3"
+                transition={{ duration: 0.6, delay: 0.26, ease: EASE }}
               >
-                <a href="#interview-slots" className="ib-primary group">
-                  Explore Available Slots
-                  <ArrowRight
-                    size={17}
-                    className="transition-transform group-hover:translate-x-1"
-                  />
-                </a>
-
-                <a href="#how-it-works" className="ib-outline">
-                  How It Works
-                  <ChevronRight size={17} />
-                </a>
-              </motion.div>
-
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {PAGE_STATS.map(({ value, label, Icon }, index) => (
-                  <motion.div
-                    key={label}
-                    initial={reduce ? false : { opacity: 0, y: 24, rotate: index % 2 ? 3 : -3 }}
-                    animate={{ opacity: 1, y: 0, rotate: 0 }}
-                    transition={{ duration: 0.5, delay: 0.8 + index * 0.07, ease: EASE }}
-                    whileHover={reduce ? undefined : { y: -4 }}
-                    className="ib-card ib-card-hover rounded-xl p-3"
-                  >
-                    <Icon size={17} className="ib-orange" />
-
-                    <div className="mt-2 text-xl font-black">
-                      <StatValue value={value} />
-                    </div>
-
-                    <p className="ib-muted mt-1 text-[11px] leading-5">{label}</p>
-                  </motion.div>
-                ))}
-              </div>
-
-              <motion.div
-                initial={reduce ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 1.1 }}
-                className="ib-muted mt-8 flex flex-wrap gap-x-5 gap-y-3 text-xs font-semibold"
-              >
-                {[
-                  [Video, "Live 1:1 Interview"],
-                  [MessageSquareText, "Actionable Feedback"],
-                  [ShieldCheck, "Secure Checkout"],
-                  [CheckCircle2, "No Account Required"],
-                ].map(([Icon, text]) => (
-                  <span key={text} className="flex items-center gap-2">
-                    <Icon size={15} className="ib-orange" />
-                    {text}
-                  </span>
-                ))}
-              </motion.div>
-            </motion.div>
-
-            {/* TOPIC CARD with rotating ring */}
-            <motion.div
-              style={reduce ? undefined : { y: heroCardY }}
-              className="relative mx-auto w-full max-w-md lg:max-w-none"
-            >
-              <div aria-hidden="true" className="ib-ring pointer-events-none absolute -inset-3 rounded-[36px]" />
-              <div aria-hidden="true" className="ib-ring ib-ring-slow pointer-events-none absolute -inset-6 rounded-[44px]" />
-
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 50, rotate: 4, scale: 0.94 }}
-                animate={{ opacity: 1, y: 0, rotate: 0, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.3, ease: EASE }}
-              >
-                <motion.div
-                  animate={reduce ? undefined : { y: [0, -9, 0] }}
-                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                  className="ib-card relative rounded-3xl p-5 shadow-2xl sm:p-7"
+                <button
+                  type="button"
+                  className="mi-btn mi-btn-primary mi-btn-lg"
+                  onClick={() => scrollToId("interview-slots")}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="ib-orange text-xs font-bold uppercase tracking-wider">
-                      What you can practice
-                    </span>
-
-                    <motion.div
-                      className="ib-panel rounded-xl p-2"
-                      animate={reduce ? undefined : { rotate: [0, 12, -12, 0] }}
-                      transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <Sparkles size={20} className="ib-orange" />
-                    </motion.div>
-                  </div>
-
-                  <div className="mt-5 space-y-2">
-                    {ALL_TOPICS.map((topic, index) => {
-                      const info = TOPIC_INFO[topic];
-                      const Icon = info.Icon;
-
-                      return (
-                        <motion.div
-                          key={topic}
-                          initial={reduce ? false : { opacity: 0, x: 28 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.5, delay: 0.7 + index * 0.08, ease: EASE }}
-                          whileHover={reduce ? undefined : { x: 6 }}
-                          className="ib-icon-spin flex items-center gap-3 rounded-xl p-2"
-                        >
-                          <div className="ib-panel rounded-lg p-2.5">
-                            <Icon size={18} className="ib-orange" />
-                          </div>
-
-                          <div className="flex-1">
-                            <div className="text-sm font-bold">{info.title}</div>
-                            <p className="ib-muted mt-1 text-xs">{info.description}</p>
-                          </div>
-
-                          <Check size={16} className="ib-orange" />
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="ib-panel ib-muted mt-5 rounded-xl px-4 py-3 text-xs leading-6">
-                    Sessions can be tailored to your experience, target role,
-                    upcoming interviews and improvement areas.
-                  </div>
-                </motion.div>
+                  See open slots
+                  <ArrowRight size={18} weight="bold" />
+                </button>
+                <button
+                  type="button"
+                  className="mi-btn mi-btn-ghost mi-btn-lg"
+                  onClick={() => scrollToId("how-it-works")}
+                >
+                  How it works
+                </button>
               </motion.div>
-            </motion.div>
-          </div>
-        </section>
 
-        {/* ==========================================
-            INTERVIEWER COMPANIES (marquee)
-        ========================================== */}
-        <section
-          id="interviewer-companies"
-          className="scroll-mt-32 px-4 py-14 sm:px-6 lg:px-8"
-          style={{ background: "var(--ib-alt)" }}
-        >
-          <div className="mx-auto max-w-6xl">
-            <Reveal>
-              <SectionIntro
-                eyebrow="Meet the engineering community"
-                title="Practice with working engineers from multiple companies"
-                description="Our interviewer network brings practical perspectives from backend development, Java, Spring Boot, microservices, system design, GenAI and production engineering."
-              />
-            </Reveal>
+              <motion.div
+                className="mi-hero-tracks"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.36 }}
+              >
+                <span>Tracks:</span>
+                {ALL_TOPICS.map((topic) => (
+                  <button
+                    key={topic}
+                    type="button"
+                    className="mi-chip"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      setTrack(topic);
+                      scrollToId("interview-topics");
+                    }}
+                  >
+                    {TOPIC_INFO[topic].short}
+                  </button>
+                ))}
+              </motion.div>
 
-            <div
-              className="ib-marquee mt-8"
-              style={{
-                WebkitMaskImage:
-                  "linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)",
-                maskImage:
-                  "linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)",
-              }}
-            >
-              <div className="ib-marquee-track py-2">
-                {[...INTERVIEWER_COMPANIES, ...INTERVIEWER_COMPANIES].map(
-                  (company, index) => (
-                    <CompanyLogo
-                      key={`${company.name}-${index}`}
-                      company={company}
-                      compact
-                    />
-                  )
-                )}
-              </div>
+              <motion.ul
+                className="mi-hero-trust"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.44, ease: EASE }}
+              >
+                {PAGE_STATS.map(({ value, label }) => (
+                  <li key={label}>
+                    <strong>{value}</strong>
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </motion.ul>
             </div>
 
-            <Reveal className="mt-6">
-              <div
-                className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 sm:p-5"
-                style={{
-                  borderColor: "var(--ib-border)",
-                  background: "var(--ib-surface)",
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="ib-orange mt-0.5 shrink-0" size={20} />
-
-                  <p className="ib-muted max-w-3xl text-xs leading-6">
-                    Company names describe reported interviewer professional
-                    backgrounds, not corporate partnerships or endorsements. The
-                    interviewer for a specific slot may vary; contact support
-                    for the assigned engineer's profile.
-                  </p>
+            {/* SAMPLE FEEDBACK CARD + NEXT SLOT */}
+            <motion.div
+              className="mi-score-wrap"
+              initial={{ opacity: 0, y: 40, rotate: reduce ? 0 : 2 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: EASE }}
+            >
+              <div className="mi-score">
+                <div className="mi-score-top">
+                  <span className="mi-score-tag">
+                    <ChatCircleText size={16} weight="fill" />
+                    Feedback you take home
+                  </span>
+                  <span className="mi-score-live">Sample</span>
                 </div>
 
-                <a href="#interview-slots" className="ib-primary">
-                  Find a slot <ArrowRight size={15} />
-                </a>
+                <div className="mi-score-who">
+                  <span className="mi-avatar" aria-hidden="true">SD</span>
+                  <div>
+                    <b>System Design round</b>
+                    <span>60 min · Live 1:1 · Design a URL shortener</span>
+                  </div>
+                </div>
+
+                <div className="mi-bars">
+                  <ScoreBar label="Problem breakdown" value={8} delay={0.5} />
+                  <ScoreBar label="Communication" value={7} delay={0.6} />
+                  <ScoreBar label="Trade-offs & scaling" value={5} focus delay={0.7} />
+                  <ScoreBar label="Data modelling" value={7} delay={0.8} />
+                </div>
+
+                <div className="mi-note">
+                  <small>Work on next</small>
+                  Talk through cache invalidation and the read/write ratio
+                  before picking a database. Start with the numbers.
+                </div>
+
+                <p className="mi-score-foot">
+                  Illustration of the kind of points discussed. Feedback format
+                  depends on your session.
+                </p>
               </div>
-            </Reveal>
+
+              <div className="mi-next" aria-live="polite">
+                <span className="mi-ico mi-ico-sm">
+                  <CalendarBlank size={18} weight="duotone" />
+                </span>
+                <div className="mi-next-main">
+                  {loading ? (
+                    <>
+                      <small>Checking availability</small>
+                      <b className="mi-skel" style={{ height: 16, width: 150, marginTop: 4 }} />
+                    </>
+                  ) : nextSlot ? (
+                    <>
+                      <small>Next open slot {dayWord}</small>
+                      <b>
+                        {fmtTime(nextSlot.startTime, timeZone, timeFormat)} {displayZone} ·{" "}
+                        {fmtMoney(nextSlot.price, nextSlot.currency)}
+                      </b>
+                    </>
+                  ) : (
+                    <>
+                      <small>New slots open regularly</small>
+                      <b>Browse the next 8 days</b>
+                    </>
+                  )}
+                </div>
+                {nextSlot && !loading ? (
+                  <button
+                    type="button"
+                    className="mi-btn mi-btn-primary mi-btn-sm"
+                    onClick={() => handleBook(nextSlot)}
+                  >
+                    Book
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="mi-btn mi-btn-ghost mi-btn-sm"
+                    onClick={() => scrollToId("interview-slots")}
+                  >
+                    View
+                  </button>
+                )}
+              </div>
+            </motion.div>
           </div>
         </section>
 
-        {/* ==========================================
-            SLOT CALENDAR
-        ========================================== */}
-        <section
-          id="interview-slots"
-          className="scroll-mt-36 px-4 py-16 sm:px-6 lg:px-8"
-        >
-          <div className="mx-auto max-w-6xl">
-            <Reveal className="mb-7 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <span className="ib-orange inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                  <span className="h-px w-8 bg-gradient-to-r from-orange-500 to-transparent" />
-                  Choose Your Time
+        {/* ===================================== */}
+        {/* INTERVIEWER BACKGROUNDS               */}
+        {/* ===================================== */}
+
+        <section className="mi-logos" aria-label="Interviewer backgrounds">
+          <div className="mi-shell">
+            <p className="mi-logos-title">
+              Our interviewers have worked as <b>engineers at companies like these</b>
+            </p>
+          </div>
+
+          <div className="mi-marquee">
+            <div className="mi-marquee-track">
+              {[...INTERVIEWER_COMPANIES, ...INTERVIEWER_COMPANIES].map((company, index) => (
+                <span
+                  className="mi-logo"
+                  key={`${company.name}-${index}`}
+                  aria-hidden={index >= INTERVIEWER_COMPANIES.length ? "true" : undefined}
+                >
+                  <img
+                    src={favicon(company.domain)}
+                    alt=""
+                    loading="lazy"
+                    width="20"
+                    height="20"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                  {company.name}
                 </span>
-
-                <h2 className="mt-2 text-2xl font-black sm:text-4xl">
-                  Upcoming <span className="ib-grad-text">Interview Slots</span>
-                </h2>
-
-                <p className="ib-muted mt-2 max-w-2xl text-sm leading-7">
-                  Browse dates in IST, then instantly view session times in your
-                  preferred time zone and clock format. Your booking uses the
-                  original slot and schedule.
-                </p>
-              </div>
-
-              <TimeDisplayControls
-                timeZone={timeZone}
-                setTimeZone={setTimeZone}
-                timeFormat={timeFormat}
-                setTimeFormat={setTimeFormat}
-              />
-            </Reveal>
-
-            {/* DATE SELECTOR */}
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-3">
-              {days.map(({ key, date }, index) => {
-                const active = selectedDay === key;
-
-                return (
-                  <Reveal key={key} delay={index * 0.03} y={18}>
-                    <button
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => {
-                        setSelectedDay(key);
-                        setViewFilter("all");
-                      }}
-                      className="ib-card ib-card-hover relative w-full overflow-hidden rounded-2xl p-2.5 text-center transition-transform duration-200 hover:-translate-y-1 sm:p-4"
-                    >
-                      {active && (
-                        <motion.span
-                          layoutId="ib-day-pill"
-                          className="absolute inset-0 rounded-2xl"
-                          style={{
-                            background: "var(--ib-orange-light)",
-                            boxShadow: "inset 0 0 0 2px var(--ib-orange)",
-                          }}
-                          transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                        />
-                      )}
-
-                      <span className="relative block">
-                        <span className="ib-muted block text-[11px] font-bold">
-                          {index === 0
-                            ? "Today"
-                            : fmtDate(date, { weekday: "short" })}
-                        </span>
-
-                        <span
-                          className={`mt-1 block text-2xl font-black ${
-                            active ? "ib-orange" : ""
-                          }`}
-                        >
-                          {fmtDate(date, { day: "numeric" })}
-                        </span>
-
-                        <span className="ib-muted mt-1 block text-xs">
-                          {fmtDate(date, { month: "short" })}
-                        </span>
-                      </span>
-                    </button>
-                  </Reveal>
-                );
-              })}
+              ))}
             </div>
+          </div>
 
-            {/* FILTER HEADER */}
-            <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-extrabold">
-                  {selectedDateLabel(selectedDay)}{" "}
-                  <span className="ib-muted text-xs font-semibold">(IST date)</span>
-                </h3>
+          <div className="mi-shell">
+            <p className="mi-logos-note">
+              Names describe interviewers' professional backgrounds, not
+              partnerships or endorsements. The interviewer for a slot may vary.
+            </p>
+          </div>
+        </section>
 
-                <p className="ib-muted mt-1 text-xs">
-                  {loading
-                    ? "Checking availability..."
-                    : `${countAvailable} available · ${countBooked} booked · ${countHeld} reserved`}
-                </p>
+        {/* ===================================== */}
+        {/* STICKY TABS                           */}
+        {/* ===================================== */}
+
+        <div ref={tabsSlotRef} className="mi-tabs-slot">
+          <nav className={cn("mi-tabs", pinned && "is-pinned")} aria-label="On this page">
+            <div className="mi-shell mi-tabs-in">
+              <div className="mi-tabs-list">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={cn("mi-tab", activeTab === tab.id && "is-on")}
+                    aria-current={activeTab === tab.id ? "true" : undefined}
+                    onClick={() => scrollToId(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="ib-card inline-flex flex-wrap rounded-xl p-1">
-                {[
-                  { key: "all", label: "All" },
-                  { key: "available", label: "Available" },
-                  { key: "unavailable", label: "Unavailable" },
-                ].map((filter) => {
-                  const active = viewFilter === filter.key;
+              <div className="mi-tabs-cta">
+                {fromPrice && (
+                  <span>
+                    From <b>{fromPrice}</b>
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="mi-btn mi-btn-primary mi-btn-sm"
+                  onClick={() => scrollToId("interview-slots")}
+                >
+                  Book a slot
+                </button>
+              </div>
+            </div>
+          </nav>
+        </div>
+
+        {/* ===================================== */}
+        {/* SLOTS                                 */}
+        {/* ===================================== */}
+
+        <section id="interview-slots" className="mi-sec" aria-labelledby="mi-slots-title">
+          <div className="mi-shell">
+            <SectionHead
+              id="mi-slots-title"
+              eyebrow="Book your session"
+              title={
+                <>
+                  Pick a time that <span className="mi-hl">works for you</span>
+                </>
+              }
+              lead="Choose a date, then an open slot. You'll pick your topics and add your details in the next step."
+            />
+
+            <div className="mi-book">
+              <div className="mi-book-bar">
+                <p className="mi-step-label">
+                  <span className="mi-step-num">1</span>
+                  Choose a date <span className="mi-muted mi-xs" style={{ fontWeight: 600 }}>(IST)</span>
+                </p>
+
+                <div className="mi-days" role="group" aria-label="Choose a date">
+                  {days.map(({ key, date }, index) => {
+                    const active = selectedDay === key;
+
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => pickDay(key)}
+                        className={cn("mi-day", active && "is-on")}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="mi-day-bg"
+                            className="mi-day-bg"
+                            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                          />
+                        )}
+                        <small>
+                          {index === 0 ? "Today" : index === 1 ? "Tmrw" : fmtDate(date, { weekday: "short" })}
+                        </small>
+                        <b>{fmtDate(date, { day: "numeric" })}</b>
+                        <span>{fmtDate(date, { month: "short" })}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mi-controls">
+                  <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
+                    <p className="mi-step-label">
+                      <span className="mi-step-num">2</span>
+                      Filter by topic
+                    </p>
+                    <div className="mi-topic-chips" role="group" aria-label="Filter by topic">
+                      <button
+                        type="button"
+                        className={cn("mi-filter", topicFilter === "all" && "is-on")}
+                        aria-pressed={topicFilter === "all"}
+                        onClick={() => setTopicFilter("all")}
+                      >
+                        All topics
+                      </button>
+                      {ALL_TOPICS.map((topic) => {
+                        const Icon = TOPIC_INFO[topic].Icon;
+
+                        return (
+                          <button
+                            key={topic}
+                            type="button"
+                            className={cn("mi-filter", topicFilter === topic && "is-on")}
+                            aria-pressed={topicFilter === topic}
+                            onClick={() => setTopicFilter(topic)}
+                          >
+                            <Icon size={15} weight="bold" />
+                            {TOPIC_INFO[topic].short}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mi-tz">
+                    <label className="mi-select-wrap">
+                      <span>Show times in</span>
+                      <select
+                        className="mi-select"
+                        value={timeZone}
+                        onChange={(event) => setTimeZone(event.target.value)}
+                      >
+                        {DISPLAY_TIMEZONES.map((zone) => (
+                          <option key={zone.value} value={zone.value}>
+                            {zone.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="mi-select-wrap" style={{ flex: "0 1 150px" }}>
+                      <span>Clock</span>
+                      <select
+                        className="mi-select"
+                        value={timeFormat}
+                        onChange={(event) => setTimeFormat(event.target.value)}
+                      >
+                        <option value="12">12-hour</option>
+                        <option value="24">24-hour</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* DAY HEADER */}
+              <div className="mi-day-head">
+                <div>
+                  <h3>{selectedDateLabel(selectedDay)}</h3>
+                  <div className="mi-counts" aria-live="polite">
+                    {loading ? (
+                      <span className="mi-chip">Checking availability…</span>
+                    ) : (
+                      <>
+                        <span className="mi-chip" style={{ color: "var(--ok)" }}>
+                          {countAvailable} open
+                        </span>
+                        {countBooked > 0 && <span className="mi-chip">{countBooked} booked</span>}
+                        {countHeld > 0 && <span className="mi-chip">{countHeld} reserved</span>}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mi-seg" role="group" aria-label="Show slots">
+                  {[
+                    { key: "all", label: "All" },
+                    { key: "available", label: "Open" },
+                    { key: "unavailable", label: "Taken" },
+                  ].map((filter) => {
+                    const active = viewFilter === filter.key;
+
+                    return (
+                      <button
+                        key={filter.key}
+                        type="button"
+                        aria-pressed={active}
+                        className={active ? "is-on" : ""}
+                        onClick={() => setViewFilter(filter.key)}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="mi-seg-bg"
+                            className="mi-seg-bg"
+                            transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                          />
+                        )}
+                        <span>{filter.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ERROR */}
+              {loadError && (
+                <div className="mi-alert" role="alert">
+                  <WarningCircle size={20} weight="fill" />
+                  <div>{loadError}</div>
+                  <button type="button" onClick={() => fetchSlots()}>
+                    Try again
+                  </button>
+                </div>
+              )}
+
+              {/* LOADING / EMPTY / SLOTS */}
+              {loading ? (
+                <div className="mi-slots" aria-busy="true">
+                  {[0, 1, 2].map((index) => (
+                    <div key={index} className="mi-slot" style={{ padding: 20, gap: 14 }}>
+                      <div className="mi-skel" style={{ height: 22, width: "45%" }} />
+                      <div className="mi-skel" style={{ height: 36, width: "70%" }} />
+                      <div className="mi-skel" style={{ height: 18, width: "55%" }} />
+                      <div className="mi-skel" style={{ height: 44, marginTop: 10 }} />
+                    </div>
+                  ))}
+                </div>
+              ) : shownSlots.length === 0 ? (
+                <motion.div
+                  className="mi-empty"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE }}
+                >
+                  <span className="mi-ico">
+                    <CalendarBlank size={28} weight="duotone" />
+                  </span>
+                  <h3 className="mi-h3">
+                    {slots.length === 0 ? `No slots ${dayWord} yet` : "No slots match these filters"}
+                  </h3>
+                  <p>
+                    {slots.length === 0
+                      ? "Try another date. New sessions are added regularly."
+                      : "Clear the filters to see every slot for this date."}
+                  </p>
+                  <div className="mi-empty-actions">
+                    {(viewFilter !== "all" || topicFilter !== "all") && (
+                      <button
+                        type="button"
+                        className="mi-btn mi-btn-ghost"
+                        onClick={() => {
+                          setViewFilter("all");
+                          setTopicFilter("all");
+                        }}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                    {dayIndex < days.length - 1 && (
+                      <button type="button" className="mi-btn mi-btn-primary" onClick={goToNextDay}>
+                        Check the next day
+                        <ArrowRight size={16} weight="bold" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="mi-slots" key={`${selectedDay}-${viewFilter}-${topicFilter}`}>
+                  {shownSlots.map((slot, index) => {
+                    const available = slot.status === "AVAILABLE";
+                    const topics =
+                      Array.isArray(slot.allowedTopics) && slot.allowedTopics.length
+                        ? slot.allowedTopics
+                        : ALL_TOPICS;
+                    const hasDiscount = Number(slot.mrp) > Number(slot.price);
+                    const off = hasDiscount
+                      ? Math.round((1 - Number(slot.price) / Number(slot.mrp)) * 100)
+                      : 0;
+                    const time = fmtTime(slot.startTime, timeZone, timeFormat);
+                    const [clock, meridiem] = time.split(/\s(?=[AaPp][Mm]$)/);
+
+                    return (
+                      <motion.article
+                        key={slot._id}
+                        className={cn("mi-slot", available ? "is-open" : "is-closed")}
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.45, delay: Math.min(index, 8) * 0.05, ease: EASE }}
+                      >
+                        <div className="mi-slot-body">
+                          <div className="mi-slot-top">
+                            <span className="mi-slot-kind">
+                              <VideoCamera size={16} weight="duotone" />
+                              <span>{slot.title || "Technical mock interview"}</span>
+                            </span>
+                            <StatusBadge slot={slot} />
+                          </div>
+
+                          <p className="mi-slot-time">
+                            {clock}
+                            {meridiem && <small> {meridiem.toUpperCase()}</small>}
+                          </p>
+
+                          <div className="mi-slot-meta">
+                            <span>
+                              <Clock size={15} weight="bold" />
+                              {slot.durationMinutes || 45} min
+                            </span>
+                            <span>
+                              Ends {fmtTime(slot.endTime, timeZone, timeFormat)} {displayZone}
+                            </span>
+                          </div>
+
+                          {timeZone !== TIMEZONE && (
+                            <p className="mi-slot-local">
+                              Your date: {fmtSlotDate(slot.startTime, timeZone)} ·
+                              {" "}{fmtTime(slot.startTime, TIMEZONE, "12")} IST
+                            </p>
+                          )}
+
+                          <div className="mi-slot-topics">
+                            {topics.slice(0, 5).map((topic) => (
+                              <span key={topic} className="mi-chip">
+                                {TOPIC_INFO[topic]?.short || topic}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mi-slot-foot">
+                          <div className="mi-slot-price">
+                            <small>Session price</small>
+                            <b>{fmtMoney(slot.price, slot.currency)}</b>
+                            {hasDiscount && (
+                              <>
+                                <s>{fmtMoney(slot.mrp, slot.currency)}</s>
+                                {off > 0 && <span className="mi-off">{off}% off</span>}
+                              </>
+                            )}
+                          </div>
+
+                          {available ? (
+                            <button
+                              type="button"
+                              className="mi-btn mi-btn-primary"
+                              onClick={() => handleBook(slot)}
+                              aria-label={`Book the ${time} slot`}
+                            >
+                              Book
+                              <ArrowRight size={16} weight="bold" />
+                            </button>
+                          ) : (
+                            <button type="button" className="mi-btn mi-btn-muted" disabled>
+                              Taken
+                            </button>
+                          )}
+                        </div>
+                      </motion.article>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mi-book-help">
+                <span><SealCheck size={17} weight="fill" /> No account needed</span>
+                <span><LockKey size={17} weight="fill" /> Secure Cashfree checkout</span>
+                <span><EnvelopeSimple size={17} weight="fill" /> Joining details by email</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* WHAT YOU GET                          */}
+        {/* ===================================== */}
+
+        <section id="what-you-get" className="mi-sec mi-tint" aria-labelledby="mi-get-title">
+          <div className="mi-shell">
+            <SectionHead
+              id="mi-get-title"
+              eyebrow="What you get"
+              title={
+                <>
+                  More than another <span className="mi-hl">practice question</span>
+                </>
+              }
+              lead="A live session that shows your blind spots before the real interview, and gives you a short list of things to fix."
+            />
+
+            <div className="mi-bento">
+              <Reveal className="mi-card mi-benefit is-feature">
+                <span className="mi-ico">
+                  <ChatCircleText size={24} weight="duotone" />
+                </span>
+                <h3 className="mi-h3">Honest, specific feedback</h3>
+                <p>
+                  Your interviewer walks you through what went well and what
+                  didn't, so you know exactly what to practise next. Written
+                  feedback is included when the slot says so.
+                </p>
+                <ul className="mi-feedback-list">
+                  {FEEDBACK_POINTS.map((point) => (
+                    <li key={point}>
+                      <CheckCircle size={18} weight="fill" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </Reveal>
+
+              {SESSION_BENEFITS.map(({ Icon, title, description }, index) => (
+                <Reveal key={title} delay={(index % 3) * 0.06} className="mi-card mi-card-hover mi-benefit">
+                  <span className="mi-ico">
+                    <Icon size={22} weight="duotone" />
+                  </span>
+                  <h3 className="mi-h3">{title}</h3>
+                  <p>{description}</p>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* TOPICS / TRACKS                       */}
+        {/* ===================================== */}
+
+        <section id="interview-topics" className="mi-sec" aria-labelledby="mi-topics-title">
+          <div className="mi-shell">
+            <SectionHead
+              id="mi-topics-title"
+              eyebrow="What we can cover"
+              title={
+                <>
+                  Practise the <span className="mi-hl">rounds that matter</span>
+                </>
+              }
+              lead="Five tracks, each focused on reasoning and clear communication, not memorised answers. Pick a track to see what's covered."
+            />
+
+            <div className="mi-tracks">
+              <div className="mi-track-list" role="tablist" aria-label="Interview tracks">
+                {CURRICULUM.map((item) => {
+                  const Icon = TOPIC_INFO[item.key].Icon;
+                  const on = track === item.key;
 
                   return (
                     <button
-                      key={filter.key}
+                      key={item.key}
                       type="button"
-                      onClick={() => setViewFilter(filter.key)}
-                      className={`relative rounded-lg px-3 py-2 text-xs font-bold ${
-                        active ? "ib-orange" : "ib-muted"
-                      }`}
+                      role="tab"
+                      aria-selected={on}
+                      aria-controls="mi-track-panel"
+                      className={cn("mi-track-btn", on && "is-on")}
+                      onClick={() => setTrack(item.key)}
                     >
-                      {active && (
-                        <motion.span
-                          layoutId="ib-filter-pill"
-                          className="absolute inset-0 rounded-lg"
-                          style={{ background: "var(--ib-orange-light)" }}
-                          transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                        />
-                      )}
-
-                      <span className="relative">{filter.label}</span>
+                      <span className="mi-ico mi-ico-sm">
+                        <Icon size={18} weight="duotone" />
+                      </span>
+                      <span>
+                        <b>{item.title}</b>
+                        <small>{item.tagline}</small>
+                      </span>
+                      <CaretRight size={18} weight="bold" className="mi-track-caret" />
                     </button>
                   );
                 })}
               </div>
-            </div>
 
-            {/* TOPIC FILTER */}
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setTopicFilter("all")}
-                className={`ib-outline !px-3 !py-2 ${
-                  topicFilter === "all" ? "ib-selected" : ""
-                }`}
-              >
-                All Topics
-              </button>
-
-              {ALL_TOPICS.map((topic) => (
-                <button
-                  key={topic}
-                  type="button"
-                  onClick={() => setTopicFilter(topic)}
-                  className={`ib-outline !px-3 !py-2 ${
-                    topicFilter === topic ? "ib-selected" : ""
-                  }`}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeTrack.key}
+                  id="mi-track-panel"
+                  role="tabpanel"
+                  className="mi-track-panel"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3, ease: EASE }}
                 >
-                  {TOPIC_INFO[topic].title}
-                </button>
+                  <div className="mi-track-panel-head">
+                    <span className="mi-ico">
+                      <ActiveTrackIcon size={26} weight="duotone" />
+                    </span>
+                    <div>
+                      <h3 className="mi-h3">{activeTrack.title}</h3>
+                      <p className="mi-muted" style={{ marginTop: 4 }}>{activeTrack.tagline}</p>
+                    </div>
+                  </div>
+
+                  <ul>
+                    {activeTrack.points.map((point) => (
+                      <li key={point}>
+                        <Check size={18} weight="bold" />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mi-track-cta">
+                    <p>
+                      Preparing for a specific company or round? Add the job
+                      description or topics in your booking notes.
+                    </p>
+                    <button
+                      type="button"
+                      className="mi-btn mi-btn-primary"
+                      onClick={() => {
+                        setTopicFilter(activeTrack.key);
+                        scrollToId("interview-slots");
+                      }}
+                    >
+                      Find a {TOPIC_INFO[activeTrack.key].short} slot
+                      <ArrowRight size={16} weight="bold" />
+                    </button>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* INSIDE THE SESSION + WHO IT'S FOR     */}
+        {/* ===================================== */}
+
+        <section id="session-experience" className="mi-sec mi-tint" aria-labelledby="mi-flow-title">
+          <div className="mi-shell">
+            <SectionHead
+              id="mi-flow-title"
+              eyebrow="Inside the session"
+              title={
+                <>
+                  An interview, <span className="mi-hl">not a lecture</span>
+                </>
+              }
+              lead="The session follows a real interview's shape, adjusted to your topics and the length of your slot."
+            />
+
+            <div className="mi-flow" ref={flowRef}>
+              <div className="mi-flow-line" aria-hidden="true">
+                <motion.i style={{ scaleX: reduce ? 1 : flowScale }} />
+              </div>
+
+              {SESSION_FLOW.map(([number, title, description, tag], index) => (
+                <Reveal key={number} delay={index * 0.08} className="mi-card mi-flow-step">
+                  <span className="mi-flow-n">{number}</span>
+                  <h3 className="mi-h3">{title}</h3>
+                  <p>{description}</p>
+                  <span className="mi-chip">{tag}</span>
+                </Reveal>
               ))}
             </div>
 
-            {/* ERROR */}
-            {loadError && (
-              <div className="ib-error mt-6 flex items-start gap-3 rounded-xl p-4 text-sm">
-                <AlertCircle size={19} className="shrink-0" />
+            <p className="mi-xs mi-muted" style={{ marginTop: 16 }}>
+              Session length decides how deep each topic can go. No specific
+              question or hiring result is guaranteed.
+            </p>
 
-                <div className="flex-1">{loadError}</div>
-
-                <button
-                  type="button"
-                  onClick={() => fetchSlots()}
-                  className="font-bold underline"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {/* LOADING / EMPTY / SLOTS */}
-            {loading ? (
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6].map((index) => (
-                  <div
-                    key={index}
-                    className="ib-card animate-pulse rounded-2xl p-5"
-                  >
-                    <div className="ib-panel h-5 w-1/2 rounded-lg" />
-                    <div className="ib-panel mt-4 h-12 rounded-xl" />
-                    <div className="ib-panel mt-4 h-10 rounded-xl" />
-                  </div>
-                ))}
-              </div>
-            ) : shownSlots.length === 0 ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="ib-card mt-8 rounded-3xl px-5 py-14 text-center"
-              >
-                <motion.div
-                  animate={reduce ? undefined : { rotate: [0, 8, -8, 0] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                  className="inline-block"
-                >
-                  <CalendarDays size={36} className="ib-orange mx-auto" />
-                </motion.div>
-
-                <h3 className="mt-4 text-lg font-extrabold">
-                  No matching interview slots
-                </h3>
-
-                <p className="ib-muted mx-auto mt-2 max-w-md text-sm leading-7">
-                  Try a different date or clear the selected filters to explore
-                  more sessions.
-                </p>
-
-                <button
-                  type="button"
-                  className="ib-outline mt-5"
-                  onClick={() => {
-                    setViewFilter("all");
-                    setTopicFilter("all");
-                  }}
-                >
-                  Clear Filters
-                </button>
-              </motion.div>
-            ) : (
-              <div
-                key={`${selectedDay}-${viewFilter}-${topicFilter}`}
-                className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-              >
-                {shownSlots.map((slot, index) => {
-                  const available = slot.status === "AVAILABLE";
-
-                  const topics =
-                    Array.isArray(slot.allowedTopics) && slot.allowedTopics.length
-                      ? slot.allowedTopics
-                      : ALL_TOPICS;
-
-                  const hasDiscount = Number(slot.mrp) > Number(slot.price);
-
-                  return (
-                    <motion.article
-                      key={slot._id}
-                      initial={reduce ? false : { opacity: 0, y: 24, rotate: index % 2 ? 1.5 : -1.5 }}
-                      animate={{ opacity: 1, y: 0, rotate: 0 }}
-                      transition={{ duration: 0.45, delay: Math.min(index, 8) * 0.05, ease: EASE }}
-                      whileHover={reduce ? undefined : { y: -5 }}
-                      className={`ib-card ib-icon-spin flex flex-col rounded-2xl p-5 shadow-sm ${
-                        available ? "ib-card-hover" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="ib-panel rounded-xl p-3">
-                          <Video size={20} className="ib-orange" />
-                        </div>
-
-                        <StatusPill slot={slot} />
-                      </div>
-
-                      <h3 className="mt-4 text-lg font-black">
-                        {slot.title || "Technical Mock Interview"}
-                      </h3>
-
-                      <div className="ib-muted mt-3 flex items-center gap-2 text-sm">
-                        <Clock3 size={16} className="ib-orange" />
-                        {fmtTime(slot.startTime, timeZone, timeFormat)}
-                        {" – "}
-                        {fmtTime(slot.endTime, timeZone, timeFormat)}
-                      </div>
-
-                      <p className="ib-muted mt-2 text-xs">
-                        {slot.durationMinutes || 45} minutes · {displayZone}
-                      </p>
-
-                      {timeZone !== TIMEZONE && (
-                        <p className="ib-muted mt-1 text-xs">
-                          Your local date: {fmtSlotDate(slot.startTime, timeZone)} ·
-                          Original schedule: {fmtTime(slot.startTime, TIMEZONE, "12")} IST
-                        </p>
-                      )}
-
-                      <div className="mt-4 flex flex-wrap gap-1.5">
-                        {topics.slice(0, 4).map((topic) => (
-                          <span
-                            key={topic}
-                            className="ib-panel rounded-lg px-2.5 py-1 text-[11px] font-bold"
-                          >
-                            {topic}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="mt-auto pt-5">
-                        <div
-                          className="border-t pt-4"
-                          style={{ borderColor: "var(--ib-border)" }}
-                        >
-                          <p className="ib-muted text-[11px]">Session price</p>
-
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className="ib-orange text-2xl font-black">
-                              {fmtMoney(slot.price, slot.currency)}
-                            </span>
-
-                            {hasDiscount && (
-                              <span className="ib-muted text-xs line-through">
-                                {fmtMoney(slot.mrp, slot.currency)}
-                              </span>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            disabled={!available}
-                            onClick={() => handleBook(slot)}
-                            className={`group ${
-                              available
-                                ? "ib-primary mt-4 w-full"
-                                : "ib-outline mt-4 w-full"
-                            }`}
-                          >
-                            {available ? (
-                              <>
-                                Book This Slot
-                                <Send
-                                  size={16}
-                                  className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-1"
-                                />
-                              </>
-                            ) : (
-                              "Not Available"
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </motion.article>
-                  );
-                })}
-              </div>
-            )}
+            <div className="mi-who">
+              {AUDIENCE.map(([title, description, tag], index) => (
+                <Reveal key={title} delay={index * 0.06} className="mi-card mi-card-hover mi-who-card">
+                  <span className="mi-chip">{tag}</span>
+                  <h3 className="mi-h3">{title}</h3>
+                  <p>{description}</p>
+                </Reveal>
+              ))}
+            </div>
           </div>
         </section>
 
-        <MarketingSections openFaq={openFaq} setOpenFaq={setOpenFaq} />
+        {/* ===================================== */}
+        {/* HOW IT WORKS + TARGETS                */}
+        {/* ===================================== */}
 
-        {/* ==========================================
-            SUPPORT AND CANCELLATIONS
-        ========================================== */}
-        <section className="px-4 py-14 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <Reveal>
-              <div className="ib-card grid gap-6 rounded-3xl p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
-                <div>
-                  <div className="ib-orange flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                    <HelpCircle size={17} />
-                    Support
-                  </div>
-
-                  <h2 className="mt-3 text-xl font-black sm:text-2xl">
-                    Need to cancel or reschedule?
-                  </h2>
-
-                  <p className="ib-muted mt-3 max-w-2xl text-sm leading-7">
-                    Contact our support team using the same email address you
-                    entered during booking. Include your booking ID and request.
-                    For candidate-requested cancellations, email support at
-                    least 24 hours before your interview. A ₹199 cancellation
-                    fee applies; requests made within 24 hours are
-                    non-refundable, subject to the applicable terms.
-                  </p>
-                </div>
-
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-                    "Mock Interview Booking Support"
-                  )}`}
-                  className="ib-primary w-full md:w-auto"
+        <section id="how-it-works" className="mi-sec" aria-labelledby="mi-how-title">
+          <div className="mi-shell">
+            <SectionHead
+              id="mi-how-title"
+              eyebrow="How booking works"
+              title={
+                <>
+                  Booked in <span className="mi-hl">three steps</span>
+                </>
+              }
+              lead="No sign-up and no back-and-forth. Pick a slot, pay, and you're set."
+              aside={
+                <button
+                  type="button"
+                  className="mi-btn mi-btn-primary mi-btn-lg"
+                  onClick={() => scrollToId("interview-slots")}
                 >
-                  <Mail size={17} />
-                  Contact Support
-                </a>
+                  Pick a slot
+                  <ArrowRight size={18} weight="bold" />
+                </button>
+              }
+            />
+
+            <div className="mi-steps">
+              {HOW_IT_WORKS.map(({ title, description, Icon }, index) => (
+                <Reveal key={title} delay={index * 0.08} className="mi-card mi-card-hover mi-howto">
+                  <div className="mi-howto-top">
+                    <span className="mi-ico">
+                      <Icon size={22} weight="duotone" />
+                    </span>
+                    <b>STEP 0{index + 1}</b>
+                  </div>
+                  <h3 className="mi-h3">{title}</h3>
+                  <p>{description}</p>
+                </Reveal>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 72 }}>
+              <SectionHead
+                eyebrow="Aim higher"
+                title="Getting ready for top tech interviews?"
+                lead="Build the coding, backend, design and communication skills that tough software engineering interviews test."
+              />
+
+              <div className="mi-targets">
+                {TARGET_COMPANIES.map((company, index) => (
+                  <Reveal key={company.name} delay={(index % 4) * 0.05} className="mi-card mi-target">
+                    <img
+                      src={favicon(company.domain)}
+                      alt=""
+                      loading="lazy"
+                      width="24"
+                      height="24"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                    {company.name}
+                  </Reveal>
+                ))}
               </div>
+
+              <p className="mi-xs mi-muted" style={{ marginTop: 14 }}>
+                These are preparation targets, not employers or partners of
+                Target Trek. Mock interviews do not guarantee selection or offers.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* FAQ                                   */}
+        {/* ===================================== */}
+
+        <section id="mock-faq" className="mi-sec mi-tint" aria-labelledby="mi-faq-title">
+          <div className="mi-shell mi-faq">
+            <div className="mi-faq-side">
+              <SectionHead
+                id="mi-faq-title"
+                eyebrow="FAQ"
+                title="Good to know before you book"
+                lead="Who you'll talk to, what you get, payment and cancellations."
+              />
+
+              <Reveal className="mi-faq-help">
+                <span className="mi-ico mi-ico-sm">
+                  <EnvelopeSimple size={18} weight="duotone" />
+                </span>
+                <div>
+                  <b>Still have a question?</b>
+                  <p>We usually reply within a day.</p>
+                  <a className="mi-link" href={`mailto:${SUPPORT_EMAIL}`}>
+                    {SUPPORT_EMAIL}
+                  </a>
+                </div>
+              </Reveal>
+            </div>
+
+            <div className="mi-faq-list">
+              {FAQ_ITEMS.map((item, index) => {
+                const open = openFaq === index;
+
+                return (
+                  <div key={item.question} className={cn("mi-faq-item", open && "is-open")}>
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      aria-controls={`mi-faq-${index}`}
+                      onClick={() => setOpenFaq((old) => (old === index ? -1 : index))}
+                    >
+                      <span>{item.question}</span>
+                      <span className="mi-faq-icon" aria-hidden="true">
+                        <Plus size={16} weight="bold" />
+                      </span>
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {open && (
+                        <motion.div
+                          id={`mi-faq-${index}`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: EASE }}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <p className="mi-faq-answer">{item.answer}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* FINAL CTA + POLICY                    */}
+        {/* ===================================== */}
+
+        <section className="mi-sec" aria-labelledby="mi-cta-title">
+          <div className="mi-shell">
+            <Reveal className="mi-cta">
+              <div>
+                <span className="mi-eyebrow" style={{ color: "var(--panel-accent)" }}>
+                  <Lightning size={16} weight="fill" />
+                  Your next interview
+                </span>
+                <h2 id="mi-cta-title" className="mi-h2" style={{ marginTop: 12 }}>
+                  Walk in having already done it once.
+                </h2>
+                <p>
+                  Pick a date, choose your topics and book a live 1:1 mock
+                  interview{fromPrice ? `, from ${fromPrice}` : ""}. It takes
+                  about two minutes.
+                </p>
+              </div>
+
+              <div className="mi-cta-actions">
+                <button
+                  type="button"
+                  className="mi-btn mi-btn-mark mi-btn-lg"
+                  onClick={() => scrollToId("interview-slots")}
+                >
+                  See open slots
+                  <ArrowRight size={18} weight="bold" />
+                </button>
+              </div>
+            </Reveal>
+
+            <Reveal className="mi-policy">
+              <span className="mi-ico">
+                <GraduationCap size={22} weight="duotone" />
+              </span>
+              <div>
+                <h3>Need to cancel or reschedule?</h3>
+                <p>
+                  Email support from the address you booked with and include
+                  your booking ID, at least 24 hours before your interview. A
+                  ₹199 cancellation fee applies; requests within 24 hours are
+                  non-refundable, subject to the applicable terms.
+                </p>
+              </div>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+                  "Mock Interview Booking Support"
+                )}`}
+                className="mi-btn mi-btn-ghost"
+              >
+                <EnvelopeSimple size={17} weight="bold" />
+                Contact support
+              </a>
             </Reveal>
           </div>
         </section>
+
+        <div className="mi-dock-space" aria-hidden="true" />
       </main>
 
-      {/* Mobile sticky CTA */}
-      <div
-        className="ib-card fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t p-3 sm:hidden"
-        style={{ boxShadow: "0 -8px 25px rgba(0,0,0,.08)" }}
-      >
-        <div className="min-w-0">
-          <strong className="block text-sm">Live 1:1 mock interview</strong>
-          <span className="ib-muted block text-xs">Choose a slot · Secure checkout</span>
+      {/* MOBILE STICKY BAR */}
+      <div className="mi mi-dock" data-theme={theme === "dark" ? "dark" : "light"} style={{ minHeight: 0 }}>
+        <div className="mi-dock-main">
+          <b>Live 1:1 mock interview</b>
+          <span>
+            {fromPrice ? `From ${fromPrice} · ` : ""}
+            {countAvailable > 0 ? `${countAvailable} open ${dayWord}` : "Pick a date and time"}
+          </span>
         </div>
-
-        <a href="#interview-slots" className="ib-primary shrink-0">
-          Book a slot <Send size={15} />
-        </a>
+        <button
+          type="button"
+          className="mi-btn mi-btn-primary"
+          onClick={() => scrollToId("interview-slots")}
+        >
+          Book a slot
+        </button>
       </div>
 
-      {/* BOOKING MODAL */}
+      {/* BOOKING DIALOG */}
       <AnimatePresence>
         {selectedSlot && (
           <BookingModal
             key={selectedSlot._id}
             slot={selectedSlot}
-            theme={theme}
+            theme={theme === "dark" ? "dark" : "light"}
             timeZone={timeZone}
             timeFormat={timeFormat}
             cashfreeMode={cashfreeMode}
@@ -3765,6 +3137,6 @@ export default function InterviewBookingPage({
           />
         )}
       </AnimatePresence>
-    </div>
+    </MotionConfig>
   );
 }
