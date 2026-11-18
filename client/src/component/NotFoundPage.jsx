@@ -1,622 +1,319 @@
-import React, {
-  useEffect,
-  useState,
-} from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Helmet } from "react-helmet-async";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
-  Compass,
-  GraduationCap,
+  Briefcase,
+  CalendarCheck,
+  ChevronRight,
+  Code2,
+  FileText,
+  Gift,
   Home,
+  Info,
+  Layers,
+  Library,
+  Mail,
+  Newspaper,
   Search,
+  Shield,
+  Tag,
+  Users,
+  X,
 } from "lucide-react";
 
-import {
-  Link,
-  useNavigate,
-} from "react-router-dom";
+import "./notFound.css";
 
-import { Helmet } from "react-helmet-async";
+/* =====================================================
+   NOT FOUND (404)
+   Shows the path that was asked for, guesses the page
+   the visitor probably meant, and lets them search every
+   main destination on the site.
+===================================================== */
 
 const THEME_KEY = "theme";
-const THEME_EVENT =
-  "targettrek-theme-change";
+const THEME_EVENT = "targettrek-theme-change";
+const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
+const FONTS =
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Geist+Mono:wght@400;600&family=Manrope:wght@500;600;700;800&display=swap";
 
 const readTheme = () => {
-  if (
-    typeof window === "undefined"
-  ) {
+  if (typeof window === "undefined") return "light";
+  try {
+    return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+  } catch {
     return "light";
   }
-
-  const saved =
-    window.localStorage.getItem(
-      THEME_KEY
-    );
-
-  return saved === "dark"
-    ? "dark"
-    : "light";
 };
 
-function NotFoundPage() {
-  const navigate =
-    useNavigate();
+const GROUPS = [
+  {
+    title: "Prepare for interviews",
+    items: [
+      { to: "/books", Icon: BookOpen, name: "Ebooks", text: "System design, Java, SQL, cloud, GenAI", keys: "book books ebook pdf" },
+      { to: "/books/bundle-offers", Icon: Tag, name: "Bundle offers", text: "Buy several books and save", keys: "bundle offer combo discount deal" },
+      { to: "/book/all-books", Icon: Library, name: "All Access", text: "The whole library in one purchase", keys: "all access library every book" },
+      { to: "/resources", Icon: Layers, name: "Free resources", text: "HLD, SQL and API guides", keys: "resources hld sql api free guide learn" },
+      { to: "/learn", Icon: Code2, name: "Learn", text: "Start here: topics and study paths", keys: "learn home study" },
+    ],
+  },
+  {
+    title: "Practise and get hired",
+    items: [
+      { to: "/resume-review", Icon: FileText, name: "Resume Lab", text: "Resume review and AI scoring", keys: "resume cv review ats lab builder" },
+      { to: "/mock-interviews", Icon: CalendarCheck, name: "Mock interviews", text: "Book a live technical mock", keys: "mock interview booking practice" },
+      { to: "/prep-buddy", Icon: Users, name: "Prep Buddy", text: "Find an interview prep partner", keys: "prep buddy arena partner match" },
+      { to: "/interviews", Icon: Briefcase, name: "Interview experiences", text: "Real questions from real rounds", keys: "interview experience questions company" },
+    ],
+  },
+  {
+    title: "More from Target Trek",
+    items: [
+      { to: "/memories", Icon: Gift, name: "Memories", text: "Personalised memory pages", keys: "memories birthday gift" },
+      { to: "/blogs", Icon: Newspaper, name: "Blog", text: "Articles and guides", keys: "blog blogs article post" },
+      { to: "/about", Icon: Info, name: "About", text: "Who we are", keys: "about team" },
+      { to: "/contact", Icon: Mail, name: "Contact", text: "Questions and support", keys: "contact help support email" },
+      { to: "/privacy-policy", Icon: Shield, name: "Policies", text: "Privacy, terms and refunds", keys: "privacy terms refund policy legal" },
+    ],
+  },
+];
 
-  const [
-    theme,
-    setTheme,
-  ] = useState(
-    readTheme
-  );
+const ALL = GROUPS.flatMap((g) => g.items);
 
-  const isDark =
-    theme === "dark";
+/* small edit-distance, used to guess the page the visitor meant */
+const distance = (a, b) => {
+  const dp = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const tmp = dp[j];
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[b.length];
+};
+
+const guess = (path) => {
+  const clean = path.toLowerCase().replace(/\/+$/, "") || "/";
+  if (clean === "/") return null;
+  const words = clean.split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+  let best = null;
+  for (const it of ALL) {
+    const d = distance(clean, it.to) / Math.max(clean.length, it.to.length);
+    const hit = words.some((w) => it.keys.split(" ").some((k) => k.length > 3 && (k.startsWith(w) || w.startsWith(k) || distance(w, k) <= 1)));
+    const score = hit ? d - 0.4 : d;
+    if (!best || score < best.score) best = { it, score };
+  }
+  return best && best.score < 0.3 ? best.it : null;
+};
+
+export default function NotFoundPage() {
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  const [theme, setTheme] = useState(readTheme);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    setTheme(
-      readTheme()
-    );
-
-    const handleThemeChange =
-      (event) => {
-        const newTheme =
-          event?.detail?.theme;
-
-        if (
-          newTheme === "dark" ||
-          newTheme === "light"
-        ) {
-          setTheme(
-            newTheme
-          );
-        }
-      };
-
-    const handleStorageChange =
-      (event) => {
-        if (
-          event.key !==
-          THEME_KEY
-        ) {
-          return;
-        }
-
-        if (
-          event.newValue ===
-            "dark" ||
-          event.newValue ===
-            "light"
-        ) {
-          setTheme(
-            event.newValue
-          );
-        }
-      };
-
-    window.addEventListener(
-      THEME_EVENT,
-      handleThemeChange
-    );
-
-    window.addEventListener(
-      "storage",
-      handleStorageChange
-    );
-
+    setTheme(readTheme());
+    const onTheme = (e) => {
+      const t = e?.detail?.theme;
+      if (t === "dark" || t === "light") setTheme(t);
+    };
+    const onStorage = (e) => {
+      if (e.key === THEME_KEY) setTheme(readTheme());
+    };
+    window.addEventListener(THEME_EVENT, onTheme);
+    window.addEventListener("storage", onStorage);
     return () => {
-      window.removeEventListener(
-        THEME_EVENT,
-        handleThemeChange
-      );
-
-      window.removeEventListener(
-        "storage",
-        handleStorageChange
-      );
+      window.removeEventListener(THEME_EVENT, onTheme);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
-  const pageBg =
-    isDark
-      ? "bg-[#080D14]"
-      : "bg-slate-50";
+  /* "/" focuses the search box */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
-  const primaryText =
-    isDark
-      ? "text-white"
-      : "text-slate-950";
+  const asked = `${pathname}${search}`;
+  const meant = useMemo(() => guess(pathname), [pathname]);
 
-  const secondaryText =
-    isDark
-      ? "text-slate-400"
-      : "text-slate-500";
+  const q = query.trim().toLowerCase();
+  const groups = useMemo(
+    () =>
+      GROUPS.map((g) => ({
+        ...g,
+        items: g.items.filter((it) => !q || `${it.name} ${it.text} ${it.keys} ${it.to}`.toLowerCase().includes(q)),
+      })).filter((g) => g.items.length),
+    [q]
+  );
 
-  const borderColor =
-    isDark
-      ? "border-slate-800"
-      : "border-slate-200";
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) navigate(-1);
+    else navigate("/");
+  };
 
-  const cardBg =
-    isDark
-      ? "bg-[#101720]"
-      : "bg-white";
+  const reportHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Broken link on Target Trek")}&body=${encodeURIComponent(
+    `Hello Target Trek Support,\n\nThis link didn't work for me:\nhttps://www.targettrek.in${asked}\n\nWhere I found it (page, email, search result):\n\nThank you.`
+  )}`;
 
   return (
-    <>
+    <div className="nf" data-theme={theme}>
       <Helmet>
-        <title>
-          Page Not Found | TargetTrek
-        </title>
-
-        <meta
-          name="description"
-          content="The TargetTrek page you requested could not be found. Explore TargetTrek learning resources, technical books and software engineering interview experiences."
-        />
-
-        <meta
-          name="robots"
-          content="noindex,follow"
-        />
-
-        <meta
-          property="og:title"
-          content="Page Not Found | TargetTrek"
-        />
-
-        <meta
-          property="og:description"
-          content="The requested page could not be found. Continue exploring TargetTrek books, resources and interview experiences."
-        />
-
-        <meta
-          property="og:type"
-          content="website"
-        />
-
-        <meta
-          name="twitter:card"
-          content="summary"
-        />
-
-        <meta
-          name="twitter:title"
-          content="Page Not Found | TargetTrek"
-        />
-
-        <meta
-          name="twitter:description"
-          content="The requested TargetTrek page could not be found."
-        />
+        <title>Page not found (404) | Target Trek</title>
+        <meta name="description" content="This page doesn't exist on Target Trek. Find ebooks, Resume Lab, mock interviews, Prep Buddy and free resources from here." />
+        <meta name="robots" content="noindex,follow" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="stylesheet" href={FONTS} />
       </Helmet>
 
-      <main
-        className={`
-          relative
-          min-h-screen
-          w-full
-          overflow-hidden
-          pt-16
-          font-sans
-          transition-colors
-          duration-300
-          ${pageBg}
-          ${primaryText}
-        `}
-      >
-        {/* Background */}
-
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-50"
-            style={{
-              backgroundImage:
-                isDark
-                  ? "linear-gradient(rgba(59,130,246,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.035) 1px, transparent 1px)"
-                  : "linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px)",
-
-              backgroundSize:
-                "42px 42px",
-            }}
-          />
-
-          <div
-            className={`
-              absolute
-              -left-40
-              top-20
-              h-[380px]
-              w-[380px]
-              rounded-full
-              blur-[120px]
-              ${
-                isDark
-                  ? "bg-blue-900/15"
-                  : "bg-blue-100/70"
-              }
-            `}
-          />
-
-          <div
-            className={`
-              absolute
-              -right-40
-              bottom-0
-              h-[420px]
-              w-[420px]
-              rounded-full
-              blur-[130px]
-              ${
-                isDark
-                  ? "bg-cyan-900/10"
-                  : "bg-indigo-100/60"
-              }
-            `}
-          />
-        </div>
-
-        {/* Content */}
-
-        <div
-          className="
-            relative
-            mx-auto
-            flex
-            min-h-[calc(100vh-4rem)]
-            max-w-7xl
-            items-center
-            justify-center
-            px-4
-            py-14
-
-            sm:px-6
-            sm:py-16
-
-            lg:px-8
-            lg:py-20
-          "
-        >
-          <div className="w-full max-w-3xl text-center">
-            {/* Badge */}
-
-            <div
-              className={`
-                mb-8
-                inline-flex
-                items-center
-                gap-2
-                rounded-full
-                border
-                px-4
-                py-2
-                text-[10px]
-                font-black
-                uppercase
-                tracking-[0.16em]
-
-                sm:text-[11px]
-
-                ${
-                  isDark
-                    ? "border-blue-900/50 bg-blue-950/20 text-blue-300"
-                    : "border-blue-100 bg-white text-blue-600 shadow-sm"
-                }
-              `}
-            >
-              <Compass className="h-3.5 w-3.5" />
-
-              Page Not Found
-            </div>
-
-            {/* 404 */}
-
-            <div className="relative mx-auto w-fit">
-              <h1
-                className={`
-                  select-none
-                  text-[100px]
-                  font-black
-                  leading-[0.8]
-                  tracking-[-0.08em]
-
-                  sm:text-[145px]
-                  md:text-[180px]
-                  lg:text-[200px]
-
-                  ${
-                    isDark
-                      ? "text-white"
-                      : "text-slate-950"
-                  }
-                `}
-              >
-                404
-              </h1>
-
-              <div
-                className="
-                  absolute
-                  -right-1
-                  -top-2
-                  h-4
-                  w-4
-                  rounded-full
-                  bg-blue-500
-
-                  sm:-right-2
-                  sm:-top-3
-                  sm:h-6
-                  sm:w-6
-                "
-              />
-            </div>
-
-            {/* Text */}
-
-            <h2
-              className={`
-                mt-10
-                text-2xl
-                font-black
-                tracking-tight
-
-                sm:text-3xl
-                md:text-4xl
-                lg:text-5xl
-
-                ${primaryText}
-              `}
-            >
-              This page went off the{" "}
-
-              <span className="text-blue-500">
-                roadmap.
-              </span>
-            </h2>
-
-            <p
-              className={`
-                mx-auto
-                mt-5
-                max-w-2xl
-                text-sm
-                leading-7
-
-                sm:text-base
-                sm:leading-8
-
-                ${secondaryText}
-              `}
-            >
-              The page you're looking
-              for may have been moved,
-              removed or the URL may
-              be incorrect. You can
-              return to TargetTrek or
-              continue exploring our
-              books, learning
-              resources and interview
-              experiences.
+      <main className="nf-wrap">
+        <section className="nf-top" aria-labelledby="nf-h">
+          <div>
+            <span className="nf-code">
+              <i aria-hidden />
+              Error 404 · Page not found
+            </span>
+            <h1 id="nf-h" className="nf-h1">
+              This page took a <span className="nf-mark">wrong turn.</span>
+            </h1>
+            <p className="nf-lead">
+              The link may be old, mistyped, or the page has moved. Nothing is broken on your side. Let&apos;s get you to the
+              right place.
             </p>
 
-            {/* Primary Actions */}
+            {meant && (
+              <p className="nf-suggest">
+                <span>Did you mean</span>
+                <Link to={meant.to}>
+                  {meant.name}
+                  <ArrowRight size={16} aria-hidden />
+                </Link>
+              </p>
+            )}
 
-            <div
-              className="
-                mt-9
-                grid
-                gap-3
-
-                sm:flex
-                sm:flex-wrap
-                sm:items-center
-                sm:justify-center
-              "
-            >
-              <Link
-                to="/"
-                className="
-                  group
-                  inline-flex
-                  min-h-[48px]
-                  w-full
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  bg-blue-600
-                  px-6
-                  py-3
-                  text-sm
-                  font-black
-                  text-white
-                  shadow-[0_8px_20px_rgba(37,99,235,0.18)]
-                  transition-all
-                  duration-200
-                  hover:-translate-y-0.5
-                  hover:bg-blue-700
-                  hover:shadow-[0_12px_28px_rgba(37,99,235,0.25)]
-
-                  sm:w-auto
-                "
-              >
-                <Home className="h-4 w-4" />
-
-                Homepage
-
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <div className="nf-actions">
+              <Link to="/" className="nf-btn nf-btn-primary">
+                <Home size={18} aria-hidden /> Go to homepage
               </Link>
-
-              <Link
-                to="/learn"
-                className={`
-                  group
-                  inline-flex
-                  min-h-[48px]
-                  w-full
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  border
-                  px-6
-                  py-3
-                  text-sm
-                  font-black
-                  transition-all
-                  duration-200
-                  hover:-translate-y-0.5
-
-                  sm:w-auto
-
-                  ${
-                    isDark
-                      ? "border-slate-700 bg-slate-900 text-white hover:border-blue-700 hover:bg-slate-800"
-                      : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-200 hover:text-blue-600 hover:shadow-md"
-                  }
-                `}
-              >
-                <GraduationCap className="h-4 w-4" />
-
-                Explore Learn
-              </Link>
-
-              <Link
-                to="/books"
-                className={`
-                  group
-                  inline-flex
-                  min-h-[48px]
-                  w-full
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  border
-                  px-6
-                  py-3
-                  text-sm
-                  font-black
-                  transition-all
-                  duration-200
-                  hover:-translate-y-0.5
-
-                  sm:w-auto
-
-                  ${
-                    isDark
-                      ? "border-slate-700 bg-[#101720] text-slate-300 hover:border-blue-700 hover:text-blue-300"
-                      : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-200 hover:text-blue-600 hover:shadow-md"
-                  }
-                `}
-              >
-                <BookOpen className="h-4 w-4" />
-
-                Explore Books
-              </Link>
+              <button type="button" className="nf-btn nf-btn-ghost" onClick={goBack}>
+                <ArrowLeft size={18} aria-hidden /> Go back
+              </button>
             </div>
-
-            {/* Back */}
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate(-1)
-              }
-              className={`
-                group
-                mt-7
-                inline-flex
-                items-center
-                gap-2
-                text-xs
-                font-bold
-                transition
-
-                ${
-                  isDark
-                    ? "text-slate-500 hover:text-slate-300"
-                    : "text-slate-400 hover:text-slate-700"
-                }
-              `}
-            >
-              <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-
-              Go back to previous page
-            </button>
-
-            {/* Divider */}
-
-            <div className="mx-auto mt-12 flex max-w-md items-center gap-4">
-              <div
-                className={`
-                  h-px
-                  flex-1
-                  ${
-                    isDark
-                      ? "bg-slate-800"
-                      : "bg-slate-200"
-                  }
-                `}
-              />
-
-              <div
-                className={`
-                  flex
-                  h-9
-                  w-9
-                  items-center
-                  justify-center
-                  rounded-full
-                  border
-                  ${borderColor}
-                  ${cardBg}
-                `}
-              >
-                <Search
-                  className={`h-3.5 w-3.5 ${
-                    isDark
-                      ? "text-slate-500"
-                      : "text-slate-400"
-                  }`}
-                />
-              </div>
-
-              <div
-                className={`
-                  h-px
-                  flex-1
-                  ${
-                    isDark
-                      ? "bg-slate-800"
-                      : "bg-slate-200"
-                  }
-                `}
-              />
-            </div>
-
-            <p
-              className={`
-                mt-5
-                text-[11px]
-                font-medium
-                ${
-                  isDark
-                    ? "text-slate-600"
-                    : "text-slate-400"
-                }
-              `}
-            >
-              Error 404 · The requested
-              page could not be found
-            </p>
           </div>
+
+          <div className="nf-term" role="img" aria-label={`The page ${asked} returned 404 not found`}>
+            <div className="nf-term-bar" aria-hidden>
+              <i />
+              <i />
+              <i />
+              <span>targettrek.in</span>
+            </div>
+            <div className="nf-term-body" aria-hidden>
+              <div className="nf-big">
+                <b>
+                  4<span>0</span>4
+                </b>
+                <em>not found</em>
+              </div>
+              <p>
+                <span className="k">GET</span> <span className="v">{asked}</span>
+              </p>
+              <p>
+                <span className="k">Host:</span> <span className="v">www.targettrek.in</span>
+              </p>
+              <hr />
+              <p className="bad">HTTP/1.1 404 Not Found</p>
+              <p className="c"># the page you asked for isn&apos;t here</p>
+              <p>
+                <span className="ok">→ try</span> <span className="v">{meant ? meant.to : "/books"}</span> <span className="nf-cursor" />
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="nf-find" aria-labelledby="nf-find-h">
+          <div className="nf-find-head">
+            <div>
+              <span className="nf-eyebrow">Find your way</span>
+              <h2 id="nf-find-h" className="nf-h2">Where were you headed?</h2>
+            </div>
+          </div>
+
+          <label className="nf-search">
+            <Search size={19} aria-hidden />
+            <input
+              ref={inputRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search pages: books, resume, mock interview…"
+              aria-label="Search Target Trek pages"
+            />
+            {query ? (
+              <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
+                <X size={17} aria-hidden />
+              </button>
+            ) : (
+              <kbd aria-hidden>/</kbd>
+            )}
+          </label>
+
+          {groups.length ? (
+            <div className="nf-groups">
+              {groups.map((g) => (
+                <div key={g.title} className="nf-group">
+                  <h3>{g.title}</h3>
+                  <ul>
+                    {g.items.map(({ to, Icon, name, text }) => (
+                      <li key={to}>
+                        <Link to={to} className="nf-dest">
+                          <span className="nf-ico">
+                            <Icon size={19} aria-hidden />
+                          </span>
+                          <div>
+                            <b>{name}</b>
+                            <small>{text}</small>
+                          </div>
+                          <ChevronRight size={18} className="nf-go" aria-hidden />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="nf-none" role="status">
+              No page matches <b>&ldquo;{query}&rdquo;</b>. Try &ldquo;books&rdquo;, &ldquo;resume&rdquo; or &ldquo;interview&rdquo;, or
+              email us and we&apos;ll point you to it.
+            </p>
+          )}
+        </section>
+
+        <div className="nf-help">
+          <p>
+            <b>Followed a link from our site or an email?</b> Tell us and we&apos;ll fix it. We&apos;ll include the address you
+            tried automatically.
+          </p>
+          <a href={reportHref} className="nf-btn nf-btn-ghost">
+            <Mail size={17} aria-hidden /> Report broken link
+          </a>
         </div>
       </main>
-    </>
+    </div>
   );
 }
-
-export default NotFoundPage;
