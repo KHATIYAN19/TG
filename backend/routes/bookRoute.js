@@ -5,6 +5,8 @@ import {
   createBook,
   getAllBooks,
   getProductByRedirectUrl,
+  getProductsByRedirectUrls,
+  getCatalog,
   getBookByIdForAdmin,
   getAllBooksForAdmin,
   updateBookByBookId,
@@ -119,6 +121,16 @@ router.delete(
 router.get(
   "/product",
   getProductByRedirectUrl
+);
+
+router.get(
+  "/catalog",
+  getCatalog
+);
+
+router.get(
+  "/products",
+  getProductsByRedirectUrls
 );
 
 router.get(

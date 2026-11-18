@@ -42,7 +42,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { trackViewContent } from "../lib/metaPixel.js";
-import BASE_URL from "../utils/Url";
+import { loadCatalog } from "../utils/bookApi";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 import { gatewayLabel, preferredGateway } from "../payment/gatewayConfig";
 import { useSiteTheme } from "./systemDesign/ui.jsx";
@@ -67,8 +67,6 @@ const ROUTES = {
   lld: "/book/system-design/lld",
 };
 
-const BOOKS_API =
-  `${String(BASE_URL || "").replace(/\/+$/, "")}/book`;
 
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 
@@ -1346,41 +1344,23 @@ export default function SystemDesignCombo() {
   // FETCH PRODUCTS (the page's single API request)
   // ====================================================
 
-  const fetchProducts = useCallback(async (signal) => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       setLoadError("");
-
-      const response = await fetch(BOOKS_API, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-        signal,
-      });
-
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok || result?.success === false) {
-        throw new Error(result?.message || `Unable to load books (HTTP ${response.status}).`);
-      }
-
-      const normalized = parseBooks(result).map(normalizeBook).filter(Boolean);
-
-      if (!signal?.aborted) setBooks(normalized);
+      // shared, cached /book/catalog (same data the /books page uses)
+      const catalog = await loadCatalog();
+      setBooks(parseBooks({ data: catalog.books }).map(normalizeBook).filter(Boolean));
     } catch (error) {
-      if (error?.name === "AbortError") return;
-
       console.error("Combo books API:", error);
       setLoadError(error.message || "Unable to load products.");
     } finally {
-      if (!signal?.aborted) setLoading(false);
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchProducts(controller.signal);
-    return () => controller.abort();
+    fetchProducts();
   }, [fetchProducts]);
 
   // ====================================================

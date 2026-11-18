@@ -1,6 +1,8 @@
 import Book from "../models/Book.js";
 import uploadFile from "../utils/cloudinary.js";
 import redis from "../utils/redis.js";
+import { listLiveOffersWithBooks } from "../services/bundleOffers.js";
+import { getCatalogBooks, getPackProducts } from "../services/membership/membershipService.js";
 import mongoose from "mongoose";
 import asyncHandler from "express-async-handler";
 
@@ -71,30 +73,49 @@ const getAdminId = (req) => {
 // REDIS HELPERS
 // =====================================================
 
+// In-process cache in front of Redis: a hit costs ~0ms instead of a network
+// round-trip to Upstash. Short TTL because other instances only learn about
+// admin changes when it expires (this instance is cleared immediately).
+const MEM_TTL_MS = 15_000;
+const MEM_MAX = 200;
+const mem = new Map();
+
+const memGet = (key) => {
+  const hit = mem.get(key);
+  if (!hit) return null;
+  if (hit.exp < Date.now()) { mem.delete(key); return null; }
+  return hit.value;
+};
+
+const memSet = (key, value) => {
+  if (mem.size >= MEM_MAX) mem.delete(mem.keys().next().value);
+  mem.set(key, { value, exp: Date.now() + MEM_TTL_MS });
+};
+
 const safeRedisGet = async (key) => {
+  const local = memGet(key);
+  if (local) return local;
   try {
-    return await redis.get(key);
+    const value = await redis.get(key);
+    if (value) memSet(key, value);
+    return value;
   } catch (error) {
     console.error("Redis GET error:", error);
     return null;
   }
 };
 
-const safeRedisSet = async (
-  key,
-  value,
-  ttl = CACHE_TTL
-) => {
+const safeRedisSet = async (key, value, ttl = CACHE_TTL) => {
+  memSet(key, value);
   try {
-    await redis.set(key, value, {
-      ex: ttl,
-    });
+    await redis.set(key, value, { ex: ttl });
   } catch (error) {
     console.error("Redis SET error:", error);
   }
 };
 
 const safeRedisDelete = async (...keys) => {
+  mem.clear();
   try {
     const validKeys = [
       ...new Set(keys.filter(Boolean)),
@@ -1078,70 +1099,211 @@ export const updateBookPosition = asyncHandler(
 );
 
 
-export const getAllBooks = asyncHandler(
-  async (req, res) => {
-    const cachedBooks =
-      await safeRedisGet(CACHE_KEYS.allBooks);
+// =====================================================
+// SINGLE-FLIGHT: while a cache fill is running, every other request for the
+// same thing awaits that same promise. 500 simultaneous misses = 1 query.
+// =====================================================
 
-    if (Array.isArray(cachedBooks)) {
-      return res.status(200).json({
-        success: true,
-        count: cachedBooks.length,
-        data: cachedBooks,
-      });
-    }
+const flights = new Map();
 
-    await backfillPositions();
+const singleFlight = (key, fn) => {
+  if (flights.has(key)) return flights.get(key);
+  const promise = Promise.resolve()
+    .then(fn)
+    .finally(() => flights.delete(key));
+  flights.set(key, promise);
+  return promise;
+};
 
-    const books =
-      await populateIncludedBooks(
+// Product fills are tracked per URL, so overlapping batches (/hld+/lld+/combo
+// and /lld+/hld+/combo) still share work, and what is not already being
+// fetched goes out as ONE `$in` query.
+const productFills = new Map();
+
+const fillProducts = (urls) => {
+  const need = urls.filter((u) => !productFills.has(u));
+
+  if (need.length) {
+    const query = (async () => {
+      const found = await populateIncludedBooks(
         Book.find({
+          redirectUrl: { $in: need },
           isActive: true,
           isPublished: true,
-          showInMainBooks: { $ne: false },
-        })
-          .select(
-            [
-              "title",
-              "slug",
-              "subtitle",
-              "resourceType",
-              "price",
-              "mrp",
-              "currency",
-              "tags",
-              "redirectUrl",
-              "pageKey",
-              "coverPageUrl",
-              "category",
-              "badge",
-              "isFeatured",
-              "position",
-              "includedBooks",
-              "showInMainBooks",
-              "matches",
-              "membership",
-            ].join(" ")
-          )
-          .sort({
-            position: 1,
-            isFeatured: -1,
-            createdAt: -1,
-          })
+        }).select(PUBLIC_PRODUCT_FIELDS)
       ).lean();
 
-    await safeRedisSet(
-      CACHE_KEYS.allBooks,
-      books
-    );
+      await Promise.all(
+        found.map((product) =>
+          safeRedisSet(CACHE_KEYS.redirectUrl(product.redirectUrl), product)
+        )
+      );
 
-    return res.status(200).json({
-      success: true,
-      count: books.length,
-      data: books,
+      return new Map(found.map((product) => [product.redirectUrl, product]));
+    })();
+
+    need.forEach((url) => {
+      const fill = query.then((byUrl) => byUrl.get(url) || null);
+      productFills.set(url, fill);
+      fill.then(
+        () => productFills.delete(url),
+        () => productFills.delete(url)
+      );
     });
   }
-);
+
+  return Promise.all(urls.map((u) => productFills.get(u)));
+};
+
+// cache first (memory, then Redis), then a coalesced fill
+const loadProducts = async (urls) => {
+  const out = {};
+  const missing = [];
+
+  await Promise.all(
+    urls.map(async (url) => {
+      const cached = await safeRedisGet(CACHE_KEYS.redirectUrl(url));
+      if (cached) out[url] = cached;
+      else missing.push(url);
+    })
+  );
+
+  if (missing.length) {
+    const filled = await fillProducts(missing);
+    missing.forEach((url, i) => { out[url] = filled[i] || null; });
+  }
+
+  return out;
+};
+
+// =====================================================
+// BUFFERED VIEW COUNTS: count in memory, write one $inc per book every
+// VIEW_FLUSH_MS instead of one write per page load.
+// =====================================================
+
+const VIEW_FLUSH_MS = 20_000;
+const VIEW_BUFFER_MAX = 2000;
+const viewBuffer = new Map();
+
+const countView = (id) => {
+  const key = String(id);
+  if (!viewBuffer.has(key) && viewBuffer.size >= VIEW_BUFFER_MAX) return;
+  viewBuffer.set(key, (viewBuffer.get(key) || 0) + 1);
+};
+
+export const flushBookViews = async () => {
+  if (!viewBuffer.size) return;
+
+  const batch = [...viewBuffer];
+  viewBuffer.clear();
+
+  try {
+    await Book.bulkWrite(
+      batch.map(([id, n]) => ({
+        updateOne: { filter: { _id: id }, update: { $inc: { "stats.views": n } } },
+      })),
+      { ordered: false }
+    );
+  } catch (error) {
+    console.error("View flush error:", error);
+    // put the counts back so they are retried on the next flush
+    batch.forEach(([id, n]) => {
+      if (viewBuffer.has(id) || viewBuffer.size < VIEW_BUFFER_MAX) {
+        viewBuffer.set(id, (viewBuffer.get(id) || 0) + n);
+      }
+    });
+  }
+};
+
+setInterval(flushBookViews, VIEW_FLUSH_MS).unref?.();
+
+const loadAllBooks = async () => {
+  const local = memGet(CACHE_KEYS.allBooks);
+  if (Array.isArray(local)) return local;
+  return singleFlight(CACHE_KEYS.allBooks, fillAllBooks);
+};
+
+const fillAllBooks = async () => {
+  const cachedBooks = await safeRedisGet(CACHE_KEYS.allBooks);
+  if (Array.isArray(cachedBooks)) return cachedBooks;
+
+  await backfillPositions();
+
+  const books = await populateIncludedBooks(
+    Book.find({
+      isActive: true,
+      isPublished: true,
+      showInMainBooks: { $ne: false },
+    })
+      .select(
+        [
+          "title", "slug", "subtitle", "resourceType", "price", "mrp", "currency",
+          "tags", "redirectUrl", "pageKey", "coverPageUrl", "category", "badge",
+          "isFeatured", "position", "includedBooks", "showInMainBooks", "matches", "membership",
+        ].join(" ")
+      )
+      .sort({ position: 1, isFeatured: -1, createdAt: -1 })
+  ).lean();
+
+  await safeRedisSet(CACHE_KEYS.allBooks, books);
+  return books;
+};
+
+const PUBLIC_CACHE = "public, max-age=30, stale-while-revalidate=120";
+
+export const getAllBooks = asyncHandler(async (req, res) => {
+  const books = await loadAllBooks();
+  res.set("Cache-Control", PUBLIC_CACHE);
+  return res.status(200).json({ success: true, count: books.length, data: books });
+});
+
+// =====================================================
+// GET CATALOG: the books list AND the running bundle offers in ONE request
+// (the /books page used to make three: list, offers, packs)
+// =====================================================
+
+// Same shape as GET /api/membership/plans -> data (packs, books, stats)
+const loadPlans = async () => {
+  const hit = memGet("books:public:plans");
+  if (hit) return hit;
+  return singleFlight("books:public:plans", fillPlans);
+};
+
+const fillPlans = async () => {
+  const [packs, books] = await Promise.all([getPackProducts(), getCatalogBooks()]);
+  const data = {
+    packs,
+    books,
+    stats: {
+      bookCount: books.length,
+      individualWorth: books.reduce((n, b) => n + (Number(b.price) || 0), 0),
+    },
+  };
+  memSet("books:public:plans", data);
+  return data;
+};
+
+export const getCatalog = asyncHandler(async (req, res) => {
+  const [books, offers, plans] = await Promise.all([
+    loadAllBooks(),
+    listLiveOffersWithBooks().catch((error) => {
+      console.error("Catalog offers error:", error);
+      return [];
+    }),
+    loadPlans().catch((error) => {
+      console.error("Catalog plans error:", error);
+      return null;
+    }),
+  ]);
+  res.set("Cache-Control", PUBLIC_CACHE);
+  return res.status(200).json({
+    success: true,
+    count: books.length,
+    data: books,
+    offers: offers.filter((o) => o.available),
+    plans,
+  });
+});
 
 // =====================================================
 // GET PRODUCT BY REDIRECT URL
@@ -1174,55 +1336,52 @@ export const getProductByRedirectUrl =
       );
     }
 
-    const cacheKey =
-      CACHE_KEYS.redirectUrl(redirectUrl);
-
-    let product = await safeRedisGet(cacheKey);
+    const product = (await loadProducts([redirectUrl]))[redirectUrl];
 
     if (!product) {
-      product = await populateIncludedBooks(
-        Book.findOne({
-          redirectUrl,
-          isActive: true,
-          isPublished: true,
-        }).select(PUBLIC_PRODUCT_FIELDS)
-      ).lean();
-
-      if (!product) {
-        return fail(
-          res,
-          404,
-          "Product not found."
-        );
-      }
-
-      await safeRedisSet(
-        cacheKey,
-        product
+      return fail(
+        res,
+        404,
+        "Product not found."
       );
     }
 
-    // Increment views without blocking response
-    Book.updateOne(
-      {
-        _id: product._id,
-      },
-      {
-        $inc: {
-          "stats.views": 1,
-        },
-      }
-    ).catch((error) => {
-      console.error(
-        "View update error:",
-        error
-      );
-    });
+    countView(product._id);
 
+    res.set("Cache-Control", PUBLIC_CACHE);
     return res.status(200).json({
       success: true,
       data: product,
     });
+  });
+
+// =====================================================
+// GET SEVERAL PRODUCTS BY REDIRECT URL (one round-trip)
+// ?redirectUrls=/a,/b,/c  ->  { data: { "/a": product|null, ... } }
+// Views are counted for the first URL only (the page being viewed).
+// =====================================================
+
+export const getProductsByRedirectUrls =
+  asyncHandler(async (req, res) => {
+    const raw = String(req.query.redirectUrls ?? "");
+    const urls = [
+      ...new Set(raw.split(",").map((u) => u.trim()).filter(Boolean)),
+    ].slice(0, 10);
+
+    if (!urls.length || !urls.every(validateRedirectUrl)) {
+      return fail(res, 400, "Valid redirect URLs are required.");
+    }
+
+    const data = await loadProducts(urls);
+
+    const primary = data[urls[0]];
+    if (primary?._id) countView(primary._id);
+
+    const out = {};
+    urls.forEach((u) => { out[u] = data[u] || null; });
+
+    res.set("Cache-Control", PUBLIC_CACHE);
+    return res.status(200).json({ success: true, data: out });
   });
 
 // =====================================================

@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import compression from "compression";
 import dns from "node:dns/promises";
 
 import connectDB from "./utils/dbConnection.js";
@@ -25,6 +26,7 @@ import InterestRoute from "./routes/Interest.js";
 import ClientRoute from "./routes/Client.js";
 import interviewMaintenanceRoutes from "./routes/interviewMaintenanceRoutes.js";
 import BookRoute from "./routes/bookRoute.js";
+import { flushBookViews } from "./controllers/bookController.js";
 import BookSalesRoute from "./routes/bookSales.js";
 import OrderMailRoute from "./routes/orderMailRoute.js";
 import CouponRoute from "./routes/couponRoute.js";
@@ -166,6 +168,9 @@ const isProduction =
 app.set("trust proxy", 1);
 
 app.disable("x-powered-by");
+
+/* gzip/brotli-less deflate for JSON + HTML: book payloads shrink ~5-8x */
+app.use(compression({ threshold: 1024 }));
 
 /* =====================================================
    SECURITY HEADERS
@@ -915,3 +920,8 @@ const startServer = async () => {
 startServer();
 
 export default app;
+
+/* write any buffered book view counts before the container stops */
+process.once("SIGTERM", () => {
+  flushBookViews().finally(() => process.exit(0));
+});

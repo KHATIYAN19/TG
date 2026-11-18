@@ -60,10 +60,9 @@ import {
   X,
 } from "@phosphor-icons/react";
 
-import BASE_URL from "../utils/Url";
 import { describeOffer } from "./bundleRules";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
-import { usePacks } from "./PackSections";
+import { loadCatalog, peekCatalog } from "../utils/bookApi";
 import { fetchPackages, cachedPackages } from "../resume/api";
 import { SAMPLE, planType } from "../resume/landingContent";
 
@@ -1916,7 +1915,7 @@ export default function Books() {
   // The book open in Quick view (null = closed)
   const [peek, setPeek] = useState(null);
 
-  const { data: packData } = usePacks();
+  const [packData, setPackData] = useState(null);
 
   const isDark = theme === "dark";
 
@@ -2087,75 +2086,40 @@ export default function Books() {
   }, []);
 
   // =====================================================
-  // EXISTING APIS - UNCHANGED
-  //
-  // GET ${BASE_URL}/book             -> { success: true, data: [...] }
-  // GET ${BASE_URL}/api/book-offers  -> running bundle offers
+  // ONE request: GET /book/catalog -> books + running offers + packs
+  // (was three: /book, /api/book-offers, /api/membership/plans)
   // =====================================================
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const fetchCatalog = useCallback(async (force) => {
+    const cached = force ? null : peekCatalog();
+    if (cached) {
+      setBooks(cached.books);
+      setOffers(cached.offers.filter((o) => o.available !== false));
+      setPackData(cached.plans);
+      setError("");
+      setLoading(false);
+      return;
+    }
 
-    fetch(`${BASE_URL}/api/book-offers`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        const list = Array.isArray(json?.data)
-          ? json.data.filter((o) => o.available)
-          : [];
-        setOffers(list);
-      })
-      .catch(() => {}); // purely promotional: stay hidden on any error
-
-    return () => controller.abort();
-  }, []);
-
-  const fetchBooks = useCallback(async (signal) => {
     try {
       setLoading(true);
       setError("");
-
-      const response = await fetch(`${BASE_URL}/book`, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-        },
-        signal,
-      });
-
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok || result?.success !== true) {
-        throw new Error(
-          result?.error?.message ||
-            result?.message ||
-            "Unable to load resources."
-        );
-      }
-
-      setBooks(Array.isArray(result?.data) ? result.data : []);
+      const data = await loadCatalog({ force });
+      setBooks(data.books);
+      setOffers(data.offers.filter((o) => o.available !== false));
+      setPackData(data.plans);
     } catch (err) {
-      if (err?.name === "AbortError") return;
-
       console.error("Books fetch error:", err);
-
       setBooks([]);
-
       setError(err?.message || "Something went wrong while loading books.");
     } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    fetchBooks(controller.signal);
-
-    return () => controller.abort();
-  }, [fetchBooks, retryCount]);
+    fetchCatalog(retryCount > 0);
+  }, [fetchCatalog, retryCount]);
 
   // =====================================================
   // DERIVED DATA (all numbers come from the live API)

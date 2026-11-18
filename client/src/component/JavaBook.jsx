@@ -1,4 +1,4 @@
-import API_BASE_URL from "../utils/Url";
+import { loadProduct, peekProduct } from "../utils/bookApi";
 
 import React, {
   useEffect,
@@ -55,9 +55,6 @@ import PayUCheckoutModal from "../payment/PayUCheckoutModal";
    CONFIG
 ========================================================= */
 
-const BASE_URL = (
-  API_BASE_URL
-).replace(/\/$/, "");
 
 const JAVA_PATH = "/book/langauge/java";
 const SPRING_PATH = "/book/springboot";
@@ -228,73 +225,41 @@ function validateProduct(response) {
 }
 
 function useBookProduct(path) {
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [state, setState] = useState(() => {
+    const hit = peekProduct(path);
+    if (hit) {
+      try { return { product: validateProduct({ success: true, data: hit }), loading: false, error: "" }; } catch { /* fall through to a fresh load */ }
+    }
+    return { product: null, loading: true, error: "" };
+  });
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    async function fetchBook() {
-      setLoading(true);
-      setError("");
-      setProduct(null);
-
-      try {
-        const url =
-          `${BASE_URL}/book/product?redirectUrl=` +
-          encodeURIComponent(path);
-
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        const json = await response
-          .json()
-          .catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(
-            json?.message ||
-            json?.error?.message ||
-            "Unable to load price"
-          );
+    let alive = true;
+    loadProduct(path, { force: refresh > 0 }).then(
+      (data) => {
+        if (!alive) return;
+        try {
+          setState({ product: validateProduct({ success: true, data }), loading: false, error: "" });
+        } catch (err) {
+          setState({ product: null, loading: false, error: err.message || "Price unavailable" });
         }
-
-        const valid = validateProduct(json);
-
-        if (!controller.signal.aborted) {
-          setProduct(valid);
-        }
-      } catch (err) {
-        if (controller.signal.aborted) return;
-
+      },
+      (err) => {
+        if (!alive) return;
         console.error(`Book API failed: ${path}`, err);
-
-        setError(err.message || "Price unavailable");
-        setProduct(null);
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchBook();
-
-    return () => controller.abort();
+        setState({ product: null, loading: false, error: err.message || "Price unavailable" });
+      },
+    );
+    return () => { alive = false; };
   }, [path, refresh]);
 
   const retry = useCallback(() => {
+    setState((cur) => ({ ...cur, loading: true, error: "" }));
     setRefresh((current) => current + 1);
   }, []);
 
+  const { product, loading, error } = state;
   return {
     product,
     loading,

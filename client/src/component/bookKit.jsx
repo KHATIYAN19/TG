@@ -1,4 +1,4 @@
-import API_BASE_URL from "../utils/Url";
+import { loadProduct, peekProduct } from "../utils/bookApi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, CaretLeft, CaretRight, Check, Lightning, LockKey, ShieldCheck, Sparkle } from "@phosphor-icons/react";
 import { pdfjs } from "react-pdf";
@@ -94,22 +94,19 @@ export function useSiteTheme() {
 }
 
 /* ------------------------------------------------------------------ a product from the server */
+/* same-tick calls share one request (see utils/bookApi.js) */
 export function useProduct(redirectUrl) {
-  const [state, setState] = useState({ product: null, loading: true, error: "" });
+  const [state, setState] = useState(() => {
+    const hit = peekProduct(redirectUrl);
+    return hit ? { product: hit, loading: false, error: "" } : { product: null, loading: true, error: "" };
+  });
   useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/book/product?redirectUrl=${encodeURIComponent(redirectUrl)}`, { cache: "no-store", headers: { Accept: "application/json" }, signal: controller.signal });
-        const result = await res.json().catch(() => null);
-        if (!res.ok || !result?.success || !result?.data) throw new Error(result?.error?.message || "Book details are unavailable.");
-        setState({ product: result.data, loading: false, error: "" });
-      } catch (e) {
-        if (e?.name === "AbortError") return;
-        setState({ product: null, loading: false, error: e?.message || "Book details are unavailable." });
-      }
-    })();
-    return () => controller.abort();
+    let alive = true;
+    loadProduct(redirectUrl).then(
+      (product) => alive && setState((cur) => (cur.product === product && !cur.loading ? cur : { product, loading: false, error: "" })),
+      (e) => alive && setState({ product: null, loading: false, error: e?.message || "Book details are unavailable." }),
+    );
+    return () => { alive = false; };
   }, [redirectUrl]);
   return state;
 }

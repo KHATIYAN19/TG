@@ -219,6 +219,11 @@ const bookSchema = new mongoose.Schema(
   }
 );
 
+// product page lookup: findOne({ redirectUrl, isActive, isPublished })
+bookSchema.index({ redirectUrl: 1, isActive: 1, isPublished: 1 });
+// /book list: filter + sort
+bookSchema.index({ isActive: 1, isPublished: 1, showInMainBooks: 1, position: 1 });
+
 const Book = mongoose.model("Book", bookSchema);
 
 export default Book;

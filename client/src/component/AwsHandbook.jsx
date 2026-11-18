@@ -1,4 +1,4 @@
-import API_BASE_URL from "../utils/Url";
+import { loadProduct, peekProduct } from "../utils/bookApi";
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
@@ -45,7 +45,6 @@ import { gcpStyles, ShellHighlight, spot } from "./GcpHandbook.jsx";
 const SITE_NAME = "Target Trek";
 const SITE_URL = "https://www.targettrek.in";
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
-const BASE_URL = API_BASE_URL;
 const PAGE_PATH = "/book/cloud/aws";
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 const THEME_KEY = "theme";
@@ -856,30 +855,22 @@ export default function AwsHandbook({ navbarOffset = 64 }) {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      try {
-        setLoadingProduct(true);
-        setProductError("");
-        const response = await fetch(
-          `${BASE_URL}/book/product?redirectUrl=${encodeURIComponent(window.location.pathname)}`,
-          { method: "GET", cache: "no-store", headers: { Accept: "application/json" }, signal: controller.signal },
-        );
-        const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.success || !result?.data) {
-          throw new Error(result?.error?.message || result?.message || "Unable to load the current product details.");
-        }
-        setProduct(result.data);
-      } catch (error) {
-        if (error?.name === "AbortError") return;
+    let alive = true;
+    const path = window.location.pathname;
+    const hit = peekProduct(path);
+    if (hit) { setProduct(hit); setLoadingProduct(false); setProductError(""); }
+    else { setLoadingProduct(true); setProductError(""); }
+    loadProduct(path).then(
+      (data) => { if (!alive) return; setProduct(data); setProductError(""); setLoadingProduct(false); },
+      (error) => {
+        if (!alive) return;
         console.error("Failed to fetch AWS product:", error);
         setProduct(null);
         setProductError(error?.message || "Unable to load the current product details.");
-      } finally {
-        if (!controller.signal.aborted) setLoadingProduct(false);
-      }
-    })();
-    return () => controller.abort();
+        setLoadingProduct(false);
+      },
+    );
+    return () => { alive = false; };
   }, []);
 
   const trackedViewRef = useRef(null);
