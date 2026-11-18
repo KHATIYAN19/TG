@@ -4,19 +4,31 @@ import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowRight,
-  BadgeCheck,
   BookOpen,
+  Brain,
   Check,
-  ChevronDown,
+  ChevronRight,
   Clock,
+  Cloud,
+  Coffee,
+  Cpu,
+  Database,
   Gift,
+  GraduationCap,
+  Layers,
   Loader2,
   Mail,
   Percent,
+  Plus,
+  Receipt,
   Search,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   Tag,
+  TrendingUp,
+  TriangleAlert,
+  Wallet,
   X,
   Zap,
 } from "lucide-react";
@@ -24,6 +36,7 @@ import {
 import BASE_URL from "../utils/Url";
 import { describeOffer, estimateSaving, pickHint, priceSelection } from "./bundleRules";
 import PayUCheckoutModal from "../payment/PayUCheckoutModal";
+import "./bundle.css";
 
 /* =====================================================
    BUNDLE OFFERS  (/books/bundle-offers)
@@ -37,6 +50,8 @@ import PayUCheckoutModal from "../payment/PayUCheckoutModal";
 const SITE_URL = "https://www.targettrek.in";
 const PAGE_URL = `${SITE_URL}/books/bundle-offers`;
 const API = `${String(BASE_URL || "").replace(/\/+$/, "")}/api/book-offers`;
+const FONTS =
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap";
 
 // same keys the navbar / Books page use
 const THEME_KEY = "theme";
@@ -51,11 +66,8 @@ const readTheme = () => {
   }
 };
 
-const money = (n) =>
-  `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
-
+const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-
 const errText = (e, fallback) => e?.response?.data?.message || e?.message || fallback;
 
 /* shared rules (same file as the server uses): the server still re-checks every price */
@@ -64,7 +76,6 @@ function priceFor(offer, books) {
   const original = round2(books.reduce((s, b) => s + Number(b.price || 0), 0));
   const result = offer && count > 0 ? priceSelection(offer, books) : null;
   const ready = Boolean(result?.ok);
-
   return {
     count,
     original,
@@ -78,7 +89,13 @@ function priceFor(offer, books) {
 }
 
 const offerIcon = (o, size = 13) =>
-  o.type === "FREE_BOOKS" ? <Gift size={size} /> : o.type === "FIXED_PRICE" || o.type === "PER_BOOK_PRICE" ? <Tag size={size} /> : <Percent size={size} />;
+  o.type === "FREE_BOOKS" ? (
+    <Gift size={size} aria-hidden />
+  ) : o.type === "FIXED_PRICE" || o.type === "PER_BOOK_PRICE" ? (
+    <Tag size={size} aria-hidden />
+  ) : (
+    <Percent size={size} aria-hidden />
+  );
 
 function daysLeft(endsAt) {
   if (!endsAt) return null;
@@ -88,69 +105,241 @@ function daysLeft(endsAt) {
   return d <= 7 ? `${d} day${d === 1 ? "" : "s"} left` : null;
 }
 
-const FAQ = [
+/* =====================================================
+   STATIC CONTENT (rendered on the server too, for SEO / AEO / GEO)
+===================================================== */
+
+const STEPS = [
+  { Icon: Tag, title: "Pick a running offer", text: "Each offer card shows the deal, the rule (how many books) and how many books you can choose from." },
+  { Icon: BookOpen, title: "Choose your books", text: "Tap the ebooks you want. Search or filter by topic, or let us pick for you. The price updates live." },
+  { Icon: Receipt, title: "See the exact saving", text: "Before paying you see the original total, the offer price and how much you save. Our server checks it again." },
+  { Icon: Mail, title: "Pay once, read now", text: "Pay with UPI, card or net banking. Every book opens on the success page and all PDFs reach your email." },
+];
+
+const OFFER_TYPES = [
   {
-    q: "How do bundle offers work?",
-    a: "Pick an offer, choose the books you want from it and the offer price is applied automatically. You pay once and get every book in a single order.",
+    Icon: Tag,
+    title: "Fixed bundle price",
+    text: "Any set number of books for one flat price, whatever they cost on their own.",
+    math: (
+      <>
+        3 books <s>₹897</s> → <b>₹499</b>
+        <br />
+        You save ₹398 (44%)
+      </>
+    ),
   },
   {
-    q: "How do I get my books after paying?",
-    a: "You land on the payment success page with a download link for every book, and all the PDFs are also emailed to the address you used at checkout.",
+    Icon: Percent,
+    title: "Percentage off",
+    text: "A fixed percentage off the total when you pick at least the minimum number of books.",
+    math: (
+      <>
+        4 books <s>₹1,196</s> − 30%
+        <br />
+        Pay <b>₹837</b>, save ₹359
+      </>
+    ),
   },
   {
-    q: "Can I use a coupon with a bundle offer?",
-    a: "No. Bundle offers already include the discount, so coupon codes can't be combined with them.",
+    Icon: Wallet,
+    title: "Flat amount off",
+    text: "A fixed rupee amount taken off your bundle total once you reach the minimum.",
+    math: (
+      <>
+        3 books <s>₹897</s> − ₹200
+        <br />
+        Pay <b>₹697</b>
+      </>
+    ),
   },
   {
-    q: "Which payment methods are supported?",
-    a: "UPI, debit and credit cards, net banking and wallets through our secure payment partner. We never see or store your card details.",
+    Icon: Layers,
+    title: "Per-book price",
+    text: "Every book in the bundle costs the same low price, so bigger bundles stay simple.",
+    math: (
+      <>
+        5 books × <b>₹149</b> each
+        <br />
+        Pay <b>₹745</b> instead of <s>₹1,495</s>
+      </>
+    ),
   },
   {
-    q: "What if I don't receive the email?",
-    a: "Check your spam folder first. Your download link on the success page keeps working for 24 hours, and you can write to us from the contact page and we will resend the books.",
+    Icon: Gift,
+    title: "Buy X, get Y free",
+    text: "Pick the required number of books and the cheapest ones in your bundle are free.",
+    math: (
+      <>
+        Buy 2, get 1 free
+        <br />
+        ₹299 + ₹299 + <s>₹249</s> → <b>₹598</b>
+      </>
+    ),
+  },
+  {
+    Icon: TrendingUp,
+    title: "More books, bigger discount",
+    text: "Tiered offers: the discount grows as you add books to the same bundle.",
+    math: (
+      <>
+        2+ books: <b>10% off</b>
+        <br />
+        4+ books: <b>25% off</b> · 6+ books: <b>40% off</b>
+      </>
+    ),
   },
 ];
 
-/* ------------------------------------------------------------------ */
+const IDEAS = [
+  {
+    Icon: Layers,
+    title: "System design interviews",
+    who: "SDE 2, senior and backend engineers",
+    text: "High-level and low-level design together, so you can answer both the architecture round and the machine-coding round.",
+    books: [
+      ["System Design HLD", "/book/system-design/hld"],
+      ["Java LLD: patterns & case studies", "/book/system-design/lld"],
+      ["SQL & Database Interview Handbook", "/book/database/sql"],
+    ],
+  },
+  {
+    Icon: Coffee,
+    title: "Java backend developer",
+    who: "Freshers to 5 years, product and service companies",
+    text: "Core Java, Spring Boot and databases: the three topics that come up in almost every Java backend interview.",
+    books: [
+      ["Java Interview Handbook", "/book/java-interview-handbook"],
+      ["Spring Boot Interview Handbook", "/book/springboot-interview-handbook"],
+      ["SQL & Database Interview Handbook", "/book/database/sql"],
+    ],
+  },
+  {
+    Icon: GraduationCap,
+    title: "College placements",
+    who: "Final-year students and freshers",
+    text: "The CS fundamentals that campus interviews test, plus one language book to practise with.",
+    books: [
+      ["Operating Systems", "/books/operating-systems"],
+      ["Computer Networks", "/book/computer-network"],
+      ["Java language book", "/book/language/java"],
+    ],
+  },
+  {
+    Icon: Cloud,
+    title: "Cloud engineer",
+    who: "DevOps, cloud and platform roles",
+    text: "AWS and Google Cloud side by side, so you can compare services and prepare for either platform.",
+    books: [
+      ["AWS: The Complete Cloud Engineer's Handbook", "/book/cloud/aws"],
+      ["Google Cloud (GCP) Engineer's Handbook", "/book/cloud/gcp"],
+    ],
+  },
+  {
+    Icon: Brain,
+    title: "GenAI and AI agents",
+    who: "Developers building with LLMs",
+    text: "Retrieval, tool use and agent frameworks: the building blocks of modern AI applications.",
+    books: [
+      ["RAG ebook", "/book/genai/rag"],
+      ["MCP ebook", "/book/genai/mcp"],
+      ["Google ADK Handbook", "/book/genai/google-adk"],
+    ],
+  },
+  {
+    Icon: Database,
+    title: "Data and databases",
+    who: "Backend, data and analytics roles",
+    text: "SQL depth plus how databases fit into large systems, for interviews that go beyond queries.",
+    books: [
+      ["SQL & Database Interview Handbook", "/book/database/sql"],
+      ["System Design HLD", "/book/system-design/hld"],
+    ],
+  },
+];
+
+const FAQ = [
+  {
+    q: "What is a bundle offer on Target Trek?",
+    a: "A bundle offer lets you buy several Target Trek ebooks together in one order at a lower price than buying them one by one. You choose an offer, pick the books you want from it, and the discount is applied automatically before you pay.",
+  },
+  {
+    q: "How much can I save with an ebook bundle?",
+    a: "It depends on the offer and the books you pick. Every offer card shows its deal, and the picker shows the original total, the bundle price and your exact saving in rupees and percent before you pay.",
+  },
+  {
+    q: "Can I choose which books go in my bundle?",
+    a: "Yes, for most offers. You pick any books from the offer's list until you reach the required number. Some offers include every listed book, and those say \"All books\" on the card.",
+  },
+  {
+    q: "How do I get my books after paying?",
+    a: "Right after payment you land on the success page with a download link for every book in the bundle. All the PDFs are also emailed to the address you used at checkout.",
+  },
+  {
+    q: "Can I use a coupon code with a bundle offer?",
+    a: "No. Bundle offers already include the discount, so coupon codes can't be combined with them.",
+  },
+  {
+    q: "Which payment methods can I use?",
+    a: "UPI, debit and credit cards, net banking and wallets, through our secure payment gateway. We never see or store your card or UPI details.",
+  },
+  {
+    q: "Is a bundle cheaper than buying books one by one?",
+    a: "Yes. A bundle is only allowed to go through when it costs less than the books' normal prices added together. If a set of books would not save you money, the picker tells you and you can choose different books.",
+  },
+  {
+    q: "What is the difference between a bundle and All Access?",
+    a: "A bundle is a set of books you choose, at a discount, in one payment. All Access gives you the full Target Trek library in one purchase. If you only need a few topics, a bundle is usually the better value.",
+  },
+  {
+    q: "Can I get a refund on a bundle?",
+    a: "Bundle purchases are final, like every Target Trek ebook. Refunds are made only for double payments or genuine payment or delivery issues. Email supporttargettrek@gmail.com with your payment details.",
+  },
+  {
+    q: "I paid but didn't get the email. What do I do?",
+    a: "Check your spam or promotions folder first. Your download link on the success page keeps working for 24 hours. If you still can't find your books, email supporttargettrek@gmail.com and we will resend them.",
+  },
+];
+
+const QUICK_ANSWER =
+  "Target Trek bundle offers let you buy two or more programming and interview-preparation ebooks in a single order at a discount. Pick a running offer, choose the books you want (system design, Java, Spring Boot, SQL, cloud, GenAI or CS fundamentals), and the bundle price is applied automatically. You pay once with UPI, card or net banking and get every PDF instantly on screen and by email.";
+
+/* =====================================================
+   PIECES
+===================================================== */
 
 function BookTile({ book, selected, locked, readOnly, free, onToggle }) {
-  const off =
-    book.mrp > book.price ? Math.round(((book.mrp - book.price) / book.mrp) * 100) : 0;
-
+  const off = book.mrp > book.price ? Math.round(((book.mrp - book.price) / book.mrp) * 100) : 0;
   return (
-    <li className="bo-cell">
+    <li className="bn-cell">
       <button
         type="button"
-        className="bo-book"
+        className="bn-book"
         aria-pressed={selected}
+        aria-label={`${book.title}, ${money(book.price)}${selected ? ", selected" : ""}`}
         disabled={(locked && !selected) || readOnly}
         data-readonly={readOnly || undefined}
         onClick={onToggle}
       >
-        {free && <span className="bo-free">FREE</span>}
-        <span className="bo-check" aria-hidden="true">
+        {free && <span className="bn-free">FREE</span>}
+        <span className="bn-tick" aria-hidden>
           <Check size={14} strokeWidth={3.5} />
         </span>
-
-        <span className="bo-cover">
+        <span className="bn-cover">
           {book.coverPageUrl ? (
-            <img src={book.coverPageUrl} alt={`${book.title} cover`} loading="lazy" width="104" height="140" />
+            <img src={book.coverPageUrl} alt="" loading="lazy" width="150" height="200" />
           ) : (
-            <BookOpen size={30} />
+            <BookOpen size={30} aria-hidden />
           )}
         </span>
-
-        <span className="bo-book-body">
-          <span className="bo-book-title">{book.title}</span>
-          <span className="bo-book-price">
-            <b>{money(book.price)}</b>
-            {off > 0 && <s>{money(book.mrp)}</s>}
-          </span>
+        <span className="bn-book-title">{book.title}</span>
+        <span className="bn-book-price">
+          <b>{money(book.price)}</b>
+          {off > 0 && <s>{money(book.mrp)}</s>}
         </span>
       </button>
-
       {book.redirectUrl && (
-        <Link className="bo-peek" to={book.redirectUrl} target="_blank" rel="noopener">
+        <Link className="bn-peek" to={book.redirectUrl} target="_blank" rel="noopener">
           View details
         </Link>
       )}
@@ -158,7 +347,101 @@ function BookTile({ book, selected, locked, readOnly, free, onToggle }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
+function OfferTicket({ o, onStart }) {
+  const left = daysLeft(o.endsAt);
+  const short = Math.max(0, o.minBooks - o.eligibleCount);
+  const all = o.selectionMode === "ALL";
+  const d = describeOffer(o, o.eligibleCount);
+  const saving = estimateSaving(o, o.books);
+  const spots = o.spotsLeft !== null && o.spotsLeft !== undefined;
+
+  return (
+    <li>
+      <article className="bn-ticket" data-off={!o.available} aria-labelledby={`offer-${o._id}`}>
+        <div className="bn-stub">
+          <div className="bn-stub-top">
+            <span className="bn-badge">
+              {offerIcon(o)}
+              {o.badge || (all ? "All books" : "Bundle deal")}
+            </span>
+            {left && (
+              <span className="bn-badge time">
+                <Clock size={12} aria-hidden /> {left}
+              </span>
+            )}
+          </div>
+          <p className="bn-big">{d.big}</p>
+          <p className="bn-big-sub">{d.sub}</p>
+          {o.books.length > 0 && (
+            <div className="bn-stack" aria-hidden>
+              {o.books
+                .filter((b) => b.coverPageUrl)
+                .slice(0, 4)
+                .map((b) => (
+                  <img key={b._id} src={b.coverPageUrl} alt="" loading="lazy" />
+                ))}
+              {o.books.length > 4 && <span>+{o.books.length - 4}</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="bn-ticket-main">
+          <h3 id={`offer-${o._id}`}>{o.name}</h3>
+          {o.description && <p className="bn-ticket-desc">{o.description}</p>}
+          <ul className="bn-facts">
+            {d.rule && (
+              <li>
+                <Check size={15} aria-hidden /> {d.rule}
+              </li>
+            )}
+            {d.tiers?.map((t) => (
+              <li key={t.minBooks}>
+                <Check size={15} aria-hidden /> {t.minBooks}+ books: {t.percent}% off
+              </li>
+            ))}
+            <li>
+              <Check size={15} aria-hidden /> {o.eligibleCount} book{o.eligibleCount === 1 ? "" : "s"} to choose from
+            </li>
+            <li>
+              <Check size={15} aria-hidden /> Instant download + PDFs on email
+            </li>
+            {spots && (
+              <li className="warn">
+                <Clock size={15} aria-hidden /> Only {o.spotsLeft} spot{o.spotsLeft === 1 ? "" : "s"} left
+              </li>
+            )}
+          </ul>
+
+          <div className="bn-ticket-foot">
+            {!o.available ? (
+              <p className="bn-wait">
+                Opening soon: {short} more book{short === 1 ? "" : "s"} to be added.
+              </p>
+            ) : (
+              <>
+                {saving > 0 && !d.tiers ? (
+                  <span className="bn-save">
+                    Save about <b>{saving}%</b>
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <button type="button" className="bn-btn bn-btn-primary bn-btn-block-xs" onClick={() => onStart(o)}>
+                  {all ? "View books & buy" : "Choose your books"}
+                  <ArrowRight size={17} aria-hidden />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </article>
+    </li>
+  );
+}
+
+/* =====================================================
+   PAGE
+===================================================== */
 
 export default function BundleOffers() {
   const [theme, setTheme] = useState(readTheme);
@@ -169,11 +452,10 @@ export default function BundleOffers() {
   const [error, setError] = useState("");
 
   const [offerId, setOfferId] = useState(null);
-  const [open, setOpen] = useState(false); // book picker modal
+  const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState([]);
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("");
-  const [openFaq, setOpenFaq] = useState(0);
 
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState("");
@@ -189,7 +471,6 @@ export default function BundleOffers() {
       if (!e.key || e.key === THEME_KEY) setTheme(readTheme());
     };
     const onFocus = () => setTheme(readTheme());
-
     window.addEventListener(THEME_EVENT, onEvent);
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", onFocus);
@@ -242,7 +523,7 @@ export default function BundleOffers() {
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => {
-      if (e.key === "Escape" && !product) setOpen(false);
+      if (e.key === "Escape" && !product) closePicker();
     };
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -251,17 +532,14 @@ export default function BundleOffers() {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, product]);
 
   const offer = useMemo(() => offers.find((o) => o._id === offerId) || null, [offers, offerId]);
   const bookMap = useMemo(() => new Map((offer?.books || []).map((b) => [b._id, b])), [offer]);
-  const pickedBooks = useMemo(
-    () => picked.map((id) => bookMap.get(id)).filter(Boolean),
-    [picked, bookMap]
-  );
+  const pickedBooks = useMemo(() => picked.map((id) => bookMap.get(id)).filter(Boolean), [picked, bookMap]);
   const price = useMemo(() => priceFor(offer, pickedBooks), [offer, pickedBooks]);
 
-  /* tag chips from the books of the chosen offer */
   const tagOptions = useMemo(() => {
     const counts = new Map();
     for (const b of offer?.books || []) {
@@ -280,10 +558,8 @@ export default function BundleOffers() {
   const visibleBooks = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (offer?.books || []).filter((b) => {
-      const okTag =
-        !tag || (b.tags || []).some((t) => String(t).trim().toLowerCase() === tag);
-      const okQuery =
-        !q || [b.title, b.subtitle, b.category, ...(b.tags || [])].join(" ").toLowerCase().includes(q);
+      const okTag = !tag || (b.tags || []).some((t) => String(t).trim().toLowerCase() === tag);
+      const okQuery = !q || [b.title, b.subtitle, b.category, ...(b.tags || [])].join(" ").toLowerCase().includes(q);
       return okTag && okQuery;
     });
   }, [offer, query, tag]);
@@ -327,11 +603,9 @@ export default function BundleOffers() {
 
   const pay = async () => {
     if (!offer || !price.ready || busy) return;
-
     try {
       setBusy(true);
       setPayError("");
-
       // the server re-checks the offer, the books and that this price is the right one
       const res = await axios.post(
         `${API}/quote`,
@@ -340,7 +614,6 @@ export default function BundleOffers() {
       );
       const quote = res.data?.data;
       const first = bookMap.get(quote.bookIds[0]);
-
       setProduct({
         _id: quote.bookIds[0],
         title: quote.title,
@@ -358,7 +631,6 @@ export default function BundleOffers() {
     } catch (e) {
       const code = e?.response?.data?.code;
       setPayError(errText(e, "Unable to start checkout. Please try again."));
-
       // offer changed or the price differs: reload the live offers so the page is correct again
       if (code === "OFFER_PRICE_MISMATCH" || code === "OFFER_NOT_FOUND" || code === "OFFER_BOOK_NOT_ELIGIBLE") {
         load();
@@ -369,83 +641,16 @@ export default function BundleOffers() {
     }
   };
 
-  /* ---- SEO ---- */
-  const seoTitle = "Bundle Offers: Buy Multiple Ebooks & Save Up to 60% | Target Trek";
-  const seoDescription = offers.length
-    ? `Build your own ebook bundle. ${offers
-        .slice(0, 3)
-        .map((o) => describeOffer(o, o.eligibleCount).line)
-        .join(", ")}. Instant access and PDFs on email. College placement, system design, cloud and more.`
-    : "Build your own ebook bundle from Target Trek. Pick multiple books and save. Instant access and PDFs on email.";
+  /* ---- live numbers ---- */
+  const liveOffers = useMemo(() => offers.filter((o) => o.available), [offers]);
 
-  const structuredData = useMemo(() => {
-    const graph = [
-      {
-        "@type": "CollectionPage",
-        "@id": PAGE_URL,
-        url: PAGE_URL,
-        name: "Ebook Bundle Offers",
-        description: seoDescription,
-        isPartOf: { "@type": "WebSite", name: "Target Trek", url: SITE_URL },
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-          { "@type": "ListItem", position: 2, name: "Books", item: `${SITE_URL}/books` },
-          { "@type": "ListItem", position: 3, name: "Bundle offers", item: PAGE_URL },
-        ],
-      },
-      {
-        "@type": "FAQPage",
-        mainEntity: FAQ.map((f) => ({
-          "@type": "Question",
-          name: f.q,
-          acceptedAnswer: { "@type": "Answer", text: f.a },
-        })),
-      },
-    ];
-
-    if (offers.length) {
-      graph.push({
-        "@type": "OfferCatalog",
-        name: "Target Trek ebook bundle offers",
-        itemListElement: offers.map((o) => ({
-          "@type": "Offer",
-          name: o.name,
-          description: o.description || describeOffer(o, o.eligibleCount).line,
-          priceCurrency: "INR",
-          url: `${PAGE_URL}?offer=${o.slug}`,
-          seller: { "@type": "Organization", name: "Target Trek" },
-          ...(o.type === "FIXED_PRICE" ? { price: String(o.fixedPrice) } : {}),
-          ...(o.spotsLeft !== null && o.spotsLeft !== undefined
-            ? { availability: o.spotsLeft > 0 ? "https://schema.org/LimitedAvailability" : "https://schema.org/SoldOut" }
-            : {}),
-        })),
-      });
-    }
-
-    return { "@context": "https://schema.org", "@graph": graph };
-  }, [offers, seoDescription]);
-
-  const cover = offers[0]?.books?.[0]?.coverPageUrl;
-
-  // hero: a fan of covers + headline numbers
-  const heroCovers = useMemo(() => {
-    const seen = new Set();
-    const list = [];
-    for (const o of offers) {
-      for (const b of o.books) {
-        if (b.coverPageUrl && !seen.has(b._id)) {
-          seen.add(b._id);
-          list.push(b);
-        }
-      }
-    }
-    return list.slice(0, 4);
+  const allBooks = useMemo(() => {
+    const seen = new Map();
+    for (const o of offers) for (const b of o.books) if (!seen.has(b._id)) seen.set(b._id, b);
+    return [...seen.values()];
   }, [offers]);
 
-  const totalBooks = useMemo(() => new Set(offers.flatMap((o) => o.books.map((b) => b._id))).size, [offers]);
+  const heroCovers = useMemo(() => allBooks.filter((b) => b.coverPageUrl).slice(0, 4), [allBooks]);
 
   const bestSaving = useMemo(() => {
     let best = 0;
@@ -453,18 +658,125 @@ export default function BundleOffers() {
     return best;
   }, [offers]);
 
+  /* the hero receipt shows a real offer when one is running, otherwise a worked example */
+  const receipt = useMemo(() => {
+    for (const o of liveOffers) {
+      if (o.selectionMode === "ALL" || o.type === "TIERED_PERCENT") continue;
+      const books = [...o.books].sort((a, b) => b.price - a.price).slice(0, o.minBooks);
+      if (books.length < o.minBooks) continue;
+      const r = priceSelection(o, books);
+      if (r?.ok) return { title: o.name, count: books.length, original: r.originalAmount, final: r.finalAmount, percent: r.savingsPercent, live: true };
+    }
+    return { title: "Example bundle", count: 3, original: 897, final: 499, percent: 44, live: false };
+  }, [liveOffers]);
+
+  /* ---- SEO / AEO / GEO ---- */
+  const seoTitle = "Ebook Bundle Offers: Buy Multiple Books & Save | Target Trek";
+  const seoDescription = liveOffers.length
+    ? `Build your own ebook bundle on Target Trek. ${liveOffers
+        .slice(0, 3)
+        .map((o) => describeOffer(o, o.eligibleCount).line)
+        .join(", ")}. System design, Java, Spring Boot, SQL, cloud and GenAI books. Instant PDF download.`
+    : "Build your own ebook bundle on Target Trek and save. Pick system design, Java, Spring Boot, SQL, AWS, GCP and GenAI ebooks, pay once and download every PDF instantly.";
+  const cover = heroCovers[0]?.coverPageUrl;
+
+  const structuredData = useMemo(() => {
+    const org = { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Target Trek", url: SITE_URL, email: "supporttargettrek@gmail.com" };
+    const graph = [
+      org,
+      {
+        "@type": ["WebPage", "CollectionPage"],
+        "@id": `${PAGE_URL}#webpage`,
+        url: PAGE_URL,
+        name: "Ebook Bundle Offers",
+        headline: seoTitle,
+        description: seoDescription,
+        inLanguage: "en-IN",
+        isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "Target Trek", url: SITE_URL },
+        publisher: { "@id": `${SITE_URL}/#organization` },
+        breadcrumb: { "@id": `${PAGE_URL}#breadcrumb` },
+        about: ["Programming ebooks", "Interview preparation", "System design", "Java", "Cloud computing", "Generative AI"],
+        speakable: { "@type": "SpeakableSpecification", cssSelector: ["#bn-answer-h", "#bn-answer-text"] },
+        ...(cover ? { primaryImageOfPage: { "@type": "ImageObject", url: cover } } : {}),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${PAGE_URL}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "Books", item: `${SITE_URL}/books` },
+          { "@type": "ListItem", position: 3, name: "Bundle offers", item: PAGE_URL },
+        ],
+      },
+      {
+        "@type": "HowTo",
+        "@id": `${PAGE_URL}#howto`,
+        name: "How to buy an ebook bundle on Target Trek",
+        description: "Pick an offer, choose your books, check the saving and pay once.",
+        totalTime: "PT3M",
+        step: STEPS.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.text, url: `${PAGE_URL}#how` })),
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${PAGE_URL}#faq`,
+        mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      },
+    ];
+
+    if (liveOffers.length) {
+      graph.push({
+        "@type": "OfferCatalog",
+        "@id": `${PAGE_URL}#offers`,
+        name: "Target Trek ebook bundle offers",
+        numberOfItems: liveOffers.length,
+        itemListElement: liveOffers.map((o) => {
+          const d = describeOffer(o, o.eligibleCount);
+          return {
+            "@type": "Offer",
+            name: o.name,
+            description: o.description || `${d.line}. ${d.rule}.`,
+            priceCurrency: "INR",
+            url: `${PAGE_URL}?offer=${o.slug}`,
+            seller: { "@id": `${SITE_URL}/#organization` },
+            category: "Ebook bundle",
+            ...(o.type === "FIXED_PRICE" ? { price: String(o.fixedPrice) } : {}),
+            ...(o.endsAt ? { priceValidUntil: String(o.endsAt).slice(0, 10) } : {}),
+            availability:
+              o.spotsLeft !== null && o.spotsLeft !== undefined
+                ? o.spotsLeft > 0
+                  ? "https://schema.org/LimitedAvailability"
+                  : "https://schema.org/SoldOut"
+                : "https://schema.org/InStock",
+            itemOffered: o.books.slice(0, 30).map((b) => ({
+              "@type": "Book",
+              name: b.title,
+              bookFormat: "https://schema.org/EBook",
+              ...(b.coverPageUrl ? { image: b.coverPageUrl } : {}),
+              ...(b.redirectUrl ? { url: `${SITE_URL}${b.redirectUrl}` } : {}),
+              offers: { "@type": "Offer", price: String(b.price), priceCurrency: "INR" },
+            })),
+          };
+        }),
+      });
+    }
+    return { "@context": "https://schema.org", "@graph": graph };
+  }, [liveOffers, seoDescription, cover]);
+
   /* ------------------------------ render ------------------------------ */
 
+  const d = offer ? describeOffer(offer, offer.eligibleCount) : null;
+
   return (
-    <div className="bo-root" data-theme={theme}>
+    <div className="bn" data-theme={theme}>
       <Helmet>
+        <html lang="en" />
         <title>{seoTitle}</title>
         <meta name="description" content={seoDescription} />
         <meta
           name="keywords"
-          content="ebook bundle, buy multiple books discount, college placement books, system design ebooks, cloud ebooks, interview preparation bundle, Target Trek"
+          content="ebook bundle offers, buy multiple ebooks discount, interview preparation ebook bundle, system design ebook bundle, Java Spring Boot ebooks, SQL interview book, AWS GCP ebooks, GenAI ebooks, college placement books, Target Trek bundle"
         />
-        <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+        <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
         <link rel="canonical" href={PAGE_URL} />
         <meta property="og:site_name" content="Target Trek" />
         <meta property="og:locale" content="en_IN" />
@@ -473,516 +785,423 @@ export default function BundleOffers() {
         <meta property="og:description" content={seoDescription} />
         <meta property="og:url" content={PAGE_URL} />
         {cover && <meta property="og:image" content={cover} />}
+        {cover && <meta property="og:image:alt" content="Target Trek ebook bundle" />}
         <meta name="twitter:card" content={cover ? "summary_large_image" : "summary"} />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDescription} />
         {cover && <meta name="twitter:image" content={cover} />}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="stylesheet" href={FONTS} />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
-
-        .bo-root {
-          --bg: #FFF8F0; --surface: #FFFFFF; --alt: #FFEFDC; --soft: #FFE4C7;
-          --text: #231A12; --muted: #6B5846; --subtle: #A08C79; --border: #F3DCC2;
-          --accent: #EA580C; --accent-2: #F97316; --accent-ink: #FFFFFF;
-          --ok: #15803D; --ok-bg: #DCFCE7; --err: #B91C1C; --err-bg: #FEE2E2;
-          --shadow: 0 14px 40px rgba(194,86,12,.13);
-          min-height: 100vh; width: 100%; overflow-x: clip;
-          background:
-            radial-gradient(900px 420px at 10% -5%, rgba(251,146,60,.20), transparent 60%),
-            radial-gradient(700px 380px at 100% 20%, rgba(253,186,116,.25), transparent 60%),
-            var(--bg);
-          color: var(--text); font-family: "DM Sans", system-ui, sans-serif;
-          -webkit-font-smoothing: antialiased; transition: background .25s, color .25s;
-          padding: 84px 0 110px;
-        }
-        .bo-root[data-theme="dark"] {
-          --bg: #15110E; --surface: #211B16; --alt: #2A221B; --soft: #3A2A1D;
-          --text: #FBF5EE; --muted: #C2B3A4; --subtle: #8E7F70; --border: #3A2F26;
-          --accent: #FB923C; --accent-2: #F97316; --accent-ink: #1C1006;
-          --ok: #4ADE80; --ok-bg: rgba(34,197,94,.14); --err: #FCA5A5; --err-bg: rgba(127,29,29,.3);
-          --shadow: 0 14px 40px rgba(0,0,0,.4); color-scheme: dark;
-          background:
-            radial-gradient(900px 420px at 10% -5%, rgba(251,146,60,.10), transparent 60%),
-            var(--bg);
-        }
-        .bo-root *, .bo-root *::before, .bo-root *::after { box-sizing: border-box; }
-        .bo-root button { font: inherit; cursor: pointer; color: inherit; }
-        .bo-root h1, .bo-root h2, .bo-root h3 { font-family: "Manrope", sans-serif; margin: 0; letter-spacing: -.02em; }
-        .bo-root ul { list-style: none; margin: 0; padding: 0; }
-        .bo-root a { color: inherit; }
-        .bo-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
-
-        .bo-crumbs { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 600; color: var(--subtle); margin-bottom: 14px; }
-        .bo-crumbs a { text-decoration: none; color: var(--muted); }
-        .bo-crumbs a:hover { color: var(--accent); }
-
-        /* hero */
-        .bo-hero {
-          position: relative; overflow: hidden; display: grid; gap: 28px; align-items: center; border-radius: 32px; padding: 34px 26px;
-          background: linear-gradient(135deg, #FFEDD5 0%, #FED7AA 55%, #FDBA74 100%); color: #3B1D08;
-          box-shadow: var(--shadow); grid-template-columns: minmax(0,1fr);
-        }
-        @media (min-width: 900px) { .bo-hero { grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); padding: 48px 48px; } }
-        .bo-root[data-theme="dark"] .bo-hero { background: linear-gradient(135deg, #3A2414, #4A2C16 60%, #5E3515); color: #FFEBD6; }
-        .bo-hero::after {
-          content: ""; position: absolute; right: -90px; top: -90px; width: 320px; height: 320px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(255,255,255,.55), transparent 70%); pointer-events: none;
-        }
-        .bo-hero-copy { position: relative; z-index: 1; }
-        .bo-hero h1 em { font-style: normal; color: #C2410C; }
-        .bo-root[data-theme="dark"] .bo-hero h1 em { color: #FDBA74; }
-        .bo-hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 22px; }
-        .bo-hero-btn {
-          display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 26px; border-radius: 15px; text-decoration: none;
-          font: 800 14px "Manrope", sans-serif; color: #fff; background: linear-gradient(135deg,#F97316,#EA580C); box-shadow: 0 10px 24px rgba(234,88,12,.35);
-        }
-        .bo-root[data-theme="dark"] .bo-hero-btn { color: #1C1006; background: linear-gradient(135deg,#FDBA74,#F97316); }
-        .bo-hero-link { font-size: 13.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
-        .bo-hero-art { position: relative; z-index: 1; display: none; height: 300px; }
-        @media (min-width: 900px) { .bo-hero-art { display: block; } }
-        .bo-fan { position: absolute; bottom: 8px; width: 150px; height: 204px; object-fit: cover; border-radius: 10px; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 24px 40px rgba(120,53,15,.35); transform-origin: bottom center; }
-        .bo-fan-0 { left: 4%; transform: rotate(-14deg); z-index: 1; }
-        .bo-fan-1 { left: 24%; transform: rotate(-4deg) translateY(-14px); z-index: 2; }
-        .bo-fan-2 { left: 44%; transform: rotate(7deg) translateY(-6px); z-index: 3; }
-        .bo-fan-3 { left: 62%; transform: rotate(17deg) translateY(10px); z-index: 4; }
-        .bo-hero-badge {
-          position: absolute; right: 4%; top: 0; z-index: 6; display: grid; place-items: center; width: 108px; height: 108px; border-radius: 50%; text-align: center;
-          background: #fff; color: #9A3412; font-size: 11px; font-weight: 800; line-height: 1.2; box-shadow: 0 14px 30px rgba(194,86,12,.35); transform: rotate(8deg);
-        }
-        .bo-hero-badge b { display: block; font: 800 28px "Manrope", sans-serif; color: #EA580C; }
-        .bo-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
-        .bo-stats div { padding: 14px 12px; border-radius: 18px; border: 1.5px solid var(--border); background: var(--surface); text-align: center; }
-        .bo-stats dt { font-size: 11px; font-weight: 700; color: var(--muted); }
-        .bo-stats dd { margin: 4px 0 0; font: 800 clamp(20px, 4vw, 28px) "Manrope", sans-serif; color: var(--accent); }
-        .bo-kicker {
-          display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 11px;
-          font-weight: 800; letter-spacing: .08em; text-transform: uppercase; background: rgba(255,255,255,.6); color: #9A3412;
-        }
-        .bo-root[data-theme="dark"] .bo-kicker { background: rgba(251,146,60,.18); color: #FDBA74; }
-        .bo-hero h1 { margin-top: 14px; font-size: clamp(28px, 5vw, 46px); line-height: 1.08; font-weight: 800; max-width: 760px; }
-        .bo-hero p { margin: 12px 0 0; max-width: 640px; font-size: 15px; line-height: 1.7; opacity: .85; }
-        .bo-trust { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 18px; font-size: 12.5px; font-weight: 700; }
-        .bo-trust span { display: inline-flex; align-items: center; gap: 6px; }
-        .bo-trust svg { color: #C2410C; }
-        .bo-root[data-theme="dark"] .bo-trust svg { color: #FDBA74; }
-
-        /* layout */
-        .bo-step { margin-bottom: 34px; }
-        .bo-step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-        .bo-step-head h2 { font-size: 22px; font-weight: 800; }
-        .bo-step-head p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
-
-        /* offer cards */
-        .bo-offers { display: grid; gap: 14px; grid-template-columns: 1fr; }
-        @media (min-width: 640px) { .bo-offers { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-        @media (min-width: 1024px) { .bo-offers { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-        .bo-offers > li { display: flex; }
-        .bo-offer {
-          position: relative; display: flex; flex-direction: column; width: 100%; overflow: hidden; border-radius: 24px;
-          border: 1.5px solid var(--border); background: var(--surface); transition: border-color .2s, box-shadow .25s, transform .25s;
-        }
-        .bo-offer:hover:not([data-off="true"]) { border-color: var(--accent-2); box-shadow: var(--shadow); transform: translateY(-4px); }
-        .bo-offer[data-off="true"] { opacity: .65; }
-        .bo-offer-hero {
-          position: relative; overflow: hidden; padding: 18px 20px 20px; color: #3B1D08;
-          background: linear-gradient(135deg,#FFEDD5 0%,#FED7AA 60%,#FDBA74 100%);
-        }
-        .bo-root[data-theme="dark"] .bo-offer-hero { color: #FFEBD6; background: linear-gradient(135deg,#3A2414,#4A2C16 60%,#5E3515); }
-        .bo-offer-hero::after { content: ""; position: absolute; right: -40px; top: -50px; width: 170px; height: 170px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.55), transparent 70%); pointer-events: none; }
-        .bo-offer-big { margin: 14px 0 0; font: 800 clamp(34px, 5vw, 44px)/1 "Manrope", sans-serif; letter-spacing: -.04em; }
-        .bo-offer-bigsub { margin: 4px 0 0; font-size: 13.5px; font-weight: 700; opacity: .8; }
-        .bo-stack { display: flex; align-items: center; margin-top: 16px; }
-        .bo-stack img { width: 38px; height: 52px; object-fit: cover; border-radius: 6px; border: 2px solid rgba(255,255,255,.9); box-shadow: 0 6px 14px rgba(120,53,15,.3); margin-left: -12px; position: relative; }
-        .bo-stack img:first-child { margin-left: 0; }
-        .bo-stack span { margin-left: 8px; font-size: 12px; font-weight: 800; }
-        .bo-offer-main { display: flex; flex-direction: column; flex: 1; padding: 18px 20px 20px; }
-        .bo-offer-main h3 { font-size: 18px; font-weight: 800; }
-        .bo-offer-facts { display: grid; gap: 6px; margin: 12px 0 16px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
-        .bo-offer-facts li { display: flex; align-items: center; gap: 7px; }
-        .bo-offer-facts svg { flex-shrink: 0; color: var(--ok); }
-        .bo-offer-cta {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; width: 100%; height: 48px;
-          border: 0; border-radius: 14px; font: 800 14px "Manrope", sans-serif; color: #fff;
-          background: linear-gradient(135deg,#F97316,#EA580C); box-shadow: 0 8px 20px rgba(234,88,12,.3); transition: transform .15s, filter .2s;
-        }
-        .bo-offer-cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
-        .bo-root[data-theme="dark"] .bo-offer-cta { color: #1C1006; background: linear-gradient(135deg,#FDBA74,#F97316); }
-        .bo-offer-wait { margin: auto 0 0; padding: 8px 12px; border-radius: 10px; background: var(--soft); color: var(--accent); font-size: 12px; font-weight: 700; }
-        .bo-offer-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .bo-offer-badge {
-          display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: .06em;
-          text-transform: uppercase; color: #9A3412;
-        }
-        .bo-offer-left { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.7); font-size: 11px; font-weight: 800; color: #B91C1C; }
-        .bo-offer-desc { margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
-        .bo-offer-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .bo-offer-badge {
-          display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: .06em;
-          text-transform: uppercase; color: var(--accent);
-        }
-        .bo-offer-left { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--err); }
-        .bo-offer h3 { margin-top: 6px; font-size: 17px; font-weight: 800; }
-        .bo-offer-deal { margin-top: 3px; font-size: 14px; font-weight: 700; color: var(--accent); }
-        .bo-offer-desc { margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
-        .bo-offer:disabled { opacity: .62; cursor: not-allowed; }
-        .bo-offer:disabled:hover { border-color: var(--border); }
-        /* toolbar */
-        .bo-toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
-        .bo-search { position: relative; flex: 1 1 240px; }
-        .bo-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--subtle); pointer-events: none; }
-        .bo-search input {
-          width: 100%; height: 46px; padding: 0 38px 0 40px; border-radius: 14px; border: 1.5px solid var(--border);
-          background: var(--surface); color: var(--text); font: 500 14px "DM Sans", sans-serif; outline: none;
-        }
-        .bo-search input:focus { border-color: var(--accent-2); }
-        .bo-search button { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--subtle); display: grid; }
-        .bo-btn-soft {
-          height: 46px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--soft); background: var(--alt);
-          color: var(--accent); font-size: 13px; font-weight: 800;
-        }
-        .bo-btn-soft:hover { border-color: var(--accent-2); }
-        .bo-btn-ghost { background: transparent; border-color: var(--border); color: var(--muted); }
-
-        .bo-chips { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-        .bo-chips::-webkit-scrollbar { display: none; }
-        .bo-chip {
-          flex-shrink: 0; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--soft); background: var(--alt);
-          color: var(--accent); font-size: 12px; font-weight: 800; transition: background .2s, color .2s;
-        }
-        .bo-chip:hover:not([aria-pressed="true"]) { background: var(--soft); }
-        .bo-chip[aria-pressed="true"] { background: linear-gradient(135deg,#F97316,#EA580C); color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(249,115,22,.35); }
-        .bo-root[data-theme="dark"] .bo-chip[aria-pressed="true"] { color: #1C1006; background: linear-gradient(135deg,#FDBA74,#F97316); }
-
-        /* books: two per row on phones */
-        .bo-grid { display: grid; gap: 12px; margin-top: 16px; grid-template-columns: repeat(2, minmax(0,1fr)); }
-        @media (min-width: 640px) { .bo-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; } }
-        @media (min-width: 1280px) { .bo-grid { grid-template-columns: repeat(4, minmax(0,1fr)); } }
-        .bo-cell { display: flex; flex-direction: column; min-width: 0; }
-        .bo-book {
-          position: relative; display: flex; flex-direction: column; flex: 1; width: 100%; padding: 0; text-align: left; overflow: hidden;
-          border-radius: 18px; border: 2px solid var(--border); background: var(--surface); transition: border-color .2s, box-shadow .2s, transform .15s;
-        }
-        .bo-book:hover:not(:disabled) { border-color: var(--accent-2); transform: translateY(-2px); }
-        .bo-book:active:not(:disabled) { transform: scale(.98); }
-        .bo-book[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 4px rgba(249,115,22,.18); background: var(--alt); }
-        .bo-book:disabled { opacity: .45; cursor: not-allowed; }
-        .bo-check {
-          position: absolute; z-index: 2; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-          border: 2px solid rgba(255,255,255,.9); background: rgba(0,0,0,.25); color: transparent; backdrop-filter: blur(4px);
-        }
-        .bo-book[aria-pressed="true"] .bo-check { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
-        .bo-free { position: absolute; z-index: 2; top: 8px; left: 8px; padding: 3px 9px; border-radius: 999px; background: #16A34A; color: #fff; font: 800 10px "Manrope", sans-serif; letter-spacing: .06em; }
-        .bo-offer-spots { color: var(--err) !important; font-weight: 800 !important; }
-        .bo-offer-spots svg { color: var(--err) !important; }
-        .bo-hint[data-tone="warn"] { color: var(--err); }
-        .bo-hint[data-tone="ok"] { color: var(--ok); }
-        .bo-cover {
-          display: grid; place-items: center; padding: 16px 10px; color: var(--subtle);
-          background: linear-gradient(180deg, var(--alt), var(--surface));
-        }
-        .bo-cover img { width: 78px; height: 106px; object-fit: cover; border-radius: 6px; box-shadow: 8px 12px 20px rgba(120,53,15,.28); }
-        @media (min-width: 640px) { .bo-cover img { width: 98px; height: 132px; } }
-        .bo-book-body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; flex: 1; }
-        .bo-book-title {
-          font-size: 13px; font-weight: 700; line-height: 1.35; color: var(--text);
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
-        .bo-book-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: auto; }
-        .bo-book-price b { font: 800 14px "Manrope", sans-serif; }
-        .bo-book-price s { font-size: 11px; color: var(--subtle); }
-        .bo-peek { margin-top: 6px; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
-        .bo-peek:hover { color: var(--accent); }
-        .bo-empty { padding: 34px 0; text-align: center; font-size: 14px; font-weight: 600; color: var(--muted); }
-
-        /* progress, pay, errors (used in the picker modal) */
-        .bo-progress { height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden; }
-        .bo-progress i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#FB923C,#EA580C); transition: width .3s; }
-        .bo-pay {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 15px;
-          font: 800 15px "Manrope", sans-serif; color: #fff; background: linear-gradient(135deg,#F97316,#EA580C);
-          box-shadow: 0 10px 24px rgba(234,88,12,.35); transition: transform .15s, opacity .2s;
-        }
-        .bo-root[data-theme="dark"] .bo-pay, .bo-modal[data-theme="dark"] .bo-pay { color: #1C1006; background: linear-gradient(135deg,#FDBA74,#F97316); }
-        .bo-pay:active:not(:disabled) { transform: scale(.98); }
-        .bo-pay:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-        .bo-err { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: var(--err-bg); color: var(--err); font-size: 12.5px; font-weight: 600; }
-        .bo-secure { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; margin-top: 12px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
-        .bo-secure span { display: inline-flex; align-items: center; gap: 5px; }
-        .bo-secure svg { color: var(--ok); }
-
-        /* picker modal */
-        .bo-overlay {
-          position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center;
-          background: rgba(35,26,18,.55); backdrop-filter: blur(3px);
-        }
-        @media (min-width: 720px) { .bo-overlay { align-items: center; padding: 24px; } }
-        .bo-modal {
-          --bg: #FFF8F0; --surface: #FFFFFF; --alt: #FFEFDC; --soft: #FFE4C7; --text: #231A12; --muted: #6B5846; --subtle: #A08C79;
-          --border: #F3DCC2; --accent: #EA580C; --accent-2: #F97316; --ok: #15803D; --err: #B91C1C; --err-bg: #FEE2E2;
-          display: flex; flex-direction: column; width: 100%; max-width: 980px; max-height: 94vh; overflow: hidden;
-          border-radius: 26px 26px 0 0; background: var(--bg); color: var(--text); font-family: "DM Sans", sans-serif; box-shadow: 0 30px 80px rgba(0,0,0,.4);
-        }
-        .bo-modal[data-theme="dark"] {
-          --bg: #1A1511; --surface: #241D17; --alt: #2C231B; --soft: #3A2A1D; --text: #FBF5EE; --muted: #C2B3A4; --subtle: #8E7F70;
-          --border: #3A2F26; --accent: #FB923C; --ok: #4ADE80; --err: #FCA5A5; --err-bg: rgba(127,29,29,.3); color-scheme: dark;
-        }
-        .bo-modal *, .bo-modal *::before, .bo-modal *::after { box-sizing: border-box; }
-        .bo-modal button { font: inherit; cursor: pointer; color: inherit; }
-        .bo-modal h2 { margin: 0; font: 800 20px "Manrope", sans-serif; letter-spacing: -.02em; }
-        .bo-modal ul { list-style: none; margin: 0; padding: 0; }
-        @media (min-width: 720px) { .bo-modal { border-radius: 26px; max-height: 90vh; } }
-        .bo-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, var(--alt), var(--bg)); }
-        .bo-modal-kicker { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
-        .bo-modal-sub { margin: 4px 0 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
-        .bo-modal-x { flex-shrink: 0; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface); }
-        .bo-modal-body { flex: 1; overflow-y: auto; padding: 16px 20px 8px; -webkit-overflow-scrolling: touch; }
-        .bo-modal .bo-grid { margin-top: 14px; padding-bottom: 8px; }
-        .bo-all-note { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--soft); color: var(--accent); font-size: 13px; font-weight: 700; }
-        .bo-modal-foot { padding: 12px 20px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
-        .bo-foot-row { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
-        .bo-foot-info { flex: 1; min-width: 0; }
-        .bo-foot-info .bo-hint { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--accent); }
-        .bo-foot-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 4px 0 0; }
-        .bo-foot-price b { font: 800 22px "Manrope", sans-serif; }
-        .bo-foot-price s { font-size: 12px; color: var(--subtle); }
-        .bo-foot-price span { font-size: 12px; font-weight: 600; color: var(--muted); }
-        .bo-modal .bo-pay { width: auto; margin: 0; height: 50px; padding: 0 26px; flex-shrink: 0; }
-        @media (max-width: 520px) { .bo-modal .bo-pay { padding: 0 18px; } .bo-modal-head h2 { font-size: 18px; } }
-        .bo-book[data-readonly] { cursor: default; }
-        .bo-book[data-readonly]:disabled { opacity: 1; }
-        .bo-book[data-readonly]:hover { transform: none; }
-
-        /* how + faq */
-        .bo-section { margin-top: 46px; }
-        .bo-section > h2 { font-size: clamp(22px, 3.5vw, 30px); font-weight: 800; }
-        .bo-how { display: grid; gap: 12px; margin-top: 16px; grid-template-columns: 1fr; }
-        @media (min-width: 720px) { .bo-how { grid-template-columns: repeat(3, 1fr); } }
-        .bo-how li { padding: 18px; border-radius: 18px; border: 1.5px solid var(--border); background: var(--surface); }
-        .bo-how li > span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--soft); color: var(--accent); }
-        .bo-how h3 { margin-top: 12px; font-size: 16px; font-weight: 800; }
-        .bo-how p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.65; color: var(--muted); }
-        .bo-faq { display: grid; gap: 10px; margin-top: 16px; max-width: 860px; }
-        .bo-faq-item { border-radius: 16px; border: 1.5px solid var(--border); background: var(--surface); overflow: hidden; }
-        .bo-faq-item[data-open="true"] { border-color: var(--accent-2); }
-        .bo-faq-item button {
-          display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 16px 18px; border: 0;
-          background: transparent; text-align: left; font: 700 14.5px "Manrope", sans-serif;
-        }
-        .bo-faq-item button svg { flex-shrink: 0; color: var(--accent); transition: transform .25s; }
-        .bo-faq-item[data-open="true"] button svg { transform: rotate(180deg); }
-        .bo-faq-item p { margin: 0; padding: 0 18px 16px; font-size: 13.5px; line-height: 1.75; color: var(--muted); }
-
-        .bo-state { display: grid; place-items: center; gap: 10px; padding: 70px 0; text-align: center; color: var(--muted); }
-        .bo-skel { height: 130px; border-radius: 18px; background: linear-gradient(90deg, var(--alt), var(--soft), var(--alt)); background-size: 200% 100%; animation: bo-sh 1.4s infinite; }
-        @keyframes bo-sh { to { background-position: -200% 0; } }
-        @media (prefers-reduced-motion: reduce) { .bo-root * { animation: none !important; transition: none !important; } }
-      `}</style>
-
-      <div className="bo-shell">
-        <nav className="bo-crumbs" aria-label="Breadcrumb">
-          <Link to="/">Home</Link> / <Link to="/books">Books</Link> / <span>Bundle offers</span>
+      <div className="bn-wrap">
+        <nav className="bn-crumbs" aria-label="Breadcrumb">
+          <Link to="/">Home</Link>
+          <ChevronRight size={14} aria-hidden />
+          <Link to="/books">Books</Link>
+          <ChevronRight size={14} aria-hidden />
+          <span aria-current="page">Bundle offers</span>
         </nav>
 
-        <header className="bo-hero">
-          <div className="bo-hero-copy">
-            <span className="bo-kicker">
-              <Sparkles size={13} /> Bundle offers
+        {/* ================= HERO ================= */}
+        <header className="bn-hero">
+          <div>
+            <span className="bn-pill">
+              <i aria-hidden />
+              {liveOffers.length ? `${liveOffers.length} offer${liveOffers.length === 1 ? "" : "s"} running now` : "Ebook bundle offers"}
             </span>
-            <h1>
-              Build your own ebook bundle and <em>save more</em>
+            <h1 className="bn-h1">
+              Build your own ebook bundle. <span className="bn-mark">Pay less</span> for every book.
             </h1>
-            <p>
-              Pick the books you need for college placement, system design, cloud or interviews. Your
-              offer price is applied automatically. Pay once and download everything instantly.
+            <p className="bn-hero-lead">
+              Pick the books you need for interviews, placements, system design, cloud or GenAI. The bundle price is applied
+              automatically, you pay once, and every PDF is yours instantly.
             </p>
-
-            <div className="bo-hero-cta">
-              <a href="#bo-offers-h" className="bo-hero-btn">
-                See running offers <ArrowRight size={16} />
+            <div className="bn-hero-cta">
+              <a href="#offers" className="bn-btn bn-btn-glow bn-btn-lg bn-btn-block-xs">
+                See running offers <ArrowRight size={18} aria-hidden />
               </a>
-              <Link to="/books" className="bo-hero-link">Browse single books</Link>
+              <a href="#how" className="bn-btn bn-btn-line bn-btn-lg bn-btn-block-xs">
+                How it works
+              </a>
             </div>
-
-            <div className="bo-trust">
-              <span><Zap size={15} /> Instant access</span>
-              <span><ShieldCheck size={15} /> Secure payment</span>
-              <span><BadgeCheck size={15} /> One order, many books</span>
+            <div className="bn-trust">
+              <span><Zap size={15} aria-hidden /> Instant download</span>
+              <span><Mail size={15} aria-hidden /> PDFs on email</span>
+              <span><ShieldCheck size={15} aria-hidden /> Secure UPI & card payment</span>
             </div>
           </div>
 
-          {heroCovers.length > 0 && (
-            <div className="bo-hero-art" aria-hidden="true">
-              {heroCovers.map((b, i) => (
-                <img key={b._id} src={b.coverPageUrl} alt="" className={`bo-fan bo-fan-${i}`} loading="eager" />
-              ))}
-              {bestSaving > 0 && (
-                <span className="bo-hero-badge">
-                  Save up to <b>{bestSaving}%</b>
+          <div className="bn-art" aria-hidden>
+            <div className="bn-fan">
+              {heroCovers.length >= 4
+                ? heroCovers.map((b) => <img key={b._id} src={b.coverPageUrl} alt="" loading="eager" />)
+                : ["System Design", "Java", "Cloud", "GenAI"].map((t) => (
+                    <span key={t} className="bn-spine">{t}</span>
+                  ))}
+            </div>
+            <div className="bn-receipt">
+              <div className="bn-receipt-h">
+                <span>{receipt.live ? "Live offer" : "Example"}</span>
+                <span>#BUNDLE</span>
+              </div>
+              <div className="bn-receipt-row">
+                <span>{receipt.count} ebooks</span>
+                <span>×{receipt.count}</span>
+              </div>
+              <div className="bn-receipt-row strike">
+                <span>Bought one by one</span>
+                <span>{money(receipt.original)}</span>
+              </div>
+              <div className="bn-receipt-row">
+                <span>Bundle saving</span>
+                <span>−{money(receipt.original - receipt.final)}</span>
+              </div>
+              <div className="bn-receipt-row total">
+                <span>You pay</span>
+                <span>{money(receipt.final)}</span>
+              </div>
+            </div>
+            <span className="bn-stamp">
+              {bestSaving > 0 ? (
+                <span>
+                  Save up to
+                  <b>{bestSaving}%</b>
+                </span>
+              ) : (
+                <span>
+                  Bundle
+                  <b>& save</b>
                 </span>
               )}
-            </div>
-          )}
+            </span>
+          </div>
         </header>
 
         {!loading && offers.length > 0 && (
-          <dl className="bo-stats">
-            <div><dt>Running offers</dt><dd>{offers.filter((o) => o.available).length}</dd></div>
-            <div><dt>Books you can bundle</dt><dd>{totalBooks}</dd></div>
-            <div><dt>Biggest saving</dt><dd>{bestSaving ? `${bestSaving}%` : "-"}</dd></div>
+          <dl className="bn-stats" aria-label="Live offer numbers">
+            <div>
+              <dt>Running offers</dt>
+              <dd>{liveOffers.length}</dd>
+            </div>
+            <div>
+              <dt>Books you can bundle</dt>
+              <dd>{allBooks.length}</dd>
+            </div>
+            <div>
+              <dt>Biggest saving</dt>
+              <dd>{bestSaving ? `${bestSaving}%` : "-"}</dd>
+            </div>
           </dl>
         )}
-
-        {loading && (
-          <div className="bo-layout" aria-busy="true">
-            <div style={{ display: "grid", gap: 12 }}>
-              <div className="bo-skel" />
-              <div className="bo-skel" />
-            </div>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="bo-state" role="alert">
-            <p>{error}</p>
-            <button className="bo-btn-soft" onClick={() => load()}>Try again</button>
-          </div>
-        )}
-
-        {!loading && !error && offers.length === 0 && (
-          <div className="bo-state">
-            <p><b>No bundle offers are running right now.</b></p>
-            <Link className="bo-btn-soft" style={{ display: "inline-grid", placeItems: "center" }} to="/books">
-              Browse all books
-            </Link>
-          </div>
-        )}
-
-        {!loading && offers.length > 0 && (
-          <section className="bo-step" aria-labelledby="bo-offers-h" style={{ marginTop: 30 }}>
-            <div className="bo-step-head">
-              <div>
-                <h2 id="bo-offers-h">Running offers</h2>
-                <p>Choose an offer, then pick your books. The price is checked again before you pay.</p>
-              </div>
-            </div>
-
-            <ul className="bo-offers">
-              {offers.map((o) => {
-                const left = daysLeft(o.endsAt);
-                const short = Math.max(0, o.minBooks - o.eligibleCount);
-                const all = o.selectionMode === "ALL";
-                const d = describeOffer(o, o.eligibleCount);
-                const saving = estimateSaving(o, o.books);
-                return (
-                  <li key={o._id}>
-                    <article className="bo-offer" data-off={!o.available}>
-                      <div className="bo-offer-hero">
-                        <div className="bo-offer-top">
-                          <span className="bo-offer-badge">
-                            {offerIcon(o)}
-                            {o.badge || (all ? "All books" : "Bundle deal")}
-                          </span>
-                          {left && <span className="bo-offer-left"><Clock size={12} /> {left}</span>}
-                        </div>
-
-                        <p className="bo-offer-big">{d.big}</p>
-                        <p className="bo-offer-bigsub">{d.sub}</p>
-
-                        {o.books.length > 0 && (
-                          <div className="bo-stack" aria-hidden="true">
-                            {o.books.slice(0, 4).map((b, i) =>
-                              b.coverPageUrl ? (
-                                <img key={b._id} src={b.coverPageUrl} alt="" loading="lazy" style={{ zIndex: 5 - i }} />
-                              ) : null
-                            )}
-                            {o.books.length > 4 && <span>+{o.books.length - 4}</span>}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="bo-offer-main">
-                        <h3>{o.name}</h3>
-                        {o.description && <p className="bo-offer-desc">{o.description}</p>}
-
-                        <ul className="bo-offer-facts">
-                          <li><Check size={14} /> {d.rule}</li>
-                          {d.tiers && d.tiers.map((t) => (
-                            <li key={t.minBooks}><Check size={14} /> {t.minBooks}+ books: {t.percent}% off</li>
-                          ))}
-                          <li><Check size={14} /> {o.eligibleCount} book{o.eligibleCount === 1 ? "" : "s"} available</li>
-                          {saving > 0 && !d.tiers && <li><Check size={14} /> Save about {saving}%</li>}
-                          {o.spotsLeft !== null && o.spotsLeft !== undefined && (
-                            <li className="bo-offer-spots"><Clock size={14} /> Only {o.spotsLeft} spot{o.spotsLeft === 1 ? "" : "s"} left</li>
-                          )}
-                        </ul>
-
-                        {!o.available ? (
-                          <p className="bo-offer-wait">
-                            Coming soon: needs {short} more book{short === 1 ? "" : "s"} to be added.
-                          </p>
-                        ) : (
-                          <button type="button" className="bo-offer-cta" onClick={() => startOffer(o)}>
-                            {all ? "View books & buy" : "Choose books"} <ArrowRight size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* SEO content */}
-        <section className="bo-section" aria-labelledby="bo-how">
-          <h2 id="bo-how">How bundle offers work</h2>
-          <ol className="bo-how" style={{ listStyle: "none", padding: 0 }}>
-            <li><span><Tag size={20} /></span><h3>1. Pick an offer</h3><p>Choose a deal such as a flat price for a set number of books, or a percentage off when you buy more.</p></li>
-            <li><span><BookOpen size={20} /></span><h3>2. Choose your books</h3><p>Select the ebooks you want from the offer. The price updates live and you see exactly what you save.</p></li>
-            <li><span><Mail size={20} /></span><h3>3. Pay once, read now</h3><p>Pay securely, download every book instantly and receive all the PDFs on your email.</p></li>
-          </ol>
-        </section>
-
-        <section className="bo-section" aria-labelledby="bo-faq">
-          <h2 id="bo-faq">Frequently asked questions</h2>
-          <div className="bo-faq">
-            {FAQ.map((f, i) => (
-              <div className="bo-faq-item" key={f.q} data-open={openFaq === i}>
-                <button type="button" aria-expanded={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? -1 : i)}>
-                  {f.q}
-                  <ChevronDown size={18} />
-                </button>
-                {openFaq === i && <p>{f.a}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
-      {open && offer && (
-        <div className="bo-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && !product && closePicker()}>
-          <div className="bo-modal" role="dialog" aria-modal="true" aria-labelledby="bo-modal-h" data-theme={theme}>
-            <div className="bo-modal-head">
-              <div style={{ minWidth: 0 }}>
-                <p className="bo-modal-kicker">{offer.badge || describeOffer(offer, offer.eligibleCount).big}</p>
-                <h2 id="bo-modal-h">{offer.name}</h2>
-                <p className="bo-modal-sub">{describeOffer(offer, offer.eligibleCount).line} · {describeOffer(offer, offer.eligibleCount).rule}</p>
+      {/* ================= OFFERS ================= */}
+      <section id="offers" className="bn-sec" aria-labelledby="bn-offers-h">
+        <div className="bn-wrap">
+          <div className="bn-sec-head row">
+            <div>
+              <span className="bn-eyebrow">Step 1 · Pick a deal</span>
+              <h2 id="bn-offers-h" className="bn-h2">
+                Running <span className="bn-mark">bundle offers</span>
+              </h2>
+              <p className="bn-lead">Choose an offer, then pick your books. The final price is checked again by our server before you pay.</p>
+            </div>
+            <Link to="/books" className="bn-btn bn-btn-ghost">
+              Browse single books <ArrowRight size={16} aria-hidden />
+            </Link>
+          </div>
+
+          {loading && (
+            <div className="bn-offers" aria-busy="true" aria-label="Loading offers">
+              <div className="bn-skel" />
+              <div className="bn-skel" />
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="bn-state" role="alert">
+              <TriangleAlert size={30} aria-hidden />
+              <h3>We couldn&apos;t load the offers</h3>
+              <p>{error}</p>
+              <div className="bn-row">
+                <button type="button" className="bn-btn bn-btn-primary" onClick={() => load()}>
+                  Try again
+                </button>
+                <Link to="/books" className="bn-btn bn-btn-ghost">
+                  Browse all books
+                </Link>
               </div>
-              <button type="button" className="bo-modal-x" onClick={closePicker} aria-label="Close">
-                <X size={20} />
+            </div>
+          )}
+
+          {!loading && !error && offers.length === 0 && (
+            <div className="bn-state">
+              <ShoppingBag size={30} aria-hidden />
+              <h3>No bundle offers are running right now</h3>
+              <p>New offers open regularly. Meanwhile, every ebook is available on its own, or get the whole library with All Access.</p>
+              <div className="bn-row">
+                <Link to="/books" className="bn-btn bn-btn-primary">
+                  Browse all books
+                </Link>
+                <Link to="/book/all-books" className="bn-btn bn-btn-ghost">
+                  See All Access
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {!loading && offers.length > 0 && (
+            <ul className="bn-offers">
+              {offers.map((o) => (
+                <OfferTicket key={o._id} o={o} onStart={startOffer} />
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* ================= QUICK ANSWER (AEO) ================= */}
+      <section className="bn-wrap" aria-labelledby="bn-answer-h">
+        <div className="bn-answer">
+          <span className="bn-eyebrow">In short</span>
+          <h2 id="bn-answer-h">What are Target Trek bundle offers?</h2>
+          <p id="bn-answer-text">{QUICK_ANSWER}</p>
+          <div className="bn-answer-points">
+            <div><b>Who it&apos;s for</b>Students, freshers and engineers preparing for tech interviews.</div>
+            <div><b>What you get</b>Several full ebooks (PDF) in one order.</div>
+            <div><b>Delivery</b>Instant on screen, plus every PDF by email.</div>
+            <div><b>Payment</b>UPI, cards, net banking and wallets, in INR.</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= HOW IT WORKS ================= */}
+      <section id="how" className="bn-sec" aria-labelledby="bn-how-h">
+        <div className="bn-wrap">
+          <div className="bn-sec-head">
+            <span className="bn-eyebrow">How it works</span>
+            <h2 id="bn-how-h" className="bn-h2">Four steps, about three minutes</h2>
+            <p className="bn-lead">No account juggling, no separate payments. One order holds every book you pick.</p>
+          </div>
+          <ol className="bn-steps">
+            {STEPS.map(({ Icon, title, text }) => (
+              <li key={title} className="bn-step">
+                <span className="bn-ico"><Icon size={21} aria-hidden /></span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ================= OFFER TYPES ================= */}
+      <section className="bn-sec bn-sec-tint" aria-labelledby="bn-types-h">
+        <div className="bn-wrap">
+          <div className="bn-sec-head">
+            <span className="bn-eyebrow">Types of offers</span>
+            <h2 id="bn-types-h" className="bn-h2">How each kind of bundle saves you money</h2>
+            <p className="bn-lead">Offers change from time to time. These are the kinds you&apos;ll see, with a worked example of the maths.</p>
+          </div>
+          <div className="bn-types">
+            {OFFER_TYPES.map(({ Icon, title, text, math }) => (
+              <article key={title} className="bn-type">
+                <div className="bn-type-top">
+                  <span className="bn-ico"><Icon size={20} aria-hidden /></span>
+                  <h3>{title}</h3>
+                </div>
+                <p>{text}</p>
+                <p className="bn-math">{math}</p>
+              </article>
+            ))}
+          </div>
+          <p className="bn-fine">Prices in the examples are illustrative. The live price of your bundle is always shown before you pay.</p>
+        </div>
+      </section>
+
+      {/* ================= COMPARE ================= */}
+      <section className="bn-sec" aria-labelledby="bn-compare-h">
+        <div className="bn-wrap">
+          <div className="bn-sec-head">
+            <span className="bn-eyebrow">Compare</span>
+            <h2 id="bn-compare-h" className="bn-h2">Single book, bundle or All Access?</h2>
+            <p className="bn-lead">Pick the option that matches how many topics you need right now.</p>
+          </div>
+          <div className="bn-compare">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col"><span className="bn-sr">Feature</span></th>
+                  <th scope="col">Single ebook</th>
+                  <th scope="col" className="hl">Bundle offer</th>
+                  <th scope="col">All Access</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Best for", "One topic, one interview", "2 or more topics you choose", "Every topic, the whole library"],
+                  ["You choose the books", "Yes, one", "Yes, from the offer", "Everything is included"],
+                  ["Price", "The book's price", "Lower than buying separately", "One price for all books"],
+                  ["Payments", "One per book", "One for the whole bundle", "One"],
+                  ["Delivery", "Instant + email", "Instant + every PDF on email", "Instant access"],
+                ].map(([k, a, b, c]) => (
+                  <tr key={k}>
+                    <th scope="row">{k}</th>
+                    <td data-label="Single">{a}</td>
+                    <td data-label="Bundle" className="hl">{b}</td>
+                    <td data-label="All Access">{c}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="bn-fine">
+            Looking for everything? See <Link className="bn-link" to="/book/all-books">All Access</Link>. Need just one topic? Browse{" "}
+            <Link className="bn-link" to="/books">all ebooks</Link>.
+          </p>
+        </div>
+      </section>
+
+      {/* ================= BUNDLE IDEAS ================= */}
+      <section className="bn-sec bn-sec-tint" aria-labelledby="bn-ideas-h">
+        <div className="bn-wrap">
+          <div className="bn-sec-head">
+            <span className="bn-eyebrow">Bundle ideas</span>
+            <h2 id="bn-ideas-h" className="bn-h2">Not sure what to pick? Start with your goal</h2>
+            <p className="bn-lead">
+              Popular combinations by role. Open a book to read its contents, then add it to any running offer that includes it.
+            </p>
+          </div>
+          <div className="bn-ideas">
+            {IDEAS.map(({ Icon, title, who, text, books }) => (
+              <article key={title} className="bn-idea">
+                <div className="bn-idea-top">
+                  <span className="bn-ico"><Icon size={20} aria-hidden /></span>
+                  <div>
+                    <h3>{title}</h3>
+                    <p className="bn-idea-for">{who}</p>
+                  </div>
+                </div>
+                <p>{text}</p>
+                <ul>
+                  {books.map(([name, to]) => (
+                    <li key={to}>
+                      <Link to={to}>
+                        <BookOpen size={15} aria-hidden />
+                        {name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= DELIVERY & POLICY ================= */}
+      <section className="bn-sec" aria-labelledby="bn-deliver-h">
+        <div className="bn-wrap">
+          <div className="bn-sec-head">
+            <span className="bn-eyebrow">After you pay</span>
+            <h2 id="bn-deliver-h" className="bn-h2">What you get, and when</h2>
+          </div>
+          <div className="bn-deliver">
+            <ul className="bn-checks">
+              <li><Zap size={20} aria-hidden /><div><b>Instant access</b>The success page shows a download link for every book in your bundle.</div></li>
+              <li><Mail size={20} aria-hidden /><div><b>Every PDF on email</b>All books are sent to the email address you enter at checkout.</div></li>
+              <li><Cpu size={20} aria-hidden /><div><b>Read anywhere</b>PDFs work on phone, tablet, laptop and e-readers that open PDF files.</div></li>
+              <li><Sparkles size={20} aria-hidden /><div><b>Price checked twice</b>The bundle price is calculated live and confirmed by our server before payment.</div></li>
+            </ul>
+            <div className="bn-policy">
+              <h3><TriangleAlert size={20} aria-hidden /> Good to know before you pay</h3>
+              <p>
+                <b>Bundle purchases are final.</b> Like every Target Trek ebook, bundles can&apos;t be refunded once paid. We only
+                refund a double payment or a genuine payment or delivery issue.
+              </p>
+              <p>Coupon codes can&apos;t be combined with bundle offers, because the bundle already includes the discount.</p>
+              <p>
+                Need help? Email <a className="bn-link" href="mailto:supporttargettrek@gmail.com">supporttargettrek@gmail.com</a>. Read the{" "}
+                <Link className="bn-link" to="/refund-policy">Refund Policy</Link>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= FAQ ================= */}
+      <section id="faq" className="bn-sec bn-sec-tint" aria-labelledby="bn-faq-h">
+        <div className="bn-wrap bn-faq-grid">
+          <div className="bn-sec-head" style={{ marginBottom: 0 }}>
+            <span className="bn-eyebrow">FAQ</span>
+            <h2 id="bn-faq-h" className="bn-h2">Questions about bundle offers</h2>
+            <p className="bn-lead">
+              Can&apos;t find your answer? Email <a className="bn-link" href="mailto:supporttargettrek@gmail.com">supporttargettrek@gmail.com</a>.
+            </p>
+          </div>
+          <div className="bn-faq">
+            {FAQ.map((f, i) => (
+              <details key={f.q} open={i === 0}>
+                <summary>
+                  {f.q}
+                  <Plus size={18} aria-hidden />
+                </summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= FINAL CTA ================= */}
+      <section className="bn-sec" aria-labelledby="bn-final-h">
+        <div className="bn-wrap">
+          <div className="bn-final">
+            <h2 id="bn-final-h">
+              More books, <span className="bn-mark">one payment</span>.
+            </h2>
+            <p>Pick a running offer, choose your books and start reading in minutes.</p>
+            <div className="bn-row">
+              <a href="#offers" className="bn-btn bn-btn-glow bn-btn-lg">
+                See running offers <ArrowRight size={18} aria-hidden />
+              </a>
+              <Link to="/books" className="bn-btn bn-btn-line bn-btn-lg">
+                Browse all books
+              </Link>
+            </div>
+          </div>
+          <p className="bn-updated">Offers and prices on this page update live.</p>
+        </div>
+      </section>
+
+      {/* ================= PICKER ================= */}
+      {open && offer && (
+        <div className="bn-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && !product && closePicker()}>
+          <div className="bn-modal" role="dialog" aria-modal="true" aria-labelledby="bn-modal-h">
+            <div className="bn-grab" aria-hidden />
+            <div className="bn-modal-head">
+              <div style={{ minWidth: 0 }}>
+                <p className="bn-modal-kicker">{offer.badge || d.big}</p>
+                <h2 id="bn-modal-h">{offer.name}</h2>
+                <p className="bn-modal-sub">
+                  {d.line}
+                  {d.rule ? ` · ${d.rule}` : ""}
+                </p>
+              </div>
+              <button type="button" className="bn-x" onClick={closePicker} aria-label="Close">
+                <X size={20} aria-hidden />
               </button>
             </div>
 
-            <div className="bo-modal-body">
-              {offer.selectionMode !== "ALL" && (
+            <div className="bn-modal-body">
+              {offer.selectionMode !== "ALL" ? (
                 <>
-                  <div className="bo-toolbar">
-                    <div className="bo-search">
-                      <Search size={17} />
+                  <div className="bn-toolbar">
+                    <label className="bn-search">
+                      <Search size={17} aria-hidden />
                       <input
                         type="search"
                         value={query}
@@ -992,47 +1211,40 @@ export default function BundleOffers() {
                       />
                       {query && (
                         <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
-                          <X size={16} />
+                          <X size={16} aria-hidden />
                         </button>
                       )}
-                    </div>
-                    <button type="button" className="bo-btn-soft" onClick={autoPick}>
-                      Pick {Math.min(offer.minBooks, offer.books.length)} for me
+                    </label>
+                    <button type="button" className="bn-btn bn-btn-ghost bn-btn-sm" onClick={autoPick}>
+                      <Sparkles size={15} aria-hidden /> Pick {Math.min(offer.minBooks, offer.books.length)} for me
                     </button>
                     {picked.length > 0 && (
-                      <button type="button" className="bo-btn-soft bo-btn-ghost" onClick={() => setPicked([])}>
+                      <button type="button" className="bn-btn bn-btn-ghost bn-btn-sm" onClick={() => setPicked([])}>
                         Clear
                       </button>
                     )}
                   </div>
-
                   {tagOptions.length > 1 && (
-                    <div className="bo-chips" role="group" aria-label="Filter by tag">
-                      <button type="button" className="bo-chip" aria-pressed={!tag} onClick={() => setTag("")}>All</button>
+                    <div className="bn-chips" role="group" aria-label="Filter by topic">
+                      <button type="button" className="bn-chip" aria-pressed={!tag} onClick={() => setTag("")}>
+                        All
+                      </button>
                       {tagOptions.map((t) => (
-                        <button
-                          key={t.key}
-                          type="button"
-                          className="bo-chip"
-                          aria-pressed={tag === t.key}
-                          onClick={() => setTag(tag === t.key ? "" : t.key)}
-                        >
+                        <button key={t.key} type="button" className="bn-chip" aria-pressed={tag === t.key} onClick={() => setTag(tag === t.key ? "" : t.key)}>
                           #{t.label}
                         </button>
                       ))}
                     </div>
                   )}
                 </>
-              )}
-
-              {offer.selectionMode === "ALL" && (
-                <p className="bo-all-note">
-                  <Check size={15} /> All {offer.books.length} books below are included in this offer.
+              ) : (
+                <p className="bn-all">
+                  <Check size={16} aria-hidden /> All {offer.books.length} books below are included in this offer.
                 </p>
               )}
 
               {visibleBooks.length > 0 ? (
-                <ul className="bo-grid">
+                <ul className="bn-grid">
                   {visibleBooks.map((b) => (
                     <BookTile
                       key={b._id}
@@ -1046,19 +1258,20 @@ export default function BundleOffers() {
                   ))}
                 </ul>
               ) : (
-                <p className="bo-empty">No books match your search.</p>
+                <p className="bn-empty">No books match your search.</p>
               )}
             </div>
 
-            <div className="bo-modal-foot">
-              <div className="bo-progress" aria-hidden="true"><i style={{ width: `${progress}%` }} /></div>
-
-              <div className="bo-foot-row">
-                <div className="bo-foot-info">
-                  <p className="bo-hint" data-tone={hint?.tone} aria-live="polite">
+            <div className="bn-modal-foot">
+              <div className="bn-progress" aria-hidden>
+                <i style={{ width: `${progress}%` }} />
+              </div>
+              <div className="bn-foot-row">
+                <div className="bn-foot-info">
+                  <p className="bn-hint" data-tone={hint?.tone} aria-live="polite">
                     {hint?.text}
                   </p>
-                  <p className="bo-foot-price">
+                  <p className="bn-total">
                     <b>{money(price.final)}</b>
                     {price.ready && <s>{money(price.original)}</s>}
                     <span>
@@ -1068,18 +1281,25 @@ export default function BundleOffers() {
                     </span>
                   </p>
                 </div>
-
-                <button type="button" className="bo-pay" onClick={pay} disabled={!price.ready || busy}>
-                  {busy ? <Loader2 size={18} className="animate-spin" /> : <>Pay {price.ready ? money(price.final) : ""} <ArrowRight size={17} /></>}
+                <button type="button" className="bn-btn bn-btn-primary bn-btn-lg bn-pay" onClick={pay} disabled={!price.ready || busy}>
+                  {busy ? (
+                    <Loader2 size={18} className="bn-spin" aria-label="Starting checkout" />
+                  ) : (
+                    <>
+                      Pay {price.ready ? money(price.final) : ""} <ArrowRight size={17} aria-hidden />
+                    </>
+                  )}
                 </button>
               </div>
-
-              {payError && <p className="bo-err" role="alert">{payError}</p>}
-
-              <div className="bo-secure">
-                <span><ShieldCheck size={14} /> Secure checkout</span>
-                <span><Zap size={14} /> Instant access</span>
-                <span><Check size={14} /> Price verified by our server</span>
+              {payError && (
+                <p className="bn-err" role="alert">
+                  {payError}
+                </p>
+              )}
+              <div className="bn-secure">
+                <span><ShieldCheck size={14} aria-hidden /> Secure checkout</span>
+                <span><Zap size={14} aria-hidden /> Instant access</span>
+                <span><Check size={14} aria-hidden /> Price verified by our server</span>
               </div>
             </div>
           </div>

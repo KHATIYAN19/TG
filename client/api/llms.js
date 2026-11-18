@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     "",
     "## Ebooks",
     `- [All ebooks](${SITE_URL}/books)`,
-    `- [Bundle offers: buy multiple ebooks and save](${SITE_URL}/books/bundle-offers)`,
+    `- [Bundle offers: buy multiple ebooks and save](${SITE_URL}/books/bundle-offers): Build your own bundle of Target Trek ebooks (system design, Java, Spring Boot, SQL, AWS, GCP, GenAI, OS, networks) in one order at a discount. Offer types include a fixed bundle price, percentage or flat amount off, a per-book price, buy X get Y free and tiered discounts. Pay once in INR (UPI, cards, net banking, wallets); every PDF is available instantly and emailed. Coupons can't be combined with bundles; purchases are final except double payments or genuine payment issues.`,
     `- [System Design HLD – 19 case studies](${SITE_URL}/book/system-design/hld)`,
     `- [Java LLD – 23 patterns, 16 case studies](${SITE_URL}/book/system-design/lld)`,
     `- [SQL & Database Interview Handbook – 26 chapters](${SITE_URL}/book/database/sql)`,
