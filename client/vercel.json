@@ -150,6 +150,10 @@
       "destination": "/prerendered/resume-review.html"
     },
     {
+      "source": "/referral",
+      "destination": "/prerendered/referral.html"
+    },
+    {
       "source": "/prep-buddy",
       "destination": "/prerendered/prep-buddy.html"
     },

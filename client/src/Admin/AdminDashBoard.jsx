@@ -202,6 +202,18 @@ const PRIORITY_ROUTES = [
     priority: 6,
   },
   {
+    path: "/admin/referrals",
+    name: "Referrals",
+    icon: Handshake,
+    description:
+      "Chats, members, job board posts, payments, credits, Unlimited and Priority subscriptions, plans and settings for the referral program, all in one console.",
+    category: "Resume Lab",
+    keywords:
+      "referral refer chat hiring job board members plans credits fee payments subscription priority unlimited refund delete",
+    featured: true,
+    priority: 2,
+  },
+  {
     path: "/admin/resume-reviews",
     name: "Resume Lab Reviews",
     icon: Mail,

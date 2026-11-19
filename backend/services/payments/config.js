@@ -22,6 +22,19 @@
 */
 
 export const GATEWAY_IDS = ["cashfree", "razorpay", "payu"];
+const productKey = (product) => String(product || "").trim().toUpperCase();
+
+/*
+  RECURRING BILLING GATEWAY  (subscriptions: "charge now, then every month")
+       <PRODUCT>_SUBSCRIPTION_PAYMENT_GATEWAY   e.g. REFERRAL_SUBSCRIPTION_PAYMENT_GATEWAY=cashfree   (per-product override)
+       SUBSCRIPTION_PAYMENT_GATEWAY             razorpay | cashfree    (global; blank = follow the normal gateway)
+  Only used when a NEW subscription starts. Each subscription remembers the gateway it was created on and is charged,
+  checked and cancelled there, so changing this variable never touches subscriptions that already exist.
+*/
+export const subscriptionGatewayId = (product) => {
+  const p = productKey(product);
+  return String(first(`${p}_SUBSCRIPTION_PAYMENT_GATEWAY`, "SUBSCRIPTION_PAYMENT_GATEWAY")).toLowerCase();
+};
 
 const env = (name) => String(process.env[name] ?? "").trim();
 const first = (...names) => names.map(env).find(Boolean) || "";
@@ -41,7 +54,6 @@ const gatewayMode = (gateway) => {
   return "test";
 };
 
-const productKey = (product) => String(product || "").trim().toUpperCase();
 
 export const resolveGatewayId = (product, override) => {
   const p = productKey(product);
@@ -66,6 +78,7 @@ export const credentialsFor = (gateway, mode = gatewayMode(gateway)) => {
       apiVersion: env("CASHFREE_API_VERSION") || "2025-01-01",
       baseUrl: mode === "live" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg",
       sdkMode: mode === "live" ? "production" : "sandbox",
+      subscriptionApiVersion: env("CASHFREE_SUBSCRIPTION_API_VERSION") || env("CASHFREE_API_VERSION") || "2025-01-01",
     };
   }
 

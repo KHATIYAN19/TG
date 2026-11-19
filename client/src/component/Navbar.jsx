@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight, BarChart3, BookOpen, CalendarCheck2, Check, ChevronDown, Code2, Contact, DollarSign, Edit3,
-  FileText, GraduationCap, Heart, LayoutDashboard, LogOut, Mail, Menu, Moon, Sparkles, Sun, UserRound,
+  FileText, GraduationCap, Handshake, Heart, LayoutDashboard, LogOut, Mail, Menu, Moon, Sparkles, Sun, UserRound,
   Users, X,
 } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -33,6 +33,7 @@ const ROUTES = {
   interviews: "/interviews",
   mockInterviews: "/mock-interviews",
   resumeLab: "/resume-review", // the page keeps its URL; only the name changed
+  referrals: "/referral",
   memories: "/memories",
   resources: "/resources",
   blogs: "/blogs",
@@ -138,6 +139,16 @@ const ResumeLabButton = memo(function ResumeLabButton({ active, compact = false 
       <span className="tt-lab-btn-t">
         Resume Lab
       </span>
+    </Link>
+  );
+});
+
+/* The Referrals button: sits next to Resume Lab (a lighter, outlined twin) */
+const ReferralsButton = memo(function ReferralsButton({ active, compact = false }) {
+  return (
+    <Link to={ROUTES.referrals} className={`tt-ref-btn${compact ? " tt-ref-btn--compact" : ""}`} data-active={active} aria-label="Referrals">
+      <Handshake size={16} aria-hidden="true" />
+      <span className="tt-ref-btn-t">Referrals</span>
     </Link>
   );
 });
@@ -295,6 +306,7 @@ const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin
 
       <div className="tt-right">
         {isLearn && <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />}
+        <ReferralsButton active={active(ROUTES.referrals)} />
         <ResumeLabButton active={active(ROUTES.resumeLab)} />
         {isAuthenticated && <ProfileMenu user={user} isAdmin={isAdmin} onNavigate={onNavigate} onLogout={onLogout} />}
       </div>
@@ -312,6 +324,7 @@ const CompactBar = memo(function CompactBar({ isLearn, isDark, pathname, menuOpe
       </button>
       <Brand isLearn={isLearn} />
       <div className="tt-mob-right">
+        <ReferralsButton compact active={routeMatches(pathname, ROUTES.referrals)} />
         <ResumeLabButton compact active={routeMatches(pathname, ROUTES.resumeLab)} />
         {isLearn && <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />}
       </div>
@@ -363,6 +376,13 @@ const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDar
             <span className="tt-lab-card-title">Get more <mark>interview calls</mark></span>
             <span className="tt-lab-card-sub">AI resume review, ATS check and a rewrite, in minutes.</span>
             <span className="tt-lab-card-go">Open Resume Lab <ArrowRight size={16} aria-hidden="true" /></span>
+          </NavLink>
+
+          {/* Referrals card */}
+          <NavLink to={ROUTES.referrals} onClick={onClose} className="tt-ref-card" data-active={active(ROUTES.referrals)} tabIndex={open ? 0 : -1}>
+            <span className="tt-ref-card-ic" aria-hidden="true">🤝</span>
+            <span className="tt-grow"><span className="tt-ref-card-title">Referrals</span><span className="tt-ref-card-sub">Get referred by people who work there</span></span>
+            <ArrowRight size={18} aria-hidden="true" />
           </NavLink>
 
           {isLearn ? (

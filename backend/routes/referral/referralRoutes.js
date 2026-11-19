@@ -1,0 +1,110 @@
+import express from "express";
+
+import { auth, isAdmin } from "../../Middleware/auth.js";
+import { budget, byIp } from "../../Middleware/budget.js";
+import * as PB from "../../Middleware/publicBudgets.js";
+import { envInt, HOUR, MINUTE } from "../../utils/limits.js";
+import * as U from "../../controllers/referral/userController.js";
+import * as A from "../../controllers/referral/adminController.js";
+
+const viewLimit = budget({ name: "referral-view", limit: () => envInt("REFERRAL_VIEW_LIMIT", 120), windowSec: 10 * MINUTE, key: byIp, message: "Too many requests." });
+const byUser = (req) => req.user?.id;
+const askLimit = budget({ name: "referral-ask", limit: () => envInt("REFERRAL_ASK_LIMIT", 20), windowSec: HOUR, key: byUser, message: "You've sent a lot of requests this hour. Please wait a little." });
+const writeLimit = budget({ name: "referral-write", limit: () => envInt("REFERRAL_WRITE_LIMIT", 60), windowSec: HOUR, key: byUser, message: "Too many changes. Please wait a little." });
+const msgLimit = budget({ name: "referral-msg", limit: () => envInt("REFERRAL_MSG_LIMIT", 300), windowSec: HOUR, key: byUser, message: "You're sending messages too fast." });
+
+/* PUBLIC  /api/referral/public */
+export const publicRouter = express.Router();
+publicRouter.get("/", viewLimit, U.publicInfo);
+
+/* PAYMENT RETURN  /api/referral/payments/callback/:gateway */
+export const paymentCallbackRouter = express.Router();
+paymentCallbackRouter.all("/:gateway", PB.payStatusTenMin, U.gatewayCallback);
+
+/* SIGNED-IN MEMBER  /api/referral/* */
+export const userRouter = express.Router();
+userRouter.use(auth);
+userRouter.get("/summary", U.summary);
+userRouter.post("/welcome/close", U.closeWelcome);
+userRouter.get("/profile", U.getProfile);
+userRouter.put("/profile", writeLimit, U.saveProfile);
+userRouter.get("/companies", U.companies);
+userRouter.get("/directory", U.directory);
+userRouter.get("/directory/:id", U.directoryOne);
+userRouter.get("/posts", U.posts);
+userRouter.get("/posts/mine", U.myPosts);
+userRouter.get("/posts/:id", U.onePost);
+userRouter.post("/posts", writeLimit, U.createPost);
+userRouter.put("/posts/:id", writeLimit, U.updatePost);
+userRouter.delete("/posts/:id", writeLimit, U.deletePost);
+userRouter.post("/requests", askLimit, U.sendRequest);
+userRouter.get("/requests", U.listRequests);
+userRouter.get("/requests/:id", U.getRequest);
+userRouter.post("/requests/:id/accept", writeLimit, U.accept);
+userRouter.post("/requests/:id/reject", writeLimit, U.reject);
+userRouter.post("/requests/:id/cancel", writeLimit, U.cancel);
+userRouter.post("/requests/:id/end", writeLimit, U.end);
+userRouter.get("/requests/:id/resume", viewLimit, U.resumeLink);
+userRouter.post("/requests/:id/unlock", PB.payCreateHourly, PB.payCreateDaily, U.unlock);
+userRouter.get("/requests/:id/messages", U.messages);
+userRouter.post("/requests/:id/messages", msgLimit, U.sendMessage);
+userRouter.post("/requests/:id/read", U.readChat);
+userRouter.patch("/requests/:id/messages/:mid", msgLimit, U.editMsg);
+userRouter.delete("/requests/:id/messages/:mid", msgLimit, U.deleteMsg);
+userRouter.post("/requests/:id/messages/:mid/react", msgLimit, U.reactMsg);
+userRouter.get("/plans", U.plans);
+userRouter.post("/plans/buy", PB.payCreateHourly, PB.payCreateDaily, U.buyPlan);
+userRouter.post("/priority/buy", PB.payCreateHourly, PB.payCreateDaily, U.buyPriority);
+userRouter.post("/subscriptions", PB.payCreateHourly, PB.payCreateDaily, U.startSub);
+userRouter.get("/subscriptions/:id", U.getSub);
+userRouter.post("/subscriptions/:id/verify", PB.payVerifyHourly, U.verifySub);
+userRouter.post("/subscriptions/:id/cancel", writeLimit, U.cancelSub);
+userRouter.post("/subscriptions/:id/retry", PB.payCreateHourly, PB.payCreateDaily, U.retrySub);
+userRouter.post("/subscriptions/:id/notice/close", writeLimit, U.closeFailNotice);
+userRouter.get("/wallet", U.wallet);
+userRouter.get("/payments", U.payments);
+userRouter.post("/orders/:id/pay", PB.payCreateHourly, PB.payCreateDaily, U.payOrder);
+userRouter.get("/orders/:id/status", PB.payStatusTenMin, U.paymentStatus);
+userRouter.post("/payments/verify", PB.payVerifyHourly, U.verifyPayment);
+
+/* ADMIN  /api/admin/referral/*  (admins; Employee accounts may read chats) */
+export const adminRouter = express.Router();
+adminRouter.use(auth);
+adminRouter.get("/stats", isAdmin, A.stats);
+adminRouter.get("/requests", isAdmin, A.listRequests);
+adminRouter.get("/requests/:id", isAdmin, A.getRequest);
+adminRouter.get("/requests/:id/messages", isAdmin, A.moreMessages);
+adminRouter.get("/requests/:id/resume", isAdmin, A.resumeLink);
+adminRouter.post("/requests/:id/end", isAdmin, A.endRequest);
+adminRouter.post("/requests/:id/unlock", isAdmin, A.unlockRequest);
+adminRouter.delete("/requests/:id", isAdmin, A.deleteRequest);
+adminRouter.delete("/messages/:mid", isAdmin, A.removeMessage);
+adminRouter.get("/profiles", isAdmin, A.listProfiles);
+adminRouter.patch("/profiles/:id", isAdmin, A.setProfileStatus);
+adminRouter.get("/posts", isAdmin, A.listPosts);
+adminRouter.patch("/posts/:id", isAdmin, A.hidePost);
+adminRouter.delete("/posts/:id", isAdmin, A.deletePost);
+adminRouter.get("/orders", isAdmin, A.listOrders);
+adminRouter.post("/grants", isAdmin, A.grant);
+adminRouter.patch("/orders/:id", isAdmin, A.updateOrder);
+adminRouter.delete("/orders/:id", isAdmin, A.deleteOrder);
+adminRouter.get("/credits", isAdmin, A.memberCredits);
+adminRouter.post("/credits", isAdmin, A.changeCredits);
+adminRouter.patch("/credits/:id", isAdmin, A.editBucket);
+adminRouter.delete("/profiles/:id", isAdmin, A.deleteProfile);
+adminRouter.delete("/subscriptions/:id", isAdmin, A.deleteSub);
+adminRouter.delete("/charges/:id", isAdmin, A.deleteCharge);
+adminRouter.get("/plans", isAdmin, A.listPlans);
+adminRouter.post("/plans", isAdmin, A.createPlan);
+adminRouter.put("/plans/:id", isAdmin, A.updatePlan);
+adminRouter.delete("/plans/:id", isAdmin, A.deletePlan);
+adminRouter.get("/sub-plans", isAdmin, A.listSubPlans);
+adminRouter.post("/sub-plans", isAdmin, A.createSubPlan);
+adminRouter.put("/sub-plans/:id", isAdmin, A.updateSubPlan);
+adminRouter.delete("/sub-plans/:id", isAdmin, A.deleteSubPlan);
+adminRouter.get("/subscriptions", isAdmin, A.listSubscriptions);
+adminRouter.get("/subscriptions/:id", isAdmin, A.getSubscription);
+adminRouter.post("/subscriptions/:id/sync", isAdmin, A.syncSub);
+adminRouter.post("/subscriptions/:id/cancel", isAdmin, A.cancelSub);
+adminRouter.get("/settings", isAdmin, A.getSettingsOut);
+adminRouter.put("/settings", isAdmin, A.saveSettings);

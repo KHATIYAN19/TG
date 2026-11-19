@@ -10,6 +10,10 @@ const client = (c) => {
   return clients.get(k);
 };
 
+/* Razorpay's subscription entity, in the shape the rest of the app uses */
+const T = (n) => (n ? new Date(n * 1000) : null);
+const subState = (s) => ({ status: s.status, paidCount: s.paid_count || 0, remaining: s.remaining_count ?? null, currentStart: T(s.current_start), currentEnd: T(s.current_end), chargeAt: T(s.charge_at), endedAt: T(s.ended_at), gatewayPlanId: s.plan_id || null });
+
 const safeEqual = (a, b) => {
   const x = Buffer.from(String(a || ""));
   const y = Buffer.from(String(b || ""));
@@ -84,6 +88,72 @@ export default {
       receipt: String(refundId || "").slice(0, 40) || undefined,
     });
     return { refundId: r.id };
+  },
+
+  /* ---------------- recurring billing (Razorpay Subscriptions) ---------------- */
+  supportsSubscriptions: true,
+
+  /* A Razorpay "plan" is a price + period. `plan.gatewayPlanId` is reused when the caller already has one. */
+  async createSubscription({ credentials: c }, req) {
+    const rz = client(c);
+    let planId = req.plan.gatewayPlanId;
+    if (!planId) {
+      const made = await rz.plans.create({ period: req.plan.period || "monthly", interval: req.plan.interval || 1, item: { name: String(req.plan.name || "Plan").slice(0, 100), amount: req.plan.amountPaise, currency: req.currency || "INR" }, notes: { plan: String(req.plan.key || "") } });
+      planId = made.id;
+    }
+    // No start_at: the first charge happens right now, while the buyer authorises the mandate. Later charges follow every period.
+    const sub = await rz.subscriptions.create({ plan_id: planId, total_count: req.totalCycles || 120, quantity: 1, customer_notify: 1, notes: { ...(req.notes || {}), ref: req.ref } });
+    return {
+      gatewaySubscriptionId: sub.id, gatewayPlanId: planId,
+      checkout: { type: "razorpay", keyId: c.keyId, subscriptionId: sub.id, name: req.merchantName || "Target Trek", description: req.description || "", prefill: { name: req.customer.name, email: req.customer.email, contact: req.customer.rawPhone || "" } },
+    };
+  },
+
+  /* Razorpay signs `payment_id|subscription_id` for the first payment. */
+  async verifySubscriptionClient({ credentials: c }, { gatewaySubscriptionId, proof = {} }) {
+    const paymentId = proof.razorpay_payment_id, signature = proof.razorpay_signature, subId = proof.razorpay_subscription_id || gatewaySubscriptionId;
+    if (!paymentId || !signature || subId !== gatewaySubscriptionId) return { valid: false };
+    const expected = crypto.createHmac("sha256", c.secret).update(`${paymentId}|${subId}`).digest("hex");
+    return safeEqual(signature, expected) ? { valid: true, paymentId } : { valid: false };
+  },
+
+  async fetchSubscription({ credentials: c }, { gatewaySubscriptionId }) {
+    return subState(await client(c).subscriptions.fetch(gatewaySubscriptionId));
+  },
+
+  /* Every charge the gateway made for this subscription (paid ones carry a payment id; unpaid ones show as failed/pending). */
+  async listSubscriptionCharges({ credentials: c }, { gatewaySubscriptionId }) {
+    const r = await client(c).invoices.all({ subscription_id: gatewaySubscriptionId, count: 100 });
+    return (r?.items || []).map((i) => ({
+      invoiceId: i.id, paymentId: i.payment_id || null, amountPaise: Number(i.amount || 0),
+      status: i.status === "paid" ? "paid" : ["expired", "cancelled"].includes(i.status) ? "failed" : "pending",
+      at: i.paid_at ? new Date(i.paid_at * 1000) : i.created_at ? new Date(i.created_at * 1000) : new Date(),
+      periodStart: i.billing_start ? new Date(i.billing_start * 1000) : null, periodEnd: i.billing_end ? new Date(i.billing_end * 1000) : null,
+      reason: i.status === "paid" ? null : i.status,
+    }));
+  },
+
+  /* atCycleEnd=false stops all future charges now. (Our own records keep the access until the paid period ends.) */
+  async cancelSubscription({ credentials: c }, { gatewaySubscriptionId, atCycleEnd }) {
+    return subState(await client(c).subscriptions.cancel(gatewaySubscriptionId, atCycleEnd ? 1 : 0));
+  },
+
+  parseSubscriptionWebhook({ credentials: c }, { rawBody, headers }) {
+    if (!c.webhookSecret || !rawBody) return { valid: false };
+    const expected = crypto.createHmac("sha256", c.webhookSecret).update(rawBody).digest("hex");
+    if (!safeEqual(headers["x-razorpay-signature"], expected)) return { valid: false };
+    let evt;
+    try { evt = JSON.parse(rawBody); } catch { return { valid: false }; }
+    const kind = { "subscription.authenticated": "authenticated", "subscription.activated": "activated", "subscription.charged": "charged", "subscription.pending": "pending", "subscription.halted": "halted", "subscription.cancelled": "cancelled", "subscription.completed": "completed", "subscription.paused": "paused", "subscription.resumed": "resumed", "subscription.updated": "updated" }[evt?.event];
+    if (!kind) return { valid: true, ignore: true, subscription: false };
+    const sub = evt?.payload?.subscription?.entity;
+    if (!sub?.id) return { valid: true, ignore: true, subscription: true };
+    const pay = evt?.payload?.payment?.entity;
+    return {
+      valid: true, subscription: true,
+      event: { id: String(headers["x-razorpay-event-id"] || `${evt.event}:${sub.id}:${pay?.id || sub.paid_count || ""}:${evt.created_at || ""}`), type: kind, gatewaySubscriptionId: sub.id, state: subState(sub),
+        payment: pay ? { paymentId: pay.id, invoiceId: pay.invoice_id || null, amountPaise: Number(pay.amount || 0), method: pay.method || null, status: pay.status, reason: pay.error_description || null } : null },
+    };
   },
 
   describeError: (e) => e?.error?.description || e?.message || "unknown error",

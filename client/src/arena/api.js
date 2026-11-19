@@ -58,6 +58,18 @@ export const resumeAdminHttp = axios.create({
   withCredentials: true,
   timeout: 30000,
 });
+// Referrals: members, requests, chat history and payments; admin screens.
+export const referralHttp = axios.create({
+  baseURL: `${API_ROOT}/api/referral`,
+  withCredentials: true,
+  timeout: 30000,
+});
+export const referralAdminHttp = axios.create({
+  baseURL: `${API_ROOT}/api/admin/referral`,
+  withCredentials: true,
+  timeout: 30000,
+});
+export const REFERRAL_WS_URL = `${API_ROOT.replace(/^http/, "ws")}/ws/referral`;
 export const uploadsHttp = axios.create({
   baseURL: `${API_ROOT}/api/uploads`,
   withCredentials: true,
@@ -106,7 +118,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, uploadsHttp]) {
+for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, referralHttp, referralAdminHttp, uploadsHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
@@ -135,7 +147,7 @@ for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp,
         } catch {
           store.dispatch(logout());
         }
-      } else if (status === 401 && getToken() && ((instance !== memoriesHttp && instance !== resumeHttp) || SESSION_CODES.has(code))) {
+      } else if (status === 401 && getToken() && ((instance !== memoriesHttp && instance !== resumeHttp && instance !== referralHttp) || SESSION_CODES.has(code))) {
         // Memories: only a real "your session ended" answer signs the visitor out. A 401 relayed from a payment gateway must not.
         store.dispatch(logout());
       }

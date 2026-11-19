@@ -42,6 +42,7 @@ const STATIC_PAGES = [
   "/memories",
   "/memories/birthday",
   "/resume-review",
+  "/referral",
 ];
 
 const xmlEsc = (s) =>

@@ -115,6 +115,24 @@
 .tt-lab-btn--compact { min-height: 42px; padding: 0 12px; font-size: 13.5px; gap: 6px; border-radius: 11px; }
 @media (min-width: 400px) { .tt-lab-btn--compact { padding: 0 15px; font-size: 14px; } }
 
+/* Referrals button: the outlined twin of Resume Lab */
+.tt-ref-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; min-height: 42px; padding: 0 15px; border-radius: 12px; white-space: nowrap; font-size: 14.5px; font-weight: 800; color: var(--n-brand) !important; background: var(--n-surface); border: 1.5px solid color-mix(in srgb, var(--n-brand) 45%, var(--n-border-strong)); transition: border-color .15s, background .15s, transform .15s; }
+.tt-ref-btn:hover { border-color: var(--n-brand); background: color-mix(in srgb, var(--n-brand) 8%, var(--n-surface)); }
+.tt-ref-btn:active { transform: scale(0.97); }
+.tt-ref-btn[data-active="true"] { background: color-mix(in srgb, var(--n-brand) 12%, var(--n-surface)); border-color: var(--n-brand); }
+.tt-ref-btn svg { flex: none; }
+/* small screens: Referrals sits beside Resume Lab as a labelled pill; the brand keeps only its logo below 480px to make room */
+.tt-ref-btn--compact { min-height: 42px; padding: 0 12px; gap: 6px; font-size: 13.5px; border-radius: 11px; }
+@media (min-width: 400px) { .tt-ref-btn--compact { padding: 0 14px; font-size: 14px; } }
+@media (max-width: 479px) { .tt-mob .tt-brand-t { display: none; } }
+@media (max-width: 359px) { .tt-ref-btn--compact { padding: 0 10px; font-size: 13px; } .tt-ref-btn--compact svg { display: none; } }
+.tt-ref-card { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 14px; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--n-brand) 40%, var(--n-border)); background: color-mix(in srgb, var(--n-brand) 6%, var(--n-surface)); color: var(--n-text); }
+.tt-ref-card[data-active="true"] { border-color: var(--n-brand); }
+.tt-ref-card svg { color: var(--n-brand); flex: none; }
+.tt-ref-card-ic { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--n-surface); font-size: 22px; flex: none; }
+.tt-ref-card-title { display: block; font-weight: 800; font-size: 15.5px; }
+.tt-ref-card-sub { display: block; font-size: 13px; color: var(--n-muted, inherit); opacity: .85; }
+
 /* ---------- desktop bar (>= 1280px) ---------- */
 .tt-desk { display: none; height: 76px; align-items: center; gap: 18px; }
 .tt-links { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px; }

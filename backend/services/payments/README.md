@@ -86,3 +86,13 @@ Frontend:
    return a session id, a form post or a redirect URL need nothing else.
 
 Books, Arena and Memories pick it up with `PAYMENT_GATEWAY=<id>` (or `<PRODUCT>_PAYMENT_GATEWAY`).
+
+## Recurring billing (subscriptions)
+
+`services/payments/subscriptions.js` is the reusable entry point for "charge now, then every period":
+`createSubscription`, `verifySubscriptionPayment`, `fetchSubscription`, `listSubscriptionCharges`, `cancelSubscription`,
+`parseSubscriptionWebhook`, `pickSubscriptionGateway`. Razorpay and Cashfree implement it (`supportsSubscriptions: true`); PayU answers 501. The gateway for NEW subscriptions comes from
+`SUBSCRIPTION_PAYMENT_GATEWAY` (or `<PRODUCT>_SUBSCRIPTION_PAYMENT_GATEWAY`); a subscription stays on the gateway it started on. The first charge happens when the
+buyer authorises the mandate in checkout (`checkout.subscriptionId`, handled by `client/src/payment/checkoutRunner.js`).
+Referrals use it in `services/referral/subscriptions.js`. Razorpay dashboard: enable Subscriptions, and add these webhook events to the
+existing referral webhook URL: `subscription.authenticated|activated|charged|pending|halted|cancelled|completed|paused|resumed`.

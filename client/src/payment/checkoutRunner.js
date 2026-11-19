@@ -52,14 +52,13 @@ const RUNNERS = {
     if (!(await loadScript("rzp-sdk", "https://checkout.razorpay.com/v1/checkout.js", () => Boolean(window.Razorpay)))) throw new Error(CANT_LOAD);
     const key = checkout.keyId || checkout.key;
     const orderId = checkout.orderId || checkout.razorpayOrderId;
-    if (!key || !orderId || !checkout.amount) throw new Error("Invalid payment information received from server.");
+    const subscriptionId = checkout.subscriptionId; // recurring billing: Razorpay charges the first period now, then every period
+    if (!key || (subscriptionId ? false : !orderId || !checkout.amount)) throw new Error("Invalid payment information received from server.");
 
     return new Promise((resolve, reject) => {
       const rzp = new window.Razorpay({
         key,
-        amount: checkout.amount,
-        currency: checkout.currency || "INR",
-        order_id: orderId,
+        ...(subscriptionId ? { subscription_id: subscriptionId } : { amount: checkout.amount, currency: checkout.currency || "INR", order_id: orderId }),
         name: name || checkout.name || "Target Trek",
         description: description || checkout.description || "",
         prefill: { ...(checkout.prefill || {}), ...Object.fromEntries(Object.entries(prefill || {}).filter(([, v]) => v)) },
@@ -77,6 +76,16 @@ const RUNNERS = {
       rzp.on("payment.failed", (r) => resolve({ status: "failed", message: r?.error?.description || "Payment failed. Please try again." }));
       rzp.open();
     });
+  },
+
+  /* Cashfree recurring billing: hosted mandate + first payment page, then back to the return url (the server checks with Cashfree) */
+  async cashfree_subscription({ checkout }) {
+    if (!(await loadScript("cashfree-sdk", "https://sdk.cashfree.com/js/v3/cashfree.js", () => Boolean(window.Cashfree)))) throw new Error(CANT_LOAD);
+    if (!checkout.subscriptionSessionId) throw new Error("Invalid payment session received from server.");
+    const mode = /prod|live/i.test(checkout.environment || checkout.mode || "") ? "production" : "sandbox";
+    const result = await window.Cashfree({ mode }).subscriptionsCheckout({ subsSessionId: checkout.subscriptionSessionId, redirectTarget: "_self" });
+    if (result?.error) throw new Error(result.error.message || "Unable to open the payment window.");
+    return { status: "redirect" };
   },
 
   async form_post({ checkout }) {

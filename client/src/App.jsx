@@ -176,6 +176,9 @@ const ResumeAuth = lazy(() => import("./resume/ResumeAuth.jsx"));
 const ResumeApp = lazy(() => import("./resume/ResumeApp.jsx"));
 const ResumePaymentResult = lazy(() => import("./resume/ResumePaymentResult.jsx"));
 const AdminResumeReviews = lazy(() => import("./Admin/AdminResumeReviews.jsx"));
+const ReferralApp = lazy(() => import("./referral/ReferralApp.jsx"));
+const ReferralLanding = lazy(() => import("./referral/ReferralLanding.jsx"));
+const AdminReferrals = lazy(() => import("./Admin/AdminReferrals.jsx"));
 const BirthdayPreview = lazy(() =>
   import("./memories/templates/birthday/BirthdayPreview.jsx")
 );
@@ -635,11 +638,13 @@ const NO_NAVBAR_ROUTES = [
   "/others/book/how-to-sell-ebook",
   "/memories/*",
   "/admin/resume-reviews",
+  "/admin/referrals",
 ];
 const NO_FOOTER_ROUTES = [
   "/others/book/how-to-sell-ebook",
   "/memories/*",
   "/admin/resume-reviews",
+  "/admin/referrals",
 ];
 function matchesLayoutRoute(pathname, routes) {
   return routes.some((route) => {
@@ -712,6 +717,12 @@ function App() {
           window.location.pathname +
             window.location.search
         );
+      }
+      if (window.location.pathname.startsWith("/referral/app")) {
+        // Referrals sign in with the Resume Lab login and come straight back to where they were.
+        sessionStorage.setItem("resume:returnTo", window.location.pathname + window.location.search);
+        window.location.replace("/resume-review/login");
+        return;
       }
       if (window.location.pathname.startsWith("/resume-review")) {
         if (window.location.pathname.startsWith("/resume-review/app")) {
@@ -1179,9 +1190,18 @@ function App() {
           <Route path="/resume-review/payment-result" element={<ResumePaymentResult />} />
           <Route path="/resume-review/plans" element={<Navigate to="/resume-review/app/plans" replace />} />
           <Route path="/resume-review/app/*" element={<ResumeApp />} />
+          <Route path="/referral" element={<ReferralLanding />} />
+          <Route path="/referral/app/*" element={<ReferralApp />} />
+          <Route path="/referal" element={<Navigate to="/referral" replace />} />
+          <Route path="/referal/app/*" element={<Navigate to="/referral/app" replace />} />
+          <Route path="/resume-review/referral/*" element={<Navigate to="/referral/app" replace />} />
           <Route
             path="/admin/resume-reviews"
             element={requireUser(<AdminResumeReviews />)}
+          />
+          <Route
+            path="/admin/referrals"
+            element={requireAdmin(<AdminReferrals />)}
           />
           <Route
             path="/admin/arena"

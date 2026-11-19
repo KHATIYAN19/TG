@@ -103,6 +103,14 @@ import {
   paymentCallbackRouter as resumePaymentCallbackRoutes,
 } from "./routes/resume/resumeRoutes.js";
 import { gatewayWebhook as resumeGatewayWebhook } from "./controllers/resume/userController.js";
+import {
+  publicRouter as referralPublicRoutes,
+  userRouter as referralUserRoutes,
+  adminRouter as referralAdminRoutes,
+  paymentCallbackRouter as referralPaymentCallbackRoutes,
+} from "./routes/referral/referralRoutes.js";
+import { gatewayWebhook as referralGatewayWebhook } from "./controllers/referral/userController.js";
+import { attachReferralSocket } from "./services/referral/socket.js";
 import userRoutes from "./routes/userRoutes.js";
 
 /* =====================================================
@@ -314,6 +322,7 @@ const GATEWAY_RETURN_PATHS = [
   /^\/api\/arena\/payments\/return\/?$/,
   /^\/api\/memories\/payments\/callback\/[A-Za-z0-9_-]+\/?$/,
   /^\/api\/resume\/payments\/callback\/[A-Za-z0-9_-]+\/?$/,
+  /^\/api\/referral\/payments\/callback\/[A-Za-z0-9_-]+\/?$/,
 ];
 
 const corsMiddleware = cors(corsOptions);
@@ -400,6 +409,13 @@ app.post(
   "/api/resume/payments/webhook/:gateway",
   express.raw({ type: "*/*", limit: "1mb" }),
   resumeGatewayWebhook
+);
+
+/* Referral payment webhooks (any gateway): raw body for signature checks, so it stays above express.json(). */
+app.post(
+  "/api/referral/payments/webhook/:gateway",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  referralGatewayWebhook
 );
 
 /* Book payment webhooks (any gateway): raw body for signature checks, so it stays above express.json(). */
@@ -572,6 +588,12 @@ app.use("/api/resume/public", resumePublicRoutes);
 app.use("/api/resume/payments/callback", resumePaymentCallbackRoutes);
 app.use("/api/resume", resumeUserRoutes);
 app.use("/api/admin/resume", resumeAdminRoutes);
+
+/* REFERRALS: members refer each other into companies; chat opens after the referrer accepts (sender may pay a small fee). */
+app.use("/api/referral/public", referralPublicRoutes);
+app.use("/api/referral/payments/callback", referralPaymentCallbackRoutes);
+app.use("/api/referral", referralUserRoutes);
+app.use("/api/admin/referral", referralAdminRoutes);
 
 /* =====================================================
    EXISTING PAYMENT ROUTES
@@ -907,6 +929,8 @@ const startServer = async () => {
 
     // Real-time chat for matched buddies (ws://host/ws/arena).
     attachArenaSocket(server, { isOriginAllowed });
+    // Real-time referral chat (ws://host/ws/referral).
+    attachReferralSocket(server, { isOriginAllowed });
   } catch (error) {
     console.error(
       "Failed to start Target Trek Backend:",

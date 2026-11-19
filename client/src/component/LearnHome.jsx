@@ -51,6 +51,9 @@ import {
   Stack,
   Target,
   UsersThree,
+  UserPlus,
+  ChatsCircle,
+
   VideoCamera,
 } from "@phosphor-icons/react";
 
@@ -170,6 +173,13 @@ const EXPLORE = [
     icon: FileText,
   },
   {
+    title: "Referrals",
+    text: "Ask people who work at your dream company to refer you. Free to ask.",
+    to: "/referral",
+    icon: UserPlus,
+    free: true,
+  },
+  {
     title: "Mentorship",
     text: "Placement guidance for students and early-career engineers.",
     to: "/mentorship",
@@ -280,6 +290,11 @@ const MEMORY_FEATURES = [
 ];
 
 const FAQS = [
+  {
+    question: "How do I get a job referral?",
+    answer:
+      "Open Target Trek Referrals, search the company you want and pick a member who works there. Send your resume, LinkedIn and the job ID or link with a short note. Asking is free. If they accept, a private chat opens so you can share details.",
+  },
   {
     question: "Where should I start learning system design?",
     answer:
@@ -747,6 +762,7 @@ export default function LearnHome() {
     { id: "books", label: "Books" },
     { id: "interview-prep", label: "Interview prep" },
     { id: "resume", label: "Resume review" },
+    { id: "referrals", label: "Referrals" },
     { id: "memories", label: "Memories" },
     { id: "faq", label: "FAQ" },
   ];
@@ -754,7 +770,7 @@ export default function LearnHome() {
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return undefined;
 
-    const nodes = ["explore", "resources", "books", "interview-prep", "resume", "memories", "faq"]
+    const nodes = ["explore", "resources", "books", "interview-prep", "resume", "referrals", "memories", "faq"]
       .map((id) => document.getElementById(id))
       .filter(Boolean);
 
@@ -1585,6 +1601,52 @@ export default function LearnHome() {
                       <span>After</span>
                       <SampleBullet text={after} />
                     </p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ===================================== */}
+        {/* REFERRALS                             */}
+        {/* ===================================== */}
+
+        <section className="lx-sec" id="referrals" aria-labelledby="lx-ref-title" style={{ paddingTop: 0 }}>
+          <div className="lx-shell">
+            <Reveal>
+              <div className="lx-resume">
+                <div>
+                  <span className="lx-eyebrow">Target Trek Referrals</span>
+                  <h2 className="lx-h2" id="lx-ref-title">
+                    Skip the pile. <span className="lx-hl">Get referred.</span>
+                  </h2>
+                  <p className="lx-resume-text">
+                    A referral puts your resume in front of the hiring team. Ask people who already work at the company you want.
+                  </p>
+                  <ul className="lx-points">
+                    <li><UserPlus size={16} weight="duotone" /><span><b>Search by company.</b> See members who work there, their role and experience.</span></li>
+                    <li><ChatsCircle size={16} weight="duotone" /><span><b>Chat once they accept.</b> Share your resume, LinkedIn and the job ID.</span></li>
+                    <li><ShieldCheck size={16} weight="duotone" /><span><b>Private by default.</b> Referrers can hide their name. Asking is free.</span></li>
+                  </ul>
+                  <div className="lx-resume-actions">
+                    <Link to="/referral/app/find" className="lx-btn lx-btn-primary">
+                      Find a referrer
+                      <ArrowRight size={16} weight="bold" />
+                    </Link>
+                    <Link to="/referral" className="lx-link">
+                      How referrals work
+                      <ArrowRight size={14} weight="bold" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="lx-report" aria-hidden="true">
+                  <div className="lx-report-head"><span>Referral request</span><small>Accepted ✅</small></div>
+                  <h4>Aarav K. · SDE-2 at Flipkart · 4 yrs</h4>
+                  <div className="lx-fix">
+                    <p className="lx-before"><span>You</span>Hi! Applying for SDE-1 (R-12345). Built a payments retry service in Node. Would love a referral 🙏</p>
+                    <p className="lx-after"><span>Aarav</span>Your resume looks strong. Sending it to the hiring manager today 🎉</p>
                   </div>
                 </div>
               </div>

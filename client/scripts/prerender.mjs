@@ -44,6 +44,7 @@ const ROUTES = {
   "/memories": "src/memories/MemoriesLanding.jsx",
   "/memories/birthday": "src/memories/BirthdayLanding.jsx",
   "/resume-review": "src/resume/ResumeLanding.jsx",
+  "/referral": "src/referral/ReferralLanding.jsx",
   "/prep-buddy": "src/arena/ArenaLanding.jsx",
   "/books/bundle-offers": "src/Ebooks/BundleOffers.jsx",
 };

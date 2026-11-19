@@ -18,6 +18,7 @@ const PRIVATE = [
   "/ebook/adk/payment/",
   "/set-password",
   "/review/",
+  "/referral/app",
   "/resume-review/app",
   "/resume-review/login",
   "/resume-review/signup",
