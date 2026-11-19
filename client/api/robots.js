@@ -20,6 +20,8 @@ const PRIVATE = [
   "/review/",
   "/referral/app",
   "/resume-review/app",
+  "/login",
+  "/signup",
   "/resume-review/login",
   "/resume-review/signup",
   "/resume-review/payment-result",

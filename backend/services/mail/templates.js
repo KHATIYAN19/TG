@@ -35,7 +35,7 @@ import { rupees } from "../arena/pricing.js";
 export const BRAND = "Target Trek";
 export const PRODUCT = "Prep Buddy Arena";
 
-const C = {
+const ORANGE = {
   page: "#fff4ec",        // soft orange-tinted page
   card: "#ffffff",
   border: "#f0ded0",
@@ -55,7 +55,33 @@ const C = {
   warnBg: "#fffbeb",
   warnBorder: "#fde68a",
   warnInk: "#92400e",
+  eyebrow: "#ffedd5",
 };
+
+/* The website's own palette (teal). Used by the sign-in / sign-up / reset code emails so they match the login page. */
+const TEAL = {
+  page: "#f0f7f5",
+  card: "#ffffff",
+  border: "#d3e4df",
+  head1: "#0d9488",
+  head2: "#0f766e",
+  accent: "#0f766e",
+  button: "#115e59",
+  linkText: "#0f766e",
+  ink: "#0c1a17",
+  body: "#2a3f3a",
+  muted: "#5b706a",
+  tint: "#e3f3ef",
+  tintBorder: "#b7dcd3",
+  codeBg: "#e3f3ef",
+  codeBorder: "#7cc4b6",
+  codeInk: "#115e59",
+  warnBg: "#fffbeb",
+  warnBorder: "#fde68a",
+  warnInk: "#92400e",
+  eyebrow: "#ccfbf1",
+};
+let C = ORANGE; // palette in use; templates are synchronous, so otpEmail can switch it for the length of one render
 
 const FONT = "Arial,Helvetica,sans-serif";
 const MONO = "'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace";
@@ -127,16 +153,24 @@ const button = (href, label) => `
   </tr>
 </table>`;
 
-/* The one-time code, large and easy to copy. */
-const codeBox = (code) => `
+/* The one-time code: one box per digit (like the boxes on the login page), large and easy to read. */
+const codeBox = (code) => {
+  const digits = String(code).split("");
+  const cell = (d) => `<td align="center" width="${Math.floor(100 / digits.length)}%" style="padding:0 4px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;border:2px solid ${C.codeBorder};border-radius:10px;padding:12px 0;font-family:${MONO};font-size:30px;line-height:34px;font-weight:700;color:${C.codeInk};">${esc(d)}</td>
+        </tr></table>
+      </td>`;
+  return `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:8px 0 20px;">
   <tr>
-    <td align="center" bgcolor="${C.codeBg}" style="background-color:${C.codeBg};border:2px dashed ${C.codeBorder};border-radius:14px;padding:22px 12px;">
-      <div style="font-family:${FONT};font-size:12px;line-height:16px;letter-spacing:2px;font-weight:700;color:${C.warnInk};text-transform:uppercase;padding-bottom:8px;">Your code</div>
-      <div style="font-family:${MONO};font-size:40px;line-height:44px;letter-spacing:10px;font-weight:700;color:${C.codeInk};">${esc(code)}</div>
+    <td align="center" bgcolor="${C.codeBg}" style="background-color:${C.codeBg};border:1px solid ${C.tintBorder};border-radius:14px;padding:20px 10px 22px;">
+      <div style="font-family:${FONT};font-size:12px;line-height:16px;letter-spacing:2px;font-weight:700;color:${C.accent};text-transform:uppercase;padding-bottom:12px;">Your verification code</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:380px;"><tr>${digits.map(cell).join("")}</tr></table>
     </td>
   </tr>
 </table>`;
+};
 
 /* A tinted panel (info / warning). */
 const panel = (innerHtml, { bg = C.tint, border = C.tintBorder } = {}) => `
@@ -227,7 +261,7 @@ const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason, not
         <tr>
           <td bgcolor="${C.head2}" style="background-color:${C.head2};background-image:linear-gradient(135deg,${C.head1},${C.head2});border-radius:18px 18px 0 0;padding:${pad.head};">
             <div style="font-family:${FONT};font-size:22px;line-height:26px;font-weight:700;color:#ffffff;letter-spacing:.3px;">${BRAND}</div>
-            <div style="padding-top:4px;font-family:${FONT};font-size:12px;line-height:16px;font-weight:700;color:#ffedd5;letter-spacing:2.5px;text-transform:uppercase;">${esc(eyebrow || PRODUCT)}</div>
+            <div style="padding-top:4px;font-family:${FONT};font-size:12px;line-height:16px;font-weight:700;color:${C.eyebrow};letter-spacing:2.5px;text-transform:uppercase;">${esc(eyebrow || PRODUCT)}</div>
           </td>
         </tr>
 
@@ -294,15 +328,15 @@ const joinText = (parts) => parts.filter((x) => x !== null && x !== undefined &&
 
 const OTP_COPY = {
   signup: {
-    subject: `Verify your email – ${PRODUCT}`,
-    eyebrow: PRODUCT,
+    subject: `Verify your email – ${BRAND}`,
+    eyebrow: "Create your account",
     heading: "Verify your email",
     preheader: (m) => `Your verification code is inside. It expires in ${m} minutes.`,
-    lead: (name) => `Hi ${esc(firstName(name))}, welcome to ${PRODUCT}! Enter this code on the sign-up page to finish creating your account.`,
-    textLead: (name) => `Hi ${firstName(name)}, welcome to ${PRODUCT}! Enter this code on the sign-up page to finish creating your account.`,
+    lead: (name) => `Hi ${esc(firstName(name))}, welcome to ${BRAND}! Enter this code on the sign-up page to finish creating your account.`,
+    textLead: (name) => `Hi ${firstName(name)}, welcome to ${BRAND}! Enter this code on the sign-up page to finish creating your account.`,
     notYou: "Didn't try to sign up? You can ignore this email. No account is created until this code is entered.",
-    steps: ["Go back to the sign-up page.", "Type the 6-digit code above.", "You're in. Next you'll set up your profile."],
-    reason: "You received this because this email address was used to sign up for Prep Buddy Arena.",
+    steps: ["Go back to the sign-up page.", "Type the 6-digit code above.", "You're in. Your account works across Books, Resume Lab, Referrals and Prep Buddy."],
+    reason: "You received this because this email address was used to sign up for Target Trek.",
     tips: [
       "Didn't get the code? Check your Spam and Promotions folders, wait 60 seconds, then press <strong>Resend code</strong>.",
       "Always use the <strong>newest</strong> code. Older codes stop working when a new one is sent.",
@@ -315,7 +349,7 @@ const OTP_COPY = {
     ],
   },
   reset: {
-    subject: `Reset your password – ${PRODUCT}`,
+    subject: `Reset your password – ${BRAND}`,
     eyebrow: "Account security",
     heading: "Reset your password",
     preheader: (m) => `Your password reset code is inside. It expires in ${m} minutes.`,
@@ -352,7 +386,16 @@ const OTP_COPY = {
   },
 };
 
-export const otpEmail = ({ purpose = "signup", name, otp, minutes = 10 }) => {
+export const otpEmail = (args) => {
+  C = TEAL;
+  try {
+    return buildOtpEmail(args);
+  } finally {
+    C = ORANGE;
+  }
+};
+
+const buildOtpEmail = ({ purpose = "signup", name, otp, minutes = 10 }) => {
   const c = OTP_COPY[purpose];
   if (!c) throw new Error(`Unknown OTP email purpose: ${purpose}`);
 

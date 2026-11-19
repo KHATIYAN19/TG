@@ -1,0 +1,117 @@
+/*
+  Login / sign-up (the one shared page). Uses the website's own palette (the same teal as the navbar, see
+  component/Navbar.css --n-brand); the verification-code emails (services/mail/templates.js, TEAL) use it too.
+  Light only. Every class is prefixed "ta-" so nothing here leaks into the rest of the site.
+*/
+.ta {
+  --ta-page: #f6f8f7;
+  --ta-card: #ffffff;
+  --ta-border: #dfe8e5;
+  --ta-head1: #0d9488;
+  --ta-head2: #0f766e;
+  --ta-accent: #0f766e;
+  --ta-button: #0f766e;
+  --ta-button-hover: #115e59;
+  --ta-ink: #0c1a17;
+  --ta-body: #2a3f3a;
+  --ta-muted: #4a5d58;
+  --ta-tint: #e3f3ef;
+  --ta-tint-border: #b7dcd3;
+  --ta-bad: #b91c1c;
+  --ta-bad-bg: #fef2f2;
+  --ta-warn-bg: #fffbeb;
+  --ta-warn-border: #fde68a;
+  --ta-warn-ink: #92400e;
+  min-height: 100vh;
+  background: var(--ta-page);
+  color: var(--ta-body);
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+.ta *, .ta *::before, .ta *::after { box-sizing: border-box; }
+.ta a { color: var(--ta-button); }
+.ta :focus-visible { outline: 3px solid #5eead4; outline-offset: 2px; }
+
+.ta-wrap { display: grid; min-height: 100vh; grid-template-columns: 1fr; }
+@media (min-width: 960px) { .ta-wrap { grid-template-columns: minmax(340px, 5fr) 7fr; } }
+
+/* brand side */
+.ta-aside { display: none; position: relative; overflow: hidden; background: var(--ta-head2); background-image: linear-gradient(135deg, var(--ta-head1), var(--ta-head2)); color: #fff; }
+@media (min-width: 960px) { .ta-aside { display: flex; } }
+.ta-aside::before { content: ""; position: absolute; width: 380px; height: 380px; left: -140px; top: -140px; border-radius: 50%; background: rgba(255, 255, 255, 0.07); pointer-events: none; }
+.ta-aside::after { content: ""; position: absolute; width: 520px; height: 520px; right: -200px; bottom: -220px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); pointer-events: none; }
+.ta-aside-in { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 22px; padding: 44px 44px 36px; max-width: 520px; margin: 0 auto; justify-content: center; }
+.ta-brand { color: #fff !important; font-size: 22px; font-weight: 700; letter-spacing: 0.3px; text-decoration: none; }
+.ta-aside-h { margin: 0; font-size: clamp(28px, 3vw, 38px); line-height: 1.15; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+.ta-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 18px; }
+.ta-list li { display: flex; gap: 14px; align-items: flex-start; }
+.ta-list b { display: block; font-size: 15px; color: #fff; }
+.ta-list p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: #d5f3ee; }
+.ta-ico { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; background: rgba(255, 255, 255, 0.18); color: #fff; }
+.ta-fine { display: flex; gap: 8px; align-items: center; margin: 8px 0 0; font-size: 13px; color: #d5f3ee; }
+
+/* form side */
+.ta-main { display: grid; place-items: center; padding: 28px 16px 40px; }
+.ta-card { width: 100%; max-width: 520px; background: var(--ta-card); border: 1px solid var(--ta-border); border-radius: 18px; padding: 28px 24px 22px; box-shadow: 0 10px 40px rgba(15, 118, 110, 0.1); }
+@media (min-width: 520px) { .ta-card { padding: 32px 34px 24px; } }
+.ta-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 18px; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--ta-muted) !important; }
+.ta-back:hover { color: var(--ta-button) !important; }
+
+.ta-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 24px; background: var(--ta-tint); border: 1px solid var(--ta-tint-border); border-radius: 12px; }
+.ta-seg button { height: 40px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--ta-muted); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.ta-seg button[aria-selected="true"] { background: #fff; color: var(--ta-button); box-shadow: 0 1px 4px rgba(15, 118, 110, 0.22); }
+
+.ta-form { display: grid; gap: 16px; }
+.ta-title { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 800; color: var(--ta-ink); letter-spacing: -0.01em; }
+.ta-sub { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--ta-muted); }
+.ta-sub b { color: var(--ta-ink); word-break: break-all; }
+.ta-pair { display: grid; gap: 16px; }
+@media (min-width: 560px) { .ta-pair { grid-template-columns: 1fr 1fr; } }
+.ta-field { min-width: 0; }
+.ta-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--ta-ink); }
+.ta-star { color: var(--ta-accent); }
+
+.ta-input { display: block; width: 100%; height: 46px; padding: 0 14px; border: 1px solid #c3d2cd; border-radius: 10px; background: #fff; font: inherit; font-size: 15px; color: var(--ta-ink); transition: border-color 0.15s, box-shadow 0.15s; }
+.ta-input::placeholder { color: #8ea19b; }
+.ta-input:focus { outline: none; border-color: var(--ta-accent); box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.22); }
+.ta-input.bad { border-color: var(--ta-bad); }
+.ta-input:disabled { background: #f1f5f4; }
+select.ta-input { appearance: auto; }
+.ta-pw { position: relative; }
+.ta-pw button { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 34px; height: 34px; border: 0; background: none; border-radius: 8px; color: var(--ta-muted); cursor: pointer; }
+.ta-pw button:hover { color: var(--ta-button); }
+
+.ta-otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.ta-otp .ta-input { padding: 0; height: 54px; text-align: center; font-size: 22px; font-weight: 700; }
+.ta-mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+
+.ta-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--ta-muted); }
+.ta-err { display: flex; gap: 6px; align-items: flex-start; margin: 6px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--ta-bad); }
+.ta-err svg { margin-top: 1px; flex: none; }
+.ta-errbox { margin: 0 0 16px; padding: 11px 14px; border: 1px solid #fecaca; border-radius: 10px; background: var(--ta-bad-bg); color: var(--ta-bad); font-size: 14px; line-height: 1.45; }
+.ta-lock { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--ta-warn-border); border-radius: 10px; background: var(--ta-warn-bg); color: var(--ta-warn-ink); font-size: 13.5px; line-height: 1.5; }
+.ta-lock p { margin: 0 0 4px; }
+.ta-lock p:last-child { margin: 0; }
+
+.ta-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; border: 0; border-radius: 12px; background: var(--ta-button); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s, transform 0.05s; }
+.ta-btn:hover:not(:disabled) { background: var(--ta-button-hover); }
+.ta-btn:active:not(:disabled) { transform: translateY(1px); }
+.ta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.ta-spin { width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.45); border-top-color: #fff; border-radius: 50%; animation: ta-rot 0.7s linear infinite; }
+@keyframes ta-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ta-spin { animation-duration: 2s; } }
+
+.ta-link { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--ta-button); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ta-link:hover { color: var(--ta-button-hover); }
+.ta-link:disabled { opacity: 0.6; cursor: not-allowed; }
+.ta-start { justify-self: start; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.ta-right { text-align: right; margin-top: -6px; }
+.ta-sm { margin: 0; text-align: center; font-size: 14px; color: var(--ta-muted); }
+.ta-center { text-align: center; justify-self: center; }
+.ta-hint a { text-decoration: underline; }
+
+.ta-or { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ta-muted); }
+.ta-or span { flex: 1; height: 1px; background: var(--ta-border); }
+
+.ta-trust { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 22px 0 0; padding-top: 16px; border-top: 1px solid var(--ta-border); font-size: 12px; color: var(--ta-muted); text-align: center; }

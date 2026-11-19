@@ -13,6 +13,7 @@ import ResumeBuy from "./ResumeBuy";
 import ResumeDetail from "./ResumeDetail";
 import ResumeSubmit from "./ResumeSubmit";
 import { Bar, Btn, Page, ScoreRing, Skeleton, cx } from "./ui";
+import { loginUrl } from "../auth/authRedirect";
 
 /*
   THE SIGNED-IN AREA: /resume-review/app/*
@@ -291,8 +292,7 @@ export default function ResumeApp() {
   useEffect(() => { if (token) myPlans().then((d) => setData({ ...d, path: location.pathname })).catch((e) => setError(errMsg(e))); }, [token, location.pathname]);
 
   if (!token) {
-    try { sessionStorage.setItem("resume:returnTo", location.pathname + location.search); } catch { /* ignore */ }
-    return <Navigate to="/resume-review/login" replace state={{ from: location }} />;
+    return <Navigate to={loginUrl(location)} replace />;
   }
   // never paid for anything: the only useful page is the plans page
   if (data && data.path === location.pathname && data.plans?.length === 0 && /^\/resume-review\/app\/?$/.test(location.pathname)) {

@@ -40,7 +40,9 @@ test("support address can be overridden with SUPPORT_EMAIL", () => {
 
 test("orange brand palette is used and nothing external is loaded (no images, fonts, scripts, remote CSS)", () => {
   for (const m of ALL()) {
-    assert.ok(m.html.includes("#ea580c") && m.html.includes("#c2410c"), "orange palette");
+    // The code emails (sign-up / reset / login) use the website's teal, like the login page; the Prep Buddy emails stay orange.
+    const teal = /Verify your email|Reset your password|login code/.test(m.subject);
+    assert.ok(teal ? m.html.includes("#0f766e") && m.html.includes("#115e59") : m.html.includes("#ea580c") && m.html.includes("#c2410c"), "brand palette");
     assert.ok(!/<img|<script|<link|@import|url\(http|@font-face/i.test(m.html), "external resources");
     assert.ok(!/indigo|#4f46e5|#6366f1/i.test(m.html), "old indigo theme must be gone");
   }
@@ -59,7 +61,10 @@ test("OTP emails: the code, expiry and the safety warning appear in HTML and tex
   const cases = [["signup", "482915", 15], ["reset", "730184", 10], ["login", "905512", 10]];
   for (const [purpose, otp, minutes] of cases) {
     const m = otpEmail({ purpose, name: "Asha Rao", otp, minutes });
-    assert.ok(m.html.includes(otp) && m.text.includes(`YOUR CODE: ${otp}`));
+    // the HTML shows one box per digit, so look at the text without the tags
+    const shown = m.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, "");
+    assert.ok(shown.includes(otp) && m.text.includes(`YOUR CODE: ${otp}`));
+    assert.equal((m.html.match(new RegExp(`>${otp[0]}</td>`, "g")) || []).length >= 1, true, "digit boxes");
     assert.ok(m.html.includes(`${minutes} minutes`) && m.text.includes(`${minutes} minutes`));
     assert.match(m.html, /Never share this code/); assert.match(m.text, /Never share this code/);
     assert.ok(!m.subject.includes(otp), "code must not be in the subject line");

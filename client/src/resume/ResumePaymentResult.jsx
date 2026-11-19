@@ -8,6 +8,7 @@ import { errMsg } from "../arena/api";
 import { formatINR, getPaymentStatus } from "./api";
 import { payForExisting } from "./checkout";
 import { Btn, Page, cx } from "./ui";
+import { loginUrl } from "../auth/authRedirect";
 
 /*
   Where the payment gateway sends the browser back to (or where the app sends someone whose payment didn't finish).
@@ -140,7 +141,7 @@ export default function ResumePaymentResult() {
     try { await navigator.clipboard.writeText(purchase); toast.success("Reference copied"); } catch { toast(purchase); }
   };
 
-  if (!token) return <Navigate to="/resume-review/login" replace state={{ from: location }} />;
+  if (!token) return <Navigate to={loginUrl(location)} replace />;
 
   const plan = info?.plan;
   const price = plan?.amount != null ? formatINR(plan.amount) : "";

@@ -17,9 +17,9 @@ import { ReviewView } from "./ResumeDetail";
 import { SAMPLE_AI, SAMPLE_POOL } from "./sampleReview";
 import { schemaJson } from "./seo";
 import { Btn, Page, cx } from "./ui";
+import { loginUrl } from "../auth/authRedirect";
 
 const OG_IMAGE = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
-const RETURN_KEY = "resume:returnTo";
 const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 /* ============================ head: SEO, AEO and GEO ============================ */
@@ -98,7 +98,7 @@ function MarkedResume() {
   );
 }
 
-function Hero({ paid, signedIn, onLogin, cheapest }) {
+function Hero({ paid, signedIn, cheapest }) {
   return (
     <header className="rl-hero">
       <div className="rv-shell rl-hero-grid">
@@ -112,7 +112,7 @@ function Hero({ paid, signedIn, onLogin, cheapest }) {
           </div>
           <p className="rl-hero-alt">
             {paid ? <Link to="/resume-review/app" className="rl-textlink">Go to my reviews and plans <ArrowRight size={14} weight="bold" aria-hidden /></Link>
-              : !signedIn ? <>Already bought a plan? <Link to="/resume-review/login" className="rl-textlink" onClick={onLogin}>Log in</Link></>
+              : !signedIn ? <>Already bought a plan? <Link to={loginUrl("/resume-review/app")} className="rl-textlink">Log in</Link></>
               : <Link to="/resume-review/app/plans" className="rl-textlink">Choose a plan to get started <ArrowRight size={14} weight="bold" aria-hidden /></Link>}
           </p>
           <dl className="rl-facts">
@@ -421,7 +421,7 @@ function Faq() {
     signed in, plan   My reviews and plans
     signed in, none   Choose a plan
 */
-function StickyBar({ token, hasPlan, cheapest, onLogin }) {
+function StickyBar({ token, hasPlan, cheapest }) {
   return (
     <div className="rv-stick" role="region" aria-label="Quick actions">
       <div className="rv-stick-in">
@@ -430,7 +430,7 @@ function StickyBar({ token, hasPlan, cheapest, onLogin }) {
           <span>{token && hasPlan ? "Your reports and credits are in your space." : cheapest ? `Plans from ${formatINR(cheapest)} · pay once, no subscription` : "Pay once, no subscription"}</span>
         </div>
         <div className="rv-stick-btns">
-          {!token && <Btn as={Link} to="/resume-review/login" variant="ghost" onClick={onLogin}>Log in</Btn>}
+          {!token && <Btn as={Link} to={loginUrl("/resume-review/app")} variant="ghost">Log in</Btn>}
           {token && hasPlan
             ? <Btn as={Link} to="/resume-review/app">My reviews <ArrowRight size={16} weight="bold" aria-hidden /></Btn>
             : <Btn onClick={() => scrollTo("pricing")}>Choose a plan <ArrowRight size={16} weight="bold" aria-hidden /></Btn>}
@@ -465,11 +465,9 @@ export default function ResumeLanding() {
   const needLogin = useCallback((plan) => {
     if (token) return false;
     const search = `?buy=${encodeURIComponent(plan.key)}`;
-    try { sessionStorage.setItem(RETURN_KEY, `/resume-review${search}`); } catch { /* ignore */ }
-    navigate("/resume-review/signup", { state: { from: { pathname: "/resume-review", search } } });
+    navigate(loginUrl(`/resume-review${search}`, "signup"));
     return true;
   }, [token, navigate]);
-  const rememberApp = useCallback(() => { try { sessionStorage.setItem(RETURN_KEY, "/resume-review/app"); } catch { /* ignore */ } }, []);
   const buyer = usePlanBuy({ onNeedLogin: needLogin });
 
   const want = params.get("buy");
@@ -488,8 +486,8 @@ export default function ResumeLanding() {
   return (
     <Page title={SEO.title} description={SEO.description} className="rv-landing rl">
       <Head plans={plans} />
-      <Hero paid={paid} signedIn={Boolean(token)} onLogin={rememberApp} cheapest={cheapest} />
-      <StickyBar token={token} hasPlan={paid} cheapest={cheapest} onLogin={rememberApp} />
+      <Hero paid={paid} signedIn={Boolean(token)} cheapest={cheapest} />
+      <StickyBar token={token} hasPlan={paid} cheapest={cheapest} />
       <main>
         <Features onPickType={pickType} />
         <How />
@@ -507,7 +505,7 @@ export default function ResumeLanding() {
               <p>Choose a plan, upload your resume, and read your AI report in minutes, with a working professional's notes to follow.</p>
               <div className="rl-hero-btns">
                 <Btn size="lg" onClick={() => scrollTo("pricing")}>See plans <ArrowRight size={17} weight="bold" aria-hidden /></Btn>
-                <Btn as={Link} to={token ? "/resume-review/app" : "/resume-review/login"} size="lg" variant="ghost" onClick={token ? undefined : rememberApp}>{token ? "Go to my space" : "Log in"}</Btn>
+                <Btn as={Link} to={token ? "/resume-review/app" : loginUrl("/resume-review/app")} size="lg" variant="ghost">{token ? "Go to my space" : "Log in"}</Btn>
               </div>
             </div>
           </div>

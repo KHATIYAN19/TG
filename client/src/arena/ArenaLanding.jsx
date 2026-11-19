@@ -16,6 +16,7 @@ import {
   BENEFITS, FALLBACK_FIELDS, OG_IMAGE, PAGE_NAV, PAGE_URL, SAFETY, SEO, STEPS, TOPICS, UPDATED_ISO, WHAT_IS, WHO_FOR, buildFaq, schemaJson,
 } from "./landingContent";
 import "./prep.css";
+import { loginUrl } from "../auth/authRedirect";
 
 const FONTS = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@500;600&family=Manrope:wght@400;500;600;700;800&display=swap";
 const cx = (...a) => a.filter(Boolean).join(" ");
@@ -323,7 +324,7 @@ export default function ArenaLanding() {
   const waiting = info?.activeMembers ?? 0;
   const price = info ? inr(info.entryPricePaise) : null;
 
-  const cta = signedIn ? "/prep-buddy/app" : "/prep-buddy/signup";
+  const cta = signedIn ? "/prep-buddy/app" : loginUrl("/prep-buddy/app", "signup");
   const ctaLabel = !signedIn
     ? "Join the arena"
     : { none: "Add your details", draft: "Continue to payment", active: "Open my arena", matched: "Open my buddy chat", suspended: "View my account" }[stage] ?? "Open my arena";
@@ -346,7 +347,7 @@ export default function ArenaLanding() {
               <a href="#how-it-works" className="pb-btn pb-btn-ghost pb-btn-lg">How it works</a>
             </div>
             <OfferBanner offer={info?.offer} />
-            {!signedIn && <p className="pb-hero-alt">Already a member? <Link to="/prep-buddy/signup?mode=login" className="pb-link">Log in</Link></p>}
+            {!signedIn && <p className="pb-hero-alt">Already a member? <Link to={loginUrl("/prep-buddy/app")} className="pb-link">Log in</Link></p>}
             {waiting > 0 && <p className="pb-live"><i aria-hidden /><span><b>{waiting}</b> {waiting === 1 ? "member is" : "members are"} looking for a prep buddy right now</span></p>}
             {info && !info.enabled && <p role="status" className="pb-paused">New entries are paused for the moment. Check back soon.</p>}
             <dl className="pb-facts">

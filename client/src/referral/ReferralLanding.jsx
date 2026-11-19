@@ -95,7 +95,6 @@ export default function ReferralLanding() {
   const [info, setInfo] = useState(null);
   useEffect(() => { publicInfo().then(setInfo).catch(() => {}); }, []);
   const go = token ? "Open Referrals" : "Get started free";
-  const remember = () => { try { sessionStorage.setItem("resume:returnTo", "/referral/app"); } catch { /* ignore */ } };
   const hasPriority = offered(info, "priority");
   const unlimited = offered(info, "unlimited") ? info.subPlans.find((p) => p.kind === "unlimited") : null;
   const priority = hasPriority ? info.subPlans.filter((p) => p.kind === "priority").sort((a, b) => a.price - b.price) : [];
@@ -116,8 +115,8 @@ export default function ReferralLanding() {
             <h1>Get referred by people who <em>already work there</em></h1>
             <p className="rfl-answer">{ANSWER}</p>
             <div className="rf-btns">
-              <Link to="/referral/app" className="rv-btn rv-btn-primary rv-btn-lg" onClick={remember}>{go}<ArrowRight size={17} weight="bold" aria-hidden /></Link>
-              <Link to="/referral/app/find" className="rv-btn rv-btn-ghost rv-btn-lg" onClick={remember}><MagnifyingGlass size={17} weight="bold" aria-hidden />Browse referrers</Link>
+              <Link to="/referral/app" className="rv-btn rv-btn-primary rv-btn-lg">{go}<ArrowRight size={17} weight="bold" aria-hidden /></Link>
+              <Link to="/referral/app/find" className="rv-btn rv-btn-ghost rv-btn-lg"><MagnifyingGlass size={17} weight="bold" aria-hidden />Browse referrers</Link>
             </div>
             <ul className="rfl-points" aria-label="Quick facts">{FACTS.map(([e, a, b]) => <li key={a}><span className="e" aria-hidden>{e}</span><b>{a}</b><span>{b}</span></li>)}</ul>
             {info?.stats?.referrers > 0 && <p className="rf-xs">👥 {info.stats.referrers.toLocaleString("en-IN")} referrers across {info.stats.companies.toLocaleString("en-IN")} companies right now.</p>}
@@ -129,9 +128,9 @@ export default function ReferralLanding() {
       <Section id="how-it-works" eyebrow="🧭 How it works" title={HOWTO_NAME} lead="Two sides, one simple flow. Sign in with your Target Trek account.">
         <div className="rf-grid c2">
           <article className="rf-card rfl-path"><header><Ico e="🙋" tone="sky" /><h3>I want a referral</h3></header><ol className="rf-steps">{SEEKER_STEPS.map(([t, d]) => <li key={t}><div><b>{t}</b><span>{d}</span></div></li>)}</ol>
-            <Link to="/referral/app/find" className="rl-textlink" onClick={remember} style={{ fontWeight: 700 }}>Find a referrer <ArrowRight size={13} weight="bold" aria-hidden /></Link></article>
+            <Link to="/referral/app/find" className="rl-textlink" style={{ fontWeight: 700 }}>Find a referrer <ArrowRight size={13} weight="bold" aria-hidden /></Link></article>
           <article className="rf-card rfl-path"><header><Ico e="🧑‍💼" tone="violet" /><h3>I can refer people</h3></header><ol className="rf-steps">{REFERRER_STEPS.map(([t, d]) => <li key={t}><div><b>{t}</b><span>{d}</span></div></li>)}</ol>
-            <Link to="/referral/app/profile" className="rl-textlink" onClick={remember} style={{ fontWeight: 700 }}>Start referring, free <ArrowRight size={13} weight="bold" aria-hidden /></Link></article>
+            <Link to="/referral/app/profile" className="rl-textlink" style={{ fontWeight: 700 }}>Start referring, free <ArrowRight size={13} weight="bold" aria-hidden /></Link></article>
         </div>
       </Section>
 
@@ -184,7 +183,7 @@ export default function ReferralLanding() {
       <section className="rfl-cta" aria-labelledby="cta-h">
         <div className="rv-shell"><div className="rf-hello">
           <div><h2 id="cta-h" style={{ fontFamily: "var(--rl-display)", fontSize: "clamp(26px,4vw,38px)", color: "#fff", letterSpacing: "-.03em" }}>Ready to get referred? 🚀</h2><p>Search a company and send your resume. It takes about two minutes.</p></div>
-          <div className="rf-btns"><Link to="/referral/app" className="rv-btn rv-btn-primary rv-btn-lg" onClick={remember}>{go}<ArrowRight size={17} weight="bold" aria-hidden /></Link><Link to="/learn" className="rv-btn rv-btn-ghost rv-btn-lg">More on Target Trek</Link></div>
+          <div className="rf-btns"><Link to="/referral/app" className="rv-btn rv-btn-primary rv-btn-lg">{go}<ArrowRight size={17} weight="bold" aria-hidden /></Link><Link to="/learn" className="rv-btn rv-btn-ghost rv-btn-lg">More on Target Trek</Link></div>
         </div></div>
       </section>
     </Page>

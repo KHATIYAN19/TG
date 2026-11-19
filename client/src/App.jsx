@@ -19,7 +19,7 @@ import {
   useDispatch,
   useSelector,
 } from "react-redux";
-import toast, {
+import {
   Toaster,
 } from "react-hot-toast";
 import axios from "axios";
@@ -37,6 +37,12 @@ import {
   tokenIsExpired,
   tokenExpiresAt,
 } from "./lib/authSession";
+import {
+  ALLOWED_ROLES,
+  LOGIN_PATH,
+  loginUrl,
+  pathOf,
+} from "./auth/authRedirect";
 /* ============================================================
    LAZY IMPORTS — PUBLIC PAGES
 ============================================================ */
@@ -109,9 +115,9 @@ const Resources = lazy(() =>
 const ArenaLanding = lazy(() =>
   import("./arena/ArenaLanding.jsx")
 );
-const ArenaAuth = lazy(() =>
-  import("./arena/ArenaAuth.jsx")
-);
+/* The one shared login / sign-up page (replaces the admin, Prep Buddy and Resume Lab ones). */
+const AuthPage = lazy(() => import("./auth/AuthPage.jsx"));
+const LegacyAuthRedirect = lazy(() => import("./auth/LegacyAuthRedirect.jsx"));
 const ArenaApp = lazy(() =>
   import("./arena/ArenaApp.jsx")
 );
@@ -172,7 +178,6 @@ const MemoriesApp = lazy(() =>
 );
 /* Resume Lab: paid resume + LinkedIn review (own colours, own header and footer) */
 const ResumeLanding = lazy(() => import("./resume/ResumeLanding.jsx"));
-const ResumeAuth = lazy(() => import("./resume/ResumeAuth.jsx"));
 const ResumeApp = lazy(() => import("./resume/ResumeApp.jsx"));
 const ResumePaymentResult = lazy(() => import("./resume/ResumePaymentResult.jsx"));
 const AdminResumeReviews = lazy(() => import("./Admin/AdminResumeReviews.jsx"));
@@ -348,9 +353,6 @@ const AddBlogPage = lazy(() =>
 const BlogAgentPage = lazy(() =>
   import("./Admin/BlogAgentPage")
 );
-const LoginPage = lazy(() =>
-  import("./Admin/LoginPage")
-);
 const GenerateReviewLinkPage = lazy(() =>
   import("./Admin/GenerateReview")
 );
@@ -493,15 +495,9 @@ const RouteLoader = ({ noNav = false }) => {
 /* ============================================================
    AUTHENTICATION HELPERS
 ============================================================ */
-const LOGIN_URL = "/admin/login";
+const LOGIN_URL = LOGIN_PATH; // the one shared login page
 const API_ORIGIN = String(Base_url || "")
   .replace(/\/$/, "");
-const ALLOWED_ROLES = [
-  "admin",
-  "Employee",
-  "affiliate",
-  "normal",
-];
 const ADMIN_ROLES = [
   "admin",
   "Employee",
@@ -579,11 +575,8 @@ function ProtectedRoute({
   ) {
     return (
       <Navigate
-        to={LOGIN_URL}
+        to={loginUrl(location)}
         replace
-        state={{
-          from: location,
-        }}
       />
     );
   }
@@ -606,41 +599,22 @@ function ProtectedRoute({
   return children;
 }
 /* ============================================================
-   LOGIN ROUTE
-============================================================ */
-function PublicLoginRoute({
-  token,
-  user,
-  children,
-}) {
-  if (
-    token &&
-    !accessTokenExpired(token) &&
-    user &&
-    ALLOWED_ROLES.includes(user.role)
-  ) {
-    return (
-      <Navigate
-        to={destinationForRole(user.role)}
-        replace
-      />
-    );
-  }
-  return children;
-}
-/* ============================================================
    PAGE LAYOUT CONFIGURATION
    Add routes here when they should hide the navbar and/or footer.
    Supports exact paths and wildcard prefixes ending in /*.
 ============================================================ */
 // Memories has its own header and footer (and is light-only), so the site chrome is hidden there.
 const NO_NAVBAR_ROUTES = [
+  "/login",
+  "/signup",
   "/others/book/how-to-sell-ebook",
   "/memories/*",
   "/admin/resume-reviews",
   "/admin/referrals",
 ];
 const NO_FOOTER_ROUTES = [
+  "/login",
+  "/signup",
   "/others/book/how-to-sell-ebook",
   "/memories/*",
   "/admin/resume-reviews",
@@ -700,43 +674,10 @@ function App() {
         "authLogoutReason",
         reason
       );
-      // Prep Buddy Arena members sign back in on the arena's own login
-      // (and return to the page they were on), not the admin login.
+      // Memories keeps its own sign-in: its visitors sign back in there and return to where they were.
       const onMemories =
         window.location.pathname.startsWith("/memories");
-      const onArena =
-        window.location.pathname.startsWith("/prep-buddy");
-      if (
-        onArena &&
-        window.location.pathname.startsWith(
-          "/prep-buddy/app"
-        )
-      ) {
-        sessionStorage.setItem(
-          "arena:returnTo",
-          window.location.pathname +
-            window.location.search
-        );
-      }
-      if (window.location.pathname.startsWith("/referral/app")) {
-        // Referrals sign in with the Resume Lab login and come straight back to where they were.
-        sessionStorage.setItem("resume:returnTo", window.location.pathname + window.location.search);
-        window.location.replace("/resume-review/login");
-        return;
-      }
-      if (window.location.pathname.startsWith("/resume-review")) {
-        if (window.location.pathname.startsWith("/resume-review/app")) {
-          sessionStorage.setItem(
-            "resume:returnTo",
-            window.location.pathname +
-              window.location.search
-          );
-        }
-        window.location.replace("/resume-review/login");
-        return;
-      }
       if (onMemories) {
-        // Memories visitors sign back in on the Memories login, and return to where they were.
         if (window.location.pathname.startsWith("/memories/app")) {
           sessionStorage.setItem(
             "memories:returnTo",
@@ -747,10 +688,9 @@ function App() {
         window.location.replace("/memories/login");
         return;
       }
+      // Everyone else signs back in on the one shared login page and returns to the page they were on.
       window.location.replace(
-        onArena
-          ? "/prep-buddy/signup?mode=login"
-          : LOGIN_URL
+        loginUrl(pathOf(window.location))
       );
     },
     [dispatch]
@@ -903,26 +843,6 @@ function App() {
       window.removeEventListener("online", onVisible);
     };
   }, [token, renewIfNeeded]);
-  useEffect(() => {
-    if (location.pathname !== LOGIN_URL) {
-      return;
-    }
-    const reason =
-      sessionStorage.getItem(
-        "authLogoutReason"
-      );
-    if (!reason) return;
-    sessionStorage.removeItem(
-      "authLogoutReason"
-    );
-    toast.error(
-      reason === "SESSION_REVOKED"
-        ? "Your session has been revoked. Please sign in again."
-        : reason === "ACCOUNT_BLOCKED"
-          ? "Your account has been blocked."
-          : "Your session has expired. Please sign in again."
-    );
-  }, [location.pathname]);
   /* ======================================================
      ROUTE GUARDS
   ====================================================== */
@@ -1173,7 +1093,7 @@ function App() {
           />
           <Route
             path="/prep-buddy/signup"
-            element={<ArenaAuth />}
+            element={<LegacyAuthRedirect mode="signup" fallback="/prep-buddy/app" />}
           />
           <Route
             path="/prep-buddy/app/*"
@@ -1185,8 +1105,8 @@ function App() {
               authorised on the server.
           ======================================== */}
           <Route path="/resume-review" element={<ResumeLanding />} />
-          <Route path="/resume-review/login" element={<ResumeAuth />} />
-          <Route path="/resume-review/signup" element={<ResumeAuth />} />
+          <Route path="/resume-review/login" element={<LegacyAuthRedirect mode="login" fallback="/resume-review/app" />} />
+          <Route path="/resume-review/signup" element={<LegacyAuthRedirect mode="signup" fallback="/resume-review/app" />} />
           <Route path="/resume-review/payment-result" element={<ResumePaymentResult />} />
           <Route path="/resume-review/plans" element={<Navigate to="/resume-review/app/plans" replace />} />
           <Route path="/resume-review/app/*" element={<ResumeApp />} />
@@ -1366,15 +1286,16 @@ function App() {
               AUTH ROUTES
           ======================================== */}
           <Route
+            path="/login"
+            element={<AuthPage />}
+          />
+          <Route
+            path="/signup"
+            element={<AuthPage />}
+          />
+          <Route
             path="/admin/login"
-            element={
-              <PublicLoginRoute
-                token={token}
-                user={user}
-              >
-                <LoginPage />
-              </PublicLoginRoute>
-            }
+            element={<LegacyAuthRedirect mode="login" />}
           />
           <Route
             path="/admin/signup"

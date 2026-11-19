@@ -10,6 +10,7 @@ import { http, errMsg } from "./api";
 import { BugReportButton } from "./BugReport";
 import { useArenaChrome } from "./chrome";
 import { Badge, Spinner, cx } from "./ui";
+import { loginUrl } from "../auth/authRedirect";
 
 const JoinPage = lazy(() => import("./pages/JoinPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -206,7 +207,7 @@ export default function ArenaApp() {
 
   // Only signed-in members may enter. (The API enforces this independently.)
   if (!token) {
-    return <Navigate to="/prep-buddy/signup?mode=login" replace state={{ from: location }} />;
+    return <Navigate to={loginUrl(location)} replace />;
   }
 
   return (

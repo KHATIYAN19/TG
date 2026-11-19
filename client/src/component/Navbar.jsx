@@ -7,6 +7,7 @@ import {
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { serverLogout } from "../lib/authSession";
+import { loginUrl } from "../auth/authRedirect";
 import logo from "../utils/target_Trek_logo_2.jpg";
 import "./Navbar.css";
 
@@ -171,6 +172,15 @@ function usePopover() {
   return { open, setOpen, ref };
 }
 
+/* Signed out: a Log in button where the profile avatar appears. It returns to this same page after login. */
+const LoginButton = memo(function LoginButton({ to, compact = false }) {
+  return (
+    <Link to={to} className={`tt-login-btn${compact ? " tt-login-btn--compact" : ""}`} aria-label="Log in or sign up">
+      Log in
+    </Link>
+  );
+});
+
 const ProfileMenu = memo(function ProfileMenu({ user, isAdmin, onNavigate, onLogout }) {
   const { open, setOpen, ref } = usePopover();
   const go = (path) => { setOpen(false); onNavigate(path); };
@@ -272,7 +282,7 @@ const ServicesMenu = memo(function ServicesMenu({ pathname, onNavigate }) {
 
 /* ---------- desktop bar (>= 1280px) ---------- */
 
-const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin, user, isAuthenticated, onNavigate, onLogout, onToggleTheme }) {
+const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin, user, isAuthenticated, loginTo, onNavigate, onLogout, onToggleTheme }) {
   const active = (p) => routeMatches(pathname, p);
   const model = buildModel(active);
 
@@ -308,7 +318,7 @@ const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin
         {isLearn && <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />}
         <ReferralsButton active={active(ROUTES.referrals)} />
         <ResumeLabButton active={active(ROUTES.resumeLab)} />
-        {isAuthenticated && <ProfileMenu user={user} isAdmin={isAdmin} onNavigate={onNavigate} onLogout={onLogout} />}
+        {isAuthenticated ? <ProfileMenu user={user} isAdmin={isAdmin} onNavigate={onNavigate} onLogout={onLogout} /> : <LoginButton to={loginTo} />}
       </div>
     </div>
   );
@@ -316,7 +326,7 @@ const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin
 
 /* ---------- compact bar (< 1280px): menu · brand · Resume Lab · theme ---------- */
 
-const CompactBar = memo(function CompactBar({ isLearn, isDark, pathname, menuOpen, menuRef, onOpen, onToggleTheme }) {
+const CompactBar = memo(function CompactBar({ isLearn, isDark, pathname, isAuthenticated, loginTo, menuOpen, menuRef, onOpen, onToggleTheme }) {
   return (
     <div className="tt-mob">
       <button type="button" ref={menuRef} className="tt-icon-btn" onClick={onOpen} aria-label="Open navigation menu" aria-haspopup="dialog" aria-expanded={menuOpen}>
@@ -327,6 +337,7 @@ const CompactBar = memo(function CompactBar({ isLearn, isDark, pathname, menuOpe
         <ReferralsButton compact active={routeMatches(pathname, ROUTES.referrals)} />
         <ResumeLabButton compact active={routeMatches(pathname, ROUTES.resumeLab)} />
         {isLearn && <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />}
+        {!isAuthenticated && <LoginButton compact to={loginTo} />}
       </div>
     </div>
   );
@@ -350,7 +361,7 @@ const Tile = ({ to, icon: Icon, label, active, onClick, tone }) => (
   </NavLink>
 );
 
-const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDark, isAdmin, user, isAuthenticated, closeRef, onClose, onNavigate, onLogout, onSetTheme }) {
+const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDark, isAdmin, user, isAuthenticated, loginTo, signupTo, closeRef, onClose, onNavigate, onLogout, onSetTheme }) {
   const [servicesOpen, setServicesOpen] = useState(false);
   const active = (p) => routeMatches(pathname, p);
   const model = buildModel(active);
@@ -475,6 +486,11 @@ const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDar
               </div>
             </div>
           ) : (
+            <>
+              <div className="tt-dr-user-btns">
+                <Link to={loginTo} onClick={onClose} className="tt-dr-sbtn tt-dr-sbtn--brand" tabIndex={open ? 0 : -1}>Log in</Link>
+                <Link to={signupTo} onClick={onClose} className="tt-dr-sbtn" tabIndex={open ? 0 : -1}>Sign up</Link>
+              </div>
             <a className="tt-dr-support" href={`mailto:${SUPPORT_EMAIL}`} tabIndex={open ? 0 : -1}>
               <Mail size={17} aria-hidden="true" />
               <span className="tt-grow">
@@ -482,6 +498,7 @@ const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDar
                 <small>{SUPPORT_EMAIL}</small>
               </span>
             </a>
+            </>
           )}
         </div>
       </aside>
@@ -507,6 +524,11 @@ export default function Navbar() {
   const isLearn = !isMainRoute(location.pathname);
   const isDark = isLearn && theme === "dark";
   const isAdmin = isAuthenticated && ["admin", "employee"].includes(String(user?.role || "").toLowerCase());
+
+  // Signed out: the login / sign-up buttons bring the person back to the page they are on.
+  const here = `${location.pathname}${location.search}${location.hash}`;
+  const loginTo = loginUrl(here);
+  const signupTo = loginUrl(here, "signup");
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
@@ -614,6 +636,7 @@ export default function Navbar() {
             isAdmin={isAdmin}
             user={user}
             isAuthenticated={isAuthenticated}
+            loginTo={loginTo}
             onNavigate={goTo}
             onLogout={handleLogout}
             onToggleTheme={toggleTheme}
@@ -622,6 +645,8 @@ export default function Navbar() {
             isLearn={isLearn}
             isDark={isDark}
             pathname={location.pathname}
+            isAuthenticated={isAuthenticated}
+            loginTo={loginTo}
             menuOpen={menuOpen}
             menuRef={menuBtnRef}
             onOpen={openMenu}
@@ -638,6 +663,8 @@ export default function Navbar() {
         isAdmin={isAdmin}
         user={user}
         isAuthenticated={isAuthenticated}
+        loginTo={loginTo}
+        signupTo={signupTo}
         closeRef={closeBtnRef}
         onClose={closeMenu}
         onNavigate={goTo}

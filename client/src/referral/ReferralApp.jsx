@@ -16,6 +16,7 @@ import Payments from "./Payments";
 import { closeFailNotice, closeWelcome, formatINR, retrySubscription } from "./api";
 import toast from "react-hot-toast";
 import { errMsg } from "../arena/api";
+import { loginUrl } from "../auth/authRedirect";
 import "./referral.css";
 
 const B = "/referral/app";
@@ -244,8 +245,7 @@ export default function ReferralApp() {
   const location = useLocation();
   useEffect(() => { window.scrollTo({ top: 0 }); }, [location.pathname]);
   if (!token) {
-    try { sessionStorage.setItem("resume:returnTo", location.pathname + location.search); } catch { /* ignore */ }
-    return <Navigate to="/resume-review/login" replace state={{ from: location }} />;
+    return <Navigate to={loginUrl(location)} replace />;
   }
   return (
     <Page title="Referrals | Target Trek" className="rla-page rfa">

@@ -23,7 +23,7 @@ const API = {
   sessions: `${ROOT}/api/users/sessions`,
   logoutAll: `${ROOT}/api/auth/logout-all`,
 };
-const LOGIN_ROUTE = "/admin/login";
+const LOGIN_ROUTE = "/login";
 const ORANGE = "#F97316";
 const TABS = [
   { key: "profile", label: "My Profile", desc: "Account details", icon: UserRound },

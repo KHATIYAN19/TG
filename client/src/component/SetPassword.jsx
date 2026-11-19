@@ -40,7 +40,7 @@ const API_URL = `${String(BASE_URL).replace(
   ""
 )}/api/auth/password/setup`;
 
-const LOGIN_ROUTE = "/admin/login";
+const LOGIN_ROUTE = "/login";
 const THEME_KEY = "theme";
 
 /* =====================================================

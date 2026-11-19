@@ -8,6 +8,7 @@ import { http, errMsg, errCode, TOPICS, LEVELS, SLOTS, COMPANY_TYPES, LANGUAGES 
 import { CardSkeletons, InfiniteFooter, useInfiniteList } from "../infinite";
 import { BackgroundLine, PracticeFacts, TargetCompanies, TopicBadges } from "../MemberBits";
 import { Avatar, Badge, Button, Card, EmptyState, Field, Modal, inputClass, cx } from "../ui";
+import { loginUrl } from "../../auth/authRedirect";
 
 const REASONS = [
   ["harassment", "Harassment"], ["spam", "Spam"], ["fake_profile", "Fake profile"],
@@ -201,7 +202,7 @@ export default function BrowsePage() {
         <EmptyState
           title={sessionEnded ? "Please sign in again" : "Couldn't load the arena"}
           action={sessionEnded
-            ? <Link to="/prep-buddy/signup?mode=login" state={{ from: { pathname: "/prep-buddy/app/arena" } }} className="inline-flex items-center rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800">Sign in</Link>
+            ? <Link to={loginUrl("/prep-buddy/app/arena")} className="inline-flex items-center rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800">Sign in</Link>
             : <Button onClick={list.retry}>Try again</Button>}
         >
           {error}

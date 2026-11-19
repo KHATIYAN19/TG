@@ -343,5 +343,11 @@ ${faqHtml(faqs)}
   });
 
   // If the backend didn't answer, don't let the CDN pin the price-less page.
-  return send(res, 200, html, live ? undefined : { cache: "public, max-age=0, s-maxage=30" });
+  // Live pages: prices change rarely, so keep them at the CDN for an hour (and serve stale for a week while it
+  // refreshes in the background) instead of re-hitting the backend every 5 minutes per edge region.
+  return send(res, 200, html, {
+    cache: live
+      ? "public, max-age=0, s-maxage=3600, stale-while-revalidate=604800"
+      : "public, max-age=0, s-maxage=30",
+  });
 }
