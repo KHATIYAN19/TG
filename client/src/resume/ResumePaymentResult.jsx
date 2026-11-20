@@ -60,10 +60,10 @@ export default function ResumePaymentResult() {
   const [params] = useSearchParams();
   const purchase = params.get("purchase") || "";
   const hinted = params.get("status");
-  const next = `/resume-review/app/submit/${purchase}`;
 
   const [view, setView] = useState(purchase ? "checking" : "missing");
   const [info, setInfo] = useState(null); // { plan: {name, amount}, reason }
+  const next = info?.plan?.builderOnly ? "/resume-review/app/builder/new" : `/resume-review/app/new?plan=${purchase}`; // a builder-only plan goes to the builder, not to "send in a resume"
   const [elapsed, setElapsed] = useState(0);
   const [round, setRound] = useState(0); // bump to start checking again from scratch
   const [paying, setPaying] = useState(false);
@@ -207,7 +207,7 @@ export default function ResumePaymentResult() {
     paid: {
       tone: "ok", Icon: CheckCircle, title: "Payment received", text: `${plan?.name ? `Your ${plan.name} plan is ready. ` : "Your plan is ready. "}Next: send in your resume and your AI report arrives in about two minutes.`,
       extra: <p className="rv-xs rv-subtle" aria-live="polite">Taking you there in {Math.max(left, 0)}…</p>,
-      actions: <Btn as={Link} to={next} replace size="lg">Send in my resume <ArrowRight size={16} weight="bold" aria-hidden /></Btn>,
+      actions: <Btn as={Link} to={next} replace size="lg">{info?.plan?.builderOnly ? "Build my resume" : "Send in my resume"} <ArrowRight size={16} weight="bold" aria-hidden /></Btn>,
     },
   }[view];
   const { Icon } = body;

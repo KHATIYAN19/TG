@@ -127,6 +127,36 @@ const validateField = (name, rawValue) => {
 
 const FIELD_ORDER = ["firstname", "email", "phone"];
 
+// Logged-in member's saved details, read synchronously from the same
+// localStorage entry the auth slice uses (no network call, no latency).
+const getSavedProfile = () => {
+  try {
+    if (!localStorage.getItem("token")) return null;
+
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (!user) return null;
+
+    const dial = String(user.countryCode || "+91").replace(/\D/g, "");
+    let phone = "";
+
+    // The checkout only takes Indian mobiles; skip other country codes.
+    if (dial === "91") {
+      phone = String(user.mobile || "").replace(/\D/g, "");
+      if (phone.length > 10 && phone.startsWith("91")) phone = phone.slice(2);
+      if (phone.length > 10 && phone.startsWith("0")) phone = phone.slice(1);
+      phone = phone.slice(0, 10);
+    }
+
+    return {
+      firstname: String(user.name || "").replace(/\s{2,}/g, " ").trim().slice(0, 60),
+      email: String(user.email || "").trim().toLowerCase(),
+      phone,
+    };
+  } catch {
+    return null;
+  }
+};
+
 /* =====================================================
    TEXT FIELD (module-level so it never remounts
    while the user is typing)
@@ -237,6 +267,26 @@ export default function PayUCheckoutModal({
 
   useEffect(() => {
     isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  /* ------------------------------------------------
+     PREFILL FOR LOGGED-IN USERS
+     Only fills fields that are still empty, so anything
+     the user already typed is never overwritten, and
+     every field stays editable.
+  ------------------------------------------------ */
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const saved = getSavedProfile();
+    if (!saved) return;
+
+    setFormData((prev) => ({
+      firstname: prev.firstname || saved.firstname,
+      email: prev.email || saved.email,
+      phone: prev.phone || saved.phone,
+    }));
   }, [isOpen]);
 
   /* ------------------------------------------------

@@ -5,6 +5,7 @@ const { Schema } = mongoose;
 /*
   A plan the admin sells on the resume-review page: one review, a bundle, or a time-boxed pass.
     aiReviews     AI reviews included (0 = unlimited). Every resume sent in uses one.
+    builderCredits Resume Builder credits (AI writes a resume from the person's resume + a job or target role)
     humanReviews  reviews by a working professional. Optional on each resume; the admin can switch human review off for a plan.
     validityDays  how long the plan lasts after payment (0 = never expires)
     includes      what each review covers; rewrittenResume means the reviewer delivers a complete rewritten resume (a file),
@@ -23,12 +24,14 @@ const resumePackageSchema = new Schema(
     aiReviews: { type: Number, default: 1, min: 0, max: 1000000 }, // AI reviews in the plan (0 = unlimited)
     humanReviews: { type: Number, default: 0, min: 0, max: 100000 }, // reviews by a working professional (only count while includes.humanReview is on)
     linkedinReviews: { type: Number, default: 0, min: 0, max: 1000 }, // LinkedIn profile reviews in the plan (0 = none; most plans give 1)
+    builderCredits: { type: Number, default: 0, min: 0, max: 100000 }, // Resume Builder credits: each AI-written resume uses one (0 = none)
     validityDays: { type: Number, default: 0, min: 0, max: 3650 }, // 0 = never expires
     includes: {
       resume: { type: Boolean, default: true },
       linkedin: { type: Boolean, default: false },
       jobMatch: { type: Boolean, default: false },
       humanReview: { type: Boolean, default: true }, // the admin's switch: off = this plan never offers a human review
+      aiReview: { type: Boolean, default: true }, // off = no AI review of an uploaded resume (a builder-only plan); aiReviews is then ignored
       rewrittenResume: { type: Boolean, default: false },
     },
     features: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },

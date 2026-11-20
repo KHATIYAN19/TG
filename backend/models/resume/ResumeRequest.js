@@ -56,7 +56,12 @@ const resumeRequestSchema = new Schema(
       error: { type: String, default: "" },
       userMessage: { type: String, default: "" }, // what the person is told when it failed
       refunded: { type: Boolean, default: false }, // the AI credit was given back to the plan
+      chargedPurchase: { type: Schema.Types.ObjectId, ref: "ResumePurchase", default: null }, // the plan the latest run's credit came from (a re-run can use another plan); a refund goes back here
       result: { type: Schema.Types.Mixed, default: null },
+      runId: { type: String, default: "" }, // the run that owns this review; a run that was taken over stops writing
+      heartbeatAt: { type: Date, default: null }, // last progress write: a run that has gone quiet for long is taken as dead
+      /* the agents' live progress (planner, reviewer, validator, reviser, finalizer), shown on the page as it happens. See services/resume/agents/README.md */
+      pipeline: { type: Schema.Types.Mixed, default: null },
     },
 
     human: {
@@ -78,6 +83,8 @@ const resumeRequestSchema = new Schema(
       deliverable: { key: { type: String, default: "" }, filename: { type: String, default: "" }, size: { type: Number, default: 0 } },
     },
     notifiedAt: { type: Date, default: null },
+    /* the member deleted it: hidden from them everywhere, kept for the admin (who can delete it for good) */
+    deletedAt: { type: Date, default: null, index: true },
   },
   { timestamps: true }
 );

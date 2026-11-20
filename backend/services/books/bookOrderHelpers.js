@@ -5,6 +5,7 @@ import User from "../../models/User.js";
 import { scheduleEbookEmail } from "../../utils/ebookEmailDelivery.js";
 import { recordOfferPurchase } from "../bundleOffers.js";
 import { sendBookPurchase } from "./metaPurchase.js";
+import { scheduleInvoice } from "../invoice/service.js";
 import { generateDownloadToken, hashDownloadToken } from "../../utils/payu.js";
 
 /*
@@ -347,6 +348,7 @@ export const settleBookOrder = async ({ order, gateway, result, signatureVerifie
   if (first) {
     await incrementPurchaseCounters(first);
     scheduleEbookEmail(first); // background PDF email, not awaited
+    scheduleInvoice(first); // tax invoice PDF -> S3 -> email; background, never awaited, never throws
     void sendBookPurchase(first); // Meta Conversions API (Meta-ad sales only); never awaited, never throws
     return { order: first, token: access?.rawToken || null, firstPayment: true };
   }

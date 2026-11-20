@@ -936,6 +936,37 @@ export default function PaymentSuccess() {
   const token =
     searchParams.get("token");
 
+  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  const [invoiceNote, setInvoiceNote] = useState("");
+
+  // The invoice is made from the paid order on the server; the access token proves this is the buyer's own order.
+  const handleDownloadInvoice = async () => {
+    if (!token || invoiceBusy) return;
+    setInvoiceBusy(true);
+    setInvoiceNote("");
+    try {
+      const response = await fetch(
+        `${BASE_URL}/payment/books/invoice?token=${encodeURIComponent(token)}`,
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+      const result = await response.json().catch(() => null);
+      if (response.ok && result?.data?.url) {
+        const a = document.createElement("a");
+        a.href = result.data.url;
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        setInvoiceNote(result?.message || "Invoice is not available right now.");
+      }
+    } catch {
+      setInvoiceNote("Unable to reach the server. Please try again.");
+    } finally {
+      setInvoiceBusy(false);
+    }
+  };
+
   const orderId =
     searchParams.get("order");
 
@@ -1848,7 +1879,26 @@ export default function PaymentSuccess() {
                 <BookOpen size={18} />
                 See my {totalBooks > 1 ? "books" : "book"}
               </a>
+
+              {purchase.invoiceEnabled && (
+              <button
+                type="button"
+                onClick={handleDownloadInvoice}
+                disabled={invoiceBusy}
+                className="tp-btn tp-btn-onpanel tp-btn-lg"
+              >
+                {invoiceBusy ? <Loader2 size={18} className="tp-spin" /> : <FileText size={18} />}
+                Download invoice
+              </button>
+              )}
             </div>
+
+            {invoiceNote && (
+              <p className="tp-hero-note" role="status">
+                <FileText size={15} />
+                <span>{invoiceNote}</span>
+              </p>
+            )}
 
             {purchase.emailDelivery?.enabled && (
               <p className="tp-hero-note">

@@ -46,6 +46,8 @@ import {
   MessageSquareText,
   MoreHorizontal,
   Receipt,
+  FileText,
+  FileDown,
   RefreshCw,
   RotateCcw,
   Search,
@@ -1653,6 +1655,173 @@ function JsonAccordion({
 
 
 /* =========================================================
+   INVOICES (create / download / delete, stored in S3)
+========================================================= */
+
+function useInvoiceApi() {
+  const token = useSelector((state) => state.auth.token);
+
+  return useCallback(
+    async (path, options = {}) => {
+      const response = await fetch(`${BASE_URL}/admin/invoices${path}`, {
+        ...options,
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.success === false) {
+        const error = new Error(result?.message || "Invoice request failed.");
+        error.data = result?.data;
+        throw error;
+      }
+      return result;
+    },
+    [token]
+  );
+}
+
+function saveFromUrl(url) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function InvoiceMenuItems({ order }) {
+  const api = useInvoiceApi();
+  const [invoice, setInvoice] = useState(undefined); // undefined = loading, null = none yet
+  const [busy, setBusy] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    api(`/order/${encodeURIComponent(order._id)}`)
+      .then((r) => alive && setInvoice(r.data || null))
+      .catch(() => alive && setInvoice(null));
+    return () => {
+      alive = false;
+    };
+  }, [api, order._id]);
+
+  const run = async (name, fn) => {
+    const toastId = toast.loading(name === "create" ? "Creating invoice..." : name === "delete" ? "Deleting invoice..." : name === "email" ? "Sending invoice..." : "Preparing download...");
+    try {
+      setBusy(name);
+      await fn(toastId);
+    } catch (error) {
+      if (error.data) setInvoice(error.data);
+      toast.error(error.message || "Invoice action failed.", { id: toastId });
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const create = () =>
+    run("create", async (id) => {
+      const r = await api(`/order/${encodeURIComponent(order._id)}`, { method: "POST" });
+      setInvoice(r.data);
+      toast.success(r.message || "Invoice created.", { id });
+    });
+
+  const download = () =>
+    run("download", async (id) => {
+      const r = await api(`/${invoice.id}/download`);
+      saveFromUrl(r.data.url);
+      toast.success(`Downloading ${r.data.invoiceNumber}`, { id });
+    });
+
+  const email = () => {
+    if (!window.confirm(`Email invoice ${invoice.invoiceNumber} to the buyer?`)) return;
+    run("email", async (id) => {
+      const r = await api(`/${invoice.id}/email`, { method: "POST" });
+      toast.success(r.message || "Invoice emailed.", { id });
+    });
+  };
+
+  const remove = () => {
+    if (!window.confirm(`Delete invoice ${invoice.invoiceNumber}? The PDF is permanently removed from storage.`)) return;
+    run("delete", async (id) => {
+      const r = await api(`/${invoice.id}`, { method: "DELETE" });
+      setInvoice(null);
+      toast.success(r.message || "Invoice deleted.", { id });
+    });
+  };
+
+  const spin = (name, Icon) => (busy === name ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />);
+
+  return (
+    <>
+      <div className="tt-menu-heading">Invoice{invoice?.invoiceNumber ? ` · ${invoice.invoiceNumber}` : ""}</div>
+
+      {invoice === undefined ? (
+        <div className="tt-menu-item" style={{ opacity: 0.6 }}>
+          <Loader2 className="h-4 w-4 animate-spin" /> Checking...
+        </div>
+      ) : null}
+
+      {invoice === null || invoice?.status === "FAILED" || invoice?.status === "PENDING" ? (
+        <button type="button" disabled={Boolean(busy)} onClick={create} className="tt-menu-item">
+          {spin("create", FileText)}
+          {invoice ? "Retry Invoice PDF" : "Generate Invoice"}
+        </button>
+      ) : null}
+
+      {invoice?.status === "READY" ? (
+        <>
+          <button type="button" disabled={Boolean(busy)} onClick={download} className="tt-menu-item">
+            {spin("download", FileDown)}
+            Download Invoice
+          </button>
+          <button type="button" disabled={Boolean(busy)} onClick={email} className="tt-menu-item">
+            {spin("email", Mail)}
+            Email Invoice to Buyer
+          </button>
+          <button type="button" disabled={Boolean(busy)} onClick={remove} className="tt-menu-item tt-menu-danger">
+            {spin("delete", Trash2)}
+            Delete Invoice
+          </button>
+        </>
+      ) : null}
+
+      <div className="tt-menu-divider" />
+    </>
+  );
+}
+
+function InvoiceExportButton() {
+  const token = useSelector((state) => state.auth.token);
+  const [busy, setBusy] = useState(false);
+
+  const exportCsv = async () => {
+    try {
+      setBusy(true);
+      const response = await fetch(`${BASE_URL}/admin/invoices/export.csv`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error("Unable to export invoices.");
+      const url = URL.createObjectURL(await response.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error.message || "Unable to export invoices.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button type="button" onClick={exportCsv} disabled={busy} className="tt-btn tt-btn-secondary mt-3">
+      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+      Export invoices (CSV)
+    </button>
+  );
+}
+
+
+/* =========================================================
    ACTION MENU
 ========================================================= */
 
@@ -1805,6 +1974,8 @@ function ActionMenu({
 
           {isPaidSuccess ? (
             <>
+              <InvoiceMenuItems order={order} />
+
               <button
                 type="button"
 
@@ -8351,6 +8522,9 @@ export default function AdminBookPayments({ mode } = {}) {
                     reminders, coupons, refunds, access expiry,
                     access revocation and customer review requests.
                   </p>
+
+
+                  {isAll ? <InvoiceExportButton /> : null}
 
 
                   <div

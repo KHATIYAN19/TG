@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Warning, X } from "@phosphor-icons/react";
 
 import "./resume.css";
 import "./lab.css";
+import "./studio.css";
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
 

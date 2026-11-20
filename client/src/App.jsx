@@ -609,9 +609,9 @@ const NO_NAVBAR_ROUTES = [
   "/signup",
   "/others/book/how-to-sell-ebook",
   "/memories/*",
-  "/admin/resume-reviews",
   "/admin/referrals",
 ];
+// /admin/resume-reviews keeps the site navbar on top (the console makes room for it) but has no footer
 const NO_FOOTER_ROUTES = [
   "/login",
   "/signup",

@@ -38,6 +38,8 @@ import bookPaymentRoute from "./routes/bookPaymentRoute.js";
 import { bookPaymentWebhook } from "./controllers/books/bookPaymentController.js";
 
 import paymentRoutes from "./routes/paymentRoute.js";
+import invoiceRoutes from "./routes/invoiceRoutes.js";
+import { startInvoiceSweeper } from "./services/invoice/service.js";
 import emailCampaignRoutes from "./routes/emailCampaignRoutes.js";
 import marketingCampaignRoutes from "./routes/marketingCampaignRoutes.js";
 import { unsubscribePage, unsubscribeSubmit } from "./controllers/unsubscribeController.js";
@@ -729,6 +731,8 @@ app.use(
   paymentRoutes
 );
 
+app.use("/admin/invoices", invoiceRoutes);
+
 app.use(
   "/api/admin/analytics",
   BookSalesRoute
@@ -880,6 +884,7 @@ const startServer = async () => {
 
     startAnalyticsJobs();
     startEbookEmailSweeper();
+    startInvoiceSweeper();
     startPackCodeSweeper();
     await backfillExpiry().catch((error) => console.error("[memory] expiry backfill failed:", error.message));
     startStorageSweeper();

@@ -30,11 +30,10 @@ export const sendReviewReady = async (id) => {
     const fixes = (ai?.improvements || []).slice(0, 3).map((x) => x?.issue).filter(Boolean);
     const humanFixes = (human?.improvements || []).slice(0, 3).filter(Boolean);
     const top = fixes.length ? fixes : humanFixes;
-    const reviewerFirst = human?.reviewerName ? esc(String(human.reviewerName).split(" ")[0]) : "";
     const headline = ai?.headline ? esc(ai.headline) : "Your scores, what to fix first and your rewritten bullets are waiting.";
     const preheader = `${planName}${role ? ` for ${role}` : ""} is ready${overall !== null ? `. Overall score ${overall}/100` : ""}.`;
 
-    const scores = [scoreCell("Overall", overall), scoreCell("ATS ready", ats), scoreCell(reviewerFirst ? `${reviewerFirst}'s score` : "Reviewer", reviewer)].join("");
+    const scores = [scoreCell("Overall", overall), scoreCell("ATS ready", ats), scoreCell("Reviewer", reviewer)].join("");
     const fixRows = top.map((t, n) => `<tr><td width="30" valign="top" style="padding:8px 0"><div style="width:24px;height:24px;line-height:24px;border-radius:12px;background:${C.accent};color:#fff;font-size:12px;font-weight:700;text-align:center">${n + 1}</div></td><td style="padding:8px 0;font-size:15px;line-height:22px;color:${C.ink}">${esc(t)}</td></tr>`).join("");
 
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Your resume review is ready</title></head>

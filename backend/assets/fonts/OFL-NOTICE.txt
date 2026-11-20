@@ -1,0 +1,3 @@
+Fonts in this folder are open source under the SIL Open Font License 1.1 (https://openfontlicense.org):
+Carlito (Lukasz Dziedzic, metric-compatible with Calibri), Crimson Text (Sebastian Kosch),
+PT Serif (ParaType), IBM Plex Mono (IBM). Source: github.com/google/fonts. Used by services/resume/builderPdf.js.

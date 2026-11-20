@@ -18,8 +18,9 @@ const resumePurchaseSchema = new Schema(
       aiReviews: Number,
       humanReviews: Number,
       linkedinReviews: Number,
+      builderCredits: Number,
       validityDays: Number,
-      includes: { resume: Boolean, linkedin: Boolean, jobMatch: Boolean, humanReview: Boolean, rewrittenResume: Boolean },
+      includes: { resume: Boolean, linkedin: Boolean, jobMatch: Boolean, humanReview: Boolean, rewrittenResume: Boolean, aiReview: Boolean },
     },
 
     /* the plan's allowance, copied at purchase and adjustable by an admin (extend / add reviews) */
@@ -29,6 +30,9 @@ const resumePurchaseSchema = new Schema(
     humanUsed: { type: Number, default: 0, min: 0 },
     linkedinAllowed: { type: Number, default: 0, min: 0 }, // 0 = this plan has no LinkedIn reviews
     linkedinUsed: { type: Number, default: 0, min: 0 },
+    builderAllowed: { type: Number, default: 0, min: 0 }, // Resume Builder credits (0 = none). Plans bought while the builder is off hold none.
+    builderUsed: { type: Number, default: 0, min: 0 },
+    noAi: { type: Boolean, default: false }, // a builder-only plan: it holds no AI review of an uploaded resume (aiAllowed 0 would otherwise mean unlimited)
     expiresAt: { type: Date, default: null }, // set when it is paid; null = never
     revokedAt: { type: Date, default: null }, // an admin switched the plan off
     revokeReason: { type: String, default: "", maxlength: 300 },

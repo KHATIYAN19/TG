@@ -9,9 +9,10 @@ import {
 
 import { cachedPackages, fetchPackages, formatINR, myPlans } from "./api";
 import {
-  AI_VS_HUMAN, ATS_ANSWER, ATS_DO, ATS_DONT, ATS_HOW, FAQ, FEATURES, HERO_FACTS, MISTAKES, NEEDS, PAGE_NAV, PAGE_URL, REVIEWER_ANSWER,
-  REVIEWER_PROCESS, SEO, STEPS, UPDATED_ISO, WHO_FOR,
+  AI_VS_HUMAN, ATS_ANSWER, ATS_DO, ATS_DONT, ATS_HOW, FAQ, HERO_FACTS, MISTAKES, NEEDS, PAGE_NAV, PAGE_URL, REVIEWER_ANSWER,
+  REVIEWER_PROCESS, SEO, STEPS, UPDATED_ISO, WHO_FOR, featuresFor,
 } from "./landingContent";
+import { useBuilderMode } from "./useBuilder";
 import PlanPicker, { PlanAssurance, PlanCompare, needsFor, usePlanBuy } from "./PlanPicker";
 import { ReviewView } from "./ResumeDetail";
 import { SAMPLE_AI, SAMPLE_POOL } from "./sampleReview";
@@ -131,7 +132,7 @@ function Hero({ paid, signedIn, cheapest }) {
 
 /* ============================ feature explorer ============================ */
 const F_ICON = { ai: Brain, human: UserCircle, linkedin: LinkedinLogo, jd: Target, builder: FileText, tailor: MagicWand, rewrite: PencilSimpleLine, space: SquaresFour };
-const TYPE_NAME = { ai: "AI", human: "Human", linkedin: "LinkedIn", mix: "Mix" };
+const TYPE_NAME = { ai: "AI", human: "Human", linkedin: "LinkedIn", mix: "Mix", builder: "Builder" };
 const COUNT_WORD = { 4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten" };
 
 /* a small picture for each feature, drawn with the page's own pieces */
@@ -176,18 +177,12 @@ function FeatureArt({ id }) {
   );
   if (id === "builder") return (
     <div className="rl-art">
-      <ol className="rl-art-steps">{["About you", "Links", "Summary", "Education", "Experience", "Projects", "Skills", "Finish"].map((s, i) => <li key={s} className={i < 4 ? "done" : i === 4 ? "now" : ""}>{s}</li>)}</ol>
-      <div className="rl-art-tpls">{["Classic", "Modern", "Compact"].map((t, i) => <span key={t} className={i === 1 ? "on" : ""}><i /><i /><i />{t}</span>)}</div>
-    </div>
-  );
-  if (id === "tailor") return (
-    <div className="rl-art">
       <div className="rl-art-q">
         <span className="rl-art-k">The job asks for Docker</span>
         <p>Have you used it, for example in a project or internship? If yes, tell us where.</p>
         <div className="rl-art-qa"><span className="on">Yes, in my booking API project</span><span>No</span></div>
       </div>
-      <p className="rl-art-foot"><Check size={14} weight="bold" aria-hidden />Only skills you confirm go into the new version.</p>
+      <p className="rl-art-foot"><Check size={14} weight="bold" aria-hidden />Only skills you confirm go into the new resume.</p>
     </div>
   );
   if (id === "rewrite") return (
@@ -207,8 +202,10 @@ function FeatureArt({ id }) {
 }
 
 function Features({ onPickType }) {
+  const builderOn = useBuilderMode() === "on"; // the admin's switch: the builder is only mentioned while it is on
+  const FEATURES = featuresFor(builderOn);
   const [i, setI] = useState(0);
-  const f = FEATURES[i];
+  const f = FEATURES[Math.min(i, FEATURES.length - 1)];
   const Icon = F_ICON[f.id];
   return (
     <Section id="features" eyebrow="Everything inside" title={`${COUNT_WORD[FEATURES.length] || FEATURES.length} tools to take your resume from ignored to shortlisted`} lead="Pick a feature to see what it does, how long it takes and which plans include it.">

@@ -3,6 +3,7 @@ import Order from "../../models/Order.js";
 import { publicAttribution } from "../../utils/attribution.js";
 import { isAutoEbookEmailEnabled } from "../../utils/ebookEmailDelivery.js";
 import { hashDownloadToken } from "../../utils/payu.js";
+import { getInvoiceConfig } from "../../config/invoice.js";
 
 const maskEmail = (email) => {
   const [user = "", domain = ""] = String(email || "").split("@");
@@ -277,6 +278,9 @@ export const getPurchasedBookAccess = async (req, res) => {
 
       data: {
         orderId: order.orderId,
+
+        // The invoice button only appears when invoices are switched on (SEND_BOOKS_BILL=true).
+        invoiceEnabled: getInvoiceConfig().autoGenerate,
 
         isBundle,
 

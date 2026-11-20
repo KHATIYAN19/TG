@@ -471,12 +471,14 @@ export const PLAN_TYPES = [
   { id: "human", label: "Human review", blurb: "A working professional reads your resume and writes detailed feedback, on top of the AI report." },
   { id: "linkedin", label: "LinkedIn review", blurb: "Your live LinkedIn profile checked against your resume, so both tell the same story." },
   { id: "mix", label: "Mix: Human + LinkedIn", blurb: "The full package: AI report, a person's resume review and a LinkedIn review in one plan." },
+  { id: "builder", label: "Resume builder", blurb: "AI writes a one-page resume for the job you want, from your own resume. One credit per build." },
 ];
 
 /* a plan belongs to exactly one tab, by what it actually contains */
 export const planType = (p) => {
   const h = !!p.human?.enabled;
   const l = !!p.linkedin?.enabled;
+  if (!h && !l && p.ai?.enabled === false && p.builder?.enabled) return "builder"; // holds nothing but resume builder credits
   if (h && l) return "mix";
   if (l) return "linkedin";
   if (h) return "human";
@@ -559,9 +561,8 @@ export const HERO_FACTS = [
     plan    = paid: comes with the plans named in `plans`
     account = free in your space once you have an account
 */
-/* The resume builder and job tailoring are not live yet. Flip to true when they ship: every link and mention appears again. */
-export const BUILDER_LIVE = false;
-const BUILDER_IDS = ["builder", "tailor"];
+/* The resume builder is switched on and off by an admin (Resume Lab admin > Builder). `featuresFor` / `compareRowsFor` take that switch. */
+const BUILDER_IDS = ["builder"];
 
 const ALL_FEATURES = [
   {
@@ -625,30 +626,18 @@ const ALL_FEATURES = [
   },
   {
     id: "builder",
-    name: "Resume builder",
+    name: "AI resume builder",
     where: "plan",
-    plans: ["ai", "human", "linkedin", "mix"],
-    time: "15 to 30 minutes",
-    pitch: "No resume yet, or tired of fighting Word? Answer one section at a time and download a clean, ATS-friendly PDF.",
-    points: [
-      "Guided questions: about you, links, education, experience, projects, skills",
-      "Three templates: Classic, Modern and Compact",
-      "Live preview as you type, saved automatically",
-      "Single-column PDF that software can read",
-    ],
-  },
-  {
-    id: "tailor",
-    name: "Tailor a resume to a job",
-    where: "plan",
-    plans: ["ai", "human", "linkedin", "mix"],
+    plans: ["ai", "human", "linkedin", "mix", "builder"],
+    some: true,
     time: "A few minutes",
-    pitch: "Give it your resume and a job post. It asks you about each gap instead of inventing skills, then writes a version for that job.",
+    pitch: "Upload your resume and a job description (or just the role you want). The AI writes a one-page, ATS-friendly resume from your own facts, and asks before it adds anything.",
     points: [
-      "Finds what the job asks for that your resume does not show",
-      "Asks you a short question for each gap",
-      "Only adds skills you confirmed, never made-up experience",
-      "Opens in the builder so you can edit and download",
+      "Built from your real jobs, projects and links, never invented",
+      "Matches the job description, or the role and details you give",
+      "Asks a short question for each gap instead of making up skills",
+      "Edit every line and link in a form, then download the PDF",
+      "One builder credit per resume",
     ],
   },
   {
@@ -680,7 +669,8 @@ const ALL_FEATURES = [
   },
 ];
 
-export const FEATURES = ALL_FEATURES.filter((f) => BUILDER_LIVE || !BUILDER_IDS.includes(f.id));
+/* the builder is shown only while an admin has it switched on for everyone */
+export const featuresFor = (builderOn) => ALL_FEATURES.filter((f) => builderOn || !BUILDER_IDS.includes(f.id));
 
 /* "I want…" shortcuts that pick a plan type */
 export const NEEDS = [
@@ -697,17 +687,18 @@ export const COMPARE_COLS = [
   ["human", "Human review"],
   ["linkedin", "LinkedIn review"],
   ["mix", "Mix"],
+  ["builder", "Builder"],
 ];
 const ALL_COMPARE_ROWS = [
-  ["AI report with scores, keywords and rewritten bullets", { ai: true, human: true, linkedin: true, mix: true }],
-  ["Written review by a working professional", { ai: false, human: true, linkedin: false, mix: true }],
-  ["Live LinkedIn profile review by a person", { ai: false, human: false, linkedin: true, mix: true }],
-  ["Job description match", { ai: "Some plans", human: "Some plans", linkedin: "Some plans", mix: "Some plans" }],
-  ["Complete rewritten resume", { ai: false, human: "Rewrite plans", linkedin: false, mix: "Rewrite plans" }],
-  ["Resume builder and job tailoring", { ai: true, human: true, linkedin: true, mix: true }],
-  ["Credits add up across plans", { ai: true, human: true, linkedin: true, mix: true }],
+  ["AI report with scores, keywords and rewritten bullets", { ai: true, human: true, linkedin: true, mix: true, builder: false }],
+  ["Written review by a working professional", { ai: false, human: true, linkedin: false, mix: true, builder: false }],
+  ["Live LinkedIn profile review by a person", { ai: false, human: false, linkedin: true, mix: true, builder: false }],
+  ["Job description match", { ai: "Some plans", human: "Some plans", linkedin: "Some plans", mix: "Some plans", builder: "In the builder" }],
+  ["Complete rewritten resume", { ai: false, human: "Rewrite plans", linkedin: false, mix: "Rewrite plans", builder: false }],
+  ["AI resume builder", { ai: "Some plans", human: "Some plans", linkedin: "Some plans", mix: "Some plans", builder: true }],
+  ["Credits add up across plans", { ai: true, human: true, linkedin: true, mix: true, builder: true }],
 ];
-export const COMPARE_ROWS = ALL_COMPARE_ROWS.filter(([label]) => BUILDER_LIVE || !/builder/i.test(label));
+export const compareRowsFor = (builderOn) => ALL_COMPARE_ROWS.filter(([label]) => builderOn || !/builder/i.test(label));
 
 export const PLAN_ASSURANCE = [
   ["Secure payment", "UPI, card or netbanking. We never see your card details."],

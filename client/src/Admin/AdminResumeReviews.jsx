@@ -1,730 +1,1017 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowSquareOut, Brain, CaretLeft, CaretRight, ClipboardText, CreditCard, CurrencyInr, FileText, Hourglass, House, LinkedinLogo, MagnifyingGlass, Plus, ProhibitInset, SealCheck, Tag, Trash, UploadSimple, UsersThree } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowSquareOut, ArrowsClockwise, Brain, FileText, House, LinkedinLogo, MagnifyingGlass, Plus, Trash, UploadSimple, X } from "@phosphor-icons/react";
 
 import { errMsg } from "../arena/api";
 import {
-  PLAN_STATE, STATUS, adminAiSettings, adminBlock, adminClaim, adminDeletePackage, adminDeletePurchase, adminDeleteRequest, adminGet, adminGrant, adminList, adminMembers, adminPackages,
-  adminPurchases, adminRerunAi, adminSaveAiSettings, adminSavePackage, adminTestAiModel, adminSaveReview, adminStats, adminUnblock, adminUpdatePurchase, dateFmt, dayFmt, formatINR, uploadDocument,
+  PLAN_STATE, adminAiSettings, adminBlock, adminBuilder, adminBulkDeletePurchases, adminBulkDeleteRequests, adminClaim, adminDeleteDraft, adminDeletePackage,
+  adminDeletePurchase, adminDeleteRequest, adminEraseMember, adminGet, adminGetLite, adminGrant, adminList, adminMembers, adminOverview, adminPackages, adminPurchases,
+  adminRerunAi, adminSaveAiSettings, adminSaveBuilderSettings, adminSavePackage, adminSaveReview, adminTestAiModel, adminUnblock, adminUpdatePurchase,
+  dateFmt, dayFmt, formatINR, uploadDocument,
 } from "../resume/api";
 import { AiReport } from "../resume/ResumeDetail";
-import { Btn, Field, FormattedText, Modal, Page, Pill, Skeleton, cx } from "../resume/ui";
-import "./adminResume.css"; // after the shared styles so it can refine them
+import { Btn, FormattedText, Page, Skeleton, cx } from "../resume/ui";
+import { Badge, CopyText, Pager, Sheet, Switch, TextField, usePrompt } from "../referral/ui";
+import "../referral/referral.css";
+import "./adminReferrals.css";
+import "./adminResume.css";
 
 /*
-  RESUME LAB: admin and reviewer screen.
-    Reviews   every resume sent in, what the AI said, and the human review (comments + an optional rewritten resume file)
-    Payments  every plan bought: extend, add reviews, switch off, delete, or give a plan for free
-    Members   who is using it, and blocking someone from using it
-    Plans     prices, bundles, how many reviews and for how many days (admin only)
-    AI model  which provider (OpenAI, Gemini, Claude) and model writes the AI reviews (admin only)
-  Reviewers (admin now, Employee accounts later) only see Reviews.
+  RESUME LAB · admin console (rebuilt from scratch, same shape as /admin/referrals)
+    Work    Overview        the numbers, what needs attention, the oldest reviews waiting
+            Reviews         every resume sent in: AI report, the human review, Trash, bulk delete forever
+    Money   Payments        every plan bought: extend, switch off, give a plan, bulk delete forever
+            Members         who uses Resume Lab: block, unblock, erase all their data for good
+    Setup   Plans           what is sold: create, edit, hide, delete forever
+            Resume builder  the on / off switch and every question it asked (delete a builder resume for good)
+            AI model        which provider and model writes the AI reviews
+  ONE API CALL PER TAB: each tab's endpoint returns its rows, its chip counts and anything its forms need.
+  The review desk makes one call to open, then a light poll (status + AI only) while the AI agents run.
+  Reviewers (Employee accounts) see Overview and Reviews only. Every permanent delete asks in a sheet first.
 */
+
+/* ------------------------------------------------------------ small helpers */
 const lines = (v) => String(v || "").split("\n").map((s) => s.trim()).filter(Boolean);
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const since = (d) => { const h = Math.max(0, (Date.now() - new Date(d).getTime()) / 36e5); return h < 1 ? "just now" : h < 24 ? `${Math.floor(h)}h` : `${Math.floor(h / 24)}d`; };
+const scoreTone = (n) => (n >= 75 ? "ok" : n >= 50 ? "warn" : "bad");
+const useDebounced = (v, ms = 350) => { const [d, setD] = useState(v); useEffect(() => { const t = setTimeout(() => setD(v), ms); return () => clearTimeout(t); }, [v, ms]); return d; };
 
-const Pager = ({ page, pages, setPage }) => pages > 1 && (
-  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
-    <Btn variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}><CaretLeft size={14} weight="bold" aria-hidden />Prev</Btn>
-    <span className="rv-sm rv-mono">{page} / {pages}</span>
-    <Btn variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage(page + 1)}>Next<CaretRight size={14} weight="bold" aria-hidden /></Btn>
-  </div>
-);
+/* One call per view. `key` says what to load; the same key never loads twice (React's dev double-run included).
+   The last answer stays on screen while a new one loads, and an older answer never overwrites a newer one. */
+function useLoad(fn, key, skip = false) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const seq = useRef(0);
+  const last = useRef(null);
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  const run = useCallback(async () => {
+    const n = ++seq.current;
+    setLoading(true); setError("");
+    try { const d = await fnRef.current(); if (n === seq.current) setData(d); } catch (e) { if (n === seq.current) setError(errMsg(e)); } finally { if (n === seq.current) setLoading(false); }
+  }, []);
+  useEffect(() => { if (skip || last.current === key) return; last.current = key; run(); }, [key, skip, run]);
+  return { data, error, loading, reload: run, setData };
+}
 
-const Chips = ({ options, value, onChange, counts = {} }) => (
-  <div className="ar-chips" role="group" aria-label="Filter">
-    {options.map(([k, label]) => <button key={k} type="button" aria-pressed={value === k} onClick={() => onChange(k)}>{label}{counts[k] != null && <em>{counts[k]}</em>}</button>)}
-  </div>
-);
+/* runs an action with a toast; `busy` names the running one so only that button spins */
+const useRun = () => {
+  const [busy, setBusy] = useState("");
+  const run = async (name, fn, okMsg, after) => { setBusy(name); try { const r = await fn(); if (okMsg) toast.success(typeof okMsg === "function" ? okMsg(r) : okMsg); await after?.(r); return r; } catch (e) { toast.error(errMsg(e)); return null; } finally { setBusy(""); } };
+  return [busy, run];
+};
 
-const HUES = [18, 32, 152, 200, 262, 330, 8, 174];
+/* ticked rows; cleared whenever new rows arrive */
+function usePick(rows) {
+  const [picked, setPicked] = useState(() => new Set());
+  useEffect(() => { setPicked(new Set()); }, [rows]);
+  const toggle = (id) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const all = Boolean(rows?.length) && rows.every((r) => picked.has(r.id));
+  const toggleAll = () => setPicked(all ? new Set() : new Set(rows.map((r) => r.id)));
+  return { picked, toggle, all, toggleAll, clear: () => setPicked(new Set()) };
+}
+
+const HUES = [158, 172, 200, 262, 330, 18, 32, 8];
 const Avatar = ({ name, email, size }) => {
   const label = (name || email || "?").trim();
   const initials = label.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
   const hue = HUES[[...label].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length];
-  return <span className={cx("ar-av", size)} style={{ background: `linear-gradient(135deg, hsl(${hue} 78% 55%), hsl(${(hue + 28) % 360} 72% 42%))` }} aria-hidden>{initials}</span>;
+  return <span className={cx("rlx-av", size)} style={{ background: `linear-gradient(135deg, hsl(${hue} 62% 46%), hsl(${(hue + 30) % 360} 58% 34%))` }} aria-hidden>{initials}</span>;
 };
-const Who = ({ name, email }) => <div className="ar-who"><Avatar name={name} email={email} /><div style={{ minWidth: 0 }}><b>{name || "User"}</b><small>{email}</small></div></div>;
+const Who = ({ name, email, sub }) => <div className="rlx-who"><Avatar name={name} email={email} /><div><b>{name || "User"}</b><small>{sub || email}</small></div></div>;
 
-const SearchBox = ({ value, onChange, placeholder }) => (
-  <div style={{ position: "relative", width: "100%", maxWidth: 280 }}>
-    <MagnifyingGlass size={16} aria-hidden style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--rv-subtle)" }} />
-    <input className="rv-input" style={{ padding: "9px 12px 9px 36px", fontSize: 15 }} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} aria-label={placeholder} />
-  </div>
+const Search = ({ value, onChange, placeholder }) => (
+  <div className="rf-qwrap"><MagnifyingGlass size={18} aria-hidden /><input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder} />{value && <button type="button" className="x" onClick={() => onChange("")} aria-label="Clear search"><X size={15} weight="bold" aria-hidden /></button>}</div>
+);
+const Chips = ({ options, value, onChange, counts }) => (
+  <div className="rf-chips" role="group" aria-label="Filter">{options.map(([k, l]) => <button key={k} type="button" aria-pressed={value === k} onClick={() => onChange(k)}>{l}{counts?.[k] != null && <em>{counts[k]}</em>}</button>)}</div>
+);
+const Head = ({ title, sub, actions }) => <header className="arx-head"><div><h1>{title}</h1>{sub && <p>{sub}</p>}</div>{actions && <div className="rf-btns">{actions}</div>}</header>;
+const Empty = ({ e = "🔍", children }) => <div className="arx-empty"><span className="e" aria-hidden>{e}</span>{children}</div>;
+const Refresh = ({ loading, onClick }) => <Btn size="sm" variant="ghost" loading={loading} onClick={onClick}><ArrowsClockwise size={14} aria-hidden />Refresh</Btn>;
+
+function Table({ cols, rows, error, loading, empty, children }) {
+  return (
+    <>
+      {error && <p role="alert" className="rf-banner bad" style={{ marginBottom: 12 }}>{error}</p>}
+      <div className={cx("arx-table-wrap", loading && rows && "rlx-dim")} aria-busy={loading || undefined}>
+        <table className="arx-table">
+          <thead><tr>{cols.map((c, i) => <th key={i} scope="col" className={c?.pick ? "pick" : undefined}>{c?.pick ? c.node : c}</th>)}</tr></thead>
+          <tbody>
+            {!rows && !error && [0, 1, 2, 3, 4].map((i) => <tr key={i}><td colSpan={cols.length}><Skeleton h={22} /></td></tr>)}
+            {children}
+            {rows?.length === 0 && <tr><td colSpan={cols.length}><Empty e={empty[0]}>{empty[1]}</Empty></td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+const PickHead = (pick) => ({ pick: true, node: <input type="checkbox" className="rlx-box" checked={pick.all} onChange={pick.toggleAll} aria-label="Select every row on this page" /> });
+const PickCell = ({ pick, id, label }) => <td className="pick" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="rlx-box" checked={pick.picked.has(id)} onChange={() => pick.toggle(id)} aria-label={`Select ${label}`} /></td>;
+const BulkBar = ({ pick, children }) => pick.picked.size > 0 && (
+  <div className="rlx-bulk" role="region" aria-label="Selected rows"><b>{pick.picked.size} selected</b><button type="button" className="lnk" onClick={pick.clear}>Clear</button><span className="grow" />{children}</div>
 );
 
-/* an in-page confirm box, used instead of the browser's confirm()/prompt() popups */
-function ConfirmModal({ title, children, confirmLabel = "Confirm", danger = false, busy = false, onConfirm, onClose }) {
+/* a confirm sheet that can hold extra options; `typeWord` makes the admin type a word for the most dangerous deletes */
+function ConfirmSheet({ title, message, children, confirmLabel = "Delete forever", danger = true, typeWord, onConfirm, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [typed, setTyped] = useState("");
+  const blocked = typeWord && typed.trim().toUpperCase() !== typeWord;
+  const go = async () => { if (blocked) return; setBusy(true); try { await onConfirm(); } finally { setBusy(false); } };
   return (
-    <Modal title={title} onClose={busy ? () => {} : onClose}>
-      <div className="rv-sm rv-muted" style={{ display: "grid", gap: 14 }}>{children}</div>
-      <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-        <Btn variant={danger ? "danger" : undefined} loading={busy} onClick={onConfirm}>{confirmLabel}</Btn>
+    <Sheet title={title} subtitle={message} onClose={busy ? () => {} : onClose} compact>
+      {(children || typeWord) && (
+        <div className="rlx-confirm">
+          {children}
+          {typeWord && <TextField id="f-type" label={`Type ${typeWord} to confirm`} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" autoFocus />}
+        </div>
+      )}
+      <div className="rf-btns">
+        <Btn variant={danger ? "danger" : undefined} loading={busy} disabled={blocked} onClick={go}>{danger && <Trash size={15} aria-hidden />}{confirmLabel}</Btn>
         <Btn variant="ghost" disabled={busy} onClick={onClose}>Cancel</Btn>
       </div>
-    </Modal>
+    </Sheet>
   );
 }
+const Check = ({ checked, onChange, children }) => <label className="rlx-check"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />{children}</label>;
 
-/* the delete box for one submission: removes the record and the files from storage for good */
-function DeleteReviewModal({ review, onClose, onDeleted }) {
-  const [give, setGive] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const go = async () => {
-    setBusy(true);
-    try { await adminDeleteRequest(review.id, give); toast.success("Review deleted for good."); onDeleted(); } catch (e) { toast.error(errMsg(e)); setBusy(false); }
-  };
+const ST = { ai_reviewing: ["🤖 AI at work", "info"], awaiting_review: ["⏳ Waiting", "warn"], in_review: ["✍️ In review", "info"], completed: ["✅ Delivered", "ok"] };
+const StatusBadge = ({ s }) => { const [l, t] = ST[s] || [s, "muted"]; return <Badge tone={t}>{l}</Badge>; };
+const MODES = {
+  on: ["🟢 On", "Everyone sees the resume builder. Anyone with builder credits can build; others are sent to the plans. Plans with builder credits are sold."],
+  existing: ["🟡 Off for new members", "Only people who already hold builder credits (or already have builder resumes) still see and use it. Nobody new can buy credits."],
+  off: ["⛔ Off completely", "Hidden and blocked for everyone, and builder plans are not sold. Nothing is deleted: turning it back on restores every resume and credit."],
+};
+
+/* ============================================================ OVERVIEW  (1 call: /overview) */
+function Overview({ isAdmin, go, onCounts }) {
+  const { data: d, error, loading, reload } = useLoad(adminOverview, "overview");
+  useEffect(() => { if (d) onCounts({ awaiting: d.counts.awaiting }); }, [d, onCounts]);
+  const c = d?.counts;
+  const m = d?.money;
+  const tiles = d ? [
+    ["⏳", "Waiting for a reviewer", c.awaiting, c.stale ? `${c.stale} older than 2 days` : "human reviews to take", ["reviews", { filter: "awaiting_review" }], c.stale > 0],
+    ["✍️", "Being reviewed", c.inReview, "taken by a reviewer", ["reviews", { filter: "in_review" }]],
+    ["🤖", "AI agents at work", c.aiRunning, "running right now", ["reviews", { filter: "ai_reviewing" }]],
+    ["✅", "Delivered", c.completed, `${c.total} reviews in all`, ["reviews", { filter: "completed" }]],
+    ...(isAdmin ? [
+      ["💸", "Revenue", formatINR(m.revenue), `${plural(m.paidPlans, "paid plan")}`, ["payments", { filter: "paid" }]],
+      ["📅", "Last 7 days", formatINR(m.weekRevenue), `${plural(m.weekPlans, "plan")} sold`, ["payments", { filter: "paid" }]],
+      ["👥", "Paying members", d.members.paying, `${d.members.blocked} blocked`, ["members", { filter: "paying" }]],
+      ["🏷️", "Plans on sale", d.livePlans, "visible on the site", ["plans", {}]],
+    ] : []),
+  ] : [];
+  const attn = d ? [
+    c.stale > 0 && ["⏰", `${plural(c.stale, "review")} waiting more than 2 days`, "Take the oldest first. They're at the top of the queue below.", ["reviews", { filter: "awaiting_review" }]],
+    c.aiFailed > 0 && ["⚠️", `${plural(c.aiFailed, "AI review")} failed`, "Open one and re-run the AI, or check the AI model.", ["reviews", { filter: "ai_failed" }]],
+    isAdmin && m.unpaid > 0 && ["💳", `${plural(m.unpaid, "checkout")} not paid this week`, "Started but never paid. Give the plan for free if a member says they paid.", ["payments", { filter: "unpaid" }]],
+    isAdmin && m.expiring > 0 && ["📆", `${plural(m.expiring, "plan")} ending within 7 days`, "Extend one from Payments if a member asks.", ["payments", { filter: "paid" }]],
+    isAdmin && d.trash > 0 && ["🗑️", `${plural(d.trash, "review")} deleted by members`, "Hidden from them, still stored. Remove them for good from Trash.", ["reviews", { filter: "trash" }]],
+    isAdmin && d.ai?.source === "default" && ["🧠", "No AI model chosen yet", "The server's default model writes the reviews. Pick one under AI model.", ["ai", {}]],
+  ].filter(Boolean) : [];
+
   return (
-    <ConfirmModal title="Delete this review for good?" danger confirmLabel="Delete permanently" busy={busy} onConfirm={go} onClose={onClose}>
-      <p><b style={{ color: "var(--rv-text)" }}>{review.name || "User"}</b>{review.email && ` · ${review.email}`}{review.file && ` · ${review.file}`}</p>
-      <p>This removes the whole submission: the AI and human review, the uploaded resume and any rewritten resume file are deleted from storage. It cannot be undone.</p>
-      <label className="rv-check"><input type="checkbox" checked={give} onChange={(e) => setGive(e.target.checked)} />Give the user this review back on their plan</label>
-    </ConfirmModal>
+    <div>
+      <Head title="Overview" sub="Resume Lab at a glance. Tap any number to open it." actions={<Refresh loading={loading && Boolean(d)} onClick={reload} />} />
+      {error && <p role="alert" className="rf-banner bad" style={{ marginBottom: 12 }}>{error}</p>}
+      <div className="arx-kpis">
+        {!d && !error && [0, 1, 2, 3, ...(isAdmin ? [4, 5, 6, 7] : [])].map((i) => <Skeleton key={i} h={104} style={{ borderRadius: 16 }} />)}
+        {tiles.map(([e, l, v, small, [tab, opts], warn]) => <button key={l} type="button" className={cx("arx-kpi", warn && "warn")} onClick={() => go(tab, opts)}><span><span aria-hidden>{e}</span>{l}</span><b>{v ?? "–"}</b><small>{small}</small></button>)}
+      </div>
+
+      <section className="arx-sec"><h2>🔔 Needs attention</h2>
+        {d && attn.length === 0 && <p className="rf-banner ok"><span className="e" aria-hidden>🎉</span><span>All clear. Nothing needs you right now.</span></p>}
+        <div className="arx-attn">{attn.map(([e, t, sub, [tab, opts]]) => <button key={t} type="button" onClick={() => go(tab, opts)}><span className="rf-ico sm" aria-hidden>{e}</span><div><b>{t}</b><span>{sub}</span></div></button>)}</div>
+      </section>
+
+      <div className="arx-two" style={{ marginTop: 28 }}>
+        <section className="arx-card"><h3>📥 Oldest in the queue</h3>
+          {!d && <Skeleton h={180} />}
+          {d?.queue.length === 0 && <p className="rf-muted">No human reviews waiting. 🎉</p>}
+          <div className="rlx-list">
+            {d?.queue.map((r) => (
+              <button key={r.id} type="button" className="rlx-item" onClick={() => go("reviews", { open: r.id })}>
+                <Avatar name={r.user.name} email={r.user.email} />
+                <div className="mid"><b>{r.user.name || r.user.email}</b><span>{r.package}{r.targetRole ? ` · ${r.targetRole}` : ""}{r.reviewerName ? ` · ${r.reviewerName}` : ""}</span></div>
+                <div className="end"><StatusBadge s={r.status} /><small>{since(r.createdAt)} ago</small></div>
+              </button>
+            ))}
+          </div>
+          {d?.queue.length > 0 && <div><Btn size="sm" variant="ghost" onClick={() => go("reviews", { filter: "awaiting_review" })}>Open the queue</Btn></div>}
+        </section>
+
+        {isAdmin && (
+          <section className="arx-card"><h3>💳 Latest payments</h3>
+            {!d && <Skeleton h={180} />}
+            {d?.recentPayments.length === 0 && <p className="rf-muted">No paid plans yet.</p>}
+            <div className="rlx-list">
+              {d?.recentPayments.map((p) => (
+                <button key={p.id} type="button" className="rlx-item" onClick={() => go("payments", { search: p.user.email })}>
+                  <Avatar name={p.user.name} email={p.user.email} />
+                  <div className="mid"><b>{p.user.name || p.user.email}</b><span>{p.package.name} · {p.package.terms}</span></div>
+                  <div className="end"><b className="rf-mono">{p.free ? "Free" : formatINR(p.payment.amount)}</b><small>{dayFmt(p.payment.paidAt || p.createdAt)}</small></div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {isAdmin && d && (
+        <section className="arx-card" style={{ marginTop: 16 }}><h3>⚙️ Setup</h3>
+          <dl className="rf-kv">
+            <div><dt>AI model</dt><dd>{d.ai.provider} · {d.ai.model} {d.ai.source === "default" ? <Badge>Default</Badge> : <Badge tone="ok">Your choice</Badge>}</dd></div>
+            <div><dt>Resume builder</dt><dd>{MODES[d.builder]?.[0] || d.builder}</dd></div>
+            <div><dt>Plans on sale</dt><dd>{d.livePlans}</dd></div>
+          </dl>
+          <div className="rf-btns"><Btn size="sm" variant="ghost" onClick={() => go("ai", {})}>🧠 AI model</Btn><Btn size="sm" variant="ghost" onClick={() => go("builder", {})}>🧱 Resume builder</Btn><Btn size="sm" variant="ghost" onClick={() => go("plans", {})}>🏷️ Plans</Btn></div>
+        </section>
+      )}
+    </div>
   );
 }
 
-const useDebounced = (v, ms = 350) => { const [d, setD] = useState(v); useEffect(() => { const t = setTimeout(() => setD(v), ms); return () => clearTimeout(t); }, [v, ms]); return d; };
+/* ============================================================ REVIEW DESK  (1 call to open, a light poll while the AI runs) */
+const formOf = (h = {}) => ({ score: h.score ?? "", summary: h.summary || "", detailedFeedback: h.detailedFeedback || "", strengths: (h.strengths || []).join("\n"), improvements: (h.improvements || []).join("\n"), linkedinFeedback: h.linkedinFeedback || "", jobMatchFeedback: h.jobMatchFeedback || "", nextSteps: h.nextSteps || "", internalNotes: h.internalNotes || "" });
 
-/* ============================ review one submission ============================ */
+function LongField({ id, label, hint, rows = 5, value, onChange, mono = true }) {
+  const [preview, setPreview] = useState(false);
+  return (
+    <div className="rf-field">
+      <div className="rlx-lf-head"><label htmlFor={id} className="rv-label" style={{ margin: 0 }}>{label}</label><button type="button" className="rlx-mini" onClick={() => setPreview(!preview)}>{preview ? "Edit" : "Preview"}</button></div>
+      {preview
+        ? <div className="rlx-preview">{value.trim() ? <FormattedText text={value} /> : <span className="rf-xs">Nothing to preview yet.</span>}</div>
+        : <textarea id={id} rows={rows} className={cx("rv-input rf-textarea", mono && "rv-mono-area")} value={value} onChange={onChange} />}
+      {hint && <p className="rv-hint">{hint}</p>}
+    </div>
+  );
+}
+
 function ReviewDesk({ id, role, onBack, onChanged }) {
   const me = useSelector((s) => s.auth?.user);
   const isAdmin = role === "admin";
   const [r, setR] = useState(null);
   const [form, setForm] = useState(null);
-  const [busy, setBusy] = useState("");
-  const [preview, setPreview] = useState("");
+  const saved = useRef("");
   const [file, setFile] = useState(undefined); // undefined = unchanged, null = remove, {key, filename, size} = a new file
   const [uploading, setUploading] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
-  const [dlg, setDlg] = useState(""); // "deliver" | "delete"
+  const [dlg, setDlg] = useState(""); // "deliver" | "delete" | "leave"
+  const [giveBack, setGiveBack] = useState(false);
+  const [busy, run] = useRun();
   const fileInput = useRef(null);
 
   const load = useCallback(async () => {
     try {
       const d = await adminGet(id);
-      setR(d);
-      const h = d.human || {};
-      setFile(undefined);
-      setForm({ score: h.score ?? "", summary: h.summary || "", detailedFeedback: h.detailedFeedback || "", strengths: (h.strengths || []).join("\n"), improvements: (h.improvements || []).join("\n"), linkedinFeedback: h.linkedinFeedback || "", jobMatchFeedback: h.jobMatchFeedback || "", nextSteps: h.nextSteps || "", internalNotes: h.internalNotes || "" });
+      const f = formOf(d.human || {});
+      setR(d); setFile(undefined); setForm(f); saved.current = JSON.stringify(f);
     } catch (e) { toast.error(errMsg(e)); onBack(); }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
 
-  if (!r || !form) return <div style={{ display: "grid", gap: 16 }}><Skeleton h={30} style={{ width: "33%" }} /><Skeleton h={300} /></div>;
+  // while the AI agents work, follow them with the light endpoint (status + AI only), so unsaved edits are never touched
+  const aiLive = r && ["pending", "running"].includes(r.ai?.status);
+  useEffect(() => {
+    if (!aiLive) return undefined;
+    const t = setInterval(() => { if (document.visibilityState === "visible") adminGetLite(id).then((x) => setR((p) => (p ? { ...p, ai: x.ai, status: x.status } : p))).catch(() => {}); }, 4000);
+    return () => clearInterval(t);
+  }, [aiLive, id]);
 
-  const mine = r.human.reviewer && String(r.human.reviewer) === String(me?._id || me?.id);
+  if (!r || !form) return <div className="arx-desk"><Skeleton h={130} style={{ borderRadius: 18 }} /><Skeleton h={420} style={{ borderRadius: 16 }} /></div>;
+
+  const mine = r.human?.reviewer && String(r.human.reviewer) === String(me?._id || me?.id);
   const canEdit = r.humanRequested && ["in_review", "completed"].includes(r.status) && (isAdmin || mine);
-  const canTake = r.humanRequested && (["awaiting_review", "ai_reviewing"].includes(r.status) || (isAdmin && r.status === "in_review" && !mine));
-  const inc = r.package.includes || {};
+  const canTake = r.humanRequested && !r.deletedAt && (["awaiting_review", "ai_reviewing"].includes(r.status) || (isAdmin && r.status === "in_review" && !mine));
+  const inc = r.package?.includes || {};
+  const dirty = JSON.stringify(form) !== saved.current || file !== undefined;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const existing = file === undefined ? r.human.deliverable : file;
-
-  const run = async (name, fn, ok) => {
-    setBusy(name);
-    try { await fn(); if (ok) toast.success(ok); await load(); onChanged(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(""); }
-  };
+  const existing = file === undefined ? r.human?.deliverable : file;
+  const after = async () => { await load(); onChanged(); };
+  const back = () => (dirty && canEdit ? setDlg("leave") : onBack());
   const payload = (complete) => ({
     score: form.score === "" ? null : Number(form.score), summary: form.summary, detailedFeedback: form.detailedFeedback, strengths: lines(form.strengths), improvements: lines(form.improvements),
     linkedinFeedback: form.linkedinFeedback, jobMatchFeedback: form.jobMatchFeedback, nextSteps: form.nextSteps, internalNotes: form.internalNotes,
     ...(file === null ? { deliverable: null } : file ? { deliverable: { key: file.key, filename: file.filename } } : {}), complete,
   });
-  const deliver = async () => { await run("deliver", () => adminSaveReview(id, payload(true)), "Delivered. The user was emailed."); setDlg(""); };
-  const upload = async (f) => {
-    setUploading(true);
-    try { setFile(await uploadDocument(f)); } catch (e) { toast.error(errMsg(e)); } finally { setUploading(false); }
-  };
-
-  /* a long-text field with a "how it will look" preview */
-  const long = ({ k, label, rows = 5, hint, mono = true }) => (
-    <Field key={k} label={label} htmlFor={`rv-${k}`} hint={hint}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}><button type="button" className="rv-link" style={{ fontSize: 13 }} onClick={() => setPreview(preview === k ? "" : k)}>{preview === k ? "Edit" : "Preview"}</button></div>
-      {preview === k
-        ? <div className="rv-note" style={{ minHeight: 120 }}>{form[k].trim() ? <FormattedText text={form[k]} /> : <span className="rv-subtle">Nothing to preview yet.</span>}</div>
-        : <textarea id={`rv-${k}`} rows={rows} className={cx("rv-input", mono && "rv-mono-area")} value={form[k]} onChange={set(k)} />}
-    </Field>
-  );
+  const upload = async (f) => { setUploading(true); try { setFile(await uploadDocument(f)); } catch (e) { toast.error(errMsg(e)); } finally { setUploading(false); } };
+  const p = r.profile || {};
+  const facts = [["Type", p.kind === "student" ? "Student" : "Working professional"], [p.kind === "student" ? "College" : "Company", p.organization], p.kind === "professional" && ["Role", `${p.currentRole || "–"} · ${p.experienceYears ?? 0} yr`], p.course && ["Course", p.course], ["Target role", p.targetRole]].filter(Boolean);
 
   return (
-    <div>
-      <button type="button" onClick={onBack} className="ar-back"><ArrowLeft size={14} weight="bold" aria-hidden />All reviews</button>
-      <div className="ar-desk-head">
-        <div style={{ display: "flex", gap: 18, alignItems: "flex-start", minWidth: 0 }}>
+    <div className="arx-desk">
+      <div><button type="button" className="arx-back" onClick={back}><ArrowLeft size={14} weight="bold" aria-hidden />All reviews</button></div>
+      <section className="rlx-hero">
+        <div className="who">
           <Avatar name={r.user.name} email={r.user.email} size="lg" />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><Pill className={STATUS[r.status]?.tone}>{STATUS[r.status]?.label}</Pill><Pill>{r.package.name}</Pill>{r.humanRequested ? <Pill className="dark">Human review asked</Pill> : <Pill>AI only</Pill>}{inc.rewrittenResume && <Pill className="dark">Includes rewritten resume</Pill>}</div>
-          <h1 className="rv-h2" style={{ marginTop: 12, fontSize: 30 }}>{r.user.name || "User"}</h1>
-          <p className="rv-muted rv-sm" style={{ marginTop: 4 }}>{r.user.email}{r.user.mobile && ` · ${r.user.mobile}`} · sent {dateFmt(r.createdAt)}</p>
+          <div style={{ minWidth: 0 }}>
+            <div className="rlx-badges"><StatusBadge s={r.status} />{r.deletedAt && <Badge tone="bad">🗑️ Deleted by member {dayFmt(r.deletedAt)}</Badge>}<Badge>{r.package?.name}</Badge>{r.humanRequested ? <Badge tone="info">🙋 Human review asked</Badge> : <Badge>AI only</Badge>}{inc.rewrittenResume && <Badge tone="warn">Rewritten resume</Badge>}{r.linkedinRequested && <Badge tone="info">LinkedIn</Badge>}</div>
+            <h1>{r.user.name || "User"}</h1>
+            <p>{r.user.email && <CopyText value={r.user.email} />}{r.user.mobile && ` · ${r.user.mobile}`} · sent {dateFmt(r.createdAt)}</p>
+          </div>
         </div>
+        <div className="rf-btns">
+          {canTake && <Btn loading={busy === "claim"} onClick={() => run("claim", () => adminClaim(id), "It's yours now.", after)}>{r.status === "in_review" ? "Take over" : "Take this review"}</Btn>}
+          {isAdmin && <Btn variant="ghost" loading={busy === "ai"} title="Uses 1 of the member's AI credits (given back if the run fails)" onClick={() => run("ai", async () => { const o = await adminRerunAi(id); if (o.aiStatus === "failed") throw new Error(o.error || "The AI failed again."); }, "AI agents started. 1 AI credit was taken from the member's plan.", after)}><ArrowsClockwise size={15} aria-hidden />Re-run AI · 1 credit</Btn>}
+          {isAdmin && <Btn variant="danger" onClick={() => setDlg("delete")}><Trash size={15} aria-hidden />Delete forever</Btn>}
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {canTake && <Btn loading={busy === "claim"} onClick={() => run("claim", () => adminClaim(id), "It's yours now.")}>{r.status === "in_review" ? "Take over" : "Take this review"}</Btn>}
-          {isAdmin && <Btn variant="ghost" loading={busy === "ai"} onClick={() => run("ai", async () => { const o = await adminRerunAi(id); if (o.aiStatus === "failed") throw new Error(o.error || "The AI failed again."); }, "AI review refreshed.")}>Re-run AI</Btn>}
-          {isAdmin && <Btn variant="danger" onClick={() => setDlg("delete")}><Trash size={15} aria-hidden />Delete</Btn>}
-        </div>
-      </div>
+      </section>
 
-      <div style={{ display: "grid", gap: 32, gridTemplateColumns: "minmax(0,1fr)" }} className="rv-desk">
-        <style>{`@media (min-width: 1180px) { .rv-desk { grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important; } .rv-desk-sticky { position: sticky; top: 16px; } }`}</style>
-
-        {/* left: what they sent + the AI */}
-        <div style={{ minWidth: 0, display: "grid", gap: 24, alignContent: "start" }}>
-          <section className="rv-card rv-card-pad" style={{ display: "grid", gap: 18 }}>
-            <h2 className="rv-h3">Submission</h2>
-            <dl style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }} className="rv-sm">
-              {[["Type", r.profile.kind === "student" ? "Student" : "Working professional"], [r.profile.kind === "student" ? "College" : "Company", r.profile.organization], r.profile.kind === "professional" && ["Role", `${r.profile.currentRole} · ${r.profile.experienceYears} yr`], r.profile.course && ["Course", r.profile.course], ["Target role", r.profile.targetRole]].filter(Boolean).map(([k, v]) => <div key={k}><dt className="rv-xs rv-subtle" style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>{k}</dt><dd style={{ marginTop: 4, fontWeight: 600 }}>{v}</dd></div>)}
-            </dl>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {r.resumeUrl && <Btn as="a" href={r.resumeUrl} target="_blank" rel="noopener noreferrer" size="sm"><FileText size={15} aria-hidden />Open resume ({r.resume.filename})<ArrowSquareOut size={13} aria-hidden /></Btn>}
-              {r.linkedinUrl && <Btn as="a" href={r.linkedinUrl} target="_blank" rel="noopener noreferrer nofollow" variant="ghost" size="sm"><LinkedinLogo size={15} weight="fill" aria-hidden />Open LinkedIn<ArrowSquareOut size={13} aria-hidden /></Btn>}
+      <div className="rlx-desk">
+        <div className="rlx-col">
+          <section className="arx-card"><h3>📄 Submission</h3>
+            <dl className="rf-kv">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v || "–"}</dd></div>)}</dl>
+            <div className="rf-btns">
+              {r.resumeUrl && <Btn as="a" href={r.resumeUrl} target="_blank" rel="noopener noreferrer" size="sm"><FileText size={15} aria-hidden />Open resume ({r.resume?.filename})<ArrowSquareOut size={13} aria-hidden /></Btn>}
+              {r.linkedinUrl && <Btn as="a" href={r.linkedinUrl} target="_blank" rel="noopener noreferrer nofollow" variant="ghost" size="sm"><LinkedinLogo size={15} weight="fill" aria-hidden />LinkedIn<ArrowSquareOut size={13} aria-hidden /></Btn>}
             </div>
-            {r.notes && <div className="rv-note"><b>They asked:</b> {r.notes}</div>}
-            {r.jobDescription && <details className="rv-note"><summary style={{ cursor: "pointer", fontWeight: 600 }}>Job description ({r.jobDescription.length} characters)</summary><p style={{ marginTop: 12, whiteSpace: "pre-wrap" }}>{r.jobDescription}</p></details>}
-            {r.plan && <p className="rv-xs rv-subtle">Plan: {r.plan.package.terms} · AI {r.plan.ai.unlimited ? "unlimited" : `${r.plan.ai.used} of ${r.plan.ai.allowed} used`}{r.plan.human.enabled && ` · human ${r.plan.human.used} of ${r.plan.human.allowed} used`} · {r.plan.payment.gateway === "admin" ? "given free" : `paid ${formatINR(r.plan.payment.amount)}`}</p>}
+            {r.notes && <div className="rlx-note"><b>They asked:</b> {r.notes}</div>}
+            {r.jobDescription && <details className="rlx-note"><summary style={{ cursor: "pointer", fontWeight: 700 }}>Job description ({r.jobDescription.length} characters)</summary><p style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>{r.jobDescription}</p></details>}
+            {r.plan && <p className="rf-xs">Plan: {r.plan.package.terms} · AI {r.plan.ai.unlimited ? "unlimited" : `${r.plan.ai.used} of ${r.plan.ai.allowed} used`}{r.plan.human.enabled && ` · human ${r.plan.human.used} of ${r.plan.human.allowed} used`} · {r.plan.payment.gateway === "admin" ? "given free" : `paid ${formatINR(r.plan.payment.amount)}`}</p>}
           </section>
-          <AiReport ai={r.ai} includes={inc} kind={r.profile?.kind} />
-          {r.ai.error && <p className="rv-hint">AI error: {r.ai.error}</p>}
-          {r.ai.result && <div><button type="button" className="rv-link" onClick={() => setRawOpen(!rawOpen)}>{rawOpen ? "Hide" : "Show"} the AI's raw reply</button>{rawOpen && <pre className="rv-note rv-mono" style={{ marginTop: 12, whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 12, maxHeight: 420, overflow: "auto" }}>{JSON.stringify(r.ai.result, null, 2)}</pre>}</div>}
+          <AiReport ai={r.ai} includes={inc} kind={p.kind} />
+          {r.ai?.error && <p className="rf-banner bad">AI error: {r.ai.error}</p>}
+          {r.ai?.result && <div><button type="button" className="rlx-mini" onClick={() => setRawOpen(!rawOpen)}>{rawOpen ? "Hide" : "Show"} the AI's raw reply</button>{rawOpen && <pre className="rlx-raw">{JSON.stringify(r.ai.result, null, 2)}</pre>}</div>}
         </div>
 
-        {/* right: the human review */}
-        <section className="rv-card rv-card-pad rv-desk-sticky" style={{ height: "fit-content", display: "grid", gap: 20, borderColor: canEdit ? "var(--rv-text)" : undefined }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}><h2 className="rv-h3">Your review</h2>{r.human.reviewerName && <Pill>{r.human.reviewerName}</Pill>}</div>
-          {!canEdit && <p className="rv-note">{r.humanRequested ? "Take this review to start writing. Only the reviewer who took it (or an admin) can edit." : "The person didn't ask for a human review on this resume, so there is nothing to write. They can still ask for one later if they have human reviews left."}</p>}
-          <fieldset disabled={!canEdit} style={{ border: 0, margin: 0, padding: 0, display: "grid", gap: 20, opacity: canEdit ? 1 : 0.55 }}>
-            <Field label="Overall score (0-100)" htmlFor="rv-score"><input id="rv-score" type="number" min="0" max="100" className="rv-input" style={{ width: 120 }} value={form.score} onChange={set("score")} /></Field>
-            {long({ k: "summary", label: "Summary for the person", rows: 4, mono: false, hint: "Plain words, as if talking to them. This is the first thing they read." })}
-            {long({ k: "detailedFeedback", label: "Detailed feedback", rows: 14, hint: "Type it the way you want it to look. Blank line = new paragraph. “- ” starts a bullet. “## ” makes a heading. **text** is bold." })}
-            <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <Field label="Strengths" htmlFor="rv-str" hint="One per line"><textarea id="rv-str" rows={5} className="rv-input" value={form.strengths} onChange={set("strengths")} /></Field>
-              <Field label="What to change" htmlFor="rv-imp" hint="One per line"><textarea id="rv-imp" rows={5} className="rv-input" value={form.improvements} onChange={set("improvements")} /></Field>
+        <section className={cx("arx-card rlx-write", canEdit && "on")}>
+          <div className="rf-row-between"><h3 style={{ margin: 0 }}>✍️ Your review</h3>{r.human?.reviewerName && <Badge tone="info">{r.human.reviewerName}</Badge>}</div>
+          {!canEdit && <p className="rlx-note">{r.humanRequested ? "Take this review to start writing. Only the reviewer who took it (or an admin) can edit." : "The person didn't ask for a human review on this resume, so there is nothing to write. They can ask for one later if they have human reviews left."}</p>}
+          <fieldset disabled={!canEdit}>
+            <TextField id="rv-score" label="Overall score (0-100)" type="number" min={0} max={100} value={form.score} onChange={set("score")} style={{ maxWidth: 140 }} />
+            <LongField id="rv-summary" label="Summary for the person" rows={4} mono={false} hint="Plain words, as if talking to them. This is the first thing they read." value={form.summary} onChange={set("summary")} />
+            <LongField id="rv-detail" label="Detailed feedback" rows={12} hint="Blank line = new paragraph. “- ” starts a bullet. “## ” makes a heading. **text** is bold." value={form.detailedFeedback} onChange={set("detailedFeedback")} />
+            <div className="rf-two">
+              <TextField id="rv-str" label="Strengths" hint="One per line" textarea rows={5} value={form.strengths} onChange={set("strengths")} />
+              <TextField id="rv-imp" label="What to change" hint="One per line" textarea rows={5} value={form.improvements} onChange={set("improvements")} />
             </div>
-            {inc.linkedin && long({ k: "linkedinFeedback", label: "LinkedIn feedback", rows: 5 })}
-            {(inc.jobMatch || r.jobDescription) && long({ k: "jobMatchFeedback", label: "Tailoring to their job", rows: 5 })}
-            {long({ k: "nextSteps", label: "Next steps", rows: 4 })}
-
-            <div>
-              <span className="rv-label">Rewritten resume {inc.rewrittenResume ? <span className="rv-pill dark" style={{ marginLeft: 6 }}>Required for this plan</span> : <span className="rv-subtle" style={{ fontWeight: 500 }}>· optional</span>}</span>
+            {(inc.linkedin || r.linkedinRequested) && <LongField id="rv-li" label="LinkedIn feedback" value={form.linkedinFeedback} onChange={set("linkedinFeedback")} />}
+            {(inc.jobMatch || r.jobDescription) && <LongField id="rv-jm" label="Tailoring to their job" value={form.jobMatchFeedback} onChange={set("jobMatchFeedback")} />}
+            <LongField id="rv-next" label="Next steps" rows={4} value={form.nextSteps} onChange={set("nextSteps")} />
+            <div className="rf-field">
+              <span className="rv-label"><span>Rewritten resume {inc.rewrittenResume ? <Badge tone="warn">Required for this plan</Badge> : <span className="rv-subtle" style={{ fontWeight: 500 }}>· optional</span>}</span></span>
               {existing ? (
-                <div className="rv-note" style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between", flexWrap: "wrap" }}>
-                  <span style={{ minWidth: 0, wordBreak: "break-all" }}><FileText size={16} aria-hidden style={{ verticalAlign: "-3px", marginRight: 6 }} />{existing.filename}{file && <Pill className="warn" style={{ marginLeft: 8 }}>Not saved yet</Pill>}</span>
-                  <span style={{ display: "flex", gap: 8 }}>{file === undefined && r.deliverableUrl && <Btn as="a" href={r.deliverableUrl} target="_blank" rel="noopener noreferrer" variant="ghost" size="sm">Open</Btn>}<Btn variant="danger" size="sm" onClick={() => setFile(null)}>Remove</Btn></span>
+                <div className="rlx-file">
+                  <span><FileText size={16} aria-hidden />{existing.filename}{file && <Badge tone="warn">Not saved yet</Badge>}</span>
+                  <span className="rf-btns">{file === undefined && r.deliverableUrl && <Btn as="a" href={r.deliverableUrl} target="_blank" rel="noopener noreferrer" variant="ghost" size="sm">Open</Btn>}<Btn variant="danger" size="sm" onClick={() => setFile(null)}>Remove</Btn></span>
                 </div>
               ) : (
-                <>
+                <div>
                   <input ref={fileInput} type="file" accept=".pdf,.doc,.docx,application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
                   <Btn variant="ghost" loading={uploading} onClick={() => fileInput.current?.click()}><UploadSimple size={16} weight="bold" aria-hidden />Upload PDF or Word file</Btn>
                   <p className="rv-hint">The person downloads it from their review page once you deliver.</p>
-                </>
+                </div>
               )}
             </div>
-            <Field label="Internal notes" htmlFor="rv-int" hint="Only reviewers and admins see this."><textarea id="rv-int" rows={2} className="rv-input" value={form.internalNotes} onChange={set("internalNotes")} /></Field>
+            <TextField id="rv-int" label="Internal notes" hint="Only reviewers and admins see this." textarea rows={2} value={form.internalNotes} onChange={set("internalNotes")} />
           </fieldset>
           {canEdit && (
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", paddingTop: 20, borderTop: "1px solid var(--rv-border)" }}>
-              <Btn variant="ghost" loading={busy === "save"} disabled={uploading} onClick={() => run("save", () => adminSaveReview(id, payload(false)), "Draft saved.")}>Save draft</Btn>
-              {r.status !== "completed" ? <Btn loading={busy === "deliver"} disabled={uploading} onClick={() => setDlg("deliver")}>Deliver to user</Btn> : <Btn loading={busy === "save2"} disabled={uploading} onClick={() => run("save2", () => adminSaveReview(id, payload(true)), "Updated.")}>Update delivered review</Btn>}
+            <div className="rlx-savebar">
+              <Btn variant="ghost" loading={busy === "save"} disabled={uploading} onClick={() => run("save", () => adminSaveReview(id, payload(false)), "Draft saved.", after)}>Save draft</Btn>
+              {r.status !== "completed"
+                ? <Btn disabled={uploading} onClick={() => setDlg("deliver")}>Deliver to user</Btn>
+                : <Btn loading={busy === "save2"} disabled={uploading} onClick={() => run("save2", () => adminSaveReview(id, payload(true)), "Updated.", after)}>Update delivered review</Btn>}
+              {dirty && <span className="rf-xs" style={{ alignSelf: "center" }}>● Unsaved changes</span>}
             </div>
           )}
         </section>
       </div>
-      {dlg === "deliver" && (
-        <ConfirmModal title="Deliver this review?" confirmLabel="Deliver to user" busy={busy === "deliver"} onConfirm={deliver} onClose={() => setDlg("")}>
-          <p>{r.user.name || "The user"} will be emailed and can see this review right away.</p>
-        </ConfirmModal>
+
+      {dlg === "deliver" && <ConfirmSheet title="Deliver this review?" message={`${r.user.name || "The user"} is emailed and can see this review right away.`} danger={false} confirmLabel="Deliver to user" onClose={() => setDlg("")} onConfirm={async () => { const ok = await run("deliver", () => adminSaveReview(id, payload(true)), "Delivered. The user was emailed.", after); if (ok) setDlg(""); }} />}
+      {dlg === "leave" && <ConfirmSheet title="Leave without saving?" message="Your changes to this review are not saved yet." danger={false} confirmLabel="Leave anyway" onClose={() => setDlg("")} onConfirm={async () => onBack()} />}
+      {dlg === "delete" && (
+        <ConfirmSheet title="Delete this review for good?" message="The whole submission goes: the AI and human review, the uploaded resume and any rewritten resume file. This can't be undone." onClose={() => setDlg("")}
+          onConfirm={() => run("del", () => adminDeleteRequest(id, giveBack), "Review deleted for good.", () => { onChanged(); onBack(); })}>
+          <p className="rlx-note"><b>{r.user.name || "User"}</b> · {r.user.email}{r.resume?.filename ? ` · ${r.resume.filename}` : ""}</p>
+          <Check checked={giveBack} onChange={setGiveBack}>Give the member this review back on their plan</Check>
+        </ConfirmSheet>
       )}
-      {dlg === "delete" && <DeleteReviewModal review={{ id, name: r.user.name, email: r.user.email, file: r.resume?.filename }} onClose={() => setDlg("")} onDeleted={() => { onChanged(); onBack(); }} />}
     </div>
   );
 }
 
-/* ============================ reviews queue ============================ */
-const FILTERS = [["all", "All"], ["awaiting_review", "Waiting"], ["in_review", "In review"], ["ai_reviewing", "AI running"], ["completed", "Delivered"]];
+/* ============================================================ REVIEWS  (1 call: /requests, rows + chip counts) */
+const REVIEW_FILTERS = [["awaiting_review", "⏳ Waiting"], ["in_review", "✍️ In review"], ["ai_reviewing", "🤖 AI running"], ["completed", "✅ Delivered"], ["ai_failed", "⚠️ AI failed"], ["human", "🙋 Human asked"], ["all", "All"]];
 
-function Queue({ onOpen, refreshKey, isAdmin, onChanged, stats }) {
-  const [del, setDel] = useState(null);
-  const [filter, setFilter] = useState("awaiting_review");
-  const [search, setSearch] = useState("");
+function Reviews({ isAdmin, role, preset, onCounts }) {
+  const [open, setOpen] = useState(preset.open || null);
+  const [filter, setFilter] = useState(preset.filter || (preset.search ? "all" : "awaiting_review"));
+  const [search, setSearch] = useState(preset.search || "");
   const q = useDebounced(search.trim());
   const [mine, setMine] = useState(false);
   const [page, setPage] = useState(1);
-  const [data, setData] = useState(null);
-  const [error, setError] = useState("");
-  useEffect(() => { setPage(1); }, [filter, q, mine]);
-  useEffect(() => {
-    let live = true;
-    setData(null);
-    adminList({ status: filter, search: q, mine: mine ? "1" : "0", page }).then((d) => live && (setData(d), setError(""))).catch((e) => live && setError(errMsg(e)));
-    return () => { live = false; };
-  }, [filter, q, mine, page, refreshKey]);
+  const [tick, setTick] = useState(0);
+  const [dlg, setDlg] = useState(null); // { type: "one" | "many" | "trash", row? }
+  const [giveBack, setGiveBack] = useState(false);
+  const [, run] = useRun();
+  const { data, error, loading, reload } = useLoad(() => adminList({ status: filter, search: q, mine: mine ? "1" : "0", page }), `${filter}|${q}|${mine}|${page}|${tick}`, Boolean(open));
+  const pick = usePick(data?.rows);
+  useEffect(() => { if (data?.counts) onCounts({ awaiting: data.counts.awaiting_review }); }, [data, onCounts]);
+  const changed = () => setTick((t) => t + 1);
+  const to = (setter) => (v) => { setter(v); setPage(1); };
+  const trash = filter === "trash";
+  const filters = isAdmin ? [...REVIEW_FILTERS, ["trash", "🗑️ Trash"]] : REVIEW_FILTERS;
+
+  if (open) return <ReviewDesk id={open} role={role} onBack={() => setOpen(null)} onChanged={changed} />;
+  const cols = [...(isAdmin ? [PickHead(pick)] : []), "Person", "Plan", "Background", "AI", "Human", "Status", "Reviewer", "Sent", ...(isAdmin ? [""] : [])];
+  const closeDlg = () => { setDlg(null); setGiveBack(false); };
 
   return (
     <div>
-      <div className="ar-bar">
-        <Chips options={FILTERS} value={filter} onChange={setFilter} counts={stats ? { all: stats.totalReviews, awaiting_review: stats.awaiting, in_review: stats.inReview, ai_reviewing: stats.aiRunning, completed: stats.completed } : {}} />
-        <label className="rv-check" style={{ marginLeft: "auto" }}><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />Mine only</label>
-        <SearchBox value={search} onChange={setSearch} placeholder="Name, email, company, file…" />
+      <Head title={trash ? "Trash" : "Reviews"} sub={trash ? "Reviews members deleted themselves. They're hidden from the member but still stored. Delete them for good here." : "Every resume sent in. Open one to read the AI report and write the human review."}
+        actions={<>{trash && data?.counts?.trash > 0 && <Btn variant="danger" onClick={() => setDlg({ type: "trash" })}><Trash size={15} aria-hidden />Empty trash</Btn>}<Refresh loading={loading && Boolean(data)} onClick={reload} /></>} />
+      <div className="arx-toolbar">
+        <div className="rlx-filters">
+          <Chips options={filters} value={filter} onChange={to(setFilter)} counts={data?.counts} />
+          {!trash && <Check checked={mine} onChange={to(setMine)}>Only reviews I took</Check>}
+        </div>
+        <Search value={search} onChange={to(setSearch)} placeholder="Name, email, company, file" />
       </div>
-      {error && <p role="alert" className="rv-err">{error}</p>}
-      <div className="rv-card" style={{ overflowX: "auto" }}>
-        <table className="rv-table">
-          <thead><tr><th>Person</th><th>Plan</th><th>Background</th><th>File</th><th>AI</th><th>Human</th><th>Status</th><th>Reviewer</th><th>Sent</th>{isAdmin && <th aria-label="Actions" />}</tr></thead>
-          <tbody>
-            {data === null && !error && [0, 1, 2, 3].map((i) => <tr key={i}><td colSpan={10}><Skeleton h={18} /></td></tr>)}
-            {data?.rows.map((r) => (
-              <tr key={r.id} className="click" onClick={() => onOpen(r.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onOpen(r.id); }}>
-                <td><Who name={r.user.name} email={r.user.email} /></td>
-                <td style={{ whiteSpace: "nowrap" }}>{r.package}{r.includes?.rewrittenResume && <Pill className="dark" style={{ marginLeft: 6 }}>Rewrite</Pill>}</td>
-                <td><span className="rv-xs">{r.kind === "student" ? "Student" : "Pro"} · {r.organization}</span><div className="rv-xs rv-subtle">{r.targetRole}</div></td>
-                <td className="rv-xs" style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.file || "–"}</td>
-                <td>{r.aiScore != null ? <Pill className={r.aiScore >= 75 ? "ok" : r.aiScore >= 50 ? "warn" : "bad"}>{r.aiScore}</Pill> : <span className="rv-xs rv-subtle">{r.aiStatus}</span>}</td>
-                <td>{r.humanRequested ? <Pill className="dark">Asked</Pill> : <span className="rv-xs rv-subtle">AI only</span>}</td>
-                <td><Pill className={STATUS[r.status]?.tone}>{STATUS[r.status]?.label}</Pill></td>
-                <td className="rv-xs">{r.reviewerName || <span className="rv-subtle">–</span>}</td>
-                <td className="rv-xs" style={{ whiteSpace: "nowrap" }}>{dateFmt(r.createdAt)}</td>
-                {isAdmin && <td style={{ textAlign: "right" }}><Btn variant="danger" size="sm" aria-label="Delete review" onClick={(e) => { e.stopPropagation(); setDel({ id: r.id, name: r.user.name, email: r.user.email, file: r.file }); }}><Trash size={14} aria-hidden /></Btn></td>}
-              </tr>
-            ))}
-            {data?.rows.length === 0 && <tr><td colSpan={10}><div className="ar-empty"><ClipboardText size={36} aria-hidden />Nothing here yet.</div></td></tr>}
-          </tbody>
-        </table>
-      </div>
-      {data && <Pager page={page} pages={data.pages} setPage={setPage} />}
-      {del && <DeleteReviewModal review={del} onClose={() => setDel(null)} onDeleted={() => { setDel(null); onChanged(); }} />}
+      <Table cols={cols} rows={data?.rows} error={error} loading={loading} empty={trash ? ["🗑️", "Trash is empty."] : ["📝", "Nothing here."]}>
+        {data?.rows.map((r) => (
+          <tr key={r.id} className={cx("click", pick.picked.has(r.id) && "on")} tabIndex={0} onClick={() => setOpen(r.id)} onKeyDown={(e) => e.key === "Enter" && setOpen(r.id)}>
+            {isAdmin && <PickCell pick={pick} id={r.id} label={r.user.name || r.user.email} />}
+            <td className="first" data-label="Person"><Who name={r.user.name} email={r.user.email} /></td>
+            <td data-label="Plan">{r.package}{r.includes?.rewrittenResume && <span className="sub">+ rewritten resume</span>}</td>
+            <td data-label="Background">{r.kind === "student" ? "Student" : "Pro"} · {r.organization || "–"}<span className="sub">{r.targetRole}</span></td>
+            <td data-label="AI">{r.aiScore != null ? <Badge tone={scoreTone(r.aiScore)}>{r.aiScore}</Badge> : r.aiStatus === "failed" ? <Badge tone="bad">Failed</Badge> : <span className="rf-xs">{r.aiStatus || "–"}</span>}</td>
+            <td data-label="Human">{r.humanRequested ? <Badge tone="info">Asked</Badge> : <span className="rf-xs">AI only</span>}</td>
+            <td data-label="Status">{r.deletedAt ? <Badge tone="bad">🗑️ {dayFmt(r.deletedAt)}</Badge> : <StatusBadge s={r.status} />}</td>
+            <td data-label="Reviewer">{r.reviewerName || <span className="rf-xs">–</span>}</td>
+            <td data-label="Sent" className="nowrap">{dateFmt(r.createdAt)}</td>
+            {isAdmin && <td className="act"><div className="arx-actions"><Btn size="sm" variant="danger" aria-label="Delete review forever" onClick={(e) => { e.stopPropagation(); setDlg({ type: "one", row: r }); }}><Trash size={14} aria-hidden /></Btn></div></td>}
+          </tr>
+        ))}
+      </Table>
+      {data && <Pager page={data.page} pages={data.pages} onGo={setPage} />}
+      {isAdmin && <BulkBar pick={pick}><Btn size="sm" variant="danger" onClick={() => setDlg({ type: "many" })}><Trash size={14} aria-hidden />Delete forever</Btn></BulkBar>}
+
+      {dlg?.type === "one" && (
+        <ConfirmSheet title="Delete this review for good?" message="The AI and human review, the uploaded resume and any rewritten file are removed from storage. This can't be undone." onClose={closeDlg}
+          onConfirm={() => run("d", () => adminDeleteRequest(dlg.row.id, giveBack), "Review deleted for good.", () => { closeDlg(); changed(); })}>
+          <p className="rlx-note"><b>{dlg.row.user.name || "User"}</b> · {dlg.row.user.email}{dlg.row.file ? ` · ${dlg.row.file}` : ""}</p>
+          {!dlg.row.deletedAt && <Check checked={giveBack} onChange={setGiveBack}>Give the member this review back on their plan</Check>}
+        </ConfirmSheet>
+      )}
+      {dlg?.type === "many" && (
+        <ConfirmSheet title={`Delete ${plural(pick.picked.size, "review")} for good?`} message="Every picked review and its files are removed permanently. This can't be undone." typeWord="DELETE" onClose={closeDlg}
+          onConfirm={() => run("dm", () => adminBulkDeleteRequests({ ids: [...pick.picked], giveBackUse: giveBack }), (o) => `${plural(o.deleted, "review")} deleted for good.`, () => { closeDlg(); changed(); })}>
+          {!trash && <Check checked={giveBack} onChange={setGiveBack}>Give each member their review back on their plan</Check>}
+        </ConfirmSheet>
+      )}
+      {dlg?.type === "trash" && (
+        <ConfirmSheet title="Empty the trash?" message={`All ${plural(data?.counts?.trash || 0, "review")} members deleted are removed for good, with their files. This can't be undone.`} typeWord="DELETE" confirmLabel="Empty trash" onClose={closeDlg}
+          onConfirm={() => run("tr", () => adminBulkDeleteRequests({ trash: true }), (o) => `${plural(o.deleted, "review")} deleted for good.`, () => { closeDlg(); changed(); })} />
+      )}
     </div>
   );
 }
 
-/* ============================ payments ============================ */
-function Payments({ packages, onChanged, refreshKey }) {
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
+/* ============================================================ PAYMENTS  (1 call: /purchases, rows + counts + plan list) */
+const PAY_FILTERS = [["all", "All"], ["paid", "✅ Paid"], ["unpaid", "⏳ Not paid"], ["expired", "⌛ Expired"], ["revoked", "⛔ Switched off"]];
+const Meter = ({ label, used, allowed, unlimited }) => (
+  <div><div className="t"><span>{label}</span><span>{unlimited ? `${used} / ∞` : `${used} / ${allowed}`}</span></div><div className={cx("rlx-meter", !unlimited && allowed > 0 && used >= allowed && "full")}><i style={{ width: unlimited ? "100%" : `${allowed ? Math.min(100, (used / allowed) * 100) : 0}%`, opacity: unlimited ? 0.35 : 1 }} /></div></div>
+);
+
+function ExtendSheet({ p, onClose, onDone }) {
+  const [f, setF] = useState({ addDays: 0, addAi: 0, addHuman: 0, addBuilder: 0, addLinkedin: 0 });
+  const [busy, run] = useRun();
+  const num = (k, label, hint) => <TextField id={`ex-${k}`} label={label} hint={hint} type="number" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />;
+  return (
+    <Sheet title="Extend this plan" subtitle={`${p.user.email} · ${p.package.name}. A negative number takes days or credits away.`} onClose={onClose}>
+      <form className="rf-form" onSubmit={(e) => { e.preventDefault(); run("x", () => adminUpdatePurchase(p.id, Object.fromEntries(Object.entries(f).map(([k, v]) => [k, Number(v) || 0]))), "Plan updated ✅", onDone); }}>
+        {num("addDays", "Add days", p.expiresAt ? `Now valid until ${dayFmt(p.expiresAt)}` : "This plan never expires. Adding days makes it end that many days from now.")}
+        <div className="rf-two">
+          {!p.ai.unlimited && p.ai.enabled !== false && num("addAi", "Add AI reviews", `Now ${p.ai.used} of ${p.ai.allowed} used`)}
+          {num("addHuman", "Add human reviews", p.human.enabled ? `Now ${p.human.used} of ${p.human.allowed} used` : "None yet. Adding some turns human review on.")}
+          {num("addBuilder", "Add builder credits", p.builder?.enabled ? `Now ${p.builder.used} of ${p.builder.allowed} used` : "None yet. Adding some opens the resume builder for them.")}
+          {num("addLinkedin", "Add LinkedIn reviews", p.linkedin.enabled ? `Now ${p.linkedin.used} of ${p.linkedin.allowed} used` : "None yet. Adding some turns LinkedIn review on.")}
+        </div>
+        <div className="rf-btns rf-sticky"><Btn type="submit" loading={busy === "x"}>Save</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
+      </form>
+    </Sheet>
+  );
+}
+
+function GrantSheet({ packages, onClose, onDone }) {
+  const live = packages.filter((p) => p.isActive);
+  const [f, setF] = useState({ email: "", packageId: (live[0] || packages[0])?.id || "", extraDays: 0 });
+  const [busy, run] = useRun();
+  return (
+    <Sheet title="Give a plan for free" subtitle="For a gift, a partner, or a payment that didn't go through. They need an account already." onClose={onClose}>
+      <form className="rf-form" onSubmit={(e) => { e.preventDefault(); run("g", () => adminGrant({ email: f.email.trim(), packageId: f.packageId, extraDays: Number(f.extraDays) || 0 }), "Plan given 🎁", onDone); }}>
+        <TextField id="gr-e" label="Their email" type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoFocus />
+        <div className="rf-field">
+          <label htmlFor="gr-p" className="rv-label"><span>Plan</span></label>
+          <select id="gr-p" className="rv-input arx-select" value={f.packageId} onChange={(e) => setF({ ...f, packageId: e.target.value })}>
+            {packages.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.terms}{p.isActive ? "" : " (hidden)"}</option>)}
+          </select>
+        </div>
+        <TextField id="gr-d" label="Extra days on top" optional type="number" min={0} value={f.extraDays} onChange={(e) => setF({ ...f, extraDays: e.target.value })} />
+        <div className="rf-btns rf-sticky"><Btn type="submit" loading={busy === "g"} disabled={!f.packageId}>Give plan</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
+      </form>
+    </Sheet>
+  );
+}
+
+function PaymentSheet({ p, onClose, onChanged, go }) {
+  const [busy, run] = useRun();
+  const [prompt, promptDialog] = usePrompt();
+  const [sub, setSub] = useState(""); // "extend" | "delete"
+  const [keep, setKeep] = useState(false);
+  const st = PLAN_STATE[p.state] || { label: p.state, tone: "muted" };
+  const done = () => { onChanged(); onClose(); };
+  const off = async () => { const why = await prompt({ title: "Switch this plan off?", message: "They can't send in new resumes under it until you switch it back on. Only you see the reason.", label: "Reason", confirmLabel: "Switch off", danger: true }); if (why !== null) run("off", () => adminUpdatePurchase(p.id, { revoked: true, reason: why }), "Plan switched off.", done); };
+  if (sub === "extend") return <ExtendSheet p={p} onClose={() => setSub("")} onDone={done} />;
+  if (sub === "delete") return (
+    <ConfirmSheet title="Delete this payment for good?" message={p.payment.status === "paid" && !p.free ? "This is a PAID record. It's removed from Resume Lab permanently. Money is not refunded at the gateway by this." : "The record is removed permanently."} onClose={() => setSub("")}
+      onConfirm={() => run("del", () => adminDeletePurchase(p.id, keep), (o) => `Payment deleted for good${o.reviewsDeleted ? `, with ${plural(o.reviewsDeleted, "review")}` : ""}.`, done)}>
+      <Check checked={keep} onChange={setKeep}>Keep the reviews sent in under it (otherwise they and their files go too)</Check>
+    </ConfirmSheet>
+  );
+  return (
+    <Sheet title="Payment" subtitle={`${p.user.name || "User"} · ${p.user.email}`} onClose={onClose}>
+      <div className="rf-receipt">
+        <div className="big"><b>{p.free ? "Free" : formatINR(p.payment.amount)}</b><span className="rf-muted">{p.package.name} · {p.package.terms}</span><Badge tone={st.tone}>{st.label}</Badge></div>
+        <div className="rlx-use">
+          {p.ai.enabled !== false && <Meter label="🤖 AI reviews" used={p.ai.used} allowed={p.ai.allowed} unlimited={p.ai.unlimited} />}
+          {p.human.enabled && <Meter label="🙋 Human reviews" used={p.human.used} allowed={p.human.allowed} />}
+          {p.builder?.enabled && <Meter label="🧱 Builder credits" used={p.builder.used} allowed={p.builder.allowed} />}
+          {p.linkedin.enabled && <Meter label="🔗 LinkedIn reviews" used={p.linkedin.used} allowed={p.linkedin.allowed} />}
+        </div>
+        <dl className="rf-kv">
+          <div><dt>Created</dt><dd>{dateFmt(p.createdAt)}</dd></div>
+          {p.payment.paidAt && <div><dt>Paid</dt><dd>{dateFmt(p.payment.paidAt)}</dd></div>}
+          <div><dt>Gateway</dt><dd>{p.free ? "Given by an admin" : `${p.payment.gateway || "–"} · ${p.payment.status}`}</dd></div>
+          {p.gatewayPaymentId && <div><dt>Payment ID</dt><dd><CopyText value={p.gatewayPaymentId} /></dd></div>}
+          {p.gatewayOrderId && <div><dt>Order ID</dt><dd><CopyText value={p.gatewayOrderId} /></dd></div>}
+          <div><dt>Valid until</dt><dd>{p.expiresAt ? dayFmt(p.expiresAt) : "Never expires"}</dd></div>
+          {p.failureReason && <div><dt>Failure</dt><dd>{p.failureReason}</dd></div>}
+          {p.revoked && <div><dt>Switched off</dt><dd>{p.revokeReason || "No reason given"}</dd></div>}
+        </dl>
+        <div className="rf-btns">
+          {p.payment.status === "paid" && <Btn variant="ghost" onClick={() => setSub("extend")}><Plus size={15} weight="bold" aria-hidden />Extend</Btn>}
+          {p.payment.status === "paid" && (p.revoked
+            ? <Btn variant="ghost" loading={busy === "on"} onClick={() => run("on", () => adminUpdatePurchase(p.id, { revoked: false }), "Switched back on ✅", done)}>Switch back on</Btn>
+            : <Btn variant="ghost" loading={busy === "off"} onClick={off}>Switch off</Btn>)}
+          <Btn variant="ghost" onClick={() => { onClose(); go("reviews", { filter: "all", search: p.user.email }); }}>📝 Their reviews</Btn>
+          <Btn variant="danger" onClick={() => setSub("delete")}><Trash size={15} aria-hidden />Delete forever</Btn>
+        </div>
+      </div>
+      {promptDialog}
+    </Sheet>
+  );
+}
+
+function Payments({ preset, go }) {
+  const [filter, setFilter] = useState(preset.filter || "all");
+  const [search, setSearch] = useState(preset.search || "");
   const q = useDebounced(search.trim());
   const [page, setPage] = useState(1);
-  const [data, setData] = useState(null);
-  const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
-  const [modal, setModal] = useState(null); // { type: "delete" | "extend" | "grant", row }
-  const [busy, setBusy] = useState(false);
-  const [f, setF] = useState({});
-  useEffect(() => { setPage(1); }, [filter, q]);
-  useEffect(() => {
-    let live = true;
-    setData(null);
-    adminPurchases({ status: filter, search: q, page }).then((d) => live && (setData(d), setError(""))).catch((e) => live && setError(errMsg(e)));
-    return () => { live = false; };
-  }, [filter, q, page, tick, refreshKey]);
-  const refresh = () => { setTick((t) => t + 1); onChanged(); };
-  const act = async (fn, ok) => { setBusy(true); try { await fn(); toast.success(ok); setModal(null); refresh(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); } };
-
+  const [open, setOpen] = useState(null);
+  const [dlg, setDlg] = useState(""); // "grant" | "bulk"
+  const [keep, setKeep] = useState(false);
+  const [, run] = useRun();
+  const { data, error, loading, reload } = useLoad(() => adminPurchases({ status: filter, search: q, page }), `${filter}|${q}|${page}|${tick}`);
+  const pick = usePick(data?.rows);
+  const changed = () => setTick((t) => t + 1);
+  const to = (setter) => (v) => { setter(v); setPage(1); };
   return (
     <div>
-      <div className="ar-bar">
-        <Chips options={[["all", "All"], ["paid", "Paid"], ["unpaid", "Pending / failed"], ["expired", "Expired"], ["revoked", "Switched off"]]} value={filter} onChange={setFilter} />
-        <span style={{ marginLeft: "auto" }} />
-        <SearchBox value={search} onChange={setSearch} placeholder="Name, email, payment id…" />
-        <Btn size="sm" onClick={() => { setF({ email: "", packageId: packages?.[0]?.id || "", extraDays: 0 }); setModal({ type: "grant" }); }}><Plus size={15} weight="bold" aria-hidden />Give a plan</Btn>
+      <Head title="Payments" sub="Every plan bought, paid or not. Open one to extend it, switch it off or delete it for good."
+        actions={<><Refresh loading={loading && Boolean(data)} onClick={reload} /><Btn disabled={!data?.packages?.length} onClick={() => setDlg("grant")}><Plus size={16} weight="bold" aria-hidden />Give a plan</Btn></>} />
+      <div className="arx-toolbar">
+        <Chips options={PAY_FILTERS} value={filter} onChange={to(setFilter)} counts={data?.counts} />
+        <Search value={search} onChange={to(setSearch)} placeholder="Name, email, payment ID, plan" />
       </div>
-      {error && <p role="alert" className="rv-err">{error}</p>}
-      <div className="rv-card" style={{ overflowX: "auto" }}>
-        <table className="rv-table">
-          <thead><tr><th>Member</th><th>Plan</th><th>Paid</th><th>AI</th><th>Human</th><th>Valid until</th><th>State</th><th>Date</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
-          <tbody>
-            {data === null && !error && [0, 1, 2].map((i) => <tr key={i}><td colSpan={9}><Skeleton h={18} /></td></tr>)}
-            {data?.rows.map((p) => {
-              const st = PLAN_STATE[p.state] || {};
-              return (
-                <tr key={p.id}>
-                  <td><Who name={p.user.name} email={p.user.email} /></td>
-                  <td style={{ whiteSpace: "nowrap" }}>{p.package.name}<div className="rv-xs rv-subtle">{p.package.terms}</div></td>
-                  <td style={{ whiteSpace: "nowrap" }}><span className="rv-mono">{p.free ? "Free" : formatINR(p.payment.amount)}</span><div className="rv-xs rv-subtle">{p.free ? "given by admin" : `${p.payment.gateway || "–"} ${p.payment.status !== "paid" ? `· ${p.payment.status}` : ""}`}</div>{p.gatewayPaymentId && <div className="rv-xs rv-subtle rv-mono" style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }} title={p.gatewayPaymentId}>{p.gatewayPaymentId}</div>}</td>
-                  <td className="rv-mono">{p.ai.unlimited ? `${p.ai.used} / ∞` : `${p.ai.used} / ${p.ai.allowed}`}</td>
-                  <td className="rv-mono">{p.human.enabled ? `${p.human.used} / ${p.human.allowed}` : <span className="rv-subtle">–</span>}</td>
-                  <td className="rv-xs" style={{ whiteSpace: "nowrap" }}>{p.expiresAt ? dayFmt(p.expiresAt) : "Never"}</td>
-                  <td><Pill className={st.tone}>{st.label}</Pill>{p.revoked && p.revokeReason && <div className="rv-xs rv-subtle">{p.revokeReason}</div>}</td>
-                  <td className="rv-xs" style={{ whiteSpace: "nowrap" }}>{dateFmt(p.payment.paidAt || p.createdAt)}</td>
-                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    {p.payment.status === "paid" && <Btn variant="ghost" size="sm" onClick={() => { setF({ addDays: 0, addAi: 0, addHuman: 0, addLinkedin: 0 }); setModal({ type: "extend", row: p }); }}>Extend</Btn>}{" "}
-                    {p.payment.status === "paid" && (p.revoked
-                      ? <Btn variant="ghost" size="sm" onClick={() => act(() => adminUpdatePurchase(p.id, { revoked: false }), "Switched back on.")}>Restore</Btn>
-                      : <Btn variant="ghost" size="sm" onClick={() => { setF({ reason: "" }); setModal({ type: "off", row: p }); }}>Switch off</Btn>)}{" "}
-                    <Btn variant="danger" size="sm" onClick={() => { setF({ keep: false }); setModal({ type: "delete", row: p }); }} aria-label="Delete payment"><Trash size={14} aria-hidden /></Btn>
-                  </td>
-                </tr>
-              );
-            })}
-            {data?.rows.length === 0 && <tr><td colSpan={9}><div className="ar-empty"><CreditCard size={36} aria-hidden />No payments here.</div></td></tr>}
-          </tbody>
-        </table>
-      </div>
-      {data && <Pager page={page} pages={data.pages} setPage={setPage} />}
+      <Table cols={[PickHead(pick), "Member", "Plan", "Paid", "Credits used", "Valid until", "State", "Date"]} rows={data?.rows} error={error} loading={loading} empty={["💳", "No payments here."]}>
+        {data?.rows.map((p) => { const st = PLAN_STATE[p.state] || { label: p.state, tone: "muted" }; return (
+          <tr key={p.id} className={cx("click", pick.picked.has(p.id) && "on")} tabIndex={0} onClick={() => setOpen(p)} onKeyDown={(e) => e.key === "Enter" && setOpen(p)}>
+            <PickCell pick={pick} id={p.id} label={`${p.user.email} ${p.package.name}`} />
+            <td className="first" data-label="Member"><Who name={p.user.name} email={p.user.email} /></td>
+            <td data-label="Plan">{p.package.name}<span className="sub">{p.package.terms}</span></td>
+            <td data-label="Paid" className="rf-mono">{p.free ? "Free" : formatINR(p.payment.amount)}<span className="sub">{p.free ? "given by admin" : `${p.payment.gateway || "–"}${p.payment.status !== "paid" ? ` · ${p.payment.status}` : ""}`}</span></td>
+            <td data-label="Used"><span className="rlx-credits">{p.ai.enabled !== false && <span>AI <b>{p.ai.used}/{p.ai.unlimited ? "∞" : p.ai.allowed}</b></span>}{p.human.enabled && <span>Human <b>{p.human.used}/{p.human.allowed}</b></span>}{p.builder?.enabled && <span>Build <b>{p.builder.used}/{p.builder.allowed}</b></span>}{p.linkedin.enabled && <span>LI <b>{p.linkedin.used}/{p.linkedin.allowed}</b></span>}</span></td>
+            <td data-label="Valid until" className="nowrap">{p.expiresAt ? dayFmt(p.expiresAt) : "Never"}</td>
+            <td data-label="State"><Badge tone={st.tone}>{st.label}</Badge></td>
+            <td data-label="Date" className="nowrap">{dateFmt(p.payment.paidAt || p.createdAt)}</td>
+          </tr>); })}
+      </Table>
+      {data && <Pager page={data.page} pages={data.pages} onGo={setPage} />}
+      <BulkBar pick={pick}><Btn size="sm" variant="danger" onClick={() => setDlg("bulk")}><Trash size={14} aria-hidden />Delete forever</Btn></BulkBar>
 
-      {modal?.type === "delete" && (
-        <Modal title="Delete this payment?" onClose={() => setModal(null)}>
-          <p className="rv-sm rv-muted">{modal.row.user.email} · {modal.row.package.name} · {modal.row.free ? "free" : formatINR(modal.row.payment.amount)}. This removes the payment record from Resume Lab. It does not refund money at the payment gateway.</p>
-          <label className="rv-check" style={{ marginTop: 16 }}><input type="checkbox" checked={Boolean(f.keep)} onChange={(e) => setF({ ...f, keep: e.target.checked })} />Keep the reviews sent in under it (otherwise they and their files are deleted too)</label>
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn variant="danger" loading={busy} onClick={() => act(async () => { const o = await adminDeletePurchase(modal.row.id, f.keep); toast(`${o.reviewsDeleted} review${o.reviewsDeleted === 1 ? "" : "s"} deleted with it.`); }, "Payment deleted.")}>Delete payment</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
-        </Modal>
-      )}
-      {modal?.type === "off" && (
-        <Modal title="Switch this plan off?" onClose={() => setModal(null)}>
-          <p className="rv-sm rv-muted">{modal.row.user.email} · {modal.row.package.name}. They won't be able to send in new resumes under it until you switch it back on.</p>
-          <div style={{ marginTop: 16 }}><Field label="Reason" htmlFor="off-r" optional hint="Shown only to you."><input id="off-r" className="rv-input" value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} maxLength={300} /></Field></div>
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn variant="danger" loading={busy} onClick={() => act(() => adminUpdatePurchase(modal.row.id, { revoked: true, reason: f.reason }), "Plan switched off.")}>Switch off</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
-        </Modal>
-      )}
-      {modal?.type === "extend" && (
-        <Modal title="Extend this plan" onClose={() => setModal(null)}>
-          <p className="rv-sm rv-muted">{modal.row.user.email} · {modal.row.package.name}. Use a negative number to take days or reviews away.</p>
-          <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
-            <Field label="Add days" htmlFor="ex-d" hint={modal.row.expiresAt ? `Now valid until ${dayFmt(modal.row.expiresAt)}` : "This plan never expires. Adding days makes it end that many days from now."}><input id="ex-d" type="number" className="rv-input" value={f.addDays} onChange={(e) => setF({ ...f, addDays: e.target.value })} /></Field>
-            {!modal.row.ai.unlimited && <Field label="Add AI reviews" htmlFor="ex-a" hint={`Now ${modal.row.ai.used} of ${modal.row.ai.allowed} used`}><input id="ex-a" type="number" className="rv-input" value={f.addAi} onChange={(e) => setF({ ...f, addAi: e.target.value })} /></Field>}
-            <Field label="Add human reviews" htmlFor="ex-h" hint={modal.row.human.enabled ? `Now ${modal.row.human.used} of ${modal.row.human.allowed} used` : "This plan has none. Adding some turns human review on for this member."}><input id="ex-h" type="number" className="rv-input" value={f.addHuman} onChange={(e) => setF({ ...f, addHuman: e.target.value })} /></Field>
-            <Field label="Add LinkedIn reviews" htmlFor="ex-l" hint={modal.row.linkedin.enabled ? `Now ${modal.row.linkedin.used} of ${modal.row.linkedin.allowed} used` : "This plan has none. Adding some turns LinkedIn review on for this member."}><input id="ex-l" type="number" className="rv-input" value={f.addLinkedin} onChange={(e) => setF({ ...f, addLinkedin: e.target.value })} /></Field>
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn loading={busy} onClick={() => act(() => adminUpdatePurchase(modal.row.id, { addDays: Number(f.addDays) || 0, addAi: Number(f.addAi) || 0, addHuman: Number(f.addHuman) || 0, addLinkedin: Number(f.addLinkedin) || 0 }), "Plan updated.")}>Save</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
-        </Modal>
-      )}
-      {modal?.type === "grant" && (
-        <Modal title="Give a plan for free" onClose={() => setModal(null)}>
-          <p className="rv-sm rv-muted">For a gift, a partner, or to fix a payment that didn't go through. They need an account already.</p>
-          <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
-            <Field label="Their email" htmlFor="gr-e"><input id="gr-e" type="email" className="rv-input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
-            <Field label="Plan" htmlFor="gr-p"><select id="gr-p" className="rv-input" value={f.packageId} onChange={(e) => setF({ ...f, packageId: e.target.value })}>{packages?.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.terms})</option>)}</select></Field>
-            <Field label="Extra days on top" htmlFor="gr-d" optional><input id="gr-d" type="number" min="0" className="rv-input" value={f.extraDays} onChange={(e) => setF({ ...f, extraDays: e.target.value })} /></Field>
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn loading={busy} onClick={() => act(() => adminGrant({ email: f.email, packageId: f.packageId, extraDays: Number(f.extraDays) || 0 }), "Plan given.")}>Give plan</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
-        </Modal>
+      {open && <PaymentSheet p={open} onClose={() => setOpen(null)} onChanged={changed} go={go} />}
+      {dlg === "grant" && <GrantSheet packages={data.packages} onClose={() => setDlg("")} onDone={() => { setDlg(""); changed(); }} />}
+      {dlg === "bulk" && (
+        <ConfirmSheet title={`Delete ${plural(pick.picked.size, "payment")} for good?`} message="The picked payment records are removed permanently. Money is not refunded at the gateway by this." typeWord="DELETE" onClose={() => { setDlg(""); setKeep(false); }}
+          onConfirm={() => run("b", () => adminBulkDeletePurchases([...pick.picked], keep), (o) => `${plural(o.deleted, "payment")} deleted${o.reviewsDeleted ? `, with ${plural(o.reviewsDeleted, "review")}` : ""}.`, () => { setDlg(""); setKeep(false); changed(); })}>
+          <Check checked={keep} onChange={setKeep}>Keep the reviews sent in under them (otherwise they and their files go too)</Check>
+        </ConfirmSheet>
       )}
     </div>
   );
 }
 
-/* ============================ members ============================ */
-function Members({ onChanged }) {
-  const [search, setSearch] = useState("");
+/* ============================================================ MEMBERS  (1 call: /members, rows + counts) */
+function Members({ preset, go }) {
+  const [filter, setFilter] = useState(preset.filter || "all");
+  const [search, setSearch] = useState(preset.search || "");
   const q = useDebounced(search.trim());
-  const [rows, setRows] = useState(null);
-  const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
-  const [modal, setModal] = useState(null);
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    let live = true;
-    setRows(null);
-    adminMembers({ search: q }).then((d) => live && (setRows(d), setError(""))).catch((e) => live && setError(errMsg(e)));
-    return () => { live = false; };
-  }, [q, tick]);
-  const done = () => { setTick((t) => t + 1); onChanged(); };
-  const block = async () => { setBusy(true); try { await adminBlock(modal.id, reason); toast.success("Blocked from Resume Lab."); setModal(null); done(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); } };
-  const unblock = async (m) => { try { await adminUnblock(m.id); toast.success("Unblocked."); done(); } catch (e) { toast.error(errMsg(e)); } };
-
+  const [erase, setErase] = useState(null);
+  const [busy, run] = useRun();
+  const [prompt, promptDialog] = usePrompt();
+  const { data, error, loading, reload } = useLoad(() => adminMembers({ search: q, filter }), `${filter}|${q}|${tick}`);
+  const changed = () => setTick((t) => t + 1);
+  const block = async (m) => { const why = await prompt({ title: `Block ${m.name || m.email}?`, message: "They can't buy plans or send in resumes. They keep reviews they already have, and their Target Trek account is untouched. They see your reason.", label: "Reason", confirmLabel: "Block", danger: true }); if (why !== null) run(`${m.id}b`, () => adminBlock(m.id, why), "Blocked from Resume Lab ⛔", changed); };
   return (
     <div>
-      <div className="ar-bar">
-        <p className="rv-sm rv-muted" style={{ flex: "1 1 280px" }}>{q ? "Search results across all accounts." : "Members who bought a plan or are blocked. Search to find anyone else."}</p>
-        <SearchBox value={search} onChange={setSearch} placeholder="Name, email, mobile…" />
+      <Head title="Members" sub={q && filter === "all" ? "Search results across every account." : "People who bought a plan or are blocked. Search to find anyone else."} actions={<Refresh loading={loading && Boolean(data)} onClick={reload} />} />
+      <div className="arx-toolbar">
+        <Chips options={[["all", "All"], ["paying", "💸 Paying"], ["blocked", "⛔ Blocked"]]} value={filter} onChange={setFilter} counts={data?.counts} />
+        <Search value={search} onChange={setSearch} placeholder="Name, email, mobile" />
       </div>
-      {error && <p role="alert" className="rv-err">{error}</p>}
-      <div className="rv-card" style={{ overflowX: "auto" }}>
-        <table className="rv-table">
-          <thead><tr><th>Member</th><th>Plans</th><th>Paid</th><th>Reviews</th><th>Last sent</th><th>Status</th><th style={{ textAlign: "right" }}>Action</th></tr></thead>
-          <tbody>
-            {rows === null && !error && [0, 1, 2].map((i) => <tr key={i}><td colSpan={7}><Skeleton h={18} /></td></tr>)}
-            {rows?.map((m) => (
-              <tr key={m.id}>
-                <td><Who name={m.name} email={`${m.email}${m.mobile ? ` · ${m.mobile}` : ""}`} /></td>
-                <td className="rv-mono">{m.plans}</td><td className="rv-mono">{formatINR(m.paid)}</td><td className="rv-mono">{m.reviews}</td>
-                <td className="rv-xs">{m.lastActive ? dayFmt(m.lastActive) : "–"}</td>
-                <td>{m.blocked ? <><Pill className="bad">Blocked</Pill>{m.blockReason && <div className="rv-xs rv-subtle" style={{ marginTop: 4 }}>{m.blockReason}</div>}</> : <Pill className="ok">Active</Pill>}</td>
-                <td style={{ textAlign: "right" }}>{m.blocked ? <Btn variant="ghost" size="sm" onClick={() => unblock(m)}>Unblock</Btn> : <Btn variant="danger" size="sm" onClick={() => { setReason(""); setModal(m); }}>Block</Btn>}</td>
-              </tr>
-            ))}
-            {rows?.length === 0 && <tr><td colSpan={7}><div className="ar-empty"><UsersThree size={36} aria-hidden />No members found.</div></td></tr>}
-          </tbody>
-        </table>
-      </div>
-      {modal && (
-        <Modal title="Block from Resume Lab" onClose={() => setModal(null)}>
-          <p className="rv-sm rv-muted">{modal.email} won't be able to buy plans or send in resumes. They can still see reviews they already have, and their Target Trek account is untouched.</p>
-          <div style={{ marginTop: 16 }}><Field label="Reason" htmlFor="bl-r" optional hint="The member sees this."><input id="bl-r" className="rv-input" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} /></Field></div>
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}><Btn variant="danger" loading={busy} onClick={block}>Block member</Btn><Btn variant="ghost" onClick={() => setModal(null)}>Cancel</Btn></div>
-        </Modal>
+      <Table cols={["Member", "Plans", "Paid", "Reviews", "Last sent", "Status", ""]} rows={data?.rows} error={error} loading={loading} empty={["👥", "No members found."]}>
+        {data?.rows.map((m) => (
+          <tr key={m.id}>
+            <td className="first" data-label="Member"><Who name={m.name} email={m.email} sub={`${m.email}${m.mobile ? ` · ${m.mobile}` : ""}`} /></td>
+            <td data-label="Plans" className="rf-mono">{m.plans}</td>
+            <td data-label="Paid" className="rf-mono">{formatINR(m.paid)}</td>
+            <td data-label="Reviews" className="rf-mono">{m.reviews}</td>
+            <td data-label="Last sent">{m.lastActive ? dayFmt(m.lastActive) : "–"}</td>
+            <td data-label="Status">{m.staff ? <Badge tone="info">Staff</Badge> : m.blocked ? <><Badge tone="bad">Blocked</Badge>{m.blockReason && <span className="sub">{m.blockReason}</span>}</> : <Badge tone="ok">Active</Badge>}</td>
+            <td className="act"><div className="arx-actions">
+              <Btn size="sm" variant="ghost" onClick={() => go("reviews", { filter: "all", search: m.email })}>📝 Reviews</Btn>
+              <Btn size="sm" variant="ghost" onClick={() => go("payments", { search: m.email })}>💳 Plans</Btn>
+              {!m.staff && (m.blocked
+                ? <Btn size="sm" variant="ghost" loading={busy === `${m.id}u`} onClick={() => run(`${m.id}u`, () => adminUnblock(m.id), "Unblocked ✅", changed)}>Unblock</Btn>
+                : <Btn size="sm" variant="ghost" loading={busy === `${m.id}b`} onClick={() => block(m)}>Block</Btn>)}
+              <Btn size="sm" variant="danger" aria-label={`Erase all Resume Lab data of ${m.email}`} onClick={() => setErase(m)}><Trash size={14} aria-hidden /></Btn>
+            </div></td>
+          </tr>
+        ))}
+      </Table>
+      {erase && (
+        <ConfirmSheet title={`Erase ${erase.name || erase.email}'s Resume Lab data?`} message="Every review and its files, every plan and payment record, their builder resumes, their resume vault and any block are deleted permanently. Their Target Trek account stays. Money is not refunded by this." typeWord="ERASE" confirmLabel="Erase forever" onClose={() => setErase(null)}
+          onConfirm={() => run("er", () => adminEraseMember(erase.id), (o) => `Erased: ${plural(o.reviews, "review")}, ${plural(o.plans, "plan")}, ${plural(o.drafts, "builder resume")}, ${plural(o.files, "vault file")}.`, () => { setErase(null); changed(); })}>
+          <p className="rlx-note"><b>{erase.email}</b> · {plural(erase.plans, "plan")} · {plural(erase.reviews, "review")} · {formatINR(erase.paid)} paid</p>
+        </ConfirmSheet>
       )}
+      {promptDialog}
     </div>
   );
 }
 
-/* ============================ plans and prices ============================ */
-const EMPTY = { id: null, key: "", name: "", tagline: "", description: "", price: "", compareAt: "", badge: "", aiReviews: 2, humanReviews: 0, linkedinReviews: 0, validityDays: 0, deliveryHours: 48, sortOrder: 0, isActive: true, resume: true, jobMatch: false, humanReview: false, rewrittenResume: false, features: "" };
-const toForm = (p) => ({ id: p.id, key: p.key, name: p.name, tagline: p.tagline, description: p.description, price: p.price, compareAt: p.compareAt || "", badge: p.badge, aiReviews: p.ai.reviews, humanReviews: p.human.configured, linkedinReviews: p.linkedin.reviews, validityDays: p.validityDays, deliveryHours: p.deliveryHours, sortOrder: p.sortOrder, isActive: p.isActive, resume: p.includes.resume, jobMatch: p.includes.jobMatch, rewrittenResume: p.includes.rewrittenResume, humanReview: p.human.switch, features: (p.features || []).join("\n") });
+/* ============================================================ PLANS  (1 call: /packages) */
+const EMPTY_PLAN = { id: null, key: "", name: "", tagline: "", description: "", price: "", compareAt: "", badge: "", aiReviews: 2, humanReviews: 0, linkedinReviews: 0, builderCredits: 0, aiReview: true, validityDays: 0, deliveryHours: 48, sortOrder: 0, isActive: true, resume: true, jobMatch: false, humanReview: false, rewrittenResume: false, features: "" };
+const planForm = (p) => ({ id: p.id, key: p.key, name: p.name, tagline: p.tagline || "", description: p.description || "", price: p.price, compareAt: p.compareAt || "", badge: p.badge || "", aiReviews: p.ai.reviews, humanReviews: p.human.configured, linkedinReviews: p.linkedin.reviews, builderCredits: p.builder?.configured || 0, aiReview: p.ai?.enabled !== false, validityDays: p.validityDays, deliveryHours: p.deliveryHours, sortOrder: p.sortOrder, isActive: p.isActive, resume: p.includes.resume, jobMatch: p.includes.jobMatch, rewrittenResume: p.includes.rewrittenResume, humanReview: p.human.switch, features: (p.features || []).join("\n") });
+const planBody = (f) => ({
+  key: f.key.trim().toLowerCase(), name: f.name, tagline: f.tagline, description: f.description, price: Number(f.price), compareAt: Number(f.compareAt || 0), badge: f.badge,
+  aiReviews: Number(f.aiReviews), humanReviews: Number(f.humanReviews), linkedinReviews: Number(f.linkedinReviews), builderCredits: Number(f.builderCredits), validityDays: Number(f.validityDays), deliveryHours: Number(f.deliveryHours), sortOrder: Number(f.sortOrder), isActive: f.isActive,
+  includes: { resume: f.resume, linkedin: Number(f.linkedinReviews) > 0, jobMatch: f.jobMatch, humanReview: f.humanReview, rewrittenResume: f.rewrittenResume, aiReview: f.aiReview }, features: lines(f.features),
+});
+const readsAs = (f) => `${!f.aiReview ? "No AI review" : Number(f.aiReviews) === 0 ? "Unlimited AI reviews" : plural(Number(f.aiReviews), "AI review")}${Number(f.builderCredits) > 0 ? ` + ${plural(Number(f.builderCredits), "resume build")}` : ""}${f.humanReview && Number(f.humanReviews) > 0 ? ` + ${plural(Number(f.humanReviews), "human review")}` : ""}${Number(f.linkedinReviews) > 0 ? ` + ${plural(Number(f.linkedinReviews), "LinkedIn review")}` : ""} · ${Number(f.validityDays) === 0 ? "no expiry" : `valid ${f.validityDays} days`}`;
 
-function Plans({ list, reload }) {
-  const [form, setForm] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [del, setDel] = useState(null);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
-
-  const save = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await adminSavePackage(form.id, {
-        key: form.key, name: form.name, tagline: form.tagline, description: form.description, price: Number(form.price), compareAt: Number(form.compareAt || 0), badge: form.badge,
-        aiReviews: Number(form.aiReviews), humanReviews: Number(form.humanReviews), linkedinReviews: Number(form.linkedinReviews), validityDays: Number(form.validityDays), deliveryHours: Number(form.deliveryHours), sortOrder: Number(form.sortOrder), isActive: form.isActive,
-        includes: { resume: form.resume, linkedin: Number(form.linkedinReviews) > 0, jobMatch: form.jobMatch, humanReview: form.humanReview, rewrittenResume: form.rewrittenResume }, features: lines(form.features),
-      });
-      toast.success("Saved."); setForm(null); reload();
-    } catch (err) { toast.error(errMsg(err)); } finally { setBusy(false); }
-  };
-  const remove = async () => {
-    setBusy(true);
-    try { const o = await adminDeletePackage(del.id); toast.success(o.hidden ? "Hidden (it has orders)." : "Deleted."); setDel(null); reload(); } catch (err) { toast.error(errMsg(err)); } finally { setBusy(false); }
-  };
-
-  if (form) {
-    return (
-      <form onSubmit={save} className="rv-card rv-card-pad" style={{ maxWidth: 760, margin: "0 auto", display: "grid", gap: 20 }}>
-        <h2 className="rv-h3">{form.id ? "Edit plan" : "New plan"}</h2>
-        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          <Field label="Name" htmlFor="pk-name"><input id="pk-name" required className="rv-input" value={form.name} onChange={set("name")} maxLength={80} /></Field>
-          <Field label="Key (used in links)" htmlFor="pk-key" hint="Letters, numbers, dashes"><input id="pk-key" required className="rv-input" value={form.key} onChange={set("key")} maxLength={40} pattern="[a-zA-Z0-9-]{2,40}" /></Field>
-          <Field label="Price (₹)" htmlFor="pk-price"><input id="pk-price" required type="number" min="1" step="1" className="rv-input" value={form.price} onChange={set("price")} /></Field>
-          <Field label="Crossed-out price (₹)" htmlFor="pk-cmp" optional><input id="pk-cmp" type="number" min="0" className="rv-input" value={form.compareAt} onChange={set("compareAt")} /></Field>
-          <Field label="Badge" htmlFor="pk-badge" optional hint="e.g. Most picked"><input id="pk-badge" className="rv-input" value={form.badge} onChange={set("badge")} maxLength={30} /></Field>
-          <Field label="Review within (hours)" htmlFor="pk-hrs"><input id="pk-hrs" type="number" min="1" max="720" className="rv-input" value={form.deliveryHours} onChange={set("deliveryHours")} /></Field>
+function PlanSheet({ plan, onClose, onDone }) {
+  const [f, setF] = useState(plan ? planForm(plan) : { ...EMPTY_PLAN });
+  const [busy, run] = useRun();
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const flip = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
+  return (
+    <Sheet title={plan ? `Edit “${plan.name}”` : "New plan"} subtitle="Changes show on the site straight away. People who already bought keep what they paid for." onClose={onClose} wide>
+      <form className="rf-form" onSubmit={(e) => { e.preventDefault(); run("s", () => adminSavePackage(f.id, planBody(f)), "Plan saved ✅", onDone); }}>
+        <div className="rf-two">
+          <TextField id="pk-name" label="Name" required maxLength={80} value={f.name} onChange={set("name")} />
+          <TextField id="pk-key" label="Key (used in links)" required maxLength={40} pattern="[a-zA-Z0-9-]{2,40}" hint="Letters, numbers, dashes" value={f.key} onChange={set("key")} />
+          <TextField id="pk-price" label="Price (₹)" required type="number" min={1} step={1} value={f.price} onChange={set("price")} />
+          <TextField id="pk-cmp" label="Crossed-out price (₹)" optional type="number" min={0} value={f.compareAt} onChange={set("compareAt")} />
+          <TextField id="pk-badge" label="Badge" optional maxLength={30} hint="e.g. Most picked" value={f.badge} onChange={set("badge")} />
+          <TextField id="pk-hrs" label="Review within (hours)" type="number" min={1} max={720} value={f.deliveryHours} onChange={set("deliveryHours")} />
         </div>
-        <fieldset className="rv-note" style={{ border: 0, display: "grid", gap: 16 }}>
-          <legend className="rv-sm" style={{ fontWeight: 700, padding: 0, marginBottom: 12 }}>What the plan gives</legend>
-          <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-            <Field label="AI reviews" htmlFor="pk-ai" hint="0 = unlimited. Every resume sent in uses one."><input id="pk-ai" type="number" min="0" className="rv-input" value={form.aiReviews} onChange={set("aiReviews")} /></Field>
-            <Field label="Human reviews" htmlFor="pk-hu" hint="By working professionals. Needs the switch below on."><input id="pk-hu" type="number" min="0" className="rv-input" value={form.humanReviews} onChange={set("humanReviews")} disabled={!form.humanReview} /></Field>
-            <Field label="LinkedIn reviews" htmlFor="pk-li" hint="0 = none (nothing about LinkedIn is shown). Usually 1."><input id="pk-li" type="number" min="0" max="1000" className="rv-input" value={form.linkedinReviews} onChange={set("linkedinReviews")} /></Field>
-            <Field label="Valid for (days)" htmlFor="pk-days" hint="0 = never expires. 30, 365, 1825 (5 years)… counts from payment."><input id="pk-days" type="number" min="0" max="3650" className="rv-input" value={form.validityDays} onChange={set("validityDays")} /></Field>
+        <fieldset className="rlx-group"><legend>What the plan gives</legend>
+          <Switch checked={f.aiReview} onChange={flip("aiReview")} title="🤖 AI review of an uploaded resume" hint="Off for a builder-only plan: buyers get only the builder credits." />
+          <Switch checked={f.humanReview} onChange={flip("humanReview")} title="🙋 Human review" hint="Off = AI only. No human wording is shown to buyers." />
+          <div className="rf-two">
+            <TextField id="pk-ai" label="AI reviews" type="number" min={0} disabled={!f.aiReview} hint={f.aiReview ? "0 = unlimited. Every resume sent in uses one." : "Off: no AI review."} value={f.aiReview ? f.aiReviews : 0} onChange={set("aiReviews")} />
+            <TextField id="pk-hu" label="Human reviews" type="number" min={0} disabled={!f.humanReview} hint="By working professionals." value={f.humanReviews} onChange={set("humanReviews")} />
+            <TextField id="pk-bc" label="Resume builder credits" type="number" min={0} max={100000} hint="Each build uses one. 0 = none." value={f.builderCredits} onChange={set("builderCredits")} />
+            <TextField id="pk-li" label="LinkedIn reviews" type="number" min={0} max={1000} hint="0 = none. Usually 1." value={f.linkedinReviews} onChange={set("linkedinReviews")} />
+            <TextField id="pk-days" label="Valid for (days)" type="number" min={0} max={3650} hint="0 = never expires. Counts from payment." value={f.validityDays} onChange={set("validityDays")} />
+            <TextField id="pk-sort" label="Sort order" type="number" min={0} hint="Smaller shows first" value={f.sortOrder} onChange={set("sortOrder")} />
           </div>
-          <label className="rv-check"><input type="checkbox" checked={form.humanReview} onChange={set("humanReview")} />Allow human review in this plan. Switch off for AI-only: no human wording is shown to buyers, and the count above is ignored.</label>
-          <p className="rv-sm"><b>Reads as:</b> {Number(form.aiReviews) === 0 ? "Unlimited AI reviews" : `${form.aiReviews} AI review${Number(form.aiReviews) === 1 ? "" : "s"}`}{form.humanReview && Number(form.humanReviews) > 0 ? ` + ${form.humanReviews} human review${Number(form.humanReviews) === 1 ? "" : "s"}` : ""}{Number(form.linkedinReviews) > 0 ? ` + ${form.linkedinReviews} LinkedIn review${Number(form.linkedinReviews) === 1 ? "" : "s"}` : ""} · {Number(form.validityDays) === 0 ? "no expiry" : `valid ${form.validityDays} days`}</p>
-          <p className="rv-xs rv-subtle">Changes apply to new purchases. Members who already bought keep what they paid for (you can adjust them under Payments).</p>
+          <p className="rlx-reads"><b>Reads as:</b> {readsAs(f)}</p>
         </fieldset>
-        <Field label="One-line pitch" htmlFor="pk-tag"><input id="pk-tag" className="rv-input" value={form.tagline} onChange={set("tagline")} maxLength={160} /></Field>
-        <Field label="What's included (shown as ticks)" htmlFor="pk-feat" hint="One per line"><textarea id="pk-feat" rows={5} className="rv-input" value={form.features} onChange={set("features")} /></Field>
-        <fieldset className="rv-note" style={{ border: 0, display: "grid", gap: 12 }}>
-          <legend className="rv-sm" style={{ fontWeight: 700, padding: 0, marginBottom: 12 }}>What each resume review covers</legend>
-          {[["resume", "Resume review (the buyer uploads a PDF)"], ["jobMatch", "Job-description match (the buyer must paste a job description)"], ["rewrittenResume", "Complete rewritten resume on human reviews (you upload the finished file). Leave off for comments only."]].map(([k, label]) => <label key={k} className="rv-check"><input type="checkbox" checked={form[k]} onChange={set(k)} />{label}</label>)}
+        <fieldset className="rlx-group"><legend>What each resume review covers</legend>
+          <Switch checked={f.resume} onChange={flip("resume")} title="📄 Resume review" hint="The buyer uploads a PDF." />
+          <Switch checked={f.jobMatch} onChange={flip("jobMatch")} title="🎯 Job-description match" hint="The buyer must paste a job description." />
+          <Switch checked={f.rewrittenResume} onChange={flip("rewrittenResume")} title="✍️ Complete rewritten resume" hint="On human reviews you upload the finished file. Off = comments only." />
         </fieldset>
-        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", alignItems: "end" }}>
-          <Field label="Sort order" htmlFor="pk-sort" hint="Smaller shows first"><input id="pk-sort" type="number" min="0" className="rv-input" value={form.sortOrder} onChange={set("sortOrder")} /></Field>
-          <label className="rv-check" style={{ paddingBottom: 12 }}><input type="checkbox" checked={form.isActive} onChange={set("isActive")} />Visible on the site</label>
-        </div>
-        <div style={{ display: "flex", gap: 12 }}><Btn type="submit" loading={busy}>Save plan</Btn><Btn variant="ghost" onClick={() => setForm(null)}>Cancel</Btn></div>
+        <TextField id="pk-tag" label="One-line pitch" optional count={160} value={f.tagline} onChange={set("tagline")} />
+        <TextField id="pk-feat" label="What's included (shown as ticks)" optional textarea rows={4} hint="One per line" value={f.features} onChange={set("features")} />
+        <Switch checked={f.isActive} onChange={flip("isActive")} title="🌐 Visible on the site" />
+        <div className="rf-btns rf-sticky"><Btn type="submit" loading={busy === "s"}>Save plan</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
       </form>
-    );
-  }
+    </Sheet>
+  );
+}
+
+function Plans() {
+  const [tick, setTick] = useState(0);
+  const { data: list, error, loading, reload } = useLoad(adminPackages, `plans|${tick}`);
+  const [edit, setEdit] = useState(null); // { plan? }
+  const [del, setDel] = useState(null);
+  const [busy, run] = useRun();
+  const changed = () => setTick((t) => t + 1);
+  const toggle = (p) => run(p.id, () => adminSavePackage(p.id, planBody({ ...planForm(p), isActive: !p.isActive })), p.isActive ? "Hidden from the site." : "On sale again ✅", changed);
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
-        <p className="rv-sm rv-muted" style={{ maxWidth: 560 }}>Create single reviews, rewrite plans, or unlimited passes for 30, 60 or any number of days. Changes show on the site straight away. People who already bought keep the plan and price they paid for.</p>
-        <Btn onClick={() => setForm({ ...EMPTY })}><Plus size={16} weight="bold" aria-hidden />New plan</Btn>
-      </div>
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
-        {list === null && [0, 1, 2].map((i) => <Skeleton key={i} h={220} style={{ borderRadius: 16 }} />)}
+      <Head title="Plans" sub="What you sell: prices, review counts, builder credits and how long they last." actions={<><Refresh loading={loading && Boolean(list)} onClick={reload} /><Btn onClick={() => setEdit({})}><Plus size={16} weight="bold" aria-hidden />New plan</Btn></>} />
+      {error && <p role="alert" className="rf-banner bad" style={{ marginBottom: 12 }}>{error}</p>}
+      <div className="rlx-plans">
+        {!list && !error && [0, 1, 2].map((i) => <Skeleton key={i} h={240} style={{ borderRadius: 18 }} />)}
+        {list?.length === 0 && <Empty e="🏷️">No plans yet. Create the first one.</Empty>}
         {list?.map((p) => (
-          <div key={p.id} className="rv-card" style={{ padding: 24, display: "flex", flexDirection: "column", opacity: p.isActive ? 1 : 0.6 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><h3 className="rv-h3">{p.name}</h3>{p.isActive ? <Pill className="ok">Live</Pill> : <Pill>Hidden</Pill>}</div>
-            <p style={{ marginTop: 12, display: "flex", alignItems: "flex-end", gap: 8 }}><span className="rv-price" style={{ fontSize: 28 }}>{formatINR(p.price)}</span>{p.compareAt > 0 && <s className="rv-mono rv-subtle">{formatINR(p.compareAt)}</s>}</p>
-            <p className="rv-sm" style={{ marginTop: 8, fontWeight: 600 }}>{p.terms}</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>{p.includes.resume && <Pill>Resume</Pill>}{p.linkedin.enabled && <Pill>LinkedIn ×{p.linkedin.reviews}</Pill>}{p.includes.jobMatch && <Pill>Job match</Pill>}{p.human.enabled ? <Pill className="dark">Human ×{p.human.reviews}</Pill> : <Pill>AI only</Pill>}{p.human.configured > 0 && !p.human.switch && <Pill className="warn">Human off</Pill>}{p.includes.rewrittenResume && <Pill className="dark">Rewritten resume</Pill>}</div>
-            <p className="rv-xs rv-subtle" style={{ marginTop: 12, flex: 1 }}>{p.sold} sold</p>
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}><Btn variant="ghost" size="sm" onClick={() => setForm(toForm(p))}>Edit</Btn><Btn variant="danger" size="sm" onClick={() => setDel(p)}><Trash size={14} aria-hidden />Delete</Btn></div>
-          </div>
+          <article key={p.id} className={cx("rlx-plan", !p.isActive && "off")}>
+            <div className="rf-row-between"><h3>{p.name}</h3>{p.isActive ? <Badge tone="ok">On sale</Badge> : <Badge>Hidden</Badge>}</div>
+            <div className="price">{formatINR(p.price)}{p.compareAt > 0 && <s>{formatINR(p.compareAt)}</s>}</div>
+            <p className="terms">{p.terms}</p>
+            <div className="tags">
+              {p.includes.resume && <Badge>📄 Resume</Badge>}{p.ai?.enabled === false && <Badge>No AI</Badge>}{p.includes.jobMatch && <Badge>🎯 Job match</Badge>}
+              {p.human.enabled ? <Badge tone="info">🙋 Human ×{p.human.reviews}</Badge> : <Badge>AI only</Badge>}{p.human.configured > 0 && !p.human.switch && <Badge tone="warn">Human off</Badge>}
+              {p.linkedin.enabled && <Badge tone="info">🔗 LinkedIn ×{p.linkedin.reviews}</Badge>}{p.builder?.configured > 0 && <Badge tone="ok">🧱 Builder ×{p.builder.configured}</Badge>}{p.includes.rewrittenResume && <Badge tone="warn">✍️ Rewrite</Badge>}{p.badge && <Badge tone="info">{p.badge}</Badge>}
+            </div>
+            <div className="foot">
+              <span className="sold">{plural(p.sold, "sale")}</span>
+              <Btn size="sm" variant="ghost" onClick={() => setEdit({ plan: p })}>Edit</Btn>
+              <Btn size="sm" variant="ghost" loading={busy === p.id} onClick={() => toggle(p)}>{p.isActive ? "Hide" : "Show"}</Btn>
+              <Btn size="sm" variant="danger" aria-label={`Delete ${p.name}`} onClick={() => setDel(p)}><Trash size={14} aria-hidden /></Btn>
+            </div>
+          </article>
         ))}
       </div>
-      {del && <ConfirmModal title={`Delete "${del.name}"?`} danger confirmLabel="Delete plan" busy={busy} onConfirm={remove} onClose={() => setDel(null)}><p>If anyone bought this plan it is only hidden from the site, so their purchases keep working.</p></ConfirmModal>}
+      {edit && <PlanSheet plan={edit.plan} onClose={() => setEdit(null)} onDone={() => { setEdit(null); changed(); }} />}
+      {del && (
+        <Sheet title={`Delete “${del.name}”?`} subtitle={del.sold > 0 ? `${plural(del.sold, "person", "people")} bought it. Every purchase keeps its own copy of the plan, so their credits keep working either way.` : "Nobody has bought it, so it can go for good."} onClose={() => setDel(null)} compact>
+          <div className="rf-btns">
+            {del.sold > 0 && del.isActive && <Btn variant="ghost" loading={busy === "hide"} onClick={() => run("hide", () => adminDeletePackage(del.id), "Hidden from the site.", () => { setDel(null); changed(); })}>Just hide it</Btn>}
+            <Btn variant="danger" loading={busy === "force"} onClick={() => run("force", () => adminDeletePackage(del.id, true), "Plan deleted for good.", () => { setDel(null); changed(); })}><Trash size={15} aria-hidden />Delete forever</Btn>
+            <Btn variant="ghost" onClick={() => setDel(null)}>Cancel</Btn>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
 
-/* ============================ AI model ============================ */
+/* ============================================================ RESUME BUILDER  (1 call: /builder, the switch + every question) */
+const BQ = { open: ["Unanswered", "muted"], have: ["Yes", "ok"], none: ["No / skipped", "bad"] };
+const PHASE = { reading: ["Reading", "info"], questions: ["Waiting for answers", "warn"], writing: ["Writing", "info"], ready: ["Written", "ok"], failed: ["Failed", "bad"], scratch: ["By hand", "muted"] };
+
+function Builder() {
+  const [search, setSearch] = useState("");
+  const q = useDebounced(search.trim());
+  const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [tick, setTick] = useState(0);
+  const [open, setOpen] = useState(null);
+  const [del, setDel] = useState(null);
+  const [busy, run] = useRun();
+  const { data, error, loading, reload, setData } = useLoad(() => adminBuilder({ search: q, filter, page }), `${q}|${filter}|${page}|${tick}`);
+  const s = data?.settings;
+  const to = (setter) => (v) => { setter(v); setPage(1); };
+  const pickMode = (mode) => { if (!s || mode === s.mode || busy) return; run(mode, () => adminSaveBuilderSettings(mode), mode === "on" ? "Resume builder is on." : mode === "existing" ? "Resume builder is off for new members." : "Resume builder is off.", () => setData((d) => ({ ...d, settings: { ...d.settings, mode } }))); };
+  return (
+    <div>
+      <Head title="Resume builder" sub="Switch the AI resume builder on or off, and see every question it asked and what people answered." actions={<Refresh loading={loading && Boolean(data)} onClick={reload} />} />
+      {error && <p role="alert" className="rf-banner bad" style={{ marginBottom: 12 }}>{error}</p>}
+      <section className="arx-card" aria-labelledby="bs-h"><h3 id="bs-h">🔌 The switch</h3>
+        {!s ? <Skeleton h={130} /> : (
+          <>
+            <div className="rlx-modes" role="radiogroup" aria-label="Resume builder">
+              {Object.entries(MODES).map(([k, [label, text]]) => (
+                <button key={k} type="button" role="radio" aria-checked={s.mode === k} disabled={Boolean(busy)} className="rlx-mode" onClick={() => pickMode(k)}>
+                  <b>{label}{s.mode === k && <Badge tone="ok">Current</Badge>}{busy === k && <span className="rv-spin" aria-hidden style={{ width: 14, height: 14 }} />}</b>
+                  <span>{text}</span>
+                </button>
+              ))}
+            </div>
+            <p className="rf-xs">{plural(s.holders, "member")} still hold unused builder credits · {plural(s.drafts, "resume")} built so far. Add builder credits to any plan under Plans.</p>
+          </>
+        )}
+      </section>
+
+      {data?.top?.length > 0 && (
+        <section className="arx-sec"><h2>🔥 Most asked</h2>
+          <div className="rlx-tags">{data.top.map((t) => <span key={`${t.kind}-${t.keyword}`} className="rlx-tag" title={`${t.yes} yes, ${t.no} no, ${t.open} unanswered`}>{t.keyword}<em>×{t.asked} · {t.yes} yes</em></span>)}</div>
+        </section>
+      )}
+
+      <section className="arx-sec"><h2>💬 Every question asked</h2>
+        <div className="arx-toolbar">
+          <Chips options={[["all", "All"], ["open", "⏳ Has unanswered"], ["answered", "✅ Answered"]]} value={filter} onChange={to(setFilter)} />
+          <Search value={search} onChange={to(setSearch)} placeholder="Skill, role, name, email" />
+        </div>
+        <Table cols={["Member", "Resume", "Questions", "State", "Updated", ""]} rows={data?.items} error="" loading={loading} empty={["💬", "No builder questions yet."]}>
+          {data?.items.map((d) => {
+            const yes = d.questions.filter((x) => x.status === "have").length;
+            const no = d.questions.filter((x) => x.status === "none").length;
+            const [pl, pt] = PHASE[d.phase] || [d.phase, "muted"];
+            return (
+              <Fragment key={d.id}>
+                <tr className="click" tabIndex={0} aria-expanded={open === d.id} onClick={() => setOpen(open === d.id ? null : d.id)} onKeyDown={(e) => e.key === "Enter" && setOpen(open === d.id ? null : d.id)}>
+                  <td className="first" data-label="Member"><Who name={d.user.name} email={d.user.email} /></td>
+                  <td data-label="Resume"><b>{d.jobTitle || d.targetRole || d.title}</b><span className="sub">{d.kind === "student" ? "Student / fresher" : "Professional"}</span></td>
+                  <td data-label="Questions" className="rf-mono">{d.questions.length}<span className="sub">{yes} yes · {no} no · {d.questions.length - yes - no} open</span></td>
+                  <td data-label="State"><Badge tone={pt}>{pl}</Badge></td>
+                  <td data-label="Updated" className="nowrap">{dateFmt(d.updatedAt)}</td>
+                  <td className="act"><div className="arx-actions"><Btn size="sm" variant="danger" aria-label="Delete this builder resume forever" onClick={(e) => { e.stopPropagation(); setDel(d); }}><Trash size={14} aria-hidden /></Btn></div></td>
+                </tr>
+                {open === d.id && (
+                  <tr className="expand"><td colSpan={6}>
+                    <div className="rlx-qs">
+                      {d.error && <p className="rf-banner bad">{d.error}</p>}
+                      {d.questions.map((x) => (
+                        <div key={x.id}>
+                          <div className="h"><b>{x.keyword}</b><Badge>{x.kind === "info" ? "Basics" : x.importance === "must" ? "Required" : "Nice to have"}</Badge><Badge tone={BQ[x.status]?.[1]}>{BQ[x.status]?.[0] || x.status}</Badge></div>
+                          <span className="rf-muted">{x.question}</span>
+                          {x.detail && <span style={{ fontSize: 14 }}>Answer: <em>{x.detail}</em></span>}
+                        </div>
+                      ))}
+                      {d.details && <p className="rf-xs">Notes from the member: {d.details}</p>}
+                      {d.jobDescription && <details><summary className="rf-xs" style={{ cursor: "pointer" }}>Job description they pasted</summary><p className="rf-xs" style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{d.jobDescription}</p></details>}
+                    </div>
+                  </td></tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </Table>
+        {data && <Pager page={data.page} pages={data.pages} onGo={setPage} />}
+      </section>
+      {del && (
+        <ConfirmSheet title="Delete this builder resume for good?" message={`${d2(del)} is removed permanently, with its answers. If it was never written, the member gets the builder credit back. This can't be undone.`} onClose={() => setDel(null)}
+          onConfirm={() => run("dd", () => adminDeleteDraft(del.id), (o) => `Deleted for good${o.refunded ? ". The credit went back to the member" : ""}.`, () => { setDel(null); setTick((t) => t + 1); })} />
+      )}
+    </div>
+  );
+}
+const d2 = (d) => `“${d.jobTitle || d.targetRole || d.title}” by ${d.user.name || d.user.email}`;
+
+/* ============================================================ AI MODEL  (1 call: /ai-settings) */
 const usd = (n) => (n == null ? "" : `$${n < 1 ? n.toFixed(3) : n.toFixed(2)}`);
 
 function AiModel() {
-  const [data, setData] = useState(null);
+  const [tick, setTick] = useState(0);
+  const { data, error } = useLoad(adminAiSettings, `ai|${tick}`);
   const [sel, setSel] = useState(null); // { provider, model }
   const [custom, setCustom] = useState({});
-  const [busy, setBusy] = useState("");
   const [result, setResult] = useState(null);
-  const load = useCallback(() => adminAiSettings().then((d) => { setData(d); setSel((s) => s || { provider: d.active.provider, model: d.active.model }); }).catch((e) => toast.error(errMsg(e))), []);
-  useEffect(() => { load(); }, [load]);
+  const [busy, run] = useRun();
+  useEffect(() => { if (data) setSel((s) => s || { provider: data.active.provider, model: data.active.model }); }, [data]);
 
-  if (!data || !sel) return <div style={{ display: "grid", gap: 16 }}><Skeleton h={90} /><Skeleton h={260} /><Skeleton h={260} /></div>;
+  if (error) return <div><Head title="AI model" /><p role="alert" className="rf-banner bad">{error}</p></div>;
+  if (!data || !sel) return <div><Head title="AI model" sub="Which provider and model writes the AI reviews." /><div className="arx-desk"><Skeleton h={110} style={{ borderRadius: 16 }} /><Skeleton h={260} style={{ borderRadius: 16 }} /></div></div>;
 
   const inCatalog = (p, m) => data.providers.find((x) => x.id === p)?.models.some((x) => x.id === m);
   const pick = (provider, model) => { setSel({ provider, model }); setResult(null); };
-  const chosenLabel = () => {
-    const p = data.providers.find((x) => x.id === sel.provider);
-    return `${p?.label || sel.provider} · ${p?.models.find((x) => x.id === sel.model)?.label || sel.model}`;
-  };
+  const selP = data.providers.find((x) => x.id === sel.provider);
+  const chosen = `${selP?.label || sel.provider} · ${selP?.models.find((x) => x.id === sel.model)?.label || sel.model}`;
   const changed = sel.provider !== data.active.provider || sel.model !== data.active.model || data.active.source === "default";
   const body = { provider: sel.provider, model: sel.model.trim() };
-  const ready = body.model.length >= 2 && data.providers.find((x) => x.id === sel.provider)?.configured;
-
-  const test = async () => {
-    setBusy("test"); setResult(null);
-    try { setResult(await adminTestAiModel(body)); } catch (e) { setResult({ ok: false, message: errMsg(e) }); } finally { setBusy(""); }
-  };
-  const save = async () => {
-    setBusy("save");
-    try { await adminSaveAiSettings(body); toast.success("Saved. New reviews use this model."); setResult(null); await load(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(""); }
-  };
-
+  const ready = body.model.length >= 2 && selP?.configured;
   const activeP = data.providers.find((x) => x.id === data.active.provider);
   const activeM = activeP?.models.find((x) => x.id === data.active.model);
   const fellBack = data.saved && (data.saved.provider !== data.active.provider || data.saved.model !== data.active.model);
+  const test = async () => { setResult(null); const r = await run("test", () => adminTestAiModel(body)); setResult(r || { ok: false, message: "The test call failed." }); };
 
   return (
-    <div style={{ display: "grid", gap: 24 }}>
-      <section className="rv-card rv-card-pad" aria-labelledby="ai-now">
-        <p className="rv-kicker" id="ai-now" style={{ marginBottom: 12 }}>In use right now</p>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <Brain size={26} weight="duotone" aria-hidden />
-          <b style={{ fontSize: 20 }}>{activeP?.label} · {activeM?.label || data.active.model}</b>
-          <Pill>{data.active.source === "admin" ? "Your choice" : "Default"}</Pill>
-        </div>
-        <p className="rv-sm rv-muted" style={{ marginTop: 10 }}>
-          Every new AI review, and every re-run, is written by this model. Reviews already written keep the model that wrote them.
-          {data.active.source === "default" && !data.saved && " Nothing has been chosen yet, so OpenAI's default is used."}
-        </p>
-        {fellBack && <p role="alert" className="rv-err" style={{ marginTop: 12 }}>You chose {data.saved.model}, but that provider has no API key on the server right now, so the default is being used.</p>}
-      </section>
-
-      {data.providers.map((p) => {
-        const selectedHere = sel.provider === p.id;
-        const customSelected = selectedHere && !inCatalog(p.id, sel.model);
-        return (
-          <section key={p.id} className={cx("rv-card rv-card-pad rv-mdl", !p.configured && "off")} aria-labelledby={`ai-${p.id}`}>
-            <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-              <h2 className="rv-h3" id={`ai-${p.id}`}>{p.label}</h2>
-              {p.configured ? <Pill className="ok">API key found</Pill> : <Pill className="warn">No key yet</Pill>}
-            </div>
-            {!p.configured && <p className="rv-sm rv-muted" style={{ marginTop: 10 }}>To use {p.label}, add <code className="rv-mono">{p.envKey}</code> to the server settings and restart. These models unlock as soon as the key is there.</p>}
-            <div className="rv-mdl-list" role="radiogroup" aria-label={`${p.label} models`}>
-              {p.models.map((m) => {
-                const on = selectedHere && sel.model === m.id;
-                return (
-                  <label key={m.id} className={cx("rv-mdl-row", on && "on", !p.configured && "dis")}>
-                    <input type="radio" name="ai-model" checked={on} disabled={!p.configured} onChange={() => pick(p.id, m.id)} />
-                    <span className="rv-mdl-main">
-                      <span className="rv-mdl-name"><b>{m.label}</b>{m.reasoning && <Pill>Thinks first</Pill>}{data.active.provider === p.id && data.active.model === m.id && <Pill className="ok">In use</Pill>}</span>
-                      <span className="rv-xs rv-subtle">{m.note}</span>
-                      <span className="rv-xs rv-mono rv-subtle">{m.id}</span>
-                    </span>
-                    <span className="rv-mdl-cost">
-                      {m.costInr != null ? <><b>about ₹{m.costInr < 10 ? m.costInr.toFixed(1) : Math.round(m.costInr)}</b><span className="rv-xs rv-subtle">per review ({usd(m.costUsd)})</span></> : <span className="rv-xs rv-subtle">Price: see {p.label} pricing</span>}
-                    </span>
-                  </label>
-                );
-              })}
-              <label className={cx("rv-mdl-row", customSelected && "on", !p.configured && "dis")}>
-                <input type="radio" name="ai-model" checked={customSelected} disabled={!p.configured} onChange={() => { const v = (custom[p.id] || "").trim(); if (v) pick(p.id, v); }} />
-                <span className="rv-mdl-main">
-                  <span className="rv-mdl-name"><b>Another {p.label} model</b></span>
-                  <span className="rv-xs rv-subtle">A newer model that is not listed. Type its exact id.</span>
-                  <input className="rv-input" style={{ marginTop: 6 }} disabled={!p.configured} placeholder="model id" maxLength={100} aria-label={`Custom ${p.label} model id`}
-                    value={customSelected ? sel.model : custom[p.id] || ""}
-                    onChange={(e) => { const v = e.target.value; setCustom((c) => ({ ...c, [p.id]: v })); pick(p.id, v); }} />
-                </span>
-              </label>
-            </div>
-          </section>
-        );
-      })}
-
-      <div className="rv-sendbar" role="group" aria-label="Save the model">
-        <div style={{ minWidth: 0 }}>
-          <b>{chosenLabel()}</b>
-          {result && <p role="status" className={cx("rv-sm", result.ok ? "" : "rv-err")} style={{ marginTop: 4, ...(result.ok ? { color: "var(--rv-ok)" } : {}) }}>{result.ok ? `Works. Answered in ${(result.ms / 1000).toFixed(1)}s.` : result.message}</p>}
-          {!result && <p className="rv-xs rv-subtle" style={{ marginTop: 4 }}>Test it first: one tiny real call, a fraction of a rupee.</p>}
-        </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Btn variant="ghost" loading={busy === "test"} disabled={!ready || Boolean(busy)} onClick={test}>Test model</Btn>
-          <Btn loading={busy === "save"} disabled={!ready || !changed || Boolean(busy)} onClick={save}>Use this model</Btn>
-        </div>
-      </div>
-
-      <p className="rv-xs rv-subtle">The ₹ guide assumes a typical review (about 8,000 tokens read, 4,500 written) at the provider's list price and ₹{data.usdToInr} per US dollar. Real cost depends on resume length. Prices change, so confirm on the provider's pricing page.</p>
-
-      {data.history.length > 0 && (
-        <section aria-labelledby="ai-hist">
-          <h2 className="rv-h3" id="ai-hist" style={{ marginBottom: 12 }}>Recent changes</h2>
-          <ul style={{ display: "grid", gap: 8 }}>
-            {data.history.map((h, i) => <li key={i} className="rv-sm rv-muted"><b style={{ color: "var(--rv-text)" }}>{h.toModel}</b> ({h.toProvider}) replaced {h.fromModel} · {h.byName || "an admin"} · {dateFmt(h.at)}</li>)}
-          </ul>
+    <div>
+      <Head title="AI model" sub="Which provider and model writes every new AI review and every re-run. Reviews already written keep the model that wrote them." />
+      <div className="arx-desk">
+        <section className="arx-card"><h3>⚡ In use right now</h3>
+          <div className="rlx-now"><Brain size={26} weight="duotone" aria-hidden /><b>{activeP?.label} · {activeM?.label || data.active.model}</b>{data.active.source === "admin" ? <Badge tone="ok">Your choice</Badge> : <Badge>Default</Badge>}</div>
+          {data.active.source === "default" && !data.saved && <p className="rf-muted">Nothing has been chosen yet, so the server's default is used.</p>}
+          {fellBack && <p role="alert" className="rf-banner bad">You chose {data.saved.model}, but that provider has no API key on the server right now, so the default is being used.</p>}
         </section>
-      )}
+
+        {data.providers.map((p) => {
+          const here = sel.provider === p.id;
+          const customOn = here && !inCatalog(p.id, sel.model);
+          return (
+            <section key={p.id} className="arx-card" aria-labelledby={`ai-${p.id}`}>
+              <div className="rf-row-between"><h3 id={`ai-${p.id}`} style={{ margin: 0 }}>{p.label}</h3>{p.configured ? <Badge tone="ok">API key found</Badge> : <Badge tone="warn">No key yet</Badge>}</div>
+              {!p.configured && <p className="rf-muted">To use {p.label}, add <code className="rf-mono">{p.envKey}</code> to the server settings and restart.</p>}
+              <div className="rv-mdl-list" role="radiogroup" aria-label={`${p.label} models`}>
+                {p.models.map((m) => {
+                  const on = here && sel.model === m.id;
+                  return (
+                    <label key={m.id} className={cx("rv-mdl-row", on && "on", !p.configured && "dis")}>
+                      <input type="radio" name="ai-model" checked={on} disabled={!p.configured} onChange={() => pick(p.id, m.id)} />
+                      <span className="rv-mdl-main">
+                        <span className="rv-mdl-name"><b>{m.label}</b>{m.reasoning && <Badge>Thinks first</Badge>}{data.active.provider === p.id && data.active.model === m.id && <Badge tone="ok">In use</Badge>}</span>
+                        <span className="rf-xs">{m.note}</span>
+                        <span className="rf-xs rf-mono">{m.id}</span>
+                      </span>
+                      <span className="rv-mdl-cost">{m.costInr != null ? <><b>about ₹{m.costInr < 10 ? m.costInr.toFixed(1) : Math.round(m.costInr)}</b><span className="rf-xs">per review ({usd(m.costUsd)})</span></> : <span className="rf-xs">See {p.label} pricing</span>}</span>
+                    </label>
+                  );
+                })}
+                <label className={cx("rv-mdl-row", customOn && "on", !p.configured && "dis")}>
+                  <input type="radio" name="ai-model" checked={customOn} disabled={!p.configured} onChange={() => { const v = (custom[p.id] || "").trim(); if (v) pick(p.id, v); }} />
+                  <span className="rv-mdl-main">
+                    <span className="rv-mdl-name"><b>Another {p.label} model</b></span>
+                    <span className="rf-xs">A newer model that isn't listed. Type its exact id.</span>
+                    <input className="rv-input" style={{ marginTop: 6 }} disabled={!p.configured} placeholder="model id" maxLength={100} aria-label={`Custom ${p.label} model id`} value={customOn ? sel.model : custom[p.id] || ""} onChange={(e) => { const v = e.target.value; setCustom((c) => ({ ...c, [p.id]: v })); pick(p.id, v); }} />
+                  </span>
+                </label>
+              </div>
+            </section>
+          );
+        })}
+
+        <div className="rv-sendbar" role="group" aria-label="Save the model">
+          <div style={{ minWidth: 0 }}>
+            <b>{chosen}</b>
+            {result ? <p role="status" className={cx("rf-xs")} style={{ marginTop: 4, color: result.ok ? "var(--rv-ok)" : "var(--rv-bad)" }}>{result.ok ? `Works. Answered in ${(result.ms / 1000).toFixed(1)}s.` : result.message}</p> : <p className="rf-xs" style={{ marginTop: 4 }}>Test it first: one tiny real call, a fraction of a rupee.</p>}
+          </div>
+          <div className="rf-btns">
+            <Btn variant="ghost" loading={busy === "test"} disabled={!ready || Boolean(busy)} onClick={test}>Test model</Btn>
+            <Btn loading={busy === "save"} disabled={!ready || !changed || Boolean(busy)} onClick={() => run("save", () => adminSaveAiSettings(body), "Saved. New reviews use this model.", () => { setResult(null); setSel(null); setTick((t) => t + 1); })}>Use this model</Btn>
+          </div>
+        </div>
+
+        <p className="rf-xs">The ₹ guide assumes a typical review (about 8,000 tokens read, 4,500 written) at the provider's list price and ₹{data.usdToInr} per US dollar. Prices change, so confirm on the provider's pricing page.</p>
+        {data.history.length > 0 && (
+          <section className="arx-card"><h3>🕒 Recent changes</h3>
+            <ul className="rlx-hist">{data.history.map((h, i) => <li key={i}><b>{h.toModel}</b> ({h.toProvider}) replaced {h.fromModel} · {h.byName || "an admin"} · {dateFmt(h.at)}</li>)}</ul>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ============================ page ============================ */
+/* ============================================================ the page */
+const NAV = (isAdmin) => [
+  ["Work", [["overview", "📊", "Overview"], ["reviews", "📝", "Reviews"]]],
+  ...(isAdmin ? [
+    ["Money", [["payments", "💳", "Payments"], ["members", "👥", "Members"]]],
+    ["Setup", [["plans", "🏷️", "Plans"], ["builder", "🧱", "Resume builder"], ["ai", "🧠", "AI model"]]],
+  ] : []),
+];
+const TAB_KEY = "rlx-tab";
+
 export default function AdminResumeReviews() {
   const role = useSelector((s) => s.auth?.user?.role);
   const isAdmin = role === "admin";
-  const [tab, setTab] = useState("reviews");
-  const [openId, setOpenId] = useState(null);
-  const [tick, setTick] = useState(0);
-  const [stats, setStats] = useState(null);
-  const [packages, setPackages] = useState(null);
-  const bump = useCallback(() => setTick((t) => t + 1), []);
-  const loadPackages = useCallback(() => { if (isAdmin) adminPackages().then(setPackages).catch((e) => toast.error(errMsg(e))); }, [isAdmin]);
-  useEffect(() => { adminStats().then(setStats).catch(() => {}); }, [tick]);
-  useEffect(() => { loadPackages(); }, [loadPackages]);
-  const tabs = useMemo(() => [["reviews", "Reviews", ClipboardText, "Every resume sent in, the AI's take and the human review."], ...(isAdmin ? [["payments", "Payments", CreditCard, "Every plan bought, paid or not. Extend, switch off or give plans."], ["members", "Members", UsersThree, "Who is using Resume Lab, and who is blocked."], ["plans", "Plans and prices", Tag, "What you sell: prices, review counts and validity."], ["ai", "AI model", Brain, "Which provider and model writes the AI reviews."]] : [])], [isAdmin]);
-  const cur = tabs.find((t) => t[0] === tab) || tabs[0];
-  const cards = [
-    ["Waiting", stats?.awaiting, Hourglass, "warn"], ["In review", stats?.inReview, ClipboardText, ""], ["Delivered", stats?.completed, SealCheck, "ok"],
-    ...(isAdmin ? [["Paid plans", stats?.paidPlans, CreditCard, ""], ["Members", stats?.members, UsersThree, "ink"], ["Blocked", stats?.blocked, ProhibitInset, "bad"], ["Revenue", stats ? formatINR(stats.revenue) : null, CurrencyInr, "ok"]] : []),
-  ];
+  const staff = isAdmin || role === "Employee";
+  const groups = NAV(isAdmin);
+  const all = groups.flatMap(([, t]) => t);
+  const [tab, setTab] = useState(() => { try { return sessionStorage.getItem(TAB_KEY) || "overview"; } catch { return "overview"; } });
+  const cur = all.some(([k]) => k === tab) ? tab : "overview";
+  const [preset, setPreset] = useState({ n: 0 }); // filter / search / open handed to a tab when another tab sends you there
+  const [counts, setCounts] = useState({});
+  const onCounts = useCallback((c) => setCounts((x) => ({ ...x, ...c })), []);
+  const go = useCallback((t, opts = {}) => {
+    setTab(t); setPreset((p) => ({ ...opts, n: p.n + 1 }));
+    try { sessionStorage.setItem(TAB_KEY, t); } catch { /* private mode */ }
+    window.scrollTo({ top: 0 });
+  }, []);
+  const badge = (k) => (k === "reviews" ? counts.awaiting : 0) || 0;
+  const brand = <Link to="/dashboard" className="arx-brand"><span className="rf-logo" aria-hidden>📄</span><div><b>Resume Lab</b><small>{isAdmin ? "Admin console" : "Reviewer desk"}</small></div></Link>;
 
   return (
-    <Page title="Resume Lab | Admin" top={false} className="ar">
-      <div className="ar-layout">
-        <aside className="ar-side">
-          <div className="ar-top">
-            <div className="ar-brand"><span className="ar-logo"><FileText size={22} weight="fill" aria-hidden /></span><div><b>Resume Lab</b><small>{isAdmin ? "Admin console" : "Reviewer desk"}</small></div></div>
-            <Link to="/dashboard" className="ar-mobile-home" aria-label="Admin home"><House size={18} weight="fill" aria-hidden /></Link>
-          </div>
-          <nav className="ar-nav" aria-label="Resume Lab sections">
-            <span className="ar-nav-label">Manage</span>
-            {tabs.map(([k, label, Icon]) => (
-              <button key={k} type="button" aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setOpenId(null); }}>
-                <Icon size={19} weight={tab === k ? "fill" : "regular"} aria-hidden />{label}
-                {k === "reviews" && stats?.awaiting > 0 && <span className="ar-badge">{stats.awaiting}</span>}
-              </button>
-            ))}
-          </nav>
-          <div className="ar-side-foot">
-            <Link to="/dashboard" className="ar-home"><House size={18} weight="fill" aria-hidden />Admin home</Link>
-          </div>
+    <Page title="Resume Lab | Admin" top={false} className="arx rlx">
+      <div className="arx-layout">
+        <aside className="arx-side" aria-label="Resume Lab admin">
+          {brand}
+          {groups.map(([g, items]) => (
+            <nav key={g} className="arx-nav" aria-label={g}><span>{g}</span>
+              {items.map(([k, e, l]) => <button key={k} type="button" aria-current={cur === k ? "page" : undefined} onClick={() => go(k)}><span className="e" aria-hidden>{e}</span>{l}{badge(k) > 0 && <em>{badge(k)}</em>}</button>)}
+            </nav>
+          ))}
+          <div className="arx-foot"><Link to="/dashboard"><House size={16} weight="fill" aria-hidden />Admin home</Link><a href="/resume-review/app" target="_blank" rel="noopener">📄 Open the member app</a><a href="/resume-review" target="_blank" rel="noopener">🌐 Public page</a></div>
         </aside>
-        <main className="ar-main">
-          {!openId && (
-            <>
-              <div className="ar-head"><div><h1>{cur[1]}</h1><p>{cur[3]}</p></div></div>
-              {tab === "reviews" && (
-                <div className="ar-stats">
-                  {cards.map(([k, v, Icon, tone]) => <div key={k} className="ar-stat"><span className={cx("ar-stat-ic", tone)}><Icon size={22} weight="duotone" aria-hidden /></span><div><span>{k}</span><b>{v ?? "–"}</b></div></div>)}
-                </div>
-              )}
-            </>
+        <main className="arx-main">
+          <div className="arx-top">{brand}<Link to="/dashboard" className="rf-iconbtn" aria-label="Admin home"><House size={18} weight="fill" aria-hidden /></Link></div>
+          {staff && <nav className="arx-tabs" aria-label="Sections">{all.map(([k, e, l]) => <button key={k} type="button" aria-current={cur === k ? "page" : undefined} onClick={() => go(k)}><span aria-hidden>{e}</span>{l}{badge(k) > 0 && <em>{badge(k)}</em>}</button>)}</nav>}
+          {!staff ? <Empty e="🔒">This page is for Resume Lab reviewers and admins.</Empty> : (
+            <Fragment key={`${cur}-${preset.n}`}>
+              {cur === "overview" && <Overview isAdmin={isAdmin} go={go} onCounts={onCounts} />}
+              {cur === "reviews" && <Reviews isAdmin={isAdmin} role={role} preset={preset} onCounts={onCounts} />}
+              {cur === "payments" && <Payments preset={preset} go={go} />}
+              {cur === "members" && <Members preset={preset} go={go} />}
+              {cur === "plans" && <Plans />}
+              {cur === "builder" && <Builder />}
+              {cur === "ai" && <AiModel />}
+            </Fragment>
           )}
-          {openId
-            ? <ReviewDesk id={openId} role={role} onBack={() => setOpenId(null)} onChanged={bump} />
-            : tab === "plans" && isAdmin ? <Plans list={packages} reload={loadPackages} />
-            : tab === "ai" && isAdmin ? <AiModel />
-            : tab === "payments" && isAdmin ? <Payments packages={packages} onChanged={bump} refreshKey={tick} />
-            : tab === "members" && isAdmin ? <Members onChanged={bump} />
-            : <Queue onOpen={setOpenId} refreshKey={tick} isAdmin={isAdmin} onChanged={bump} stats={stats} />}
         </main>
       </div>
     </Page>
