@@ -34,6 +34,10 @@ const PAGES = {
     files: ["src/component/DockerBooks.jsx", "src/component/dockerBookData.js"],
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS", "HANDBOOK", "CHEATSHEET", "PARTS_RAW", "cheatSheetSections"],
   },
+  "/book/git": {
+    files: ["src/component/GitBooks.jsx", "src/component/gitBookData.js"],
+    pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS", "HANDBOOK", "CHEATSHEET", "CHAPTERS_RAW", "APPENDIX", "cheatSheetSections"],
+  },
   "/book/cloud/gcp": {
     file: "src/component/GcpHandbook.jsx",
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
@@ -148,7 +152,7 @@ for (const [route, spec] of Object.entries(PAGES)) {
     faqs: faqKey ? normaliseFaqs(data[faqKey]) : [],
     extras: Object.fromEntries(
       Object.entries(data).filter(([k]) =>
-        ["FREE_RESOURCES", "FEATURED_BOOKS", "LEARNING_AREAS", "caseStudies", "HANDBOOK", "CHEATSHEET", "PARTS_RAW", "cheatSheetSections"].includes(k)
+        ["FREE_RESOURCES", "FEATURED_BOOKS", "LEARNING_AREAS", "caseStudies", "HANDBOOK", "CHEATSHEET", "PARTS_RAW", "CHAPTERS_RAW", "APPENDIX", "cheatSheetSections"].includes(k)
       )
     ),
   };

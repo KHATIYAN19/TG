@@ -24,6 +24,8 @@ import {
 } from "react-hot-toast";
 import axios from "axios";
 import Base_url from "./utils/Url";
+import MaintenancePage from "./maintenance/MaintenancePage.jsx";
+import { MAINTENANCE, activeWindows, blockFor } from "./maintenance/maintenanceConfig.js";
 import {
   Analytics,
 } from "@vercel/analytics/react";
@@ -240,6 +242,9 @@ const AwsHandbook = lazy(() =>
 );
 const DockerBooks = lazy(() =>
   import("./component/DockerBooks.jsx")
+);
+const GitBooks = lazy(() =>
+  import("./component/GitBooks.jsx")
 );
 const GenAiGoogleAdk = lazy(() =>
   import("./component/GenAiGoogleAdk.jsx")
@@ -670,6 +675,11 @@ function App() {
   const user = useSelector(
     (state) => state.auth?.user
   );
+  /* Maintenance (whole site or one section): set with VITE_MAINTENANCE on Vercel. Admins never see it. */
+  const isAdminUser = user?.role === "admin";
+  const maintenanceBlock = isAdminUser ? null : blockFor(MAINTENANCE, location.pathname);
+  const siteDown = maintenanceBlock?.scope === "sitewide";
+  const adminMaintenanceOn = isAdminUser ? activeWindows(MAINTENANCE) : [];
   const forceSignOut = useCallback(
     (reason = "SESSION_EXPIRED") => {
       if (logoutInProgress) return;
@@ -883,16 +893,31 @@ function App() {
     <div className="tt-app min-h-screen w-full font-inter">
       <Toaster />
       <Analytics />
-      {!hideNavbar && <Navbar />}
+      {!hideNavbar && !siteDown && <Navbar />}
+      {adminMaintenanceOn.length > 0 && (
+        <div
+          role="status"
+          className="fixed bottom-4 left-4 z-[60] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-amber-950 shadow-lg hover:bg-amber-400"
+        >
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-950" aria-hidden />
+          <span className="truncate">Maintenance ON: {adminMaintenanceOn.map((m) => m.label).join(", ")} · you see the live site as admin</span>
+        </div>
+      )}
       {/* Book promos and sale popups are for the Target Trek store, not for Memories. */}
-      {!onMemories && (
+      {!onMemories && !maintenanceBlock && (
         <Suspense fallback={null}>
           <SaleCampaign />
         </Suspense>
       )}
-      <div className={hideNavbar ? "" : "mt-16 md:mt-0"}>
+      <div className={hideNavbar || siteDown ? "" : "mt-16 md:mt-0"}>
       <Suspense fallback={<RouteLoader noNav={hideNavbar} />}>
-        {!authReady ? <RouteLoader noNav={hideNavbar} /> : <div style={{ minHeight: "70vh" }}><Routes>
+        {!authReady ? <RouteLoader noNav={hideNavbar} /> : maintenanceBlock ? (
+          <MaintenancePage
+            scope={maintenanceBlock.scope}
+            window={maintenanceBlock.window}
+            sections={MAINTENANCE.sections}
+          />
+        ) : <div style={{ minHeight: "70vh" }}><Routes>
           {/* ========================================
               PUBLIC PAGES
           ======================================== */}
@@ -1254,6 +1279,10 @@ function App() {
           <Route
             path="/book/docker"
             element={<DockerBooks />}
+          />
+          <Route
+            path="/book/git"
+            element={<GitBooks />}
           />
           <Route
             path="/book/cloud/gcp"
@@ -1634,7 +1663,7 @@ function App() {
         </Routes></div>}
         {/* Inside the boundary: while a lazy page loads, React hides the footer
             too, so users never see (or get scrolled to) a footer-only screen. */}
-        {!hideFooter && <Footer />}
+        {!hideFooter && !siteDown && <Footer />}
       </Suspense>
       </div>
     </div>

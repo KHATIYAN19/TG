@@ -94,6 +94,11 @@ const multiBookHtml = (x = {}) => {
     (x.PARTS_RAW || []).forEach((part) => {
       out.push(`<h3>Part ${esc(part.number)}: ${esc(part.title)}</h3>${li((part.chapters || []).map((c) => { n += 1; return `Chapter ${n}: ${esc(c)}`; }))}`);
     });
+    /* books without parts (e.g. /book/git): a flat chapter list of { title, detail } */
+    if (Array.isArray(x.CHAPTERS_RAW) && x.CHAPTERS_RAW.length) {
+      out.push(`<h3>Chapters</h3>${li(x.CHAPTERS_RAW.map((c, i) => `Chapter ${i + 1}: ${esc(c.title)}${c.detail ? ` – ${esc(c.detail)}` : ""}`))}`);
+    }
+    if (x.APPENDIX) out.push(`<p>${esc(x.APPENDIX.title)} – ${esc(x.APPENDIX.detail)}</p>`);
   }
   if (x.CHEATSHEET) {
     const c = x.CHEATSHEET;
@@ -140,6 +145,7 @@ export default async function handler(req, res) {
     // Backend asleep: still serve the static SEO (title/desc/FAQs) but do not
     // let the CDN cache the price-less version for long.
   }
+
   const live = isBooks || isLearn ? bookList.length > 0 : Boolean(product);
 
   const title = data.title;

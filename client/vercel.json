@@ -50,6 +50,10 @@
       "destination": "/api/page?p=/book/docker"
     },
     {
+      "source": "/book/git",
+      "destination": "/api/page?p=/book/git"
+    },
+    {
       "source": "/book/cloud/gcp",
       "destination": "/api/page?p=/book/cloud/gcp"
     },

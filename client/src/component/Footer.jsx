@@ -90,6 +90,10 @@ const BOOK_LINKS = [
     name: "Docker Handbook + Cheat Sheet",
     href: "/book/docker",
   },
+  {
+    name: "Git & GitHub Guide + Cheat Sheet",
+    href: "/book/git",
+  },
 ];
 
 const LEGAL_LINKS = [
