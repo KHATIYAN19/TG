@@ -128,6 +128,9 @@ const CampaignStudio = lazy(() =>
   import("./Admin/CampaignStudio.jsx")
 );
 
+const AdminBookStorage = lazy(() =>
+  import("./Admin/AdminBookStorage.jsx")
+);
 const AdminMailSettings = lazy(() =>
   import("./Admin/AdminMailSettings.jsx")
 );
@@ -234,6 +237,9 @@ const GcpHandbook = lazy(() =>
 );
 const AwsHandbook = lazy(() =>
   import("./component/AwsHandbook.jsx")
+);
+const DockerBooks = lazy(() =>
+  import("./component/DockerBooks.jsx")
 );
 const GenAiGoogleAdk = lazy(() =>
   import("./component/GenAiGoogleAdk.jsx")
@@ -1136,6 +1142,12 @@ function App() {
             )}
           />
           <Route
+            path="/admin/book-storage"
+            element={requireAdmin(
+              <AdminBookStorage />
+            )}
+          />
+          <Route
             path="/admin/mail"
             element={requireAdmin(
               <AdminMailSettings />
@@ -1238,6 +1250,10 @@ function App() {
           <Route
             path="/book/cloud/aws"
             element={<AwsHandbook />}
+          />
+          <Route
+            path="/book/docker"
+            element={<DockerBooks />}
           />
           <Route
             path="/book/cloud/gcp"

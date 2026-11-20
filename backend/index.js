@@ -89,6 +89,7 @@ import { sweepSessions } from "./services/sessionCleanup.js";
 import { resendMissedMetaPurchases } from "./services/metaSweep.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import mailSettingsRoutes from "./routes/mailSettingsRoutes.js";
+import bookStorageRoutes from "./routes/bookStorageRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import {
   publicRouter as memoryPublicRoutes,
@@ -575,6 +576,7 @@ app.use(
 app.use("/api/arena", arenaRoutes);
 app.use("/api/admin/arena", arenaAdminRoutes);
 app.use("/api/admin/mail", mailSettingsRoutes);
+app.use("/api/admin/book-storage", bookStorageRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 /* MEMORY PAGES (birthday / proposal / sorry pages with photos + videos)

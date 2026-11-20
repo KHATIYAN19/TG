@@ -34,8 +34,6 @@ import {
 
   ChevronDown,
 
-  FileText,
-
   ImagePlus,
 
   Layers3,
@@ -61,6 +59,7 @@ import {
 
 
 import BASE_URL from "../utils/Url";
+import BookFilesField, { useBookStorage } from "./BookFilesField";
 
 
 
@@ -1089,9 +1088,19 @@ export default function AddBook() {
 
 
 
-  const [pdfFile, setPdfFile] =
+  const [pdfFiles, setPdfFiles] =
 
-    useState(null);
+    useState([]);
+
+  const storage = useBookStorage();
+
+  const [storageChoice, setStorageChoice] =
+
+    useState("");
+
+  const storageProvider =
+
+    storageChoice || storage.provider;
 
 
 
@@ -1109,7 +1118,6 @@ export default function AddBook() {
 
   const coverInputRef = useRef(null);
 
-  const pdfInputRef = useRef(null);
 
   const coverObjectUrlRef = useRef("");
 
@@ -1791,15 +1799,10 @@ export default function AddBook() {
 
     ) {
 
-      setPdfFile(null);
+      setPdfFiles([]);
 
 
 
-      if (pdfInputRef.current) {
-
-        pdfInputRef.current.value = "";
-
-      }
 
     }
 
@@ -1855,15 +1858,10 @@ export default function AddBook() {
 
     if (value === "bundle") {
 
-      setPdfFile(null);
+      setPdfFiles([]);
 
 
 
-      if (pdfInputRef.current) {
-
-        pdfInputRef.current.value = "";
-
-      }
 
     }
 
@@ -2099,85 +2097,27 @@ export default function AddBook() {
 
 
 
-  const handlePdfChange = (event) => {
+  const handlePdfFilesChange = (files) => {
 
-    const file =
-
-      event.target.files?.[0];
+    setPdfFiles(files);
 
 
 
-    if (!file) return;
+    if (files.length === 1) {
 
+      setFormData((prev) => ({
 
+        ...prev,
 
-    const validPdf =
+        fileName:
 
-      file.type ===
+          prev.fileName ||
 
-        "application/pdf" ||
+          files[0].name,
 
-      file.name
-
-        .toLowerCase()
-
-        .endsWith(".pdf");
-
-
-
-    if (!validPdf) {
-
-      toast.error(
-
-        "Only PDF files are allowed."
-
-      );
-
-      event.target.value = "";
-
-      return;
+      }));
 
     }
-
-
-
-    if (
-
-      file.size >
-
-      100 * 1024 * 1024
-
-    ) {
-
-      toast.error(
-
-        "PDF must be below 100 MB."
-
-      );
-
-      event.target.value = "";
-
-      return;
-
-    }
-
-
-
-    setPdfFile(file);
-
-
-
-    setFormData((prev) => ({
-
-      ...prev,
-
-      fileName:
-
-        prev.fileName ||
-
-        file.name,
-
-    }));
 
 
 
@@ -2195,15 +2135,7 @@ export default function AddBook() {
 
   const removePdf = () => {
 
-    setPdfFile(null);
-
-
-
-    if (pdfInputRef.current) {
-
-      pdfInputRef.current.value = "";
-
-    }
+    setPdfFiles([]);
 
   };
 
@@ -2484,13 +2416,13 @@ export default function AddBook() {
 
       requiresPdf &&
 
-      !pdfFile
+      pdfFiles.length === 0
 
     ) {
 
       next.pdf =
 
-        "Upload the product PDF.";
+        "Upload at least one product PDF.";
 
     }
 
@@ -2820,19 +2752,27 @@ export default function AddBook() {
 
     // Bundles don't upload a new PDF.
 
-    if (
+    if (!isBundle) {
 
-      !isBundle &&
+      pdfFiles.forEach((file) =>
 
-      pdfFile
+        payload.append(
 
-    ) {
+          "pdf",
+
+          file
+
+        )
+
+      );
+
+
 
       payload.append(
 
-        "pdf",
+        "storageProvider",
 
-        pdfFile
+        storageProvider
 
       );
 
@@ -4702,91 +4642,27 @@ export default function AddBook() {
 
                 {!isBundle && (
 
-                  <div>
+                  <BookFilesField
 
-                    <label className={labelClass}>
+                    label="Product PDFs"
 
-                      Product PDF
+                    required={requiresPdf}
 
-                      {requiresPdf ? " *" : ""}
+                    labelClass={labelClass}
 
-                    </label>
+                    files={pdfFiles}
 
+                    onFilesChange={handlePdfFilesChange}
 
+                    provider={storageProvider}
 
-                    <label className="flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center hover:border-blue-400">
+                    onProviderChange={setStorageChoice}
 
-                      <FileText
+                    providers={storage.providers}
 
-                        size={34}
+                    error={errors.pdf}
 
-                        className="text-red-600"
-
-                      />
-
-
-
-                      <p className="mt-3 max-w-full break-words text-sm font-bold text-slate-800">
-
-                        {pdfFile
-
-                          ? pdfFile.name
-
-                          : "Choose Product PDF"}
-
-                      </p>
-
-
-
-                      <input
-
-                        ref={pdfInputRef}
-
-                        type="file"
-
-                        accept="application/pdf,.pdf"
-
-                        onChange={handlePdfChange}
-
-                        className="hidden"
-
-                      />
-
-                    </label>
-
-
-
-                    {pdfFile && (
-
-                      <button
-
-                        type="button"
-
-                        onClick={removePdf}
-
-                        className="mt-3 text-xs font-bold text-red-600"
-
-                      >
-
-                        Remove PDF
-
-                      </button>
-
-                    )}
-
-
-
-                    {errors.pdf && (
-
-                      <p className="mt-2 text-xs text-red-600">
-
-                        {errors.pdf}
-
-                      </p>
-
-                    )}
-
-                  </div>
+                  />
 
                 )}
 

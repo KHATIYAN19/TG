@@ -47,6 +47,7 @@ export default async function handler(req, res) {
     `- [SQL & Database Interview Handbook – 26 chapters](${SITE_URL}/book/database/sql)`,
     `- [Google Cloud (GCP) Engineer's Handbook – 18 parts](${SITE_URL}/book/cloud/gcp)`,
     `- [AWS: The Complete Cloud Engineer's Handbook – 14 parts](${SITE_URL}/book/cloud/aws)`,
+    `- [Docker Handbook + Docker Cheat Sheet – 2 PDFs in one purchase](${SITE_URL}/book/docker): Docker: The Complete Engineer's Handbook (177 pages, 25 chapters in 8 parts, 18 diagrams, command and concept index; every command and YAML file with output captured live on Docker Engine 29.10.0, Compose v5.7.1 and Buildx 0.39.0) plus the Docker Cheat Sheet (20 pages, 19 sections of command tables). Covers containers, Dockerfile, BuildKit/buildx/bake, volumes, networking, Docker Compose, Swarm, Compose to Kubernetes, security (Docker Scout, SBOM, rootless), CI/CD with GitHub Actions, Model Runner, MCP Toolkit, recipes and interview questions.`,
     `- [HLD + LLD combo](${SITE_URL}/book/system-design/hld-lld/combo)`,
     `- [Java Interview Handbook](${SITE_URL}/book/java-interview-handbook)`,
     `- [Spring Boot Interview Handbook](${SITE_URL}/book/springboot-interview-handbook)`,

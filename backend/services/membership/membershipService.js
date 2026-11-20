@@ -5,6 +5,7 @@ import MailSuppression from "../../models/MailSuppression.js";
 import BookLaunchNotice from "../../models/BookLaunchNotice.js";
 import User from "../../models/User.js";
 import sendMail from "../../utils/MailSender.js";
+import { resolvePdfUrlString } from "../books/bookFiles.js";
 
 import { buildNewBookMail, buildPurchaseMail, SUPPORT_EMAIL } from "./membershipMail.js";
 import { claimMatchesForUser } from "./matches.js";
@@ -315,7 +316,8 @@ export const notifyNewBook = async (bookId) => {
             name: person.name,
             lifetime: person.lifetime,
             book,
-            accessUrl: book.pdfUrl,
+            // S3 files are private: sign a link that lasts as long as S3 allows (7 days).
+            accessUrl: await resolvePdfUrlString(book.pdfUrl, { ttl: 7 * 24 * 3600 }),
             packTitle: person.packTitle,
           });
           await sendMail(person.email, mail.subject, mail.text, mail.html, { replyTo: SUPPORT_EMAIL, headers: mail.headers });

@@ -572,6 +572,87 @@ async function fetchPdfBlob(url) {
    - Cashfree purchase responses
 ========================================================== */
 
+/*
+  A book can have several PDFs. Each entry is { id, fileName, pdfUrl }.
+  Older responses only carry a single pdfUrl: that becomes one file.
+*/
+function normalizeFiles(book, fallbackUrl = "") {
+  const list = Array.isArray(book?.files)
+    ? book.files
+        .filter((file) => file && file.pdfUrl)
+        .map((file, index) => ({
+          id: String(file.id || index),
+          fileName: file.fileName || "",
+          pdfUrl: file.pdfUrl,
+        }))
+    : [];
+
+  if (list.length > 0) {
+    return list;
+  }
+
+  const url = book?.pdfUrl || book?.downloadUrl || fallbackUrl || "";
+
+  return url
+    ? [{ id: "0", fileName: book?.fileName || "", pdfUrl: url }]
+    : [];
+}
+
+// "<book>.pdf" for a one-file book, the file's own name otherwise.
+function getFileDownloadName(book, file) {
+  return getPdfFileName({
+    ...book,
+    fileName: file?.fileName || book?.fileName,
+  });
+}
+
+/*
+  Every file of every purchased book, in one flat list, with the path it
+  takes inside a ZIP: one book -> files at the top; several books (a combo)
+  -> one folder per book. Names never collide.
+*/
+function collectDownloadItems(books) {
+  const items = [];
+  const folders = new Set();
+  const usedByFolder = new Map();
+
+  for (const book of books) {
+    let folder = "";
+
+    if (books.length > 1) {
+      folder = safeFileName(book.title || "Book").replace(/\.pdf$/i, "");
+
+      let unique = folder;
+      let n = 2;
+
+      while (folders.has(unique.toLowerCase())) {
+        unique = `${folder}-${n++}`;
+      }
+
+      folders.add(unique.toLowerCase());
+      folder = unique;
+    }
+
+    if (!usedByFolder.has(folder)) usedByFolder.set(folder, new Set());
+
+    for (const file of book.files || []) {
+      const name = getUniqueFileName(
+        getFileDownloadName(book, file),
+        usedByFolder.get(folder)
+      );
+
+      items.push({
+        book,
+        file,
+        name,
+        path: folder ? `${folder}/${name}` : name,
+      });
+    }
+  }
+
+  return items;
+}
+
 function normalizePurchasedBooks(data) {
   if (!data) {
     return [];
@@ -611,15 +692,20 @@ function normalizePurchasedBooks(data) {
             data.coverPageUrl ||
             "",
 
+          files: normalizeFiles(
+            book,
+            data.books.length === 1
+              ? data.pdfUrl
+              : ""
+          ),
+
           pdfUrl:
-            book.pdfUrl ||
-            book.downloadUrl ||
-            (
+            normalizeFiles(
+              book,
               data.books.length === 1
                 ? data.pdfUrl
                 : ""
-            ) ||
-            "",
+            )[0]?.pdfUrl || "",
 
           downloadUrl:
             book.downloadUrl ||
@@ -665,6 +751,8 @@ function normalizePurchasedBooks(data) {
         coverPageUrl:
           data.coverPageUrl ||
           "",
+
+        files: normalizeFiles(data, data.pdfUrl),
 
         pdfUrl:
           data.pdfUrl,
@@ -1256,13 +1344,27 @@ export default function PaymentSuccess() {
   const totalBooks =
     books.length;
 
+  // Every PDF across every book.
+  const totalFiles = useMemo(
+    () =>
+      books.reduce(
+        (sum, book) =>
+          sum + (book.files?.length || 0),
+        0
+      ),
+    [books]
+  );
+
   const isBundle =
     Boolean(
       purchase?.isBundle
     ) ||
     totalBooks > 1;
 
-  const selectedPreview =
+  // Which file of the previewed book is open (null = its first PDF).
+  const [previewFileId, setPreviewFileId] = useState(null);
+
+  const selectedPreviewBook =
     books.find(
       (book) =>
         book.id ===
@@ -1270,6 +1372,18 @@ export default function PaymentSuccess() {
     ) ||
     books[0] ||
     null;
+
+  const selectedPreview = useMemo(() => {
+    if (!selectedPreviewBook) return null;
+
+    const file = selectedPreviewBook.files?.find(
+      (f) => f.id === previewFileId
+    );
+
+    return file
+      ? { ...selectedPreviewBook, pdfUrl: file.pdfUrl, previewFileName: file.fileName }
+      : selectedPreviewBook;
+  }, [selectedPreviewBook, previewFileId]);
 
   const isBusy =
     Boolean(downloadingBookId) ||
@@ -1313,7 +1427,102 @@ export default function PaymentSuccess() {
   }
 
   /* ========================================================
-     DOWNLOAD ONE PDF
+     DOWNLOAD HELPERS (single file / ZIP of many files)
+  ======================================================== */
+
+  // Saves one PDF.
+  async function saveOneFile(item, label) {
+    const blob = await fetchPdfBlob(item.file.pdfUrl);
+
+    const result = await saveBlob(
+      blob,
+      item.name,
+      "application/pdf"
+    );
+
+    if (result === "cancelled") {
+      setDownloadMessage("Save cancelled.");
+    } else if (result === "shared") {
+      setDownloadMessage(
+        "Choose Save to Files or another destination."
+      );
+    } else {
+      setDownloadMessage(
+        `${label}: Download started. Check your Downloads folder.`
+      );
+    }
+  }
+
+  // Fetches every file and saves them together as one ZIP.
+  async function saveAsZip(items, zipName, label) {
+    const zip = new JSZip();
+
+    setDownloadProgress({
+      current: 0,
+      total: items.length,
+    });
+
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+
+      setDownloadMessage(
+        `Preparing ${index + 1} of ${items.length}: ${item.book.title}`
+      );
+
+      zip.file(
+        item.path,
+        await fetchPdfBlob(item.file.pdfUrl)
+      );
+
+      setDownloadProgress({
+        current: index + 1,
+        total: items.length,
+      });
+    }
+
+    setDownloadMessage("Creating your ZIP file...");
+
+    const zipBlob = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 3 },
+    });
+
+    const result = await saveBlob(
+      zipBlob,
+      zipName,
+      "application/zip"
+    );
+
+    if (result === "cancelled") {
+      setDownloadMessage("Save cancelled.");
+    } else if (result === "shared") {
+      setDownloadMessage(
+        "Choose Save to Files to keep your ebooks."
+      );
+    } else {
+      setDownloadMessage(
+        `${label}: ZIP download started with ${items.length} PDFs.`
+      );
+    }
+  }
+
+  // Network/CORS failure: fall back to plain links, one per file.
+  async function openDirectly(items) {
+    setDownloadMessage(
+      "Starting individual downloads. If your browser asks, allow multiple downloads."
+    );
+
+    for (const item of items) {
+      openDirectDownload(item.file.pdfUrl, item.name);
+
+      await wait(1200);
+    }
+  }
+
+  /* ========================================================
+     DOWNLOAD ALL FILES OF ONE BOOK
+     (one PDF -> the PDF, several PDFs -> one ZIP)
   ======================================================== */
 
   const handleDownloadBook =
@@ -1328,7 +1537,7 @@ export default function PaymentSuccess() {
           return;
         }
 
-        if (!book?.pdfUrl) {
+        if (!book?.files?.length) {
           setDownloadError(
             "The PDF is currently unavailable."
           );
@@ -1336,64 +1545,29 @@ export default function PaymentSuccess() {
           return;
         }
 
-        downloadLockRef.current =
-          true;
+        const items = collectDownloadItems([book]);
 
-        setDownloadingBookId(
-          book.id
-        );
+        downloadLockRef.current = true;
 
+        setDownloadingBookId(book.id);
         setDownloadError("");
-        setDownloadMessage(
-          `Preparing ${book.title}...`
-        );
+        setDownloadMessage(`Preparing ${book.title}...`);
 
         try {
-          const blob =
-            await fetchPdfBlob(
-              book.pdfUrl
-            );
-
-          const result =
-            await saveBlob(
-              blob,
-              getPdfFileName(book),
-              "application/pdf"
-            );
-
-          if (
-            result === "cancelled"
-          ) {
-            setDownloadMessage(
-              "Save cancelled."
-            );
-          } else if (
-            result === "shared"
-          ) {
-            setDownloadMessage(
-              "Choose Save to Files or another destination."
-            );
+          if (items.length === 1) {
+            await saveOneFile(items[0], book.title);
           } else {
-            setDownloadMessage(
-              `${book.title}: Download started. Check your Downloads folder.`
+            await saveAsZip(
+              items,
+              `${safeFileName(book.title)}.zip`,
+              book.title
             );
           }
         } catch (err) {
-          console.error(
-            "[PDF Download]",
-            err
-          );
+          console.error("[PDF Download]", err);
 
           if (err instanceof TypeError) {
-            // Network/CORS failure: use a direct link instead.
-            openDirectDownload(
-              book.pdfUrl,
-              getPdfFileName(book)
-            );
-
-            setDownloadMessage(
-              `${book.title}: Opening the direct download. If nothing happens, email ${SUPPORT_EMAIL}.`
-            );
+            await openDirectly(items);
           } else {
             setDownloadError(
               err?.message ||
@@ -1403,14 +1577,18 @@ export default function PaymentSuccess() {
             setDownloadMessage("");
           }
         } finally {
-          downloadLockRef.current =
-            false;
+          downloadLockRef.current = false;
 
-          setDownloadingBookId(
-            null
-          );
+          setDownloadingBookId(null);
+
+          setDownloadProgress({
+            current: 0,
+            total: 0,
+          });
         }
       },
+      // The helpers above only use state setters and the book data passed in.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [
         pdfUnlocked,
         downloadingAll,
@@ -1419,7 +1597,50 @@ export default function PaymentSuccess() {
     );
 
   /* ========================================================
-     DOWNLOAD ALL BOOKS AS ZIP
+     DOWNLOAD ONE SPECIFIC PDF OF A BOOK
+  ======================================================== */
+
+  async function handleDownloadFile(book, item) {
+    if (
+      !pdfUnlocked ||
+      downloadingAll ||
+      downloadingBookId ||
+      downloadLockRef.current
+    ) {
+      return;
+    }
+
+    downloadLockRef.current = true;
+
+    setDownloadingBookId(`${book.id}:${item.file.id}`);
+    setDownloadError("");
+    setDownloadMessage(`Preparing ${item.name}...`);
+
+    try {
+      await saveOneFile(item, item.name);
+    } catch (err) {
+      console.error("[PDF Download]", err);
+
+      if (err instanceof TypeError) {
+        await openDirectly([item]);
+      } else {
+        setDownloadError(
+          err?.message || "Unable to download this PDF."
+        );
+
+        setDownloadMessage("");
+      }
+    } finally {
+      downloadLockRef.current = false;
+
+      setDownloadingBookId(null);
+    }
+  }
+
+  /* ========================================================
+     DOWNLOAD EVERYTHING
+     Every PDF of every book (a combo's books can each have
+     several PDFs) in one ZIP, one folder per book for combos.
   ======================================================== */
 
   async function handleDownloadAll() {
@@ -1432,145 +1653,41 @@ export default function PaymentSuccess() {
       return;
     }
 
-    if (
-      books.length === 1
-    ) {
-      await handleDownloadBook(
-        books[0]
+    const items = collectDownloadItems(books);
+
+    if (items.length === 0) {
+      setDownloadError(
+        "The PDFs are currently unavailable."
       );
 
       return;
     }
 
-    downloadLockRef.current =
-      true;
+    // Nothing to zip: a single book with a single PDF.
+    if (items.length === 1) {
+      await handleDownloadBook(books.find((b) => b.files?.length) || books[0]);
+
+      return;
+    }
+
+    downloadLockRef.current = true;
 
     setDownloadingAll(true);
     setDownloadError("");
 
-    setDownloadProgress({
-      current: 0,
-      total: books.length,
-    });
-
     try {
-      const zip =
-        new JSZip();
-
-      const usedNames =
-        new Set();
-
-      for (
-        let index = 0;
-        index < books.length;
-        index++
-      ) {
-        const book =
-          books[index];
-
-        setDownloadMessage(
-          `Preparing ${index + 1} of ${books.length}: ${book.title}`
-        );
-
-        if (!book.pdfUrl) {
-          throw new Error(
-            `PDF unavailable: ${book.title}`
-          );
-        }
-
-        const pdfBlob =
-          await fetchPdfBlob(
-            book.pdfUrl
-          );
-
-        const fileName =
-          getUniqueFileName(
-            getPdfFileName(book),
-            usedNames
-          );
-
-        zip.file(
-          fileName,
-          pdfBlob
-        );
-
-        setDownloadProgress({
-          current:
-            index + 1,
-
-          total:
-            books.length,
-        });
-      }
-
-      setDownloadMessage(
-        "Creating your ZIP file..."
-      );
-
-      const zipBlob =
-        await zip.generateAsync({
-          type: "blob",
-
-          compression:
-            "DEFLATE",
-
-          compressionOptions: {
-            level: 3,
-          },
-        });
-
-      const zipName =
+      await saveAsZip(
+        items,
         `TargetTrek-Books-${safeFileName(
-          purchase?.orderId ||
-          "Bundle"
-        )}.zip`;
-
-      const result =
-        await saveBlob(
-          zipBlob,
-          zipName,
-          "application/zip"
-        );
-
-      if (
-        result === "cancelled"
-      ) {
-        setDownloadMessage(
-          "Save cancelled."
-        );
-      } else if (
-        result === "shared"
-      ) {
-        setDownloadMessage(
-          "Choose Save to Files to keep your ebooks."
-        );
-      } else {
-        setDownloadMessage(
-          `ZIP download started with ${books.length} ebooks.`
-        );
-      }
-    } catch (err) {
-      console.error(
-        "[ZIP Download]",
-        err
+          purchase?.orderId || "Bundle"
+        )}.zip`,
+        "All books"
       );
+    } catch (err) {
+      console.error("[ZIP Download]", err);
 
       if (err instanceof TypeError) {
-        // Network/CORS failure: download each PDF directly.
-        setDownloadMessage(
-          "Starting individual downloads. If your browser asks, allow multiple downloads."
-        );
-
-        for (const book of books) {
-          if (book.pdfUrl) {
-            openDirectDownload(
-              book.pdfUrl,
-              getPdfFileName(book)
-            );
-
-            await wait(1200);
-          }
-        }
+        await openDirectly(items);
       } else {
         setDownloadError(
           err?.message ||
@@ -1580,8 +1697,7 @@ export default function PaymentSuccess() {
         setDownloadMessage("");
       }
     } finally {
-      downloadLockRef.current =
-        false;
+      downloadLockRef.current = false;
 
       setDownloadingAll(false);
 
@@ -1596,9 +1712,10 @@ export default function PaymentSuccess() {
      PDF PREVIEW
   ======================================================== */
 
-  function openPreview(book) {
+  function openPreview(book, file = null) {
     if (!pdfUnlocked || !book?.pdfUrl) return;
     setSelectedPreviewId(book.id);
+    setPreviewFileId(file?.id ?? null);
     setShowPreview(true);
     setPreviewError("");
   }
@@ -1691,8 +1808,10 @@ export default function PaymentSuccess() {
 
   const downloadAllLabel = downloadingAll
     ? "Preparing ZIP..."
-    : totalBooks > 1
-      ? `Download all ${totalBooks} books`
+    : totalFiles > 1
+      ? totalBooks > 1
+        ? `Download all ${totalBooks} books (${totalFiles} PDFs)`
+        : `Download all ${totalFiles} PDFs`
       : "Download my book";
 
   /* ========================================================
@@ -1955,19 +2074,26 @@ export default function PaymentSuccess() {
                 </h2>
                 <p>
                   {totalBooks === 1
-                    ? "Download or preview your purchased ebook."
-                    : `You purchased ${totalBooks} ebooks. Download them one by one, or all together as a ZIP.`}
+                    ? totalFiles > 1
+                      ? `This ebook comes with ${totalFiles} PDFs. Download them one by one, or all together as a ZIP.`
+                      : "Download or preview your purchased ebook."
+                    : `You purchased ${totalBooks} ebooks${totalFiles > totalBooks ? ` (${totalFiles} PDFs in total)` : ""}. Download them one by one, or all together as a ZIP.`}
                 </p>
               </div>
             </div>
 
-            {totalBooks > 1 && (
+            {totalFiles > 1 && (
               <div className="tp-all">
                 <div className="tp-all-text">
                   <span className="tp-ico"><FileArchive size={22} /></span>
                   <div>
                     <b>Download your complete collection</b>
-                    <span>All {totalBooks} ebooks in one ZIP file. Fastest way to save everything.</span>
+                    <span>
+                      {totalBooks > 1
+                        ? `All ${totalBooks} ebooks (${totalFiles} PDFs, one folder per book) in one ZIP file.`
+                        : `All ${totalFiles} PDFs of this ebook in one ZIP file.`}{" "}
+                      Fastest way to save everything.
+                    </span>
                   </div>
                 </div>
 
@@ -2000,9 +2126,10 @@ export default function PaymentSuccess() {
             <div className="tp-books">
               {books.map((book, index) => {
                 const isDownloading = downloadingBookId === book.id;
+                const fileItems = collectDownloadItems([book]);
 
                 return (
-                  <article key={`${book.id}-${index}`} className="tp-book">
+                  <article key={`${book.id}-${index}`} className={`tp-book${fileItems.length > 1 ? " multi" : ""}`}>
                     <div className="tp-book-cover">
                       {book.coverPageUrl ? (
                         <img src={book.coverPageUrl} alt={`${book.title} cover`} loading="lazy" />
@@ -2025,14 +2152,49 @@ export default function PaymentSuccess() {
                     </div>
 
                     <div className="tp-book-actions">
+                      {fileItems.length > 1 && (
+                        <ul className="tp-files">
+                          {fileItems.map((item) => {
+                            const fileBusy =
+                              downloadingBookId === `${book.id}:${item.file.id}`;
+
+                            return (
+                              <li key={item.file.id} className="tp-file">
+                                <FileText size={16} className="tp-file-ico" />
+                                <span className="tp-file-name" title={item.name}>{item.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => guard(() => openPreview(book, item.file))}
+                                  className="tp-btn tp-btn-ghost tp-btn-xs"
+                                  aria-label={`Preview ${item.name}`}
+                                >
+                                  <BookOpen size={15} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => guard(() => handleDownloadFile(book, item))}
+                                  disabled={pdfUnlocked && isBusy}
+                                  className="tp-btn tp-btn-primary tp-btn-xs"
+                                >
+                                  {fileBusy ? <Loader2 size={15} className="tp-spin" /> : <Download size={15} />}
+                                  Download
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => guard(() => handleDownloadBook(book))}
                         disabled={(pdfUnlocked && isBusy) || !book.pdfUrl}
-                        className="tp-btn tp-btn-primary tp-btn-lg tp-btn-block"
+                        className={`tp-btn ${fileItems.length > 1 ? "tp-btn-ghost" : "tp-btn-primary tp-btn-lg"} tp-btn-block`}
                       >
                         {isDownloading ? (
                           <Loader2 size={19} className="tp-spin" />
+                        ) : fileItems.length > 1 ? (
+                          <FileArchive size={19} />
                         ) : (
                           <Download size={19} />
                         )}
@@ -2040,18 +2202,22 @@ export default function PaymentSuccess() {
                           ? "PDF unavailable"
                           : isDownloading
                             ? "Preparing..."
-                            : "Download PDF"}
+                            : fileItems.length > 1
+                              ? `Download all ${fileItems.length} PDFs of this book (ZIP)`
+                              : "Download PDF"}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => guard(() => openPreview(book))}
-                        disabled={!book.pdfUrl}
-                        className="tp-btn tp-btn-ghost tp-btn-block"
-                      >
-                        <BookOpen size={17} />
-                        Preview PDF
-                      </button>
+                      {fileItems.length <= 1 && (
+                        <button
+                          type="button"
+                          onClick={() => guard(() => openPreview(book))}
+                          disabled={!book.pdfUrl}
+                          className="tp-btn tp-btn-ghost tp-btn-block"
+                        >
+                          <BookOpen size={17} />
+                          Preview PDF
+                        </button>
+                      )}
                     </div>
                   </article>
                 );
@@ -2088,7 +2254,7 @@ export default function PaymentSuccess() {
                 <button
                   type="button"
                   onClick={() => setShowPreview(false)}
-                  className="tp-btn tp-btn-ghost tp-btn-sm"
+                  className="tp-btn tp-btn-ghost tp-btn-xs"
                 >
                   <X size={17} />
                   Close viewer
@@ -2103,7 +2269,7 @@ export default function PaymentSuccess() {
                       type="button"
                       role="tab"
                       aria-selected={selectedPreviewId === book.id}
-                      onClick={() => setSelectedPreviewId(book.id)}
+                      onClick={() => { setSelectedPreviewId(book.id); setPreviewFileId(null); }}
                       className={`tp-viewer-tab${selectedPreviewId === book.id ? " on" : ""}`}
                     >
                       {book.title}

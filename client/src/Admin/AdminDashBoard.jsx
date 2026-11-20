@@ -190,6 +190,18 @@ const PRIORITY_ROUTES = [
     priority: 5,
   },
   {
+    path: "/admin/book-storage",
+    name: "Book Storage",
+    icon: Settings,
+    description:
+      "Choose whether new book PDFs are stored in AWS S3 or Cloudinary, and move every existing book file from one to the other.",
+    category: "Platform",
+    keywords:
+      "book storage aws s3 cloudinary pdf files upload transfer migrate",
+    featured: false,
+    priority: 7,
+  },
+  {
     path: "/admin/mail",
     name: "Email Provider",
     icon: Mail,

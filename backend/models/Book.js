@@ -111,6 +111,35 @@ const bookSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Every downloadable file of this book (a book can have several).
+    // Each file remembers where it is stored, so Cloudinary and S3 files can
+    // live side by side while an admin moves them from one to the other.
+    files: {
+      type: [
+        new mongoose.Schema({
+          storage: {
+            type: String,
+            enum: ["cloudinary", "s3"],
+            default: "cloudinary",
+          },
+          // cloudinary: public https url. s3: not used (private bucket, signed on demand).
+          url: { type: String, default: "", trim: true },
+          // s3 object key.
+          key: { type: String, default: "", trim: true },
+          // cloudinary: needed to delete the file later.
+          publicId: { type: String, default: "", trim: true },
+          cloudinaryType: { type: String, default: "", trim: true },
+          fileName: { type: String, default: "", trim: true },
+          size: { type: Number, default: 0 },
+        }),
+      ],
+      default: [],
+    },
+
+    // Legacy single-file fields. Kept in sync with files[0] on every save so
+    // older code paths (catalog filters, validators) keep working.
+    // For an S3 file this holds "s3://<key>"; never use it as a link directly,
+    // resolve it with services/books/bookFiles.js.
     pdfUrl: {
       type: String,
       default: "",

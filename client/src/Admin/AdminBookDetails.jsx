@@ -2482,7 +2482,6 @@ import {
   Edit3,
   ExternalLink,
   Eye,
-  FileText,
   Layers3,
   Loader2,
   Package,
@@ -2502,6 +2501,7 @@ import {
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url";
+import BookFilesField, { storageLabel, useBookStorage } from "./BookFilesField";
 
 // =====================================================
 // CONFIGURATION
@@ -2825,7 +2825,7 @@ function Detail({ label, value, mono = false }) {
   return (
     <div className={`border-b py-3 last:border-b-0 ${ui.border}`}>
       <p className={`text-[11px] font-semibold uppercase tracking-wide ${ui.secondary}`}>{label}</p>
-      <p className={`mt-1 break-all text-sm font-medium ${ui.text} ${mono ? "font-mono text-xs" : ""}`}>
+      <p className={`mt-1 whitespace-pre-line break-all text-sm font-medium ${ui.text} ${mono ? "font-mono text-xs" : ""}`}>
         {value === undefined || value === null || value === "" ? "—" : String(value)}
       </p>
     </div>
@@ -2902,11 +2902,14 @@ export default function AdminBookDetails() {
 
   // FILES
   const [coverFile, setCoverFile] = useState(null);
-  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfFiles, setPdfFiles] = useState([]);
+  const [removedFileIds, setRemovedFileIds] = useState([]);
+  const storage = useBookStorage();
+  const [storageChoice, setStorageChoice] = useState("");
+  const storageProvider = storageChoice || storage.provider;
   const [coverPreview, setCoverPreview] = useState("");
 
   const coverInputRef = useRef(null);
-  const pdfInputRef = useRef(null);
   const previewObjectUrlRef = useRef("");
 
   // BUNDLE BOOKS
@@ -3465,7 +3468,31 @@ export default function AdminBookDetails() {
     formChanged ||
     (editingBundle && bundleChanged) ||
     Boolean(coverFile) ||
-    Boolean(pdfFile);
+    pdfFiles.length > 0 ||
+    removedFileIds.length > 0;
+
+  // PDFs the book has now, whether stored the new way (files[]) or the old single pdfUrl.
+  const existingFiles = useMemo(() => {
+    if (!book) return [];
+
+    if (Array.isArray(book.files) && book.files.length > 0) {
+      return book.files.map((file) => ({
+        id: String(file._id),
+        fileName: file.fileName,
+        storage: file.storage,
+      }));
+    }
+
+    return book.pdfUrl
+      ? [
+          {
+            id: "legacy",
+            fileName: book.fileName,
+            storage: String(book.pdfUrl).startsWith("s3://") ? "s3" : "cloudinary",
+          },
+        ]
+      : [];
+  }, [book]);
 
   // ===================================================
   // EDIT HANDLERS
@@ -3598,26 +3625,10 @@ export default function AdminBookDetails() {
     setCoverPreview(url);
   };
 
-  const handlePdfChange = (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    if (
-      file.type !== "application/pdf" &&
-      !file.name.toLowerCase().endsWith(".pdf")
-    ) {
-      toast.error("Only PDF files are allowed.");
-      return;
-    }
-
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Maximum PDF size is 100 MB.");
-      return;
-    }
-
-    setPdfFile(file);
-  };
+  const toggleRemoveFile = (id) =>
+    setRemovedFileIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
 
   const cancelEdit = () => {
     setForm({ ...originalForm });
@@ -3625,7 +3636,8 @@ export default function AdminBookDetails() {
 
     setErrors({});
     setCoverFile(null);
-    setPdfFile(null);
+    setPdfFiles([]);
+    setRemovedFileIds([]);
 
     if (previewObjectUrlRef.current) {
       URL.revokeObjectURL(previewObjectUrlRef.current);
@@ -3635,9 +3647,59 @@ export default function AdminBookDetails() {
     setCoverPreview(book?.coverPageUrl || "");
 
     if (coverInputRef.current) coverInputRef.current.value = "";
-    if (pdfInputRef.current) pdfInputRef.current.value = "";
-
     setEditMode(false);
+  };
+
+  // ===================================================
+  // MOVE ALL PDFs TO ANOTHER STORAGE (old copies are deleted)
+  // ===================================================
+
+  const [transferring, setTransferring] = useState(false);
+
+  const handleTransfer = async (to) => {
+    if (transferring) return;
+
+    if (pdfFiles.length > 0 || removedFileIds.length > 0) {
+      toast.error("Save or cancel your PDF changes first.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Move all PDFs of this book to ${storageLabel(to)}?\n\nThe copies in the other storage are deleted once the move succeeds.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setTransferring(true);
+
+      const response = await fetch(
+        `${API}/book/admin/${encodeURIComponent(bookId)}/transfer`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ to }),
+        }
+      );
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || result?.success !== true) {
+        throw new Error(getErrorMessage(result, "Unable to move the PDFs."));
+      }
+
+      await fetchBook();
+      toast.success(result.message || "PDFs moved.");
+    } catch (err) {
+      toast.error(err.message || "Unable to move the PDFs.");
+    } finally {
+      setTransferring(false);
+    }
   };
 
   // ===================================================
@@ -3649,6 +3711,15 @@ export default function AdminBookDetails() {
 
     if (updating || !hasChanges) return;
     if (!validateForm()) return;
+
+    if (
+      !editingBundle &&
+      ["pdf", "ebook"].includes(form.resourceType) &&
+      existingFiles.length - removedFileIds.length + pdfFiles.length < 1
+    ) {
+      toast.error("A book needs at least one PDF.");
+      return;
+    }
 
     if (!token) {
       toast.error("Please log in again.");
@@ -3713,8 +3784,16 @@ export default function AdminBookDetails() {
         data.append("coverPage", coverFile);
       }
 
-      if (pdfFile && !editingBundle) {
-        data.append("pdf", pdfFile);
+      if (!editingBundle) {
+        pdfFiles.forEach((file) => data.append("pdf", file));
+
+        if (pdfFiles.length > 0) {
+          data.append("storageProvider", storageProvider);
+        }
+
+        if (removedFileIds.length > 0) {
+          data.append("removeFileIds", JSON.stringify(removedFileIds));
+        }
       }
 
       const response = await fetch(
@@ -3741,12 +3820,12 @@ export default function AdminBookDetails() {
       await fetchBook();
 
       setCoverFile(null);
-      setPdfFile(null);
+      setPdfFiles([]);
+      setRemovedFileIds([]);
       setErrors({});
       setEditMode(false);
 
       if (coverInputRef.current) coverInputRef.current.value = "";
-      if (pdfInputRef.current) pdfInputRef.current.value = "";
 
       toast.success(
         editingBundle
@@ -4554,7 +4633,8 @@ export default function AdminBookDetails() {
                         }));
 
                         if (value === "bundle") {
-                          setPdfFile(null);
+                          setPdfFiles([]);
+                          setRemovedFileIds([]);
                         }
                       }}
                       className={inputClass}
@@ -4704,40 +4784,47 @@ export default function AdminBookDetails() {
                     </label>
                   </div>
 
-                  {!editingBundle && (
-                    <div>
-                      <p className={`mb-3 text-xs font-bold ${ui.secondary}`}>
-                        Replace PDF
-                      </p>
-
-                      <label
-                        className={`flex min-h-[230px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 ${ui.border} ${ui.soft}`}
-                      >
-                        <FileText
-                          size={35}
-                          className="text-red-500"
-                        />
-
-                        <p className={`mt-3 text-xs ${ui.secondary}`}>
-                          {pdfFile?.name || "Choose PDF"}
-                        </p>
-
-                        <input
-                          ref={pdfInputRef}
-                          type="file"
-                          accept="application/pdf,.pdf"
-                          onChange={handlePdfChange}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  )}
                 </div>
 
                 {!editingBundle && (
                   <div className="mt-5">
+                    <BookFilesField
+                      label="PDFs"
+                      labelClass={`mb-3 block text-xs font-bold ${ui.secondary}`}
+                      files={pdfFiles}
+                      onFilesChange={setPdfFiles}
+                      provider={storageProvider}
+                      onProviderChange={setStorageChoice}
+                      providers={storage.providers}
+                      existing={existingFiles}
+                      removedIds={removedFileIds}
+                      onToggleRemove={toggleRemoveFile}
+                    />
+
+                    {["s3", "cloudinary"]
+                      .filter((target) =>
+                        existingFiles.some((file) => file.storage !== target)
+                      )
+                      .map((target) => (
+                        <button
+                          key={target}
+                          type="button"
+                          disabled={transferring}
+                          onClick={() => handleTransfer(target)}
+                          className="mt-3 mr-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50"
+                        >
+                          {transferring
+                            ? "Moving..."
+                            : `Transfer all PDFs to ${storageLabel(target)}`}
+                        </button>
+                      ))}
+                  </div>
+                )}
+
+                {!editingBundle && (
+                  <div className="mt-5">
                     <Field
-                      label="Display File Name"
+                      label="Display File Name (used when the book has one PDF)"
                       name="fileName"
                     />
                   </div>
@@ -4913,10 +5000,17 @@ export default function AdminBookDetails() {
                   {book.redirectUrl && (
                     <a href={storefrontUrl(book.redirectUrl)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> View product page</a>
                   )}
-                  <Detail label="PDF URL" value={book.pdfUrl} mono />
-                  {isValidHttpUrl(book.pdfUrl) && (
-                    <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> Open PDF</a>
-                  )}
+                  <Detail
+                    label={`PDF files (${existingFiles.length})`}
+                    value={
+                      existingFiles.length
+                        ? existingFiles
+                            .map((file) => `${file.fileName || "PDF"} [${storageLabel(file.storage)}]`)
+                            .join("\n")
+                        : "No PDF configured"
+                    }
+                    mono
+                  />
                   <Detail label="Payment URL" value={book.paymentUrl} mono />
                   {isValidHttpUrl(book.paymentUrl) && (
                     <a href={book.paymentUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-orange-500"><ExternalLink size={14} /> Open payment URL</a>
@@ -4925,9 +5019,11 @@ export default function AdminBookDetails() {
                     label="Delivery"
                     value={isBundle
                       ? `${includedBooks.length} separate ebooks`
-                      : book.pdfUrl
-                        ? "Single PDF"
-                        : "No PDF configured"}
+                      : existingFiles.length > 1
+                        ? `${existingFiles.length} PDFs (buyers can download all)`
+                        : existingFiles.length === 1
+                          ? "Single PDF"
+                          : "No PDF configured"}
                   />
                   <Detail label="File Name" value={book.fileName} />
                 </Panel>

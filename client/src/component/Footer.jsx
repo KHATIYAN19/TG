@@ -86,6 +86,10 @@ const BOOK_LINKS = [
     name: "AWS: The Complete Cloud Engineer's Handbook",
     href: "/book/cloud/aws",
   },
+  {
+    name: "Docker Handbook + Cheat Sheet",
+    href: "/book/docker",
+  },
 ];
 
 const LEGAL_LINKS = [

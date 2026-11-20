@@ -4,6 +4,12 @@ import { publicAttribution } from "../../utils/attribution.js";
 import { isAutoEbookEmailEnabled } from "../../utils/ebookEmailDelivery.js";
 import { hashDownloadToken } from "../../utils/payu.js";
 import { getInvoiceConfig } from "../../config/invoice.js";
+import {
+  fileDownloadName,
+  getBookFiles,
+  hasBookFiles,
+  resolveFileUrl
+} from "../../services/books/bookFiles.js";
 
 const maskEmail = (email) => {
   const [user = "", domain = ""] = String(email || "").split("@");
@@ -96,12 +102,12 @@ export const getPurchasedBookAccess = async (req, res) => {
 
     const productSelect =
       "_id title slug subtitle description " +
-      "resourceType coverPageUrl pdfUrl fileName " +
+      "resourceType coverPageUrl pdfUrl files fileName " +
       "includedBooks isActive sendEbookEmailOnPurchase";
 
     const bookSelect =
       "_id title slug subtitle description " +
-      "resourceType coverPageUrl pdfUrl fileName";
+      "resourceType coverPageUrl pdfUrl files fileName";
 
     const orderSnapshotIds = Array.isArray(order.purchasedBookIds)
       ? order.purchasedBookIds.map((id) => String(id))
@@ -210,7 +216,7 @@ export const getPurchasedBookAccess = async (req, res) => {
     }
 
     const missingPdf = purchasedBooks.find(
-      (book) => !book.pdfUrl
+      (book) => !hasBookFiles(book)
     );
 
     if (missingPdf) {
@@ -238,27 +244,56 @@ export const getPurchasedBookAccess = async (req, res) => {
     // 6. FORMAT BOOK DATA
     // -----------------------------------------
 
-    const books = purchasedBooks.map((book) => ({
-      id: String(book._id),
+    // Every file of every book, each with a link that works right now
+    // (S3 files are signed on demand; the link carries the download name).
+    const books = await Promise.all(
+      purchasedBooks.map(async (book) => {
+        const bookFiles = getBookFiles(book);
 
-      title: book.title,
+        const files = await Promise.all(
+          bookFiles.map(async (file, index) => {
+            const fileName = fileDownloadName(
+              book,
+              file,
+              index,
+              bookFiles.length
+            );
 
-      slug: book.slug,
+            return {
+              id: file.id,
+              fileName,
+              pdfUrl: await resolveFileUrl(file, {
+                ttl: 6 * 3600,
+                filename: fileName,
+              }),
+            };
+          })
+        );
 
-      subtitle: book.subtitle || "",
+        return {
+          id: String(book._id),
 
-      description: book.description || "",
+          title: book.title,
 
-      resourceType: book.resourceType,
+          slug: book.slug,
 
-      coverPageUrl: book.coverPageUrl || "",
+          subtitle: book.subtitle || "",
 
-      pdfUrl: book.pdfUrl,
+          description: book.description || "",
 
-      fileName:
-        book.fileName ||
-        `${book.slug || "ebook"}.pdf`
-    }));
+          resourceType: book.resourceType,
+
+          coverPageUrl: book.coverPageUrl || "",
+
+          // First file, for older clients that expect a single PDF.
+          pdfUrl: files[0].pdfUrl,
+
+          fileName: files[0].fileName,
+
+          files
+        };
+      })
+    );
 
     const singleBook =
       !isBundle && books.length === 1
@@ -289,6 +324,11 @@ export const getPurchasedBookAccess = async (req, res) => {
           : "single",
 
         totalBooks: books.length,
+
+        totalFiles: books.reduce(
+          (sum, book) => sum + book.files.length,
+          0
+        ),
 
         // Overall purchased product
         product: {

@@ -10,6 +10,7 @@ const STATIC_PAGES = [
   "/book/database/sql",
   "/book/cloud/gcp",
   "/book/cloud/aws",
+  "/book/docker",
   "/book/system-design/hld-lld/combo",
   "/book/java-interview-handbook",
   "/book/springboot-interview-handbook",

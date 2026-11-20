@@ -1,6 +1,18 @@
 import Book from "../models/Book.js";
 import uploadFile from "../utils/cloudinary.js";
 import redis from "../utils/redis.js";
+import {
+  BookFileError,
+  assertConfigured,
+  deleteCoverImage,
+  deleteStoredFile,
+  transferBook,
+  getBookFiles as listBookFiles,
+  getBookFiles,
+  normalizeProvider,
+  storeUploadedFiles,
+  syncLegacyFields,
+} from "../services/books/bookFiles.js";
 import { listLiveOffersWithBooks } from "../services/bundleOffers.js";
 import { getCatalogBooks, getPackProducts } from "../services/membership/membershipService.js";
 import mongoose from "mongoose";
@@ -923,8 +935,8 @@ export const createBook = asyncHandler(
     const coverFile =
       req.files?.coverPage?.[0];
 
-    const pdfFile =
-      req.files?.pdf?.[0];
+    const pdfFiles =
+      req.files?.pdf || [];
 
     if (!coverFile) {
       return fail(
@@ -936,18 +948,18 @@ export const createBook = asyncHandler(
 
     if (
       ["pdf", "ebook"].includes(productData.resourceType) &&
-      !pdfFile
+      pdfFiles.length === 0
     ) {
       return fail(
         res,
         400,
-        "PDF file is required."
+        "At least one PDF file is required."
       );
     }
 
     if (
       productData.resourceType === "bundle" &&
-      pdfFile
+      pdfFiles.length > 0
     ) {
       return fail(
         res,
@@ -957,27 +969,39 @@ export const createBook = asyncHandler(
     }
 
     let coverUpload;
-    let pdfUpload = null;
+    let storedFiles = [];
 
     try {
+      const provider =
+        await normalizeProvider(req.body.storageProvider);
+
+      if (pdfFiles.length > 0) {
+        assertConfigured(provider);
+      }
+
       coverUpload =
         await uploadProductFile(coverFile);
 
-      if (pdfFile) {
-        pdfUpload =
-          await uploadProductFile(pdfFile);
-      }
+      storedFiles =
+        await storeUploadedFiles(pdfFiles, provider);
     } catch (error) {
-      console.error("Cloudinary Upload Error:", error);
+      console.error("Product Upload Error:", error);
 
       return fail(
         res,
-        500,
-        "Failed to upload product files."
+        error instanceof BookFileError ? error.status : 500,
+        error instanceof BookFileError
+          ? error.message
+          : "Failed to upload product files."
       );
     }
 
-    const book = await Book.create({
+    // A single file takes the admin's display name.
+    if (storedFiles.length === 1 && productData.fileName) {
+      storedFiles[0].fileName = productData.fileName;
+    }
+
+    const book = new Book({
       ...productData,
 
       showInMainBooks: parseBoolean(
@@ -987,16 +1011,27 @@ export const createBook = asyncHandler(
 
       coverPageUrl: coverUpload.secure_url,
 
-      pdfUrl:
-        pdfUpload?.secure_url || "",
+      files: storedFiles,
 
       fileName:
         productData.fileName ||
-        pdfFile?.originalname ||
+        pdfFiles[0]?.originalname ||
         "",
 
       createdBy: adminId,
     });
+
+    syncLegacyFields(book);
+
+    try {
+      await book.save();
+    } catch (error) {
+      // Do not leave orphaned files in S3 when the book cannot be saved.
+      await Promise.all(
+        storedFiles.map((entry) => deleteStoredFile(entry).catch(() => {}))
+      );
+      throw error;
+    }
 
     await clearBookCaches(book.redirectUrl);
 
@@ -2097,12 +2132,23 @@ export const updateBookByBookId =
     const coverFile =
       req.files?.coverPage?.[0];
 
-    const pdfFile =
-      req.files?.pdf?.[0];
+    const pdfFiles =
+      req.files?.pdf || [];
+
+    // Files the admin wants removed (ids from the edit form).
+    let removeIds = [];
+
+    try {
+      removeIds = req.body.removeFileIds
+        ? parseArray(req.body.removeFileIds).map(String)
+        : [];
+    } catch (error) {
+      return fail(res, 400, error.message);
+    }
 
     if (
       book.resourceType === "bundle" &&
-      pdfFile
+      pdfFiles.length > 0
     ) {
       return fail(
         res,
@@ -2122,23 +2168,49 @@ export const updateBookByBookId =
       );
     }
 
+    // Old books only have the legacy pdfUrl: make it a real file entry
+    // first, so it can be kept, removed or sit next to new files.
+    if (!book.files?.length && book.pdfUrl) {
+      book.files = getBookFiles(book).map(
+        ({ id, ...rest }) => rest
+      );
+    }
+
+    // The edit form calls a pre-existing single PDF "legacy".
+    if (removeIds.includes("legacy") && book.files.length > 0) {
+      removeIds.push(String(book.files[0]._id));
+    }
+
+    const removedEntries = [];
+
+    if (removeIds.length > 0) {
+      for (const entry of [...book.files]) {
+        if (removeIds.includes(String(entry._id))) {
+          removedEntries.push(entry.toObject());
+          book.files.pull(entry._id);
+        }
+      }
+    }
+
     if (
       ["pdf", "ebook"].includes(
         book.resourceType
       ) &&
-      !book.pdfUrl &&
-      !pdfFile
+      book.files.length === 0 &&
+      pdfFiles.length === 0
     ) {
       return fail(
         res,
         400,
-        "PDF file is required for this resource type."
+        "At least one PDF file is required for this resource type."
       );
     }
 
     // ---------------------------------------------
     // UPLOAD NEW FILES IF PROVIDED
     // ---------------------------------------------
+
+    let storedFiles = [];
 
     try {
       if (coverFile) {
@@ -2151,30 +2223,36 @@ export const updateBookByBookId =
           coverUpload.secure_url;
       }
 
-      if (pdfFile) {
-        const pdfUpload =
-          await uploadProductFile(
-            pdfFile
+      if (pdfFiles.length > 0) {
+        const provider =
+          await normalizeProvider(
+            req.body.storageProvider
           );
 
-        book.pdfUrl =
-          pdfUpload.secure_url;
+        assertConfigured(provider);
 
-        if (req.body.fileName === undefined) {
-          book.fileName =
-            pdfFile.originalname || "";
-        }
+        storedFiles =
+          await storeUploadedFiles(
+            pdfFiles,
+            provider
+          );
+
+        book.files.push(...storedFiles);
       }
     } catch (error) {
       console.error(
-        "Cloudinary Upload Error:",
+        "Product Upload Error:",
         error
       );
 
       return fail(
         res,
-        500,
-        "Failed to upload product files."
+        error instanceof BookFileError
+          ? error.status
+          : 500,
+        error instanceof BookFileError
+          ? error.message
+          : "Failed to upload product files."
       );
     }
 
@@ -2183,9 +2261,24 @@ export const updateBookByBookId =
     // ---------------------------------------------
 
     if (book.resourceType === "bundle") {
-      book.pdfUrl = "";
+      book.files = [];
       book.fileName = "";
+    } else if (
+      req.body.fileName !== undefined &&
+      book.files.length === 1
+    ) {
+      // One file: the admin's display name is its name.
+      book.files[0].fileName = book.fileName;
+    } else if (
+      req.body.fileName === undefined &&
+      storedFiles.length > 0 &&
+      !book.fileName
+    ) {
+      book.fileName =
+        storedFiles[0].fileName || "";
     }
+
+    syncLegacyFields(book);
 
     // ---------------------------------------------
     // SAVE UPDATED PRODUCT
@@ -2193,7 +2286,21 @@ export const updateBookByBookId =
 
     book.updatedBy = adminId;
 
-    await book.save();
+    try {
+      await book.save();
+    } catch (error) {
+      await Promise.all(
+        storedFiles.map((entry) => deleteStoredFile(entry).catch(() => {}))
+      );
+      throw error;
+    }
+
+    // Only once the book is saved is it safe to delete what was removed.
+    removedEntries.forEach((entry) =>
+      deleteStoredFile(entry).catch((error) =>
+        console.error("Stored file delete failed:", error.message)
+      )
+    );
 
     // ---------------------------------------------
     // INVALIDATE CACHES
@@ -2284,14 +2391,77 @@ export const deleteBookById =
     const redirectUrl =
       book.redirectUrl;
 
+    const filesToDelete = listBookFiles(book);
+    const coverUrl = book.coverPageUrl;
+
     await book.deleteOne();
 
     await clearBookCaches(
       redirectUrl
     );
 
+    // The book is gone: remove its PDFs and cover from Cloudinary / S3 too.
+    const cleanup = await Promise.allSettled([
+      ...filesToDelete.map((file) => deleteStoredFile(file)),
+      deleteCoverImage(coverUrl),
+    ]);
+
+    cleanup
+      .filter((r) => r.status === "rejected")
+      .forEach((r) =>
+        console.error("Stored file delete failed:", r.reason?.message)
+      );
+
     return res.status(200).json({
       success: true,
       message: "Product deleted successfully.",
     });
+  });
+
+
+// =====================================================
+// MOVE ALL FILES OF ONE BOOK TO THE OTHER STORAGE
+// =====================================================
+
+export const transferBookFiles =
+  asyncHandler(async (req, res) => {
+    const { bookId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      return fail(res, 400, "Invalid product ID.");
+    }
+
+    try {
+      const moved = await transferBook(
+        bookId,
+        String(req.body?.to || "")
+      );
+
+      const book = await Book.findById(bookId);
+
+      await clearBookCaches(book?.redirectUrl);
+
+      return res.status(200).json({
+        success: true,
+        message:
+          moved > 0
+            ? `${moved} file(s) moved.`
+            : "All files are already there.",
+        data: await populateIncludedBooks(
+          Book.findById(bookId)
+        ),
+      });
+    } catch (error) {
+      if (error instanceof BookFileError) {
+        return fail(res, error.status, error.message);
+      }
+
+      console.error("Book transfer error:", error);
+
+      return fail(
+        res,
+        500,
+        `Transfer failed: ${error.message}`
+      );
+    }
   });

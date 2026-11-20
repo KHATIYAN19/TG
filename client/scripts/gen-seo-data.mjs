@@ -30,6 +30,10 @@ const PAGES = {
     file: "src/component/AwsHandbook.jsx",
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
   },
+  "/book/docker": {
+    files: ["src/component/DockerBooks.jsx", "src/component/dockerBookData.js"],
+    pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS", "HANDBOOK", "CHEATSHEET", "PARTS_RAW", "cheatSheetSections"],
+  },
   "/book/cloud/gcp": {
     file: "src/component/GcpHandbook.jsx",
     pick: ["SEO_TITLE", "SEO_DESCRIPTION", "SEO_LONG_DESCRIPTION", "SEO_KEYWORDS", "FAQS"],
@@ -124,7 +128,7 @@ const out = {};
 const report = [];
 
 for (const [route, spec] of Object.entries(PAGES)) {
-  const src = fs.readFileSync(path.join(root, spec.file), "utf8");
+  const src = (spec.files || [spec.file]).map((f) => fs.readFileSync(path.join(root, f), "utf8")).join("\n");
   const data = {};
   for (const name of spec.pick) {
     const text = extractConst(src, name);
@@ -144,7 +148,7 @@ for (const [route, spec] of Object.entries(PAGES)) {
     faqs: faqKey ? normaliseFaqs(data[faqKey]) : [],
     extras: Object.fromEntries(
       Object.entries(data).filter(([k]) =>
-        ["FREE_RESOURCES", "FEATURED_BOOKS", "LEARNING_AREAS", "caseStudies"].includes(k)
+        ["FREE_RESOURCES", "FEATURED_BOOKS", "LEARNING_AREAS", "caseStudies", "HANDBOOK", "CHEATSHEET", "PARTS_RAW", "cheatSheetSections"].includes(k)
       )
     ),
   };

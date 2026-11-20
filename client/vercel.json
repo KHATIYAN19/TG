@@ -46,6 +46,10 @@
       "destination": "/api/page?p=/book/cloud/aws"
     },
     {
+      "source": "/book/docker",
+      "destination": "/api/page?p=/book/docker"
+    },
+    {
       "source": "/book/cloud/gcp",
       "destination": "/api/page?p=/book/cloud/gcp"
     },

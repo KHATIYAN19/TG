@@ -84,6 +84,26 @@ const orgSchema = {
   logo: LOGO_URL,
 };
 
+/* pages that sell more than one book (e.g. /book/docker): each book's contents */
+const multiBookHtml = (x = {}) => {
+  const out = [];
+  if (x.HANDBOOK) {
+    const h = x.HANDBOOK;
+    let n = 0;
+    out.push(`<h2>${esc(h.title)} (${esc(h.pages)} pages)</h2><p>${esc(h.tagline)}</p>${li((h.includes || []).map(esc))}`);
+    (x.PARTS_RAW || []).forEach((part) => {
+      out.push(`<h3>Part ${esc(part.number)}: ${esc(part.title)}</h3>${li((part.chapters || []).map((c) => { n += 1; return `Chapter ${n}: ${esc(c)}`; }))}`);
+    });
+  }
+  if (x.CHEATSHEET) {
+    const c = x.CHEATSHEET;
+    out.push(`<h2>${esc(c.title)} (${esc(c.pages)} pages)</h2><p>${esc(c.tagline)}</p>`);
+    const secs = x.cheatSheetSections || [];
+    if (secs.length) out.push(li(secs.map((s, i) => `${i + 1}. ${esc(s.title)}${s.detail ? ` – ${esc(s.detail)}` : ""}`)));
+  }
+  return out.join("\n");
+};
+
 export default async function handler(req, res) {
   const route = String(req.query.p || "").replace(/\/+$/, "") || "/";
   const data = SEO[route];
@@ -318,6 +338,7 @@ ${(product?.highlights || []).length ? `<h2>What you get</h2>${li((product.highl
 ${(product?.topics || []).length ? `<h2>Topics covered</h2>${li((product.topics || []).map((t) => esc(typeof t === "string" ? t : t.title || t.name || "")))}` : ""}
 ${(product?.includedBooks || []).length ? `<h2>Included books</h2>${li((product.includedBooks || []).map((b) => esc(typeof b === "string" ? b : b.title || "")))}` : ""}
 ${cases.length ? `<h2>${cases.length} case studies</h2>${li(cases.map((c) => `<strong>${esc(c.title)}</strong> – ${esc(c.summary)}`))}` : ""}
+${multiBookHtml(data.extras)}
 </article>
 ${faqHtml(faqs)}
 <p><a href="/books">More books</a> · <a href="/learn">Free learning resources</a> · <a href="/blogs">Blog</a></p>

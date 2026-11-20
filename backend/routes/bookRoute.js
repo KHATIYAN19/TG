@@ -12,6 +12,7 @@ import {
   updateBookByBookId,
   deleteBookById,
   updateBookPosition,
+  transferBookFiles,
 } from "../controllers/bookController.js";
 
 import {
@@ -69,7 +70,7 @@ const productFiles = uploadMiddleware.fields([
   },
   {
     name: "pdf",
-    maxCount: 1,
+    maxCount: 20,
   },
 ]);
 
@@ -109,6 +110,14 @@ router.patch(
   isAdmin,
   productFiles,
   updateBookByBookId
+);
+
+router.post(
+  "/admin/:bookId/transfer",
+  auth,
+  isAdmin,
+  express.json(),
+  transferBookFiles
 );
 
 router.delete(

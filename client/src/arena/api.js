@@ -26,6 +26,13 @@ export const mailHttp = axios.create({
   timeout: 30000,
 });
 
+// Admin-only: where book PDFs are stored (Cloudinary / AWS S3) and moving them between the two.
+export const bookStorageHttp = axios.create({
+  baseURL: `${API_ROOT}/api/admin/book-storage`,
+  withCredentials: true,
+  timeout: 30000,
+});
+
 // Admin-only: Campaign Studio (audiences, templates, queue-backed sending, DLQ).
 export const campaignHttp = axios.create({
   baseURL: `${API_ROOT}/api/admin/campaigns`,
@@ -118,7 +125,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, referralHttp, referralAdminHttp, uploadsHttp]) {
+for (const instance of [http, adminHttp, mailHttp, bookStorageHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, referralHttp, referralAdminHttp, uploadsHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
