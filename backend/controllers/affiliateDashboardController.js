@@ -1861,10 +1861,27 @@ export const getAffiliateDashboard = async (req, res) => {
       });
     }
 
-    const graphDays = [7, 30, 365].includes(
-      Number(req.query.graphDays)
-    )
-      ? Number(req.query.graphDays)
+    const data = await buildAffiliateDashboard(context, req.query.graphDays);
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Affiliate dashboard error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load affiliate dashboard.",
+    });
+  }
+};
+
+/*
+  The dashboard numbers, shared by GET /api/affiliate/dashboard and the
+  one-call account page (GET /api/users/account). `context` is
+  { user (name + affiliate fields), affiliateUserId (ObjectId) }.
+*/
+export const buildAffiliateDashboard = async (context, rawGraphDays) => {
+    const graphDays = [7, 30, 365].includes(Number(rawGraphDays))
+      ? Number(rawGraphDays)
       : 7;
 
     const periods = getPeriods();
@@ -2050,10 +2067,7 @@ export const getAffiliateDashboard = async (req, res) => {
 
     const affiliate = context.user.affiliate || {};
 
-    return res.status(200).json({
-      success: true,
-
-      data: {
+    return {
         currency: "INR",
         timezone: TIMEZONE,
 
@@ -2109,16 +2123,7 @@ export const getAffiliateDashboard = async (req, res) => {
           earningsType:
             "Current verified non-refunded order totals, not payout balances",
         },
-      },
-    });
-  } catch (error) {
-    console.error("Affiliate dashboard error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to load affiliate dashboard.",
-    });
-  }
+    };
 };
 
 /* =====================================================

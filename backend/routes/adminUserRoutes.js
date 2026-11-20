@@ -28,15 +28,28 @@ import {
   clearUserActivities,
 } from "../controllers/activityController.js";
 
+import {
+  getUsersConsole,
+  getUserConsole,
+  bulkUsers,
+  exportUsers,
+} from "../controllers/adminUserConsoleController.js";
+
 const router = express.Router();
 
 router.use(auth, isAdmin);
 
 /* USER MANAGEMENT */
 
+/* CONSOLE (one call per screen) — must stay above "/:userId" */
+router.get("/console", getUsersConsole);
+router.get("/export", exportUsers);
+router.post("/bulk", bulkUsers);
+
 router.post("/", createUser);
 router.get("/", getAllUsers);
 router.get("/:userId", getUserById);
+router.get("/:userId/console", getUserConsole);
 
 router.patch("/:userId", updateUser);
 

@@ -1,307 +1,812 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import toast from "react-hot-toast";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import toast from "react-hot-toast";
 import {
-  Activity, AlertCircle, ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2,
-  ChevronLeft, ChevronRight, Clock3, Copy, Eye, EyeOff, Handshake,
-  IndianRupee, KeyRound, LayoutDashboard, Loader2, LockKeyhole, Mail,
-  MonitorSmartphone, Percent, Phone, RefreshCw, Search, ShieldCheck,
-  ShoppingBag, SlidersHorizontal, Sparkles, TrendingUp, UserRound, Wallet, X,
-  BarChart3, ReceiptText, Filter, CalendarRange, ExternalLink, LogOut, Smartphone, Laptop, Tablet, Pencil
-} from "lucide-react";
-import BASE_URL from "../utils/Url";
-import { setDeviceLabel } from "../lib/authSession";
+  ArrowRight, ArrowsClockwise, CalendarBlank, CaretLeft, CaretRight, ChartBar, Check, CheckCircle, Clock,
+  ClockCounterClockwise, Copy, DeviceMobile, DeviceTablet, Devices, Envelope, Eye, EyeSlash, Globe, GoogleLogo,
+  Handshake, IdentificationCard, Key, Laptop, Lock, MapPin, PencilSimple, Percent, Phone, Receipt, ShieldCheck,
+  ShoppingBag, SignOut, SquaresFour, TrendUp, User, UserGear, Wallet, Warning, WarningCircle,
+} from "@phosphor-icons/react";
 
-const ROOT = String(BASE_URL).replace(/\/$/, "");
-const API = {
-  me: `${ROOT}/api/auth/me`,
-  password: `${ROOT}/api/auth/change-password`,
-  activities: `${ROOT}/api/users/activities`, // Switch to /api/auth/activities if your self-activity route is mounted there.
-  dashboard: `${ROOT}/api/affiliate/dashboard`,
-  orders: `${ROOT}/api/affiliate/orders`,
-  sessions: `${ROOT}/api/users/sessions`,
-  logoutAll: `${ROOT}/api/auth/logout-all`,
-};
-const LOGIN_ROUTE = "/login";
-const ORANGE = "#F97316";
-const TABS = [
-  { key: "profile", label: "My Profile", desc: "Account details", icon: UserRound },
-  { key: "password", label: "Passwords", desc: "Account security", icon: LockKeyhole },
-  { key: "activity", label: "Activity", desc: "Account events", icon: Activity },
-  { key: "sales", label: "Sales Dashboard", desc: "Partner performance", icon: LayoutDashboard, affiliateOnly: true },
-  { key: "devices", label: "Devices", desc: "Where you are signed in", icon: MonitorSmartphone },
-];
-const RULES = [
-  { label: "8–128 characters", test: (v) => v.length >= 8 && v.length <= 128 },
-  { label: "Uppercase letter", test: (v) => /[A-Z]/.test(v) },
-  { label: "Lowercase letter", test: (v) => /[a-z]/.test(v) },
-  { label: "Number", test: (v) => /\d/.test(v) },
-  { label: "Special character", test: (v) => /[^A-Za-z0-9]/.test(v) },
-];
-const STATUS_OPTIONS = ["ALL", "EARNED", "FAILED", "PENDING", "REFUNDED", "UNVERIFIED"];
-const emptyPassword = { oldPassword: "", newPassword: "", confirmPassword: "" };
-const money = (value, currency = "INR") => new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 2 }).format(Number(value) || 0);
+import { accountHttp, errMsg } from "../arena/api";
+import { setDeviceLabel } from "../lib/authSession";
+import { Btn, Page, cx } from "../resume/ui";
+import { Badge, Sheet } from "../referral/ui";
+import "../referral/referral.css";
+import "../Admin/adminReferrals.css";
+import "../Admin/adminResume.css";
+import "./profile.css";
+
+/*
+  ACCOUNT CENTRE  /profile  — every signed-in role (member, affiliate, employee, admin).
+  Same look as the Resume Lab admin console. The site navbar stays on top.
+
+  ONE request opens the page:  GET /api/users/account
+    → profile + last 5 devices + last 5 activities (+ affiliates: the full sales dashboard)
+  Everything after that is on demand only:
+    chart range        GET  /api/users/account/sales?graphDays=…   (affiliates)
+    all transactions   GET  /api/affiliate/orders                  (only when the sheet opens)
+    password           POST /api/auth/change-password
+    devices            PATCH/DELETE /api/users/sessions[/:id] · POST /api/auth/logout-all
+  Device actions update the list in place, so nothing is re-fetched after them.
+  The last answer is kept in memory, so coming back to /profile paints instantly and refreshes quietly.
+*/
+
+/* ------------------------------------------------------------ format */
+const TZ = "Asia/Kolkata";
+const money = (v) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: Number(v) % 1 ? 2 : 0 }).format(Number(v) || 0);
 const count = (v) => new Intl.NumberFormat("en-IN").format(Number(v) || 0);
-const dateText = (v, time = false) => {
-  if (!v || Number.isNaN(new Date(v).getTime())) return "Not available";
-  return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata", ...(time ? { hour: "2-digit", minute: "2-digit" } : {}) }).format(new Date(v));
+const valid = (v) => v && !Number.isNaN(new Date(v).getTime());
+const day = (v) => (valid(v) ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: TZ }).format(new Date(v)) : "—");
+const stamp = (v) => (valid(v) ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: TZ }).format(new Date(v)) : "—");
+const ago = (v) => {
+  if (!valid(v)) return "—";
+  const s = Math.max(0, (Date.now() - new Date(v).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)} d ago`;
+  return day(v);
+};
+/* one unit only, by the calendar: "2 years", else "5 months", else "12 days" */
+const sinceText = (v) => {
+  if (!valid(v)) return "—";
+  const from = new Date(v), now = new Date();
+  let months = (now.getFullYear() - from.getFullYear()) * 12 + (now.getMonth() - from.getMonth());
+  if (now.getDate() < from.getDate()) months -= 1;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  if (months >= 12) return plural(Math.floor(months / 12), "year");
+  if (months >= 1) return plural(months, "month");
+  const days = Math.floor((now - from) / 86400000);
+  return days < 1 ? "Today" : plural(days, "day");
 };
 const initials = (s = "") => s.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "U";
-const roleText = (r) => ({ admin: "Administrator", Employee: "Employee", normal: "Standard User", affiliate: "Affiliate Partner" }[r] || r || "User");
-const errorText = (e, fallback) => e?.response?.status === 429 ? "Too many requests. Try again shortly." : e?.response?.data?.message || e?.message || fallback;
-const themeNow = () => typeof window !== "undefined" && (localStorage.getItem("theme") === "dark" || (localStorage.getItem("theme") !== "light" && document.documentElement.classList.contains("dark"))) ? "dark" : "light";
-function useTheme() {
-  const [theme, setTheme] = useState(themeNow);
-  useEffect(() => {
-    const sync = () => setTheme(themeNow());
-    const obs = new MutationObserver(sync);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
-    window.addEventListener("storage", sync);
-    window.addEventListener("theme-change", sync);
-    return () => { obs.disconnect(); window.removeEventListener("storage", sync); window.removeEventListener("theme-change", sync); };
-  }, []);
-  return theme;
-}
-function Panel({ title, caption, icon: Icon, action, children, dark, className = "" }) {
-  return <section className={`overflow-hidden rounded-2xl border ${dark ? "border-[#303030] bg-[#151515]" : "border-[#E9E9E9] bg-white"} ${className}`}>
-    {(title || action) && <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6 ${dark ? "border-[#303030]" : "border-[#EEEEEE]"}`}>
-      <div className="flex items-center gap-3">{Icon && <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${dark ? "bg-[#2B241F]" : "bg-[#FFF2E8]"}`}><Icon size={18} className="text-[#F97316]" /></span>}
-        <div><h3 className="text-[14px] font-semibold">{title}</h3>{caption && <p className={`mt-1 text-[11px] ${dark ? "text-[#999]" : "text-[#777]"}`}>{caption}</p>}</div></div>{action}</div>}
-    <div className="p-5 sm:p-6">{children}</div>
-  </section>;
-}
-function FieldDetail({ label, value, icon: Icon, dark, copy = false }) {
-  return <div className="min-w-0"><div className={`flex items-center gap-2 text-[11px] ${dark ? "text-[#999]" : "text-[#777]"}`}>{Icon && <Icon size={14} className="text-[#F97316]" />}{label}</div>
-    <div className="mt-2 flex items-center gap-2"><span className="min-w-0 break-words text-[13px] font-semibold">{value ?? "Not provided"}</span>{copy && value && <button type="button" className="rounded-md p-1 text-[#F97316] hover:bg-[#F97316]/10" onClick={async () => { try { await navigator.clipboard.writeText(String(value)); toast.success("Copied"); } catch { toast.error("Could not copy"); } }}><Copy size={14} /></button>}</div></div>;
-}
-function StatePill({ status, dark }) {
-  const s = String(status || "UNKNOWN").toUpperCase();
-  const good = ["SUCCESS", "PAID", "EARNED", "ACTIVE"].includes(s);
-  const bad = ["FAILED", "BLOCKED", "REFUNDED", "CANCELLED"].includes(s);
-  return <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${good ? dark ? "border-[#744221] bg-[#332216] text-[#FFA569]" : "border-orange-200 bg-orange-50 text-orange-700" : bad ? "border-red-500/25 bg-red-500/10 text-red-500" : dark ? "border-[#424242] bg-[#292929] text-[#CCC]" : "border-gray-200 bg-gray-100 text-gray-600"}`}><span className={`h-1.5 w-1.5 rounded-full ${good ? "bg-[#F97316]" : bad ? "bg-red-500" : "bg-gray-400"}`} />{s}</span>;
-}
-function Metric({ label, value, sub, icon: Icon, dark }) {
-  return <div className={`min-w-0 rounded-xl border p-4 sm:p-5 ${dark ? "border-[#363636] bg-[#1B1B1B]" : "border-[#EAEAEA] bg-white"}`}>
-    <div className="flex items-center justify-between gap-3"><span className={`text-[11px] font-medium ${dark ? "text-[#AAA]" : "text-[#777]"}`}>{label}</span><Icon className="shrink-0 text-[#F97316]" size={18} /></div>
-    <p className="mt-3 break-words text-xl font-semibold tracking-tight sm:text-2xl">{value}</p>{sub && <p className={`mt-2 text-[11px] ${dark ? "text-[#888]" : "text-[#888]"}`}>{sub}</p>}</div>;
-}
-function Loading({ label = "Loading..." }) { return <div className="flex items-center justify-center gap-3 py-20 text-sm text-[#999]"><Loader2 className="animate-spin text-[#F97316]" size={21} />{label}</div>; }
-function Empty({ text, dark }) { return <div className={`rounded-xl border border-dashed py-12 text-center text-[12px] ${dark ? "border-[#424242] text-[#999]" : "border-[#DDD] text-[#777]"}`}>{text}</div>; }
-function SmallButton({ children, onClick, disabled, dark, primary = false, type = "button", className = "" }) {
-  return <button type={type} disabled={disabled} onClick={onClick} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3.5 text-[12px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${primary ? "bg-[#F97316] text-white hover:bg-[#E7660B]" : dark ? "border border-[#454545] bg-[#202020] hover:bg-[#303030]" : "border border-[#DEDEDE] bg-white hover:bg-[#F8F8F8]"} ${className}`}>{children}</button>;
-}
-function DateInput({ label, value, onChange, dark, max }) { return <label className="min-w-0 flex-1 text-[11px] font-medium">{label}<input aria-label={label} type="date" value={value} onChange={(e) => onChange(e.target.value)} max={max} className={`mt-1.5 h-10 w-full rounded-lg border px-2 text-[12px] outline-none focus:border-[#F97316] ${dark ? "border-[#424242] bg-[#242424] text-white [color-scheme:dark]" : "border-[#DDD] bg-white text-[#222]"}`} /></label>; }
-function OrderStatus({ order, dark }) { return <StatePill status={order?.state || order?.paymentStatus || order?.orderStatus} dark={dark} />; }
-function OrderRows({ orders, dark }) {
-  if (!orders.length) return <Empty text="No transactions match these filters." dark={dark} />;
-  return <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-[12px]"><thead className={dark ? "text-[#999]" : "text-[#777]"}><tr className="border-b border-current/10"><th className="pb-3 pr-4 font-medium">Order / Book</th><th className="pb-3 pr-4 font-medium">Date</th><th className="pb-3 pr-4 font-medium">Status</th><th className="pb-3 pr-4 text-right font-medium">Sale</th><th className="pb-3 text-right font-medium">Commission</th></tr></thead><tbody>{orders.map((o, i) => <tr key={`${o.orderId || i}-${i}`} className={dark ? "border-b border-[#303030]" : "border-b border-[#EEE]"}><td className="py-3.5 pr-4"><div className="max-w-[230px] truncate font-semibold">{o.book?.title || "Book"}</div><div className="mt-1 font-mono text-[10px] opacity-60">{o.orderId || "—"}</div><div className="mt-1 text-[10px] opacity-60">{o.commissionType === "PERCENTAGE" ? `${o.commissionValue}%` : o.commissionType === "FIXED" ? `${money(o.commissionValue, o.currency || "INR")} fixed` : "No commission"}</div></td><td className="py-3 pr-4 text-[11px] opacity-80">{dateText(o.eventAt || o.createdAt, true)}</td><td className="py-3 pr-4"><OrderStatus order={o} dark={dark} /></td><td className="py-3 pr-4 text-right font-medium">{money(o.amount, o.currency || "INR")}</td><td className="py-3 text-right"><span className={o.commissionEarned ? "font-semibold text-[#F97316]" : "opacity-60"}>{o.commissionEarned ? money(o.commissionAmount, o.currency || "INR") : "—"}</span></td></tr>)}</tbody></table></div>;
-}
-function SalesGraph({ graph, dark }) {
-  const [metric, setMetric] = useState("salesAmount");
-  const [hovered, setHovered] = useState(null);
-  const points = graph?.points || [];
-  const highest = Math.max(1, ...points.map((p) => Number(p[metric]) || 0));
-  const label = metric === "salesAmount" ? "Sales" : metric === "commission" ? "Commission" : "Successful orders";
-  return <Panel title="Performance over time" caption={`Daily ${label.toLowerCase()} · ${graph?.days || 7} days · IST`} icon={BarChart3} dark={dark} action={<div className="flex flex-wrap gap-1">{[["salesAmount", "Sales"], ["commission", "Commission"], ["successfulOrders", "Orders"]].map(([k, l]) => <button key={k} onClick={() => { setMetric(k); setHovered(null); }} className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${metric === k ? "bg-[#F97316] text-white" : dark ? "bg-[#282828] text-[#AAA]" : "bg-[#F3F3F3] text-[#777]"}`}>{l}</button>)}</div>}>
-    {!points.length ? <Empty text="No graph points available." dark={dark} /> : <><div className={`mb-5 flex flex-wrap justify-between gap-3 rounded-lg p-3 text-[12px] ${dark ? "bg-[#222]" : "bg-[#F8F8F8]"}`}><span className="opacity-70">{hovered === null ? `Total ${label.toLowerCase()} in chart` : dateText(`${points[hovered]?.date}T00:00:00+05:30`)}</span><b className="text-[#F97316]">{metric === "successfulOrders" ? count(hovered === null ? points.reduce((a, p) => a + (Number(p[metric]) || 0), 0) : points[hovered]?.[metric]) : money(hovered === null ? points.reduce((a, p) => a + (Number(p[metric]) || 0), 0) : points[hovered]?.[metric])}</b></div>
-      <div className="relative flex h-[230px] items-end gap-1.5 overflow-x-auto pb-8 sm:gap-2">{points.map((p, i) => { const val = Number(p[metric]) || 0; const height = Math.max(val > 0 ? 4 : 2, (val / highest) * 100); const showLabel = points.length <= 14 || i % Math.ceil(points.length / 10) === 0; return <button type="button" title={`${p.date}: ${val}`} aria-label={`${p.date}: ${val}`} key={p.date} onMouseEnter={() => setHovered(i)} onFocus={() => setHovered(i)} onMouseLeave={() => setHovered(null)} className="relative flex h-full min-w-[13px] flex-1 flex-col justify-end outline-none sm:min-w-[16px]"><span style={{ height: `${height}%` }} className={`w-full rounded-t-md transition-all duration-200 ${hovered === i ? "bg-[#F97316]" : dark ? "bg-[#9B4E1B] hover:bg-[#F97316]" : "bg-[#FDBA84] hover:bg-[#F97316]"}`} />{showLabel && <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] opacity-60">{p.date.slice(5)}</span>}</button> })}</div><p className={`mt-2 text-[10px] ${dark ? "text-[#888]" : "text-[#888]"}`}>Hover or tap a bar to inspect a day. All dates use Asia/Kolkata.</p></>}
-  </Panel>;
-}
-function TransactionModal({ open, onClose, token, dark, recent = [] }) {
-  const [filters, setFilters] = useState({ status: "ALL", startDate: "", endDate: "", sort: "desc" });
-  const [applied, setApplied] = useState(filters);
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  useEffect(() => { if (!open) return; const close = (e) => { if (e.key === "Escape") onClose(); }; document.addEventListener("keydown", close); const prior = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.removeEventListener("keydown", close); document.body.style.overflow = prior; }; }, [open, onClose]);
-  useEffect(() => { if (!open || !token) return; let cancelled = false; const controller = new AbortController(); (async () => { setLoading(true); setError(""); try { const r = await axios.get(API.orders, { headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000, signal: controller.signal, params: { ...applied, page, limit: 15, ...(!applied.startDate ? { startDate: undefined, endDate: undefined } : {}) } }); if (!cancelled) setData(r.data?.data || null); } catch (e) { if (!cancelled && !axios.isCancel(e)) setError(errorText(e, "Unable to load transactions.")); } finally { if (!cancelled) setLoading(false); } })(); return () => { cancelled = true; controller.abort() }; }, [open, token, applied, page]);
-  if (!open) return null;
-  const totals = data?.totals || {};
-  const orders = data?.orders || [];
-  const pagination = data?.pagination || {};
-  const muted = dark ? "text-[#AAA]" : "text-[#777]";
-  return <div role="presentation" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}><section role="dialog" aria-modal="true" aria-label="Affiliate transactions" className={`flex max-h-[94vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-2xl border shadow-2xl ${dark ? "border-[#393939] bg-[#141414] text-white" : "border-[#DDD] bg-white text-[#181818]"}`}>
-    <header className={`flex shrink-0 items-start justify-between gap-3 border-b px-5 py-4 sm:px-7 ${dark ? "border-[#343434]" : "border-[#EEE]"}`}><div><p className="text-[10px] font-bold uppercase tracking-widest text-[#F97316]">Target Trek · Affiliate</p><h2 className="mt-1.5 text-[21px] font-semibold">Transactions</h2><p className={`mt-1 text-[11px] ${muted}`}>Private partner transactions · 15 per page</p></div><button onClick={onClose} aria-label="Close transactions" className={`rounded-lg p-2 ${dark ? "hover:bg-[#303030]" : "hover:bg-[#EEE]"}`}><X size={20} /></button></header>
-    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7"><div className={`grid gap-3 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] ${dark ? "border-[#363636] bg-[#1E1E1E]" : "border-[#EEE] bg-[#FAFAFA]"}`}><label className="text-[11px] font-medium">Status<select value={filters.status} onChange={e => setFilters(v => ({ ...v, status: e.target.value }))} className={`mt-1.5 h-10 w-full rounded-lg border px-2 text-[12px] ${dark ? "border-[#444] bg-[#292929]" : "border-[#DDD] bg-white"}`}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></label><DateInput label="From" value={filters.startDate} onChange={v => setFilters(p => ({ ...p, startDate: v }))} dark={dark} /><DateInput label="To" value={filters.endDate} onChange={v => setFilters(p => ({ ...p, endDate: v }))} dark={dark} /><label className="text-[11px] font-medium">Order<select value={filters.sort} onChange={e => setFilters(v => ({ ...v, sort: e.target.value }))} className={`mt-1.5 h-10 w-full rounded-lg border px-2 text-[12px] ${dark ? "border-[#444] bg-[#292929]" : "border-[#DDD] bg-white"}`}><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label><div className="flex items-end gap-2"><SmallButton primary onClick={() => { if (Boolean(filters.startDate) !== Boolean(filters.endDate)) { toast.error("Select both dates or neither."); return; } if (filters.startDate && filters.startDate > filters.endDate) { toast.error("Start date must precede end date."); return; } setPage(1); setApplied({ ...filters }); }}><Filter size={14} />Apply</SmallButton><SmallButton dark={dark} onClick={() => { const v = { status: "ALL", startDate: "", endDate: "", sort: "desc" }; setFilters(v); setApplied(v); setPage(1) }}>Clear</SmallButton></div></div>
-      {error && <div className="rounded-lg border border-red-500/30 p-3 text-[12px] text-red-500">{error}<button onClick={() => setApplied({ ...applied })} className="ml-3 underline">Retry</button></div>}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric dark={dark} icon={ShoppingBag} label="Matching orders" value={count(totals.totalOrders)} /><Metric dark={dark} icon={TrendingUp} label="Verified sales" value={money(totals.successfulAmount)} /><Metric dark={dark} icon={Wallet} label="Earned commission" value={money(totals.earnedCommission)} /><Metric dark={dark} icon={AlertCircle} label="Failed orders" value={count(totals.failedOrders)} /></div>
-      {loading ? <Loading label="Loading private transactions..." /> : <OrderRows orders={orders} dark={dark} />}
-      <div className="flex flex-wrap items-center justify-between gap-3"><p className={`text-[11px] ${muted}`}>{count(pagination.total)} matching orders · Page {pagination.page || page} / {pagination.pages || 1}</p><div className="flex gap-2"><SmallButton dark={dark} disabled={loading || !pagination.hasPrevious} onClick={() => setPage(p => Math.max(1, p - 1))}><ChevronLeft size={15} />Previous</SmallButton><SmallButton dark={dark} disabled={loading || !pagination.hasNext} onClick={() => setPage(p => p + 1)}>Next<ChevronRight size={15} /></SmallButton></div></div>
-    </div></section></div>;
-}
-function SalesDashboard({ token, profile, dark }) {
-  const [graphDays, setGraphDays] = useState(7);
-  const [dashboard, setDashboard] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [revision, setRevision] = useState(0);
-  const [transactionsOpen, setTransactionsOpen] = useState(false);
-  const [period, setPeriod] = useState("last7Days");
-  useEffect(() => { if (!token) return; let alive = true; const controller = new AbortController(); (async () => { setLoading(true); setError(""); try { const r = await axios.get(API.dashboard, { headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000, signal: controller.signal, params: { graphDays } }); if (alive) setDashboard(r.data?.data || null); } catch (e) { if (alive && !axios.isCancel(e)) setError(errorText(e, "Unable to load sales dashboard.")); } finally { if (alive) setLoading(false); } })(); return () => { alive = false; controller.abort() }; }, [token, graphDays, revision]);
-  const summary = dashboard?.summary || {};
-  const current = summary[period] || {};
-  const muted = dark ? "text-[#999]" : "text-[#777]";
-  const recent = dashboard?.recentOrders || [];
-  return <div className="space-y-5">
-    {/* <div className={`relative overflow-hidden rounded-2xl border p-5 sm:p-7 ${dark?"border-[#453321] bg-[#211A16]":"border-[#F5D7C2] bg-[#FFF9F4]"}`}><div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-[#F97316]/10 blur-3xl"/><div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#F97316]"><Sparkles size={14}/> Partner analytics</div><h2 className="mt-3 text-[23px] font-semibold tracking-tight sm:text-[29px]">Your sales performance</h2><p className={`mt-2 max-w-lg text-[12px] leading-6 ${muted}`}>Verified sales, affiliate commission, payment trends and your most recent orders. Updated from your private dashboard API.</p></div><div className="flex flex-wrap gap-2"><SmallButton dark={dark} disabled={loading} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={15} className={loading?"animate-spin":""}/>Refresh</SmallButton><SmallButton primary onClick={()=>setTransactionsOpen(true)}><ReceiptText size={15}/>All transactions<ArrowRight size={15}/></SmallButton></div></div></div> */}
-    {error && <div className="rounded-xl border border-red-500/30 p-5 text-[12px] text-red-500"><AlertCircle size={17} className="mr-2 inline" />{error}<button onClick={() => setRevision(v => v + 1)} className="ml-3 font-semibold underline">Try again</button></div>}
-    {loading && !dashboard ? <Loading label="Loading affiliate sales..." /> : dashboard ? <>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><Metric dark={dark} icon={ShoppingBag} label="All orders" value={count(summary.allTime?.totalOrders)} sub="All attributed orders" /><Metric dark={dark} icon={TrendingUp} label="Verified sales" value={money(summary.allTime?.successfulAmount)} sub={`${count(summary.allTime?.successfulOrders)} successful orders`} /><Metric dark={dark} icon={Wallet} label="Earned commission" value={money(summary.allTime?.earnedCommission)} sub="Verified, non-refunded orders" /><Metric dark={dark} icon={CheckCircle2} label="Success rate" value={`${Number(summary.allTime?.conversionRate || 0).toFixed(1)}%`} sub="Across all attributed orders" /></div>
-      <Panel dark={dark} icon={CalendarRange} title="Sales by period" caption="Compare verified orders and earnings across time" action={<select className={`h-10 max-w-[150px] rounded-lg border px-2.5 text-[12px] ${dark ? "border-[#444] bg-[#242424]" : "border-[#DDD] bg-white"}`} value={period} onChange={e => setPeriod(e.target.value)}>{[["today", "Today"], ["last7Days", "Last 7 days"], ["last30Days", "Last 30 days"], ["last365Days", "Last 365 days"], ["allTime", "All time"]].map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>}><div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><Metric dark={dark} icon={TrendingUp} label="Sales amount" value={money(current.successfulAmount)} /><Metric dark={dark} icon={Wallet} label="Your commission" value={money(current.earnedCommission)} /><Metric dark={dark} icon={ShoppingBag} label="Successful orders" value={count(current.successfulOrders)} /><Metric dark={dark} icon={AlertCircle} label="Failed attempts" value={count(current.failedOrders)} sub={`Attempted ${money(current.failedAttemptedAmount)}`} /></div><div className={`mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4 text-[11px] ${dark ? "border-[#333] text-[#AAA]" : "border-[#EEE] text-[#777]"}`}><span>Pending: <b>{count(current.pendingOrders)}</b></span><span>Refunded: <b>{count(current.refundedOrders)}</b></span><span>Remaining before fees: <b>{money(current.remainingAmount)}</b></span><span>Total attempts: <b>{count(current.totalOrders)}</b></span></div></Panel>
-      <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[14px] font-semibold">Sales trends</h3><div className="flex gap-1 rounded-lg border border-[#888]/20 p-1">{[7, 30, 365].map(d => <button key={d} onClick={() => setGraphDays(d)} className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${graphDays === d ? "bg-[#F97316] text-white" : muted}`}>{d === 365 ? "1 year" : `${d} days`}</button>)}</div></div>
-      <SalesGraph graph={dashboard.graph} dark={dark} />
-      <Panel dark={dark} icon={ReceiptText} title="Recent transactions" caption="Latest 15 orders associated with your affiliate account" action={<SmallButton dark={dark} onClick={() => setTransactionsOpen(true)}>View transactions<ArrowRight size={14} /></SmallButton>}><OrderRows orders={recent.slice(0, 15)} dark={dark} /><p className={`mt-4 text-[11px] ${muted}`}>Customer details, payment credentials, and gateway responses are never shown.</p></Panel>
-      <Panel dark={dark} icon={Handshake} title="Your affiliate terms" caption="Current assigned referral configuration"><div className="grid grid-cols-2 gap-5 sm:grid-cols-4"><FieldDetail dark={dark} label="Referral code" value={dashboard.affiliate?.code || profile?.affiliate?.code} copy icon={Copy} /><FieldDetail dark={dark} label="Commission type" value={dashboard.affiliate?.commissionType || profile?.affiliate?.commissionType} /><FieldDetail dark={dark} label="Current rate" value={(dashboard.affiliate?.commissionType || profile?.affiliate?.commissionType) === "percentage" ? `${dashboard.affiliate?.commissionValue ?? profile?.affiliate?.commissionValue}%` : money(dashboard.affiliate?.commissionValue ?? profile?.affiliate?.commissionValue)} /><FieldDetail dark={dark} label="Partner status" value={dashboard.affiliate?.status || profile?.affiliate?.status} /></div><p className={`mt-5 text-[11px] leading-6 ${muted}`}>Commissions are snapshots at checkout, and recognized earnings count only eligible verified sales. They are not payment or payout confirmations. Refunds may change historical totals.</p></Panel>
-    </> : null}
-    <TransactionModal open={transactionsOpen} onClose={() => setTransactionsOpen(false)} dark={dark} token={token} recent={recent} />
-  </div>;
-}
-function PasswordPage({ profile, token, dark }) {
-  const [form, setForm] = useState(emptyPassword);
-  const [visible, setVisible] = useState({ oldPassword: false, newPassword: false, confirmPassword: false });
-  const [busy, setBusy] = useState(false);
-  const [serverError, setServerError] = useState("");
-  const [touched, setTouched] = useState(false);
-  const rules = RULES.map(r => ({ ...r, passed: r.test(form.newPassword) }));
-  const valid = rules.every(r => r.passed);
-  const matching = Boolean(form.confirmPassword) && form.confirmPassword === form.newPassword;
-  const same = Boolean(form.oldPassword) && form.oldPassword === form.newPassword;
-  const muted = dark ? "text-[#999]" : "text-[#777]";
-  const update = e => { setForm(p => ({ ...p, [e.target.name]: e.target.value })); setServerError(""); };
-  async function submit(e) {
-    e.preventDefault(); setTouched(true); if (busy) return; if (!form.oldPassword) return toast.error("Enter the current password"); if (!valid) return toast.error("Meet all password requirements"); if (!matching) return toast.error("Passwords do not match"); if (same) return toast.error("Choose a password different from your current one"); setBusy(true); setServerError(""); try {
-      const r = await axios.post(API.password, form, { headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000 }); if (!r.data?.success) throw new Error(r.data?.message || "Unable to change password"); setForm(emptyPassword); toast.success("Password updated. Please sign in again.");
-      // Full clearing is explicitly requested. This also removes redux-persist state
-      // and any locally stored access/refresh tokens. Don't just navigate using React Router.
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.replace(LOGIN_ROUTE);
-    } catch (err) { const msg = errorText(err, "Unable to update password."); setServerError(msg); toast.error(msg); } finally { setBusy(false) }
-  }
-  return <div className="space-y-5"><p className={`text-[11px] ${muted}`}>Last password change: {profile?.passwordChangedAt ? dateText(profile.passwordChangedAt, true) : "Never"}</p>
-    <Panel dark={dark} title="Update your password" icon={LockKeyhole} caption="Choose a secure password to protect your account"><form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_270px]"><div className="space-y-5">{[["oldPassword", "Current password"], ["newPassword", "New password"], ["confirmPassword", "Confirm new password"]].map(([key, label]) => <label key={key} className="block"><span className="text-[12px] font-semibold">{label}</span><div className="relative mt-2"><KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" size={16} /><input type={visible[key] ? "text" : "password"} name={key} value={form[key]} onChange={update} disabled={busy} autoComplete={key === "oldPassword" ? "current-password" : "new-password"} maxLength={128} className={`h-12 w-full rounded-lg border pl-10 pr-12 text-[13px] outline-none focus:border-[#F97316] ${dark ? "border-[#424242] bg-[#212121]" : "border-[#DDD] bg-white"}`} /><button type="button" aria-label={visible[key] ? "Hide password" : "Show password"} onClick={() => setVisible(p => ({ ...p, [key]: !p[key] }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999]">{visible[key] ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>{key === "confirmPassword" && form.confirmPassword && <p className={`mt-1.5 text-[11px] ${matching ? "text-[#F97316]" : "text-red-500"}`}>{matching ? "Passwords match" : "Passwords don't match"}</p>}</label>)}
-      {same && <p className="text-[12px] text-red-500">Your new password must differ from the current password.</p>}{serverError && <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[12px] text-red-500">{serverError}</p>}<SmallButton primary type="submit" disabled={busy || !form.oldPassword || !valid || !matching || same} className="w-full sm:w-auto">{busy ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />} {busy ? "Updating..." : "Change password"}<ArrowRight size={15} /></SmallButton></div>
-      <div className={`self-start rounded-xl border p-4 ${dark ? "border-[#454033] bg-[#24201B]" : "border-[#F3DED0] bg-[#FFF9F4]"}`}><div className="flex items-center gap-2 text-[12px] font-bold"><ShieldCheck className="text-[#F97316]" size={19} />Password checklist</div><div className="mt-4 grid grid-cols-5 gap-1">{rules.map(r => <span key={r.label} className={`h-1.5 rounded-full ${r.passed ? "bg-[#F97316]" : dark ? "bg-[#444]" : "bg-[#DDD]"}`} />)}</div><div className="mt-4 space-y-3">{rules.map(r => <div key={r.label} className={`flex items-center gap-2 text-[11px] ${r.passed ? "" : muted}`}><span className={`flex h-4 w-4 items-center justify-center rounded-full border ${r.passed ? "border-[#F97316] bg-[#F97316] text-white" : dark ? "border-[#666]" : "border-[#CCC]"}`}>{r.passed && <Check size={11} />}</span>{r.label}</div>)}</div><p className={`mt-5 border-t pt-4 text-[11px] leading-5 ${dark ? "border-[#504133] text-[#AAA]" : "border-[#F0D8C6] text-[#888]"}`}>On success, all browser-stored auth and session data are cleared and you'll be redirected to login. Other sessions must also be revoked server-side.</p></div></form></Panel></div>;
-}
-function DevicesPage({ token, dark }) {
-  const [devices, setDevices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(null); // { kind: "one" | "others" | "all", device? }
-  const [renaming, setRenaming] = useState(null); // { sessionId, name }
-  const [renameBusy, setRenameBusy] = useState(false);
-  const muted = dark ? "text-[#999]" : "text-[#777]";
-  const auth = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000 }), [token]);
+const ROLE = { admin: "Administrator", Employee: "Employee", normal: "Member", affiliate: "Affiliate partner" };
+const roleText = (r) => ROLE[r] || "Member";
+// Members just see their account; the role is only worth showing for partners and the team.
+const showRole = (r) => r === "affiliate" || r === "admin" || r === "Employee";
+const phoneText = (u) => (u?.mobile ? `${u.countryCode ? `${u.countryCode} ` : ""}${u.mobile}` : null);
+const titleCase = (s) => String(s || "").toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const load = useCallback(async () => {
-    if (!token) return;
+const copy = async (value, label = "Copied") => {
+  try { await navigator.clipboard.writeText(String(value)); toast.success(label); } catch { toast.error("Couldn't copy. Select it instead."); }
+};
+
+/* every account event, in plain words */
+const EVENTS = {
+  ACCOUNT_CREATED: ["Account created", "Your Target Trek account was created."],
+  SIGNUP_EMAIL_VERIFIED: ["Email verified", "You confirmed your email address and finished signing up."],
+  SIGNUP_GOOGLE: ["Signed up with Google", "Your account was created with Google sign-in."],
+  GOOGLE_LINKED: ["Google linked", "Google sign-in was connected to this account."],
+  LOGIN_SUCCESS: ["Signed in", "A successful sign-in to your account."],
+  LOGIN_FAILED: ["Sign-in failed", "Someone tried to sign in with a wrong password."],
+  LOGIN_OTP_SENT: ["Sign-in code sent", "A one-time code was emailed to confirm a new device."],
+  LOGIN_OTP_RESENT: ["Sign-in code re-sent", "Another one-time code was emailed."],
+  LOGIN_OTP_FAILED: ["Wrong sign-in code", "A one-time code was entered incorrectly."],
+  LOGOUT: ["Signed out", "You signed out of a device."],
+  SESSION_REVOKED: ["Device signed out", "A device was removed from your account."],
+  OTHER_SESSIONS_REVOKED: ["Other devices signed out", "Every device except the one in use was signed out."],
+  ALL_SESSIONS_REVOKED: ["Signed out everywhere", "Every device was signed out."],
+  DEVICE_TRUST_REMOVED: ["Device forgotten", "A remembered device will need a sign-in code again."],
+  PASSWORD_CHANGED: ["Password changed", "Your password was changed and devices were signed out."],
+  PASSWORD_SETUP_COMPLETED: ["Password set", "A password was set for this account."],
+  PASSWORD_RESET_VIA_EMAIL_OTP: ["Password reset", "Your password was reset with an email code."],
+  ACCOUNT_SELF_DELETED: ["Account deletion requested", "A request to delete this account."],
+  ACCOUNT_UPDATED: ["Account details updated", "Name, email, mobile, role or affiliate settings were changed."],
+  ACCOUNT_STATUS_CHANGED: ["Account status changed", "The account was activated or restricted."],
+  AFFILIATE_STATUS_CHANGED: ["Affiliate status changed", "The affiliate partnership was switched on or off."],
+  PASSWORD_LINK_SENT: ["Password link sent", "A password setup or reset link was emailed."],
+  ACCOUNT_DELETED: ["Account deleted", "The account was permanently deleted."],
+};
+const eventInfo = (a) => EVENTS[a] || [titleCase(a || "Activity"), null];
+
+const DETAIL_LABEL = { count: "Devices", trustedDevice: "Remembered device", reason: "Reason", provider: "Provider", method: "Method", source: "From" };
+
+/* ------------------------------------------------------------ data: one call, kept in memory between visits */
+let memo = null; // { key, data }
+
+function useAccount(cacheKey) {
+  const [data, setData] = useState(() => (memo?.key === cacheKey ? memo.data : null));
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(!data);
+  const seq = useRef(0);
+
+  const load = useCallback(async ({ fresh = false } = {}) => {
+    const n = ++seq.current;
     setLoading(true); setError("");
     try {
-      const { data } = await axios.get(API.sessions, auth);
-      if (!data?.success || !Array.isArray(data.sessions)) throw new Error(data?.message || "Unexpected response.");
-      setDevices(data.sessions);
-    } catch (e) { setError(errorText(e, "Could not load your devices.")); } finally { setLoading(false); }
-  }, [token, auth]);
+      const { data: r } = await accountHttp.get("/users/account", { params: fresh ? { fresh: 1 } : undefined });
+      if (!r?.success || !r.user) throw new Error(r?.message || "Your account could not be loaded.");
+      if (n !== seq.current) return;
+      memo = { key: cacheKey, data: r };
+      setData(r);
+    } catch (e) {
+      if (n === seq.current) setError(errMsg(e));
+    } finally {
+      if (n === seq.current) setLoading(false);
+    }
+  }, [cacheKey]);
+
+  const patch = useCallback((fn) => setData((d) => { const next = fn(d); memo = { key: cacheKey, data: next }; return next; }), [cacheKey]);
+
   useEffect(() => { load(); }, [load]);
+  return { data, error, loading, load, patch };
+}
 
-  // The current device (or every device) is gone after this call: sign out locally too.
-  const leave = () => { localStorage.clear(); sessionStorage.clear(); window.location.replace(LOGIN_ROUTE); };
+const leave = () => {
+  const theme = localStorage.getItem("theme");
+  localStorage.clear(); sessionStorage.clear();
+  if (theme) localStorage.setItem("theme", theme);
+  memo = null;
+  window.location.replace("/login");
+};
 
-  async function run() {
-    if (!confirm || busy) return;
-    setBusy(true);
-    try {
-      let r;
-      if (confirm.kind === "all") r = await axios.post(API.logoutAll, {}, auth);
-      else if (confirm.kind === "others") r = await axios.delete(API.sessions, auth);
-      else r = await axios.delete(`${API.sessions}/${encodeURIComponent(confirm.device.sessionId)}`, auth);
-      if (!r.data?.success) throw new Error(r.data?.message || "Request failed.");
-      toast.success(r.data.message || "Done");
-      setConfirm(null);
-      if (confirm.kind === "all" || (confirm.kind === "one" && confirm.device.isCurrent)) return leave();
-      await load();
-    } catch (e) { toast.error(errorText(e, "Could not log out.")); } finally { setBusy(false); }
-  }
+/* ------------------------------------------------------------ small parts */
+const Kpi = ({ icon: Icon, label, value, sub, text }) => (
+  <div className="arx-kpi">
+    <span><Icon size={16} weight="bold" aria-hidden />{label}</span>
+    <b className={text ? "txt" : undefined}>{value}</b>
+    {sub && <small>{sub}</small>}
+  </div>
+);
 
-  async function saveName() {
-    const name = (renaming?.name || "").trim();
-    if (name.length < 2) return toast.error("Enter at least 2 characters");
-    setRenameBusy(true);
-    try {
-      const r = await axios.patch(`${API.sessions}/${encodeURIComponent(renaming.sessionId)}`, { name }, auth);
-      if (!r.data?.success) throw new Error(r.data?.message || "Request failed.");
-      setDevices(list => list.map(d => d.sessionId === renaming.sessionId ? { ...d, device: { ...d.device, name: r.data.name || name } } : d));
-      // Remember the name for this browser so future sign-ins use it too.
-      if (devices.find(d => d.sessionId === renaming.sessionId)?.isCurrent) setDeviceLabel(name);
-      setRenaming(null); toast.success("Device renamed");
-    } catch (e) { toast.error(errorText(e, "Could not rename the device.")); } finally { setRenameBusy(false); }
-  }
+const Card = ({ icon: Icon, title, caption, action, children, className }) => (
+  <section className={cx("arx-card", className)}>
+    <div className="acx-cardhead">
+      <h3>{Icon && <Icon size={15} weight="bold" aria-hidden />}{title}</h3>
+      {action}
+      {caption && <p>{caption}</p>}
+    </div>
+    {children}
+  </section>
+);
 
-  const others = devices.filter(d => !d.isCurrent).length;
-  const Icon = (d) => d.device?.type === "tablet" ? Tablet : d.device?.type === "mobile" ? Smartphone : Laptop;
-  const title = !confirm ? "" : confirm.kind === "all" ? "Log out of all devices?" : confirm.kind === "others" ? `Log out ${others} other device${others === 1 ? "" : "s"}?` : confirm.device.isCurrent ? "Log out of this device?" : `Log out ${confirm.device.device?.name || "this device"}?`;
-  const body = !confirm ? "" : confirm.kind === "all" ? "Every device, including this one, is signed out immediately and remembered devices are forgotten. You will need to sign in again." : confirm.kind === "others" ? "All devices except this one are signed out immediately." : confirm.device.isCurrent ? "You will be signed out here and taken to the login page." : "That device is signed out immediately. It will need your password (and an OTP) to get back in.";
+const Row = ({ label, children }) => <div><dt>{label}</dt><dd>{children ?? "—"}</dd></div>;
 
-  return <div className="space-y-5">
-    <Panel dark={dark} title="Active devices" icon={MonitorSmartphone} caption="Only devices that are signed in right now are listed. Expired and logged-out devices disappear automatically."
-      action={<div className="flex flex-wrap gap-2">
-        <SmallButton dark={dark} disabled={loading || busy} onClick={load}><RefreshCw size={14} />Refresh</SmallButton>
-        <SmallButton dark={dark} disabled={busy || others === 0} onClick={() => setConfirm({ kind: "others" })}><LogOut size={14} />Log out other devices</SmallButton>
-        <SmallButton dark={dark} disabled={busy || devices.length === 0} onClick={() => setConfirm({ kind: "all" })}><LogOut size={14} />Log out all</SmallButton>
-      </div>}>
-      {confirm && <div role="alertdialog" className="mb-5 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-        <h4 className="text-[13px] font-semibold">{title}</h4>
-        <p className={`mt-2 text-[11px] ${muted}`}>{body}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <SmallButton dark={dark} disabled={busy} onClick={() => setConfirm(null)}>Cancel</SmallButton>
-          <SmallButton primary disabled={busy} onClick={run}>{busy ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}Yes, log out</SmallButton>
+const StatusBadge = ({ status }) => {
+  const s = String(status || "").toLowerCase();
+  const tone = s === "active" ? "ok" : ["blocked", "suspended", "inactive", "disabled"].includes(s) ? "bad" : "muted";
+  return <Badge tone={tone}>{s ? titleCase(s) : "Unknown"}</Badge>;
+};
+
+const deviceIcon = (t) => (t === "mobile" ? DeviceMobile : t === "tablet" ? DeviceTablet : Laptop);
+
+function Skeleton() {
+  return (
+    <div className="acx-stack" aria-busy="true" aria-label="Loading your account">
+      <div className="acx-skel" style={{ height: 120 }} />
+      <div className="arx-kpis">{[0, 1, 2, 3].map((i) => <div key={i} className="acx-skel" style={{ height: 96 }} />)}</div>
+      <div className="acx-grid2"><div className="acx-skel" style={{ height: 260 }} /><div className="acx-skel" style={{ height: 260 }} /></div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ overview */
+function Overview({ data, go }) {
+  const u = data.user;
+  const verified = Boolean(u.emailVerifiedAt);
+  const recentPw = u.passwordChangedAt && Date.now() - new Date(u.passwordChangedAt).getTime() < 180 * 86400000;
+  const others = data.deviceCount - 1;
+  const checks = [
+    { ok: verified, title: verified ? "Email verified" : "Email not verified", text: verified ? `Confirmed ${day(u.emailVerifiedAt)}` : "Sign-in codes and receipts go to this address." },
+    { ok: Boolean(recentPw), title: u.passwordChangedAt ? `Password changed ${ago(u.passwordChangedAt)}` : "Password never changed", text: recentPw ? "Changed in the last 6 months." : "Changing it every few months keeps the account safe.", to: "security" },
+    { ok: others <= 2, title: `${count(data.deviceCount)} signed-in device${data.deviceCount === 1 ? "" : "s"}`, text: others > 0 ? "Sign out any device you don't recognise." : "Only this device is signed in.", to: "devices" },
+    { ok: true, title: u.googleLinked ? "Google sign-in linked" : "Password sign-in", text: u.googleLinked ? `Linked ${day(u.googleLinkedAt)}` : "You sign in with email and password." },
+  ];
+  const last = data.activities[0];
+
+  return (
+    <div className="acx-stack">
+      <div className="arx-kpis">
+        <Kpi icon={CalendarBlank} label="Member for" value={sinceText(u.createdAt)} sub={`Since ${day(u.createdAt)}`} text />
+        <Kpi icon={Clock} label="Last sign-in" value={ago(u.lastLoginAt)} sub={stamp(u.lastLoginAt)} text />
+        <Kpi icon={Devices} label="Active devices" value={count(data.deviceCount)} sub={data.deviceCount > 5 ? "Showing the 5 most recent" : "Signed in right now"} />
+        <Kpi icon={Key} label="Password age" value={u.passwordChangedAt ? sinceText(u.passwordChangedAt) : "Never changed"} sub={u.passwordChangedAt ? `Changed ${day(u.passwordChangedAt)}` : "Set at sign-up"} text />
+      </div>
+
+      <div className="acx-grid2">
+        <Card icon={IdentificationCard} title="Personal information" caption="Registered details. To change your name, email or mobile, contact support.">
+          <dl className="rf-kv">
+            <Row label="Full name">{u.name}</Row>
+            <Row label="Email">
+              <span style={{ overflowWrap: "anywhere" }}>{u.email}</span>
+              <button type="button" className="acx-iconlink" onClick={() => copy(u.email, "Email copied")} aria-label="Copy email"><Copy size={14} /></button>
+            </Row>
+            <Row label="Mobile">{phoneText(u) || <span className="muted">Not added</span>}</Row>
+            {showRole(u.role) && <Row label="Account type">{roleText(u.role)}</Row>}
+            <Row label="Status"><StatusBadge status={u.status} /></Row>
+            <Row label="Joined">{stamp(u.createdAt)}</Row>
+          </dl>
+          {u.statusReason && u.status !== "active" && <p className="acx-note"><b>Note from the team:</b> {u.statusReason}</p>}
+        </Card>
+
+        <Card icon={ShieldCheck} title="Security check-up" caption="A quick look at how protected your account is.">
+          <ul className="acx-checks">
+            {checks.map((c) => (
+              <li key={c.title} className={c.ok ? "ok" : "warn"}>
+                {c.ok ? <CheckCircle className="ic" size={20} weight="fill" /> : <WarningCircle className="ic" size={20} weight="fill" />}
+                <div><b>{c.title}</b><span>{c.text}</span></div>
+              </li>
+            ))}
+          </ul>
+          <div className="rf-btns">
+            <Btn variant="ghost" size="sm" onClick={() => go("security")}><Lock size={15} />Change password</Btn>
+            <Btn variant="ghost" size="sm" onClick={() => go("devices")}><Devices size={15} />Manage devices</Btn>
+          </div>
+        </Card>
+      </div>
+
+      {u.role === "affiliate" && <AffiliateTerms user={u} go={go} />}
+
+      {(u.role === "admin" || u.role === "Employee") && (
+        <Card icon={UserGear} title="Team tools" caption={u.role === "admin" ? "You have administrator access." : "You have reviewer access."}>
+          <div className="rf-btns">
+            {u.role === "admin" && <Btn as={Link} to="/dashboard" size="sm"><SquaresFour size={15} />Admin dashboard</Btn>}
+            <Btn as={Link} to="/admin/resume-reviews" variant="ghost" size="sm">Resume Lab console<ArrowRight size={14} /></Btn>
+            {u.role === "admin" && <Btn as={Link} to="/admin/referrals" variant="ghost" size="sm">Referrals console<ArrowRight size={14} /></Btn>}
+          </div>
+        </Card>
+      )}
+
+      {last && (
+        <Card icon={ClockCounterClockwise} title="Latest activity" action={<Btn variant="ghost" size="sm" onClick={() => go("activity")}>See last 5<ArrowRight size={14} /></Btn>}>
+          <ul className="acx-acts"><ActivityItem a={last} /></ul>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function AffiliateTerms({ user, go }) {
+  const a = user.affiliate || {};
+  const rate = a.commissionType === "percentage" ? `${a.commissionValue}%` : a.commissionType === "fixed" ? `${money(a.commissionValue)} per sale` : "—";
+  const link = a.code && typeof window !== "undefined" ? `${window.location.origin}/?ref=${encodeURIComponent(a.code)}` : null;
+  return (
+    <Card icon={Handshake} title="Affiliate partnership" caption="Share your code or link. Sales made with it earn you commission." action={go && <Btn variant="ghost" size="sm" onClick={() => go("sales")}><ChartBar size={15} />Sales dashboard</Btn>}>
+      <div className="acx-code">
+        <div><span className="subtle">Your referral code</span><br /><b>{a.code || "Not assigned"}</b></div>
+        <div className="rf-btns">
+          <Btn size="sm" disabled={!a.code} onClick={() => copy(a.code, "Code copied")}><Copy size={15} />Copy code</Btn>
+          {link && <Btn variant="ghost" size="sm" onClick={() => copy(link, "Link copied")}><Globe size={15} />Copy link</Btn>}
         </div>
-      </div>}
-      {loading && devices.length === 0 ? <Loading label="Loading devices..." /> : error ? <div className="space-y-3"><p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[12px] text-red-500">{error}</p><SmallButton dark={dark} onClick={load}>Retry</SmallButton></div> : devices.length === 0 ? <Empty dark={dark} text="No active devices found." /> :
-        <div className="space-y-3">{devices.map(d => { const I = Icon(d); const name = d.device?.name || "Unknown device"; return <div key={d.sessionId} className={`flex flex-col justify-between gap-4 rounded-xl border p-4 sm:flex-row sm:items-center ${d.isCurrent ? "border-[#F97316]/50" : dark ? "border-[#343434] bg-[#1B1B1B]" : "border-[#E8E8E8] bg-[#FAFAFA]"}`}>
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F97316]/10"><I size={19} className="text-[#F97316]" /></span>
-            <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-2 break-words text-[13px] font-semibold">{name}{d.isCurrent && <span className="rounded-full bg-[#F97316] px-2 py-0.5 text-[10px] font-semibold text-white">This device</span>}{d.isTrusted && <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${dark ? "border-[#454545]" : "border-[#DDD]"}`}>Remembered</span>}<button type="button" aria-label="Rename device" title="Name this device, e.g. MacBook Air M5 or iPhone 15 Pro" onClick={() => setRenaming({ sessionId: d.sessionId, name })} className="rounded-md p-1 text-[#F97316] hover:bg-[#F97316]/10"><Pencil size={13} /></button></p>
-              {renaming?.sessionId === d.sessionId && <div className="mt-2 flex flex-wrap items-center gap-2"><input autoFocus maxLength={50} value={renaming.name} onChange={e => setRenaming({ ...renaming, name: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setRenaming(null); }} className={`h-9 min-w-0 flex-1 rounded-lg border px-3 text-[12px] outline-none focus:border-[#F97316] ${dark ? "border-[#424242] bg-[#242424]" : "border-[#DDD] bg-white"}`} /><SmallButton primary disabled={renameBusy} onClick={saveName}>{renameBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}Save</SmallButton><SmallButton dark={dark} disabled={renameBusy} onClick={() => setRenaming(null)}>Cancel</SmallButton></div>}
-              <p className={`mt-1 text-[11px] ${muted}`}>Signed in: {dateText(d.createdAt, true)}</p>
+      </div>
+      <dl className="rf-kv">
+        <Row label="Commission type">{a.commissionType ? titleCase(a.commissionType) : "—"}</Row>
+        <Row label="Commission rate"><b className="mono">{rate}</b></Row>
+        <Row label="Partner status"><StatusBadge status={a.status} /></Row>
+      </dl>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------ activity */
+function ActivityItem({ a }) {
+  const [title, desc] = eventInfo(a.action);
+  const bad = a.result === "failure";
+  const details = Object.entries(a.details || {});
+  return (
+    <li className={cx("acx-act", bad && "bad")}>
+      <span className="dot">{bad ? <Warning size={18} weight="bold" /> : <ShieldCheck size={18} weight="bold" />}</span>
+      <div style={{ minWidth: 0 }}>
+        <div className="top">
+          <b>{title}</b>
+          <time dateTime={a.createdAt} title={stamp(a.createdAt)}>{stamp(a.createdAt)}</time>
+        </div>
+        {desc && <p className="desc">{desc}</p>}
+        <div className="acx-meta">
+          <Badge tone={bad ? "bad" : "ok"}>{bad ? "Failed" : "Success"}</Badge>
+          {a.thisDevice && <Badge tone="brand">This device</Badge>}
+          {a.actor && <span><UserGear size={13} />By <b>{a.actor.name}</b></span>}
+          {a.device && <span>{(() => { const I = deviceIcon(a.device.type); return <I size={13} />; })()}<b>{a.device.name}</b>{a.device.os && a.device.os !== "Unknown OS" ? ` · ${a.device.os}` : ""}</span>}
+          {a.location && <span><MapPin size={13} />{a.location.text}</span>}
+          {a.ipAddress && <span><Globe size={13} />IP <b className="mono">{a.ipAddress}</b></span>}
+          {details.map(([k, v]) => <span key={k}>{DETAIL_LABEL[k] || titleCase(k)}: <b>{typeof v === "boolean" ? (v ? "Yes" : "No") : String(v)}</b></span>)}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function ActivityTab({ data }) {
+  return (
+    <Card icon={ClockCounterClockwise} title="Recent activity" caption="Your 5 latest account and security events, newest first, with the device, place and IP address each came from. Times are in IST.">
+      {data.activities.length === 0
+        ? <div className="rf-empty"><span className="e">🕊️</span><h3>Nothing yet</h3><p>Sign-ins, password changes and device changes will show up here.</p></div>
+        : <ul className="acx-acts">{data.activities.map((a) => <ActivityItem key={a.id} a={a} />)}</ul>}
+      <p className="acx-note">See something you don't recognise? <b>Change your password</b> and <b>sign out all devices</b> right away.</p>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------ devices */
+function DevicesTab({ data, patch }) {
+  const [busy, setBusy] = useState("");
+  const [ask, setAsk] = useState(null); // { kind: one | others | all, d? }
+  const [rename, setRename] = useState(null); // { id, name }
+  const devices = data.devices;
+  const others = Math.max(0, data.deviceCount - 1);
+
+  const run = async () => {
+    if (!ask) return;
+    setBusy("ask");
+    try {
+      const r = ask.kind === "all" ? await accountHttp.post("/auth/logout-all")
+        : ask.kind === "others" ? await accountHttp.delete("/users/sessions")
+        : await accountHttp.delete(`/users/sessions/${encodeURIComponent(ask.d.sessionId)}`);
+      toast.success(r.data?.message || "Done");
+      if (ask.kind === "all" || (ask.kind === "one" && ask.d.isCurrent)) return leave();
+      if (ask.kind === "others") patch((d) => ({ ...d, devices: d.devices.filter((x) => x.isCurrent), deviceCount: 1 }));
+      else patch((d) => ({ ...d, devices: d.devices.filter((x) => x.sessionId !== ask.d.sessionId), deviceCount: Math.max(1, d.deviceCount - 1) }));
+      setAsk(null);
+    } catch (e) { toast.error(errMsg(e)); } finally { setBusy(""); }
+  };
+
+  const save = async () => {
+    const name = rename.name.trim();
+    if (name.length < 2) return toast.error("Use at least 2 characters.");
+    setBusy("rename");
+    try {
+      const r = await accountHttp.patch(`/users/sessions/${encodeURIComponent(rename.id)}`, { name });
+      const finalName = r.data?.name || name;
+      patch((d) => ({ ...d, devices: d.devices.map((x) => (x.sessionId === rename.id ? { ...x, device: { ...x.device, name: finalName } } : x)) }));
+      if (devices.find((x) => x.sessionId === rename.id)?.isCurrent) setDeviceLabel(finalName);
+      setRename(null); toast.success("Device renamed");
+    } catch (e) { toast.error(errMsg(e)); } finally { setBusy(""); }
+  };
+
+  const confirmText = !ask ? null
+    : ask.kind === "all" ? ["Sign out of every device?", "Every device, including this one, is signed out now and remembered devices are forgotten. You'll need to sign in again."]
+    : ask.kind === "others" ? [`Sign out ${others} other device${others === 1 ? "" : "s"}?`, "Every device except this one is signed out now."]
+    : ask.d.isCurrent ? ["Sign out of this device?", "You'll be signed out here and taken to the login page."]
+    : [`Sign out ${ask.d.device?.name || "this device"}?`, "It's signed out now and will need your password (and an email code) to get back in."];
+
+  return (
+    <div className="acx-stack">
+      <Card icon={Devices} title="Signed-in devices"
+        caption={`${count(data.deviceCount)} device${data.deviceCount === 1 ? " is" : "s are"} signed in. ${data.deviceCount > 5 ? "The 5 most recently used are shown, this one first." : "This device is shown first."} Expired and signed-out devices disappear on their own.`}
+        action={<div className="rf-btns">
+          <Btn variant="ghost" size="sm" disabled={others === 0 || Boolean(busy)} onClick={() => setAsk({ kind: "others" })}><SignOut size={15} />Sign out others</Btn>
+          <Btn variant="danger" size="sm" disabled={Boolean(busy)} onClick={() => setAsk({ kind: "all" })}><SignOut size={15} />Sign out everywhere</Btn>
+        </div>}>
+        {ask && (
+          <div className="acx-confirm" role="alertdialog" aria-label={confirmText[0]}>
+            <b>{confirmText[0]}</b><p>{confirmText[1]}</p>
+            <div className="rf-btns">
+              <Btn variant="ghost" size="sm" disabled={busy === "ask"} onClick={() => setAsk(null)}>Cancel</Btn>
+              <Btn variant="danger" size="sm" loading={busy === "ask"} onClick={run}><SignOut size={15} />Yes, sign out</Btn>
             </div>
           </div>
-          <SmallButton dark={dark} disabled={busy} onClick={() => setConfirm({ kind: "one", device: d })}><LogOut size={14} />{d.isCurrent ? "Log out" : "Log out device"}</SmallButton>
-        </div>; })}</div>}
-    </Panel>
-  </div>;
+        )}
+        {devices.length === 0
+          ? <div className="rf-empty"><span className="e">💻</span><h3>No active devices</h3><p>Devices you sign in on will appear here.</p></div>
+          : <div className="acx-devs">{devices.map((d) => {
+            const I = deviceIcon(d.device?.type);
+            const name = d.device?.name || "Unknown device";
+            return (
+              <article key={d.sessionId} className={cx("acx-dev", d.isCurrent && "cur")}>
+                <div className="row">
+                  <span className="ico"><I size={22} weight="duotone" /></span>
+                  <div className="name">
+                    <div>
+                      <b>{name}</b>
+                      {d.isCurrent && <Badge tone="brand">This device</Badge>}
+                      {d.isTrusted && <Badge tone="info">Remembered</Badge>}
+                      <button type="button" className="acx-iconlink" aria-label={`Rename ${name}`} title="Name this device, e.g. “Work laptop”" onClick={() => setRename({ id: d.sessionId, name })}><PencilSimple size={15} /></button>
+                    </div>
+                    <span className="subtle">{[d.device?.browser, d.device?.os].filter((x) => x && x !== "Browser" && x !== "Unknown OS").join(" · ") || "Browser details unavailable"}</span>
+                  </div>
+                </div>
+                {rename?.id === d.sessionId && (
+                  <div className="acx-rename">
+                    <input className="rv-input" autoFocus maxLength={50} value={rename.name} aria-label="Device name"
+                      onChange={(e) => setRename({ ...rename, name: e.target.value })}
+                      onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setRename(null); }} />
+                    <Btn size="sm" loading={busy === "rename"} onClick={save}><Check size={15} />Save</Btn>
+                    <Btn variant="ghost" size="sm" disabled={busy === "rename"} onClick={() => setRename(null)}>Cancel</Btn>
+                  </div>
+                )}
+                <dl className="facts">
+                  <div><dt>Last active</dt><dd title={stamp(d.lastActiveAt)}>{d.isCurrent ? "Now" : ago(d.lastActiveAt)}</dd></div>
+                  <div><dt>Signed in</dt><dd>{stamp(d.createdAt)}</dd></div>
+                  <div><dt>Location</dt><dd>{d.location?.text || "Unknown"}</dd></div>
+                  <div><dt>IP address</dt><dd className="mono">{d.ipAddress || "—"}</dd></div>
+                </dl>
+                <div className="acts">
+                  <Btn variant={d.isCurrent ? "ghost" : "danger"} size="sm" disabled={Boolean(busy)} onClick={() => setAsk({ kind: "one", d })}><SignOut size={15} />{d.isCurrent ? "Sign out here" : "Sign out this device"}</Btn>
+                  {d.isTrusted && d.trustedUntil && <span className="subtle" style={{ alignSelf: "center" }}>Skips the email code until {day(d.trustedUntil)}</span>}
+                </div>
+              </article>
+            );
+          })}</div>}
+      </Card>
+    </div>
+  );
 }
-function UserProfile() {
-  const token = useSelector(s => s.auth?.token);
-  const theme = useTheme(); const dark = theme === "dark";
-  const [tab, setTab] = useState("profile");
-  const [profile, setProfile] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
-  const [activities, setActivities] = useState([]); const [activityLoaded, setActivityLoaded] = useState(false); const [activityLoading, setActivityLoading] = useState(false); const [activityError, setActivityError] = useState("");
-  const fetchProfile = useCallback(async () => { if (!token) { setLoading(false); setError("Please sign in to see your profile."); return; } setLoading(true); setError(""); try { const { data } = await axios.get(API.me, { headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000 }); const user = data?.user || data?.profile || data?.data?.user; if (!user) throw new Error("Profile data not returned."); setProfile(user); } catch (e) { setError(errorText(e, "Could not load profile.")); } finally { setLoading(false) } }, [token]);
-  const fetchActivities = useCallback(async () => { if (!token) return; setActivityLoading(true); setActivityError(""); try { const { data } = await axios.get(API.activities, { headers: { Authorization: `Bearer ${token}` }, withCredentials: true, timeout: 20000, params: { page: 1, limit: 5 } }); setActivities((data?.activities || data?.data?.activities || []).slice(0, 5)); } catch (e) { setActivityError(errorText(e, "Account history is not available.")); } finally { setActivityLoaded(true); setActivityLoading(false) } }, [token]);
-  useEffect(() => { fetchProfile() }, [fetchProfile]);
-  useEffect(() => { if (tab === "activity" && !activityLoaded && !activityLoading) fetchActivities() }, [tab, activityLoaded, activityLoading, fetchActivities]);
-  const nav = TABS.filter(item => !item.affiliateOnly || profile?.role === "affiliate");
-  const chosen = nav.find(v => v.key === tab) || nav[0];
-  const muted = dark ? "text-[#999]" : "text-[#777]";
-  const card = dark ? "border-[#303030] bg-[#151515]" : "border-[#E8E8E8] bg-white";
-  const affiliate = profile?.affiliate;
-  return <div data-theme={theme} className={`mt-16 min-h-screen px-4 py-7 sm:px-6 lg:px-8 ${dark ? "bg-black text-white" : "bg-white text-[#171717]"}`}><div className="mx-auto max-w-[1280px] space-y-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${muted}`}><span className="h-2 w-2 rounded-full bg-[#F97316]" />Target Trek / Account</p><h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Account center</h1><p className={`mt-2 text-[13px] ${muted}`}>Profile, security and affiliate performance in one place.</p></div></div>
-    {loading && !profile ? <Loading label="Loading account..." /> : error && !profile ? <Panel dark={dark}><div className="text-center"><AlertCircle size={27} className="mx-auto text-[#F97316]" /><p className="mt-3 text-sm">{error}</p><SmallButton dark={dark} onClick={fetchProfile} className="mt-4">Retry</SmallButton></div></Panel> : profile && <div className="grid items-start gap-5 lg:grid-cols-[248px_minmax(0,1fr)]"><aside className={`min-w-0 overflow-hidden rounded-2xl border lg:sticky lg:top-24 ${card}`}><div className={`hidden items-center gap-3 border-b p-5 lg:flex ${dark ? "border-[#333]" : "border-[#EEE]"}`}><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F97316] text-base font-bold text-white">{initials(profile.name)}</div><div className="min-w-0"><p className="truncate text-[13px] font-semibold">{profile.name}</p><p className={`mt-1 text-[11px] ${muted}`}>{roleText(profile.role)}</p></div></div><nav aria-label="Account sections" className="flex gap-1 overflow-x-auto p-2 lg:block lg:space-y-1 lg:overflow-visible">{nav.map(item => { const Icon = item.icon; const on = chosen.key === item.key; return <button key={item.key} onClick={() => setTab(item.key)} className={`flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-left lg:w-full ${on ? dark ? "bg-[#392418] text-[#FFA065]" : "bg-[#FFF1E5] text-[#C65C16]" : dark ? "text-[#BBB] hover:bg-[#222]" : "text-[#555] hover:bg-[#F7F7F7]"}`}><Icon size={18} className={on ? "text-[#F97316]" : ""} /><div className="flex-1"><span className="block whitespace-nowrap text-[12px] font-semibold">{item.label}</span><span className={`mt-1 hidden text-[10px] lg:block ${muted}`}>{item.desc}</span></div>{item.soon && <span className={`hidden rounded px-2 py-1 text-[9px] lg:inline ${dark ? "bg-[#333]" : "bg-[#EEE]"}`}>Soon</span>}</button> })}</nav></aside>
-      <main className="min-w-0 space-y-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-[23px] font-semibold tracking-tight">{chosen.label}</h2><p className={`mt-1 text-[12px] ${muted}`}>{chosen.desc}</p></div>{["profile", "password"].includes(chosen.key) && <StatePill dark={dark} status={profile.status} />}</div>
-        {chosen.key === "profile" && <div className="space-y-5"><div className={`overflow-hidden rounded-2xl border ${card}`}><div className="h-1 bg-[#F97316]" /><div className="flex flex-wrap items-center gap-5 p-6"><div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F97316] text-xl font-bold text-white">{initials(profile.name)}</div><div className="min-w-0 flex-1"><h3 className="break-words text-xl font-bold">{profile.name}</h3><p className="mt-1 text-[12px] font-semibold text-[#F97316]">{roleText(profile.role)}</p><p className={`mt-2 break-all text-[12px] ${muted}`}>{profile.email}</p></div><div className={`rounded-xl border p-3 text-[11px] ${dark ? "border-[#444]" : "border-[#DDD]"}`}>Member since<br /><b className="mt-1 block">{dateText(profile.createdAt)}</b></div></div></div>
-          <Panel title="Personal information" icon={UserRound} caption="Registered account information" dark={dark}><div className="grid gap-6 sm:grid-cols-2"><FieldDetail dark={dark} label="Name" value={profile.name} icon={UserRound} /><FieldDetail dark={dark} label="Email" value={profile.email} icon={Mail} copy /><FieldDetail dark={dark} label="Mobile" value={profile.mobile || "Not provided"} icon={Phone} /><FieldDetail dark={dark} label="Created" value={dateText(profile.createdAt)} icon={CalendarDays} /></div><p className={`mt-6 border-t pt-4 text-[11px] ${dark ? "border-[#333]" : "border-[#EEE]"} ${muted}`}>Contact your administrator to change registered details.</p></Panel>
-          {profile.role === "affiliate" && <Panel title="Affiliate partnership" caption="Your current referral configuration" icon={Handshake} dark={dark}><div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${dark ? "border-[#5B3B21] bg-[#211A16]" : "border-[#F5D8C4] bg-[#FFF7F1]"}`}><div><p className={`text-[11px] ${muted}`}>Affiliate code</p><p className="mt-2 break-all font-mono text-xl font-bold text-[#F97316]">{affiliate?.code || "Not assigned"}</p></div><SmallButton primary disabled={!affiliate?.code} onClick={async () => { try { await navigator.clipboard.writeText(affiliate.code); toast.success("Copied affiliate code") } catch { toast.error("Could not copy") } }}><Copy size={15} />Copy</SmallButton></div><div className="mt-5 grid grid-cols-2 gap-6 sm:grid-cols-3"><FieldDetail dark={dark} label="Commission type" value={affiliate?.commissionType || "—"} icon={Percent} /><FieldDetail dark={dark} label="Commission rate" value={affiliate?.commissionType === "percentage" ? `${affiliate.commissionValue}%` : affiliate?.commissionType === "fixed" ? money(affiliate.commissionValue) : "—"} icon={Wallet} /><FieldDetail dark={dark} label="Partner status" value={affiliate?.status || "—"} icon={ShieldCheck} /></div></Panel>}
-          <Panel title="Security overview" icon={ShieldCheck} dark={dark}><div className="grid gap-6 sm:grid-cols-2"><FieldDetail dark={dark} label="Last login" value={dateText(profile.lastLoginAt, true)} icon={Clock3} /></div></Panel>
-        </div>}
-        {chosen.key === "password" && <PasswordPage profile={profile} token={token} dark={dark} />}
-        {chosen.key === "activity" && <Panel title="Account activity" caption="Your 5 most recent account and security events" icon={Activity} dark={dark} >{activityLoading ? <Loading label="Loading activity..." /> : activityError ? <Empty dark={dark} text={activityError} /> : activities.length === 0 ? <Empty dark={dark} text="No account activity found." /> : <div className="space-y-2">{activities.map((event, i) => <div key={event._id || i} className={`flex gap-3 rounded-lg border p-4 ${dark ? "border-[#333] bg-[#1E1E1E]" : "border-[#EEE] bg-[#FAFAFA]"}`}><Activity size={18} className="mt-0.5 shrink-0 text-[#F97316]" /><div><p className="text-[12px] font-semibold">{String(event.action || "Activity").replace(/_/g, " ")}</p><p className={`mt-1 text-[11px] ${muted}`}>{dateText(event.createdAt, true)} {event.result ? `· ${event.result}` : ""}</p></div></div>)}</div>}</Panel>}
-        {chosen.key === "sales" && profile.role === "affiliate" && <SalesDashboard token={token} profile={profile} dark={dark} />}
-        {chosen.key === "devices" && <DevicesPage token={token} dark={dark} />}
-      </main></div>}</div></div>;
+
+/* ------------------------------------------------------------ password */
+const RULES = [
+  { label: "8–128 characters", test: (v) => v.length >= 8 && v.length <= 128 },
+  { label: "An uppercase letter", test: (v) => /[A-Z]/.test(v) },
+  { label: "A lowercase letter", test: (v) => /[a-z]/.test(v) },
+  { label: "A number", test: (v) => /\d/.test(v) },
+  { label: "A special character", test: (v) => /[^A-Za-z0-9]/.test(v) },
+];
+const EMPTY_PW = { oldPassword: "", newPassword: "", confirmPassword: "" };
+
+function SecurityTab({ data }) {
+  const [form, setForm] = useState(EMPTY_PW);
+  const [show, setShow] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const rules = RULES.map((r) => ({ ...r, on: r.test(form.newPassword) }));
+  const strong = rules.every((r) => r.on);
+  const match = Boolean(form.confirmPassword) && form.confirmPassword === form.newPassword;
+  const same = Boolean(form.oldPassword) && form.oldPassword === form.newPassword;
+  const ready = form.oldPassword && strong && match && !same;
+  const set = (e) => { setForm((f) => ({ ...f, [e.target.name]: e.target.value })); setErr(""); };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!ready || busy) return;
+    setBusy(true); setErr("");
+    try {
+      const { data: r } = await accountHttp.post("/auth/change-password", form);
+      if (!r?.success) throw new Error(r?.message || "Couldn't change the password.");
+      toast.success("Password changed. Please sign in again.");
+      leave();
+    } catch (x) { const m = errMsg(x); setErr(m); toast.error(m); } finally { setBusy(false); }
+  };
+
+  const field = (name, label, auto) => (
+    <div>
+      <label className="rv-label" htmlFor={`pw-${name}`}>{label}</label>
+      <div className="acx-pwfield">
+        <input id={`pw-${name}`} className="rv-input" name={name} type={show[name] ? "text" : "password"} value={form[name]} onChange={set} disabled={busy} autoComplete={auto} maxLength={128} />
+        <button type="button" onClick={() => setShow((s) => ({ ...s, [name]: !s[name] }))} aria-label={show[name] ? "Hide password" : "Show password"}>{show[name] ? <EyeSlash size={18} /> : <Eye size={18} />}</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="acx-pw">
+      <Card icon={Lock} title="Change password" caption={`Last changed: ${data.user.passwordChangedAt ? stamp(data.user.passwordChangedAt) : "never"}. After a change, every device is signed out, this one included.`}>
+        <form onSubmit={submit} noValidate className="acx-stack">
+          {field("oldPassword", "Current password", "current-password")}
+          {field("newPassword", "New password", "new-password")}
+          <div>
+            {field("confirmPassword", "Confirm new password", "new-password")}
+            {form.confirmPassword && <p className={cx("acx-hint", match ? "ok" : "bad")}>{match ? "Passwords match" : "Passwords don't match yet"}</p>}
+          </div>
+          {same && <p className="acx-hint bad">The new password must be different from the current one.</p>}
+          {err && <p className="acx-error" role="alert">{err}</p>}
+          <div className="rf-btns"><Btn type="submit" loading={busy} disabled={!ready}><ShieldCheck size={16} />Change password</Btn></div>
+        </form>
+      </Card>
+      <Card icon={ShieldCheck} title="Password rules">
+        <div className="acx-meter" aria-hidden>{rules.map((r) => <i key={r.label} className={r.on ? "on" : ""} />)}</div>
+        <ul className="acx-rules">{rules.map((r) => <li key={r.label} className={r.on ? "on" : ""}><i>{r.on && <Check size={11} weight="bold" />}</i>{r.label}</li>)}</ul>
+        <p className="acx-note">Use a password you don't use anywhere else. A short sentence works well.</p>
+      </Card>
+    </div>
+  );
 }
-export default UserProfile;
+
+/* ------------------------------------------------------------ affiliate sales */
+const PERIODS = [["today", "Today"], ["last7Days", "7 days"], ["last30Days", "30 days"], ["last365Days", "1 year"], ["allTime", "All time"]];
+const METRICS = [["salesAmount", "Sales"], ["commission", "Commission"], ["successfulOrders", "Orders"]];
+
+function SalesChart({ graph, days, onDays, loading }) {
+  const [metric, setMetric] = useState("salesAmount");
+  const [hover, setHover] = useState(null);
+  const points = graph?.points || [];
+  const fmt = (v) => (metric === "successfulOrders" ? count(v) : money(v));
+  const total = points.reduce((s, p) => s + (Number(p[metric]) || 0), 0);
+  const top = Math.max(1, ...points.map((p) => Number(p[metric]) || 0));
+  const every = Math.ceil(points.length / 8);
+  const label = METRICS.find((m) => m[0] === metric)[1];
+  const hp = hover === null ? null : points[hover];
+
+  return (
+    <Card icon={ChartBar} title={`Daily ${label.toLowerCase()}`} caption="Verified sales only, by day in IST. Hover or tap a bar to read it."
+      action={<div className="rf-btns">
+        <div className="acx-seg" role="group" aria-label="Measure">{METRICS.map(([k, l]) => <button key={k} type="button" aria-pressed={metric === k} onClick={() => { setMetric(k); setHover(null); }}>{l}</button>)}</div>
+        <div className="acx-seg" role="group" aria-label="Range">{[7, 30, 365].map((d) => <button key={d} type="button" aria-pressed={days === d} disabled={loading} onClick={() => onDays(d)}>{d === 365 ? "1 year" : `${d} days`}</button>)}</div>
+      </div>}>
+      <div className={cx(loading && "rlx-dim")}>
+        <div className="acx-readout" aria-live="polite">
+          <span>{hp ? day(`${hp.date}T00:00:00+05:30`) : `Total, last ${days === 365 ? "year" : `${days} days`}`}</span>
+          <b>{fmt(hp ? hp[metric] : total)}</b>
+        </div>
+        {points.length === 0 ? <p className="acx-note" style={{ marginTop: 12 }}>No data for this range yet.</p> : (
+          <div className={cx("acx-chart", points.length > 60 && "many")} style={{ marginTop: 14 }} onMouseLeave={() => setHover(null)}>
+            {points.map((p, i) => {
+              const v = Number(p[metric]) || 0;
+              return (
+                <button key={p.date} type="button" className={hover === i ? "on" : ""} aria-label={`${p.date}: ${fmt(v)}`}
+                  onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onClick={() => setHover(i)}>
+                  <i style={{ height: `${v > 0 ? Math.max(3, (v / top) * 100) : 1}%` }} />
+                  {(points.length <= 10 || i % every === 0) && <em>{p.date.slice(5).replace("-", "/")}</em>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+const STATE_TONE = { EARNED: "ok", FAILED: "bad", REFUNDED: "warn", PENDING: "info", UNVERIFIED: "muted" };
+const rateText = (o) => (o.commissionType === "PERCENTAGE" ? `${o.commissionValue}%` : o.commissionType === "FIXED" ? `${money(o.commissionValue)} fixed` : "No commission");
+
+function OrdersTable({ orders }) {
+  if (!orders.length) return <div className="rf-empty"><span className="e">🧾</span><h3>No transactions</h3><p>Orders made with your code will appear here.</p></div>;
+  return (
+    <div className="arx-table-wrap acx-orders">
+      <table className="arx-table">
+        <thead><tr><th>Order</th><th>Date</th><th>Status</th><th className="num">Sale</th><th className="num">Commission</th></tr></thead>
+        <tbody>
+          {orders.map((o, i) => (
+            <tr key={`${o.orderId}-${i}`} data-state={o.state || "UNVERIFIED"}>
+              <td className="first"><b>{o.book?.title || "Order"}</b><span className="sub mono">{o.orderId || "—"} · {rateText(o)}</span></td>
+              <td data-label="Date" className="date">{stamp(o.eventAt || o.createdAt)}</td>
+              <td data-label="Status"><Badge tone={STATE_TONE[o.state] || "muted"}>{titleCase(o.state || o.paymentStatus)}</Badge></td>
+              <td data-label="Sale" className="num">{money(o.amount)}{o.discountAmount > 0 && <span className="sub">−{money(o.discountAmount)} coupon</span>}</td>
+              <td data-label="Commission" className={cx("num", o.commissionEarned && "earned")}>{o.commissionEarned ? money(o.commissionAmount) : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const STATUSES = ["ALL", "EARNED", "PENDING", "FAILED", "REFUNDED", "UNVERIFIED"];
+const NO_FILTER = { status: "ALL", startDate: "", endDate: "", sort: "desc" };
+
+function TransactionsSheet({ onClose }) {
+  const [draft, setDraft] = useState(NO_FILTER);
+  const [applied, setApplied] = useState(NO_FILTER);
+  const [page, setPage] = useState(1);
+  const [res, setRes] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true); setError("");
+    const params = { page, limit: 15, status: applied.status, sort: applied.sort, ...(applied.startDate ? { startDate: applied.startDate, endDate: applied.endDate } : {}) };
+    accountHttp.get("/affiliate/orders", { params })
+      .then(({ data }) => { if (alive) setRes(data?.data || null); })
+      .catch((e) => { if (alive) setError(errMsg(e)); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [applied, page, tick]);
+
+  const apply = () => {
+    if (Boolean(draft.startDate) !== Boolean(draft.endDate)) return toast.error("Pick both dates, or neither.");
+    if (draft.startDate && draft.startDate > draft.endDate) return toast.error("The start date must come first.");
+    setPage(1); setApplied({ ...draft });
+  };
+  const t = res?.totals || {};
+  const p = res?.pagination || {};
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <Sheet title="All transactions" subtitle="Every order made with your code · 15 per page · IST" onClose={onClose} wide>
+      <div className="acx acx-stack">
+        <div className="acx-filters">
+          <label>Status<select className="rv-input" value={draft.status} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}>{STATUSES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}</select></label>
+          <label>Order<select className="rv-input" value={draft.sort} onChange={(e) => setDraft((d) => ({ ...d, sort: e.target.value }))}><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label>
+          <label>From<input className="rv-input" type="date" max={today} value={draft.startDate} onChange={(e) => setDraft((d) => ({ ...d, startDate: e.target.value }))} /></label>
+          <label>To<input className="rv-input" type="date" max={today} value={draft.endDate} onChange={(e) => setDraft((d) => ({ ...d, endDate: e.target.value }))} /></label>
+        </div>
+        <div className="rf-btns">
+          <Btn size="sm" onClick={apply}>Apply filters</Btn>
+          <Btn variant="ghost" size="sm" onClick={() => { setDraft(NO_FILTER); setApplied(NO_FILTER); setPage(1); }}>Clear</Btn>
+        </div>
+        {error && <div className="acx-error" role="alert">{error}<Btn variant="ghost" size="sm" onClick={() => setTick((n) => n + 1)}>Retry</Btn></div>}
+        <div className="arx-kpis">
+          <Kpi icon={ShoppingBag} label="Matching orders" value={count(t.totalOrders)} />
+          <Kpi icon={TrendUp} label="Verified sales" value={money(t.successfulAmount)} />
+          <Kpi icon={Wallet} label="Commission" value={money(t.earnedCommission)} />
+          <Kpi icon={WarningCircle} label="Failed" value={count(t.failedOrders)} />
+        </div>
+        <div className={cx(loading && "rlx-dim")}>{!res && loading ? <div className="acx-skel" style={{ height: 220 }} /> : <OrdersTable orders={res?.orders || []} />}</div>
+        <div className="acx-pagerow">
+          <span className="subtle">{count(p.total)} orders · page {p.page || page} of {p.pages || 1}</span>
+          <div className="rf-btns">
+            <Btn variant="ghost" size="sm" disabled={loading || !p.hasPrevious} onClick={() => setPage((n) => Math.max(1, n - 1))}><CaretLeft size={14} />Previous</Btn>
+            <Btn variant="ghost" size="sm" disabled={loading || !p.hasNext} onClick={() => setPage((n) => n + 1)}>Next<CaretRight size={14} /></Btn>
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+function SalesTab({ data, patch }) {
+  const dash = data.affiliate?.data;
+  const [period, setPeriod] = useState("last30Days");
+  const [days, setDays] = useState(dash?.graph?.days || 7);
+  const [loading, setLoading] = useState(false);
+  const [sheet, setSheet] = useState(false);
+
+  const fetchSales = async (d, fresh = false) => {
+    setLoading(true);
+    try {
+      const { data: r } = await accountHttp.get("/users/account/sales", { params: { graphDays: d, ...(fresh ? { fresh: 1 } : {}) } });
+      patch((x) => ({ ...x, affiliate: { data: r.data } }));
+      setDays(d);
+    } catch (e) { toast.error(errMsg(e)); } finally { setLoading(false); }
+  };
+
+  if (data.affiliate?.error) return <div className="acx-error" role="alert">{data.affiliate.error}</div>;
+  if (!dash) return null;
+
+  const all = dash.summary?.allTime || {};
+  const cur = dash.summary?.[period] || {};
+
+  return (
+    <div className="acx-stack">
+      <div className="arx-kpis">
+        <Kpi icon={Wallet} label="Commission earned" value={money(all.earnedCommission)} sub="All time · verified, not refunded" />
+        <Kpi icon={TrendUp} label="Verified sales" value={money(all.successfulAmount)} sub={`${count(all.successfulOrders)} successful orders`} />
+        <Kpi icon={ShoppingBag} label="All orders" value={count(all.totalOrders)} sub="Every order with your code" />
+        <Kpi icon={Percent} label="Success rate" value={`${Number(all.conversionRate || 0).toFixed(1)}%`} sub="Paid ÷ all attempts" />
+      </div>
+
+      <Card icon={CalendarBlank} title="By period" caption="Compare sales and earnings across time."
+        action={<div className="acx-seg" role="group" aria-label="Period">{PERIODS.map(([k, l]) => <button key={k} type="button" aria-pressed={period === k} onClick={() => setPeriod(k)}>{l}</button>)}</div>}>
+        <div className="arx-kpis">
+          <Kpi icon={TrendUp} label="Sales" value={money(cur.successfulAmount)} />
+          <Kpi icon={Wallet} label="Your commission" value={money(cur.earnedCommission)} />
+          <Kpi icon={ShoppingBag} label="Successful orders" value={count(cur.successfulOrders)} />
+          <Kpi icon={WarningCircle} label="Failed attempts" value={count(cur.failedOrders)} sub={`${money(cur.failedAttemptedAmount)} attempted`} />
+        </div>
+        <div className="acx-strip">
+          <span>Pending <b>{count(cur.pendingOrders)}</b></span>
+          <span>Refunded <b>{count(cur.refundedOrders)}</b></span>
+          <span>Total attempts <b>{count(cur.totalOrders)}</b></span>
+        </div>
+      </Card>
+
+      <SalesChart graph={dash.graph} days={days} loading={loading} onDays={(d) => d !== days && fetchSales(d)} />
+
+      <Card icon={Receipt} title="Recent transactions" caption="Your latest 15 orders. Customer and payment details are never shown."
+        action={<Btn variant="ghost" size="sm" onClick={() => setSheet(true)}>All transactions<ArrowRight size={14} /></Btn>}>
+        <OrdersTable orders={dash.recentOrders || []} />
+      </Card>
+
+      <AffiliateTerms user={data.user} />
+
+      <p className="acx-note">Commission is worked out on the final paid amount after coupons, and counts only verified, non-refunded sales. These are earnings, not payouts. Refunds can change past totals. Updated {ago(dash.generatedAt)}.</p>
+
+      {sheet && <TransactionsSheet onClose={() => setSheet(false)} />}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ page */
+const TABS = [
+  { key: "overview", label: "Overview", icon: User, group: "Account" },
+  { key: "sales", label: "Sales", icon: ChartBar, group: "Account", affiliate: true },
+  { key: "security", label: "Password", icon: Lock, group: "Security" },
+  { key: "devices", label: "Devices", icon: Devices, group: "Security" },
+  { key: "activity", label: "Activity", icon: ClockCounterClockwise, group: "Security" },
+];
+const HEAD = {
+  overview: ["Your account", "Your details, account health and what's happened recently."],
+  sales: ["Sales dashboard", "Your verified sales, commission and every order made with your code."],
+  security: ["Password", "Change the password you use to sign in."],
+  devices: ["Devices", "Where you're signed in right now. Sign out anything you don't recognise."],
+  activity: ["Activity", "The latest events on your account, in detail."],
+};
+const readTab = () => { if (typeof window === "undefined") return "overview"; const h = window.location.hash.slice(1); return TABS.some((t) => t.key === h) ? h : "overview"; };
+
+export default function UserProfile() {
+  const authUser = useSelector((s) => s.auth?.user);
+  const cacheKey = String(authUser?._id || authUser?.id || authUser?.email || "me");
+  const { data, error, loading, load, patch } = useAccount(cacheKey);
+  const [tab, setTab] = useState(readTab);
+
+  const u = data?.user;
+  const tabs = useMemo(() => TABS.filter((t) => !t.affiliate || u?.role === "affiliate"), [u?.role]);
+  const active = tabs.some((t) => t.key === tab) ? tab : "overview";
+  const go = useCallback((k) => {
+    setTab(k);
+    try { window.history.replaceState(null, "", `#${k}`); } catch { /* ignore */ }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+  useEffect(() => { const on = () => setTab(readTab()); window.addEventListener("hashchange", on); return () => window.removeEventListener("hashchange", on); }, []);
+
+  const [title, sub] = HEAD[active];
+  const groups = [...new Set(tabs.map((t) => t.group))];
+
+  return (
+    <Page title="My account · Target Trek" description="Your Target Trek profile, security, devices and activity." top={false}>
+      <div className="arx rlx acx">
+        <div className="arx-layout">
+          <aside className="arx-side" aria-label="Account sections">
+            {u ? (
+              <div className="acx-me"><span className="acx-av">{initials(u.name)}</span><div><b>{u.name}</b><small>{showRole(u.role) ? roleText(u.role) : u.email}</small></div></div>
+            ) : <div className="acx-skel" style={{ height: 74 }} />}
+            {groups.map((g) => (
+              <nav key={g} className="arx-nav">
+                <span>{g}</span>
+                {tabs.filter((t) => t.group === g).map((t) => (
+                  <button key={t.key} type="button" aria-current={active === t.key ? "page" : undefined} onClick={() => go(t.key)}><t.icon size={18} weight={active === t.key ? "fill" : "regular"} />{t.label}{t.key === "devices" && data?.deviceCount > 1 && <em>{data.deviceCount}</em>}</button>
+                ))}
+              </nav>
+            ))}
+            <div className="arx-foot">
+              <a href="mailto:supporttargettrek@gmail.com"><Envelope size={14} />Contact support</a>
+              {u?.role === "admin" && <Link to="/dashboard"><SquaresFour size={14} />Admin dashboard</Link>}
+            </div>
+          </aside>
+
+          <main className="arx-main">
+            <div className="acx-body">
+              {!data && loading ? <Skeleton /> : !data ? (
+                <div className="rf-empty"><span className="e">⚠️</span><h3>We couldn't load your account</h3><p>{error || "Please try again."}</p><Btn onClick={() => load()}><ArrowsClockwise size={16} />Try again</Btn></div>
+              ) : (
+                <div className="acx-stack">
+                  {active === "overview" && <header className="acx-hero">
+                    <div className="who">
+                      <span className="acx-av lg">{initials(u.name)}</span>
+                      <div>
+                        <div className="acx-badges">{showRole(u.role) && <Badge tone="brand">{roleText(u.role)}</Badge>}<StatusBadge status={u.status} />{u.emailVerifiedAt && <Badge tone="ok"><CheckCircle size={12} weight="fill" />Verified</Badge>}{u.googleLinked && <Badge tone="info"><GoogleLogo size={12} weight="bold" />Google</Badge>}</div>
+                        <h1>{u.name}</h1>
+                        <ul className="acx-contact">
+                          <li><Envelope size={16} weight="bold" aria-label="Email" /><span>{u.email}</span></li>
+                          {phoneText(u) && <li><Phone size={16} weight="bold" aria-label="Phone" /><span>{phoneText(u)}</span></li>}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="acx-since" title={`Joined ${day(u.createdAt)}`}>
+                      <CalendarBlank size={18} weight="fill" aria-hidden />
+                      <div>
+                        <small>{sinceText(u.createdAt) === "Today" ? "Welcome" : "Member for"}</small>
+                        <b>{sinceText(u.createdAt) === "Today" ? "Joined today" : sinceText(u.createdAt)}</b>
+                      </div>
+                    </div>
+                  </header>}
+
+                  <div className="arx-head" style={{ margin: "6px 0 0" }}>
+                    <div><h2 style={{ fontFamily: "var(--rl-display)", fontSize: "clamp(20px, 2.6vw, 26px)", letterSpacing: "-.02em" }}>{title}</h2><p>{sub}</p></div>
+                  </div>
+
+                  {error && <div className="acx-error" role="alert">{error}<Btn variant="ghost" size="sm" onClick={() => load()}>Retry</Btn></div>}
+
+                  {active === "overview" && <Overview data={data} go={go} />}
+                  {active === "sales" && <SalesTab data={data} patch={patch} />}
+                  {active === "security" && <SecurityTab data={data} />}
+                  {active === "devices" && <DevicesTab data={data} patch={patch} />}
+                  {active === "activity" && <ActivityTab data={data} />}
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+
+        {/* phones and tablets: icon-only tab bar fixed to the bottom, like the mobile app */}
+        <nav className="acx-tabbar" aria-label="Account sections" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+          {tabs.map((t) => (
+            <button key={t.key} type="button" aria-label={t.label} title={t.label} aria-current={active === t.key ? "page" : undefined} onClick={() => go(t.key)}>
+              <t.icon size={24} weight={active === t.key ? "fill" : "regular"} aria-hidden />
+              {t.key === "devices" && data?.deviceCount > 1 && <em>{data.deviceCount}</em>}
+            </button>
+          ))}
+        </nav>
+      </div>
+    </Page>
+  );
+}
+
+/* shared with the admin user console (Admin/UserManagement.jsx) so both screens look and read the same */
+export {
+  money, count, day, stamp, ago, sinceText, initials, phoneText, titleCase, copy, eventInfo,
+  Kpi, Card, Row, StatusBadge, deviceIcon, ActivityItem, SalesChart, OrdersTable, STATE_TONE,
+};

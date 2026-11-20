@@ -1,1471 +1,352 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Helmet } from "react-helmet-async";
+import {
+  ArrowRight, BarChart3, BookOpen, BriefcaseBusiness, CalendarDays, CheckCircle2, ChevronDown, ChevronRight,
+  CircleDollarSign, CircleUserRound, Clock3, CreditCard, FileText, Gift, Handshake, Heart, Image, LayoutDashboard,
+  LockKeyhole, Mail, Megaphone, MessageSquareHeart, PlusCircle, Receipt, Search, Send, Settings, Sparkles, Star,
+  Swords, TicketPercent, UserCog, UserPlus, Users, X, Crown, FileCheck2,
+} from "lucide-react";
 
 import { useArenaChrome } from "../arena/chrome";
 import NewQueriesNotice from "./NewQueriesNotice.jsx";
+import { Page, cx } from "../resume/ui";
+import "../referral/referral.css";
+import "./adminReferrals.css";
+import "./adminResume.css";
+import "./adminDash.css";
 
-import {
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  Crown,
-  Heart,
-  BriefcaseBusiness,
-  CalendarDays,
-  CheckCircle2,
-  CircleDollarSign,
-  CircleUserRound,
-  Clock3,
-  CreditCard,
-  FileText,
-  Gift,
-  Grid2X2,
-  Handshake,
-  Image,
-  LayoutDashboard,
-  List,
-  LockKeyhole,
-  Mail,
-  MessageSquareHeart,
-  PlusCircle,
-  Search,
-  Send,
-  Megaphone,
-  Star,
-  TicketPercent,
-  UserCog,
-  UserPlus,
-  Users,
-  X,
-  Sparkles,
-  Activity,
-  Ticket,
-  Globe,
-  Receipt,
-  Settings,
-} from "lucide-react";
+/*
+  ADMIN DASHBOARD  (/dashboard)
+  Same look as the other admin consoles (Resume Lab, Referrals, Users): light page in light mode, dark in dark.
 
-/* ==========================================================
-   CONFIGURATION
-========================================================== */
+    1. Products     ONE card each: Memories, Resume Lab, Prep Buddy, Referrals (with quick links into each console)
+    2. Essentials   the tools used every day
+    3. All tools    everything else, grouped by area, with area chips
+  Search (press "/") looks through every tool. Star a tool to pin it; recently opened tools come back at the top.
+  No API calls: the page is instant. Employees only see the tools they are allowed to use.
+*/
 
-const THEME_STORAGE_KEY = "theme";
 const FAVORITES_KEY = "targettrek_admin_favorites";
 const RECENT_KEY = "targettrek_admin_recent";
 
-/* ==========================================================
-   PRIORITY ROUTES
+/* ---------- areas: one colour each (icon chip, chips, section dot) ---------- */
+const AREAS = {
+  Products: "#0F766E",
+  "Books & Products": "#2563EB",
+  "Finance & Revenue": "#059669",
+  Marketing: "#4F46E5",
+  Interviews: "#0D9488",
+  "Users & Access": "#475569",
+  "Content & Publishing": "#9333EA",
+  "Reviews & Support": "#0891B2",
+  "Business Operations": "#65A30D",
+  Platform: "#52525B",
+};
+const AREA_ORDER = Object.keys(AREAS).filter((a) => a !== "Products");
+const accent = (area) => AREAS[area] || "#0F766E";
 
-   These six cards always appear at the top for admins.
-========================================================== */
+/* ---------- 1. products: exactly one card each ---------- */
+const PRODUCTS = [
+  {
+    path: "/admin/memories", name: "Memories", icon: Heart, color: "#DB2777", tag: "Pages · PIN links",
+    description: "Birthday, proposal, Christmas and sorry pages: pages, users, orders, codes, templates and pricing.",
+    links: [["Overview", "/admin/memories"], ["Pages", "/admin/memories?tab=pages"], ["Orders", "/admin/memories?tab=orders"], ["Tickets", "/admin/memories?tab=tickets"]],
+    keywords: "memory memories birthday proposal sorry love page pin codes price gumroad",
+  },
+  {
+    path: "/admin/resume-reviews", name: "Resume Lab", icon: FileCheck2, color: "#0F766E", tag: "AI + human reviews",
+    description: "Review resumes and LinkedIn profiles after the AI first look, payments, members, plans and the AI model.",
+    links: [["Console", "/admin/resume-reviews"], ["Public page", "/resume-review"], ["Member app", "/resume-review/app"]],
+    keywords: "resume linkedin review cv ats ai reviewer packages plans builder",
+  },
+  {
+    path: "/admin/arena", name: "Prep Buddy", icon: Swords, color: "#EA580C", tag: "Mock-interview arena",
+    description: "Entry price, members, requests, matches, payments, reports, coupons and deleted accounts.",
+    links: [["Overview", "/admin/arena"], ["Members", "/admin/arena?tab=members"], ["Matches", "/admin/arena?tab=matches"], ["Payments", "/admin/arena?tab=payments"]],
+    keywords: "prep buddy arena members matches requests price cancellation fee coupons reports accounts",
+  },
+  {
+    path: "/admin/referrals", name: "Referrals", icon: Handshake, color: "#7C3AED", tag: "Chats · jobs · plans",
+    description: "Referral chats, members, job board, payments, credits, subscriptions, plans and settings.",
+    links: [["Console", "/admin/referrals"], ["Public page", "/referral"], ["Member app", "/referral/app"]],
+    keywords: "referral refer chat hiring job board members plans credits subscription",
+  },
+].map((p) => ({ ...p, area: "Products" }));
 
-const PRIORITY_ROUTES = [
-  {
-    path: "/admin/books",
-    name: "Books Management",
-    icon: BookOpen,
-    description:
-      "Manage all ebooks, product listings, prices, covers, payment links, publishing settings and availability.",
-    category: "Books & Products",
-    keywords:
-      "books products hld lld java ebook manage publishing",
-    featured: true,
-    priority: 1,
-  },
-  {
-    path: "/admin/membership",
-    name: "Book Packs & Matches",
-    icon: Crown,
-    description:
-      "Pack members, suspend or delete a membership, Prep Arena matches, book requests and new-book email announcements.",
-    category: "Books & Products",
-    keywords:
-      "membership pack pass lifetime all books matches credits suspend delete suggestions requests new book announcement",
-    featured: true,
-    priority: 2,
-  },
-  {
-    path: "/admin/finance",
-    name: "Finance Management",
-    icon: CircleDollarSign,
-    description:
-      "Monitor gross revenue, payment gateway fees, expenses, affiliate commissions, profit and financial analytics.",
-    category: "Finance & Revenue",
-    keywords:
-      "finance revenue costs profit expenses income",
-    featured: true,
-    priority: 2,
-  },
-  {
-    path: "/admin/daily-payments",
-    name: "Daily Payments",
-    icon: CreditCard,
-    description:
-      "View all payments for any date, inspect transactions, track successful and failed orders, and manage payment records.",
-    category: "Finance & Revenue",
-    keywords:
-      "daily payments orders transactions cashfree payu razorpay",
-    featured: true,
-    priority: 3,
-  },
-  {
-    path: "/admin/campaigns",
-    name: "Campaign Studio",
-    icon: Megaphone,
-    description:
-      "Targeted marketing: email buyers of specific books (or everyone except them) using templates and coupons. Sent in the background via the email queue, with progress, retries and unsubscribe.",
-    category: "Marketing",
-    keywords:
-      "campaign studio audience segment buyers hld lld coupon template queue sqs dlq unsubscribe",
-    featured: true,
-    priority: 4,
-  },
-  {
-    path: "/admin/book-offers",
-    name: "Book Offers",
-    icon: TicketPercent,
-    description:
-      "Create multi-book deals like any 5 books at a flat price or 4+ books at 60% off, limited to tags such as college placement.",
-    category: "Books & Products",
-    keywords:
-      "bundle offers combo multi book discount placement cloud flat price",
-    featured: true,
-    priority: 4,
-  },
-  {
-    path: "/admin/transactions",
-    name: "All Transactions",
-    icon: Receipt,
-    description:
-      "Every payment ever made across all books, with paging, a page-size selector, database filters (status, book, gateway, dates, search) and all order actions.",
-    category: "Finance & Revenue",
-    keywords:
-      "all transactions payments history success pending failed books orders paging filter gateway refund access mail",
-    featured: true,
-    priority: 3,
-  },
-  {
-    path: "/admin/book-offers/payments",
-    name: "Offer Payments",
-    icon: CreditCard,
-    description:
-      "Orders placed through multi-book offers: resend access links, email PDFs, send payment reminders, and extend or revoke access.",
-    category: "Finance & Revenue",
-    keywords:
-      "offer payments orders bundle combo multi book resend access link pdf reminder revoke",
-    featured: true,
-    priority: 3,
-  },
-  {
-    path: "/admin/coupon/dashboard",
-    name: "Coupon Dashboard",
-    icon: TicketPercent,
-    description:
-      "Create coupon codes, manage discounts, configure promotional offers and monitor coupon performance.",
-    category: "Books & Products",
-    keywords:
-      "coupon discounts offers sales promo codes",
-    featured: true,
-    priority: 4,
-  },
-  {
-    path: "/admin/mock-interviews",
-    name: "Mock Interviews",
-    icon: Users,
-    description:
-      "Manage mock interview requests, candidates, interviewers, scheduled sessions, feedback and interview operations.",
-    category: "Interviews",
-    keywords:
-      "mock interviews candidates engineers booking sessions",
-    featured: true,
-    priority: 5,
-  },
-  {
-    path: "/admin/book-storage",
-    name: "Book Storage",
-    icon: Settings,
-    description:
-      "Choose whether new book PDFs are stored in AWS S3 or Cloudinary, and move every existing book file from one to the other.",
-    category: "Platform",
-    keywords:
-      "book storage aws s3 cloudinary pdf files upload transfer migrate",
-    featured: false,
-    priority: 7,
-  },
-  {
-    path: "/admin/mail",
-    name: "Email Provider",
-    icon: Mail,
-    description:
-      "Choose whether the site sends email through Mailtrap, Resend or Amazon SES, switch instantly, enable automatic failover and send a test email.",
-    category: "Platform",
-    keywords:
-      "email mail provider mailtrap resend smtp limit failover test",
-    featured: true,
-    priority: 6,
-  },
-  {
-    path: "/admin/referrals",
-    name: "Referrals",
-    icon: Handshake,
-    description:
-      "Chats, members, job board posts, payments, credits, Unlimited and Priority subscriptions, plans and settings for the referral program, all in one console.",
-    category: "Resume Lab",
-    keywords:
-      "referral refer chat hiring job board members plans credits fee payments subscription priority unlimited refund delete",
-    featured: true,
-    priority: 2,
-  },
-  {
-    path: "/admin/resume-reviews",
-    name: "Resume Lab Reviews",
-    icon: Mail,
-    description:
-      "Review paid resume and LinkedIn submissions after the AI first look, write the human review, and set package prices and bundles.",
-    category: "Resume Lab",
-    keywords:
-      "resume linkedin review cv ats ai reviewer packages price bundle job description",
-    featured: true,
-    priority: 5,
-  },
-  {
-    path: "/admin/arena",
-    name: "Prep Buddy Arena",
-    icon: Users,
-    description:
-      "Set the arena entry price and cancellation fee, manage members, requests, matches, reports, coupons and payments.",
-    category: "Prep Buddy",
-    keywords:
-      "prep buddy arena members matches requests price cancellation fee coupons reports suspend",
-    featured: true,
-    priority: 5,
-  },
-  {
-    path: "/admin/arena?tab=accounts",
-    name: "Arena Accounts",
-    icon: UserCog,
-    description:
-      "See every deleted account and every sign-up that never created a profile, and clean them up.",
-    category: "Prep Buddy",
-    keywords:
-      "deleted accounts signed up no profile incomplete signups cleanup users",
-    featured: false,
-    priority: 5,
-  },
-  {
-    path: "/campaign",
-    name: "Quick Email Send",
-    icon: Send,
-    description:
-      "One-off sender: paste a list of addresses and send a single HTML email right now. No audience filters or queue. For marketing use Campaign Studio.",
-    category: "Marketing",
-    keywords:
-      "email campaigns marketing newsletters bulk promotions",
-    featured: true,
-    priority: 6,
-  },
-  {
-    path: "/admin/memories?tab=overview",
-    name: "Memories Overview",
-    icon: Sparkles,
-    description:
-      "Live summary of memory pages: pages created, active users, revenue and recent activity.",
-    category: "Memories",
-    keywords:
-      "memory memories overview dashboard summary stats revenue",
-    featured: true,
-    priority: 7,
-  },
+/* ---------- 2. essentials ---------- */
+const ESSENTIALS = [
+  { path: "/admin/books", name: "Books", icon: BookOpen, area: "Books & Products", description: "Listings, prices, covers, files and publishing.", keywords: "books products ebook manage publishing" },
+  { path: "/admin/daily-payments", name: "Daily Payments", icon: CreditCard, area: "Finance & Revenue", description: "Every payment for a chosen day.", keywords: "daily payments orders cashfree payu razorpay" },
+  { path: "/admin/transactions", name: "All Transactions", icon: Receipt, area: "Finance & Revenue", description: "Every order with filters and actions.", keywords: "transactions payments history refund access mail" },
+  { path: "/admin/finance", name: "Finance", icon: CircleDollarSign, area: "Finance & Revenue", description: "Revenue, fees, expenses and profit.", keywords: "finance revenue costs profit expenses" },
+  { path: "/admin/users", name: "Users", icon: UserCog, area: "Users & Access", description: "Accounts, roles, devices and access.", keywords: "users employee admin roles accounts" },
+  { path: "/admin/website-analytics", name: "Website Analytics", icon: BarChart3, area: "Marketing", description: "Live visitors, traffic and journeys.", keywords: "website traffic visitors live analytics" },
+  { path: "/admin/campaigns", name: "Campaign Studio", icon: Megaphone, area: "Marketing", description: "Targeted emails to book buyers.", keywords: "campaign audience buyers coupon template queue" },
+  { path: "/admin/mock-interviews", name: "Mock Interviews", icon: Users, area: "Interviews", description: "Requests, sessions and feedback.", keywords: "mock interviews candidates sessions booking" },
 ];
 
-/* ==========================================================
-   OTHER ADMIN ROUTES
-========================================================== */
-
-const OTHER_ADMIN_ROUTES = [
-  {
-    path: "/admin/website-analytics",
-    name: "Website Analytics",
-    icon: BarChart3,
-    description:
-      "Live visitors, traffic graphs, routes, referral codes, devices, events and visitor journeys.",
-    category: "Marketing",
-    keywords: "website traffic visitors live users analytics referral ref",
-  },
-  {
-    path: "/admin/book/analytics",
-    name: "Book Analytics",
-    icon: BarChart3,
-    description:
-      "Analyze book sales, purchases, revenue, payment performance and product growth.",
-    category: "Finance & Revenue",
-    keywords: "book sales reports analytics",
-  },
-  {
-    path: "/admin/dashboard",
-    name: "Sales Dashboard",
-    icon: LayoutDashboard,
-    description:
-      "Review overall sales, orders, payment statuses and business performance.",
-    category: "Finance & Revenue",
-    keywords: "sales dashboard payments statistics",
-  },
-  {
-    path: "/admin/book/create",
-    name: "Add New Book",
-    icon: PlusCircle,
-    description:
-      "Create a new ebook listing with pricing, cover, resource details and publishing settings.",
-    category: "Books & Products",
-    keywords: "new book create upload",
-  },
-  {
-    path: "/admin/interviews",
-    name: "Interview Experiences",
-    icon: BriefcaseBusiness,
-    description:
-      "Review, edit, publish and manage technical interview experiences.",
-    category: "Content & Publishing",
-    keywords: "interview experiences content",
-  },
-  {
-    path: "/admin/add-blog",
-    name: "Add Blog",
-    icon: PlusCircle,
-    description:
-      "Write and publish technical articles, learning resources and interview posts.",
-    category: "Content & Publishing",
-    keywords: "new blog article write",
-  },
-  {
-    path: "/blog-manage",
-    name: "Manage Blogs",
-    icon: FileText,
-    description:
-      "Edit, organize, publish or remove existing blog posts and articles.",
-    category: "Content & Publishing",
-    keywords: "blog content publishing",
-  },
-  {
-    path: "/admin/affiliate-manage",
-    name: "Affiliate Management",
-    icon: Handshake,
-    description:
-      "Manage referral partners, affiliate relationships, commissions and affiliate sales.",
-    category: "Marketing",
-    keywords: "referral affiliates creators partners",
-  },
-  {
-    path: "/interest",
-    name: "Interested Users",
-    icon: MessageSquareHeart,
-    description:
-      "Review leads and users interested in products, interviews and services.",
-    category: "Marketing",
-    keywords: "interested leads prospects",
-  },
-  {
-    path: "/admin/users",
-    name: "User Management",
-    icon: UserCog,
-    description:
-      "Manage registered users, employees, roles, permissions and account access.",
-    category: "Users & Access",
-    keywords: "users employee admin roles",
-  },
-  {
-    path: "/admin/memories",
-    name: "Memory Pages",
-    icon: Heart,
-    description:
-      "Birthday, proposal, Christmas and sorry pages: users and logins, live links with PIN, deactivate and delete controls, payments, access codes, price and upload limits.",
-    category: "Users & Access",
-    keywords:
-      "memory memories birthday proposal sorry love page pin link private public codes price limits photos videos",
-  },
-  {
-    path: "/admin/signup",
-    name: "Add a User",
-    icon: UserPlus,
-    description:
-      "Create authorized accounts for administrators, employees and internal team members.",
-    category: "Users & Access",
-    keywords: "signup employee account",
-  },
-  {
-    path: "/profile",
-    name: "My Profile",
-    icon: CircleUserRound,
-    description:
-      "Manage your account information and personal profile details.",
-    category: "Users & Access",
-    keywords: "profile account",
-  },
-  {
-    path: "/admin/generate-review-link",
-    name: "Generate Review Link",
-    icon: Gift,
-    description:
-      "Create review submission links for customers and book purchasers.",
-    category: "Reviews & Support",
-    keywords: "review link feedback",
-  },
-  {
-    path: "/admin/manage-reviews",
-    name: "Manage Reviews",
-    icon: CheckCircle2,
-    description:
-      "Review, approve, edit and manage ratings, testimonials and customer feedback.",
-    category: "Reviews & Support",
-    keywords: "reviews ratings testimonials",
-  },
-  {
-    path: "/contact-query",
-    name: "Contact Queries",
-    icon: Mail,
-    description:
-      "Review customer questions, contact submissions and support inquiries.",
-    category: "Reviews & Support",
-    keywords: "support contact customer mail",
-  },
-  {
-    path: "/admin/add-portfolio",
-    name: "Add Portfolio",
-    icon: PlusCircle,
-    description:
-      "Create portfolio entries for projects and professional achievements.",
-    category: "Content & Publishing",
-    keywords: "portfolio create",
-  },
-  {
-    path: "/portfolio-manage",
-    name: "Manage Portfolio",
-    icon: Image,
-    description:
-      "Edit existing portfolio projects, images and other portfolio assets.",
-    category: "Content & Publishing",
-    keywords: "portfolio images projects",
-  },
-  {
-    path: "/clients",
-    name: "Clients",
-    icon: BriefcaseBusiness,
-    description:
-      "Manage onboarded clients, customer records and business relationships.",
-    category: "Business Operations",
-    keywords: "clients customer business",
-  },
+/* ---------- 3. everything else ---------- */
+const TOOLS = [
+  { path: "/admin/membership", name: "Book Packs & Matches", icon: Crown, area: "Books & Products", description: "Pack members, matches, book requests and announcements.", keywords: "membership pack pass lifetime matches suggestions" },
+  { path: "/admin/book-offers", name: "Book Offers", icon: TicketPercent, area: "Books & Products", description: "Multi-book deals and bundles.", keywords: "bundle offers combo discount placement" },
+  { path: "/admin/coupon/dashboard", name: "Coupons", icon: TicketPercent, area: "Books & Products", description: "Create codes and track how they perform.", keywords: "coupon discounts promo codes" },
+  { path: "/admin/book/create", name: "Add New Book", icon: PlusCircle, area: "Books & Products", description: "Create a new ebook listing.", keywords: "new book create upload" },
+  { path: "/admin/book-offers/payments", name: "Offer Payments", icon: CreditCard, area: "Finance & Revenue", description: "Bundle orders, access links and reminders.", keywords: "offer payments bundle resend access pdf reminder" },
+  { path: "/admin/book/analytics", name: "Book Analytics", icon: BarChart3, area: "Finance & Revenue", description: "Sales, purchases and revenue by book.", keywords: "book sales reports analytics" },
+  { path: "/admin/dashboard", name: "Sales Dashboard", icon: LayoutDashboard, area: "Finance & Revenue", description: "Orders, statuses and performance.", keywords: "sales dashboard statistics" },
+  { path: "/campaign", name: "Quick Email", icon: Send, area: "Marketing", description: "Send one HTML email to a pasted list.", keywords: "email bulk send newsletter" },
+  { path: "/admin/affiliate-manage", name: "Affiliates", icon: Handshake, area: "Marketing", description: "Partners, commissions and their sales.", keywords: "referral affiliates creators partners" },
+  { path: "/interest", name: "Interested Users", icon: MessageSquareHeart, area: "Marketing", description: "Leads interested in products and services.", keywords: "interested leads prospects" },
+  { path: "/admin/interviews", name: "Interview Experiences", icon: BriefcaseBusiness, area: "Interviews", description: "Review, edit and publish experiences.", keywords: "interview experiences content" },
+  { path: "/admin/signup", name: "Add a User", icon: UserPlus, area: "Users & Access", description: "Create a team or customer account.", keywords: "signup employee account create" },
+  { path: "/profile", name: "My Profile", icon: CircleUserRound, area: "Users & Access", description: "Your account, devices and password.", keywords: "profile account" },
+  { path: "/admin/add-blog", name: "Add Blog", icon: PlusCircle, area: "Content & Publishing", description: "Write and publish an article.", keywords: "new blog article write" },
+  { path: "/blog-manage", name: "Manage Blogs", icon: FileText, area: "Content & Publishing", description: "Edit, publish or remove posts.", keywords: "blog content publishing" },
+  { path: "/admin/add-portfolio", name: "Add Portfolio", icon: PlusCircle, area: "Content & Publishing", description: "Add a project to the portfolio.", keywords: "portfolio create" },
+  { path: "/portfolio-manage", name: "Manage Portfolio", icon: Image, area: "Content & Publishing", description: "Edit projects and images.", keywords: "portfolio images projects" },
+  { path: "/admin/generate-review-link", name: "Review Links", icon: Gift, area: "Reviews & Support", description: "Create links for customers to review.", keywords: "review link feedback" },
+  { path: "/admin/manage-reviews", name: "Manage Reviews", icon: CheckCircle2, area: "Reviews & Support", description: "Approve and edit ratings.", keywords: "reviews ratings testimonials" },
+  { path: "/contact-query", name: "Contact Queries", icon: Mail, area: "Reviews & Support", description: "Questions from the contact form.", keywords: "support contact customer mail" },
+  { path: "/clients", name: "Clients", icon: BriefcaseBusiness, area: "Business Operations", description: "Client records and relationships.", keywords: "clients customer business" },
+  { path: "/admin/mail", name: "Email Provider", icon: Mail, area: "Platform", description: "Mailtrap, Resend or SES, with failover.", keywords: "email provider mailtrap resend ses smtp failover test" },
+  { path: "/admin/book-storage", name: "Book Storage", icon: Settings, area: "Platform", description: "S3 or Cloudinary for book files.", keywords: "storage s3 cloudinary pdf migrate" },
 ];
 
-/* ==========================================================
-   DISABLED FEATURES
-
-   Moved to bottom.
-   No navigation is allowed.
-========================================================== */
-
-const DISABLED_ROUTES = [
-  {
-    path: "/admin/booking",
-    name: "Bookings",
-    icon: CalendarDays,
-    description:
-      "Legacy booking administration is currently disabled. Use Mock Interviews for interview-related operations.",
-    category: "Disabled Features",
-    disabled: true,
-  },
-  {
-    path: "/admin/slots",
-    name: "Booking Slots",
-    icon: Clock3,
-    description:
-      "Legacy booking-slot management is currently disabled. This section is unavailable.",
-    category: "Disabled Features",
-    disabled: true,
-  },
+const DISABLED = [
+  { path: "/admin/booking", name: "Bookings", icon: CalendarDays, description: "Legacy bookings. Use Mock Interviews instead." },
+  { path: "/admin/slots", name: "Booking Slots", icon: Clock3, description: "Legacy slot management." },
 ];
 
-/* ==========================================================
-   PERMISSIONS
-========================================================== */
-
-const employeeAllowedPaths = new Set([
-  "/profile",
-  "/campaign",
-  "/admin/interviews",
-  "/admin/add-blog",
-  "/blog-manage",
-  "/admin/generate-review-link",
-  "/admin/manage-reviews",
-  "/contact-query",
-  "/admin/add-portfolio",
-  "/portfolio-manage",
-  "/admin/affiliate-manage",
+const EMPLOYEE_PATHS = new Set([
+  "/profile", "/campaign", "/admin/interviews", "/admin/add-blog", "/blog-manage", "/admin/generate-review-link",
+  "/admin/manage-reviews", "/contact-query", "/admin/add-portfolio", "/portfolio-manage", "/admin/affiliate-manage",
 ]);
 
-const ADMIN_ROUTES = [
-  ...PRIORITY_ROUTES,
-  ...OTHER_ADMIN_ROUTES,
-];
+/* ---------- helpers ---------- */
+const readArray = (key) => { try { const v = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+const saveArray = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* storage blocked */ } };
+const matches = (t, q) => !q || [t.name, t.description, t.area, t.keywords, t.path, t.tag].join(" ").toLowerCase().includes(q);
+const greeting = () => { const h = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" }).format(new Date())); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; };
+const today = () => new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" }).format(new Date());
 
-const EMPLOYEE_ROUTES = ADMIN_ROUTES.filter((route) =>
-  employeeAllowedPaths.has(route.path)
-);
-
-const CATEGORY_ORDER = [
-  "Memories",
-  "Books & Products",
-  "Finance & Revenue",
-  "Interviews",
-  "Prep Buddy",
-  "Marketing",
-  "Users & Access",
-  "Content & Publishing",
-  "Reviews & Support",
-  "Business Operations",
-  "Platform",
-];
-
-/* ==========================================================
-   STORAGE HELPERS
-========================================================== */
-
-const readTheme = () => {
-  if (typeof window === "undefined") return "light";
-
-  try {
-    const value = localStorage.getItem(THEME_STORAGE_KEY);
-
-    if (value === "dark" || value === "light") {
-      return value;
-    }
-  } catch {
-    // Use root document theme as fallback.
-  }
-
-  return document.documentElement.classList.contains("dark")
-    ? "dark"
-    : "light";
-};
-
-const readArray = (key) => {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const value = JSON.parse(
-      localStorage.getItem(key) || "[]"
-    );
-
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveArray = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Dashboard still works if storage is blocked.
-  }
-};
-
-/* ==========================================================
-   THEME SYNCHRONIZATION
-
-   Navbar controls localStorage["theme"].
-   This component never changes the theme itself.
-========================================================== */
-
-function useSyncedTheme() {
-  const [theme, setTheme] = useState(readTheme);
-
-  useEffect(() => {
-    const synchronize = () => {
-      const next = readTheme();
-
-      setTheme((previous) =>
-        previous === next ? previous : next
-      );
-    };
-
-    synchronize();
-
-    const events = [
-      "storage",
-      "themeChange",
-      "theme-change",
-      "theme-changed",
-      "THEME_EVENT",
-      "focus",
-    ];
-
-    events.forEach((eventName) => {
-      window.addEventListener(eventName, synchronize);
-    });
-
-    const observer = new MutationObserver(synchronize);
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-
-    const handleVisibility = () => {
-      if (!document.hidden) synchronize();
-    };
-
-    document.addEventListener(
-      "visibilitychange",
-      handleVisibility
-    );
-
-    // Covers navbar implementations that only change
-    // localStorage without dispatching an event.
-    const interval = window.setInterval(synchronize, 500);
-
-    return () => {
-      events.forEach((eventName) => {
-        window.removeEventListener(eventName, synchronize);
-      });
-
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibility
-      );
-
-      observer.disconnect();
-      clearInterval(interval);
-    };
-  }, []);
-
-  return {
-    theme,
-    isDark: theme === "dark",
-  };
+/* ---------- pieces ---------- */
+function Star_({ on, name, onToggle }) {
+  return (
+    <button type="button" className={cx("adx-star", on && "on")} onClick={onToggle} aria-pressed={on} aria-label={on ? `Unpin ${name}` : `Pin ${name}`} title={on ? "Unpin" : "Pin to top"}>
+      <Star size={15} fill={on ? "currentColor" : "none"} />
+    </button>
+  );
 }
 
-/* ==========================================================
-   LOCAL THEME COLORS
-========================================================== */
-
-const getColors = (isDark) => ({
-  page: isDark ? "#111111" : "#F6F5F2",
-  panel: isDark ? "#191919" : "#FFFFFF",
-  border: isDark ? "#303030" : "#E7E5E0",
-  text: isDark ? "#F5F5F5" : "#1B1B1B",
-  muted: isDark ? "#A1A1AA" : "#71717A",
-  input: isDark ? "#212121" : "#FAFAF8",
-  inputBorder: isDark ? "#393939" : "#E1DFDA",
-  subtle: isDark ? "#252525" : "#F7F6F3",
-  divider: isDark ? "#343434" : "#EAE8E4",
-
-  orange: "#F28C38",
-  orangeDark: "#E9812B",
-  orangeSoft: isDark ? "#382719" : "#FFF2E5",
-  orangeText: isDark ? "#FFAE67" : "#AD641F",
-
-  green: isDark ? "#68C9A0" : "#26865E",
-  greenSoft: isDark ? "#18362B" : "#EAF7F0",
-
-  red: isDark ? "#F28A7D" : "#D45545",
-  redSoft: isDark ? "#382221" : "#FFF1EF",
-});
-
-const cx = (...items) =>
-  items.filter(Boolean).join(" ");
-
-/* ==========================================================
-   CARD COLORS
-
-   Every area has its own solid color so cards are recognisable at
-   a glance. All shades keep white text readable (WCAG AA).
-   A few tools override their area color (see PATH_ACCENT).
-========================================================== */
-
-const CATEGORY_ACCENT = {
-  "Books & Products": "#1D4ED8", // blue
-  "Finance & Revenue": "#047857", // green
-  Marketing: "#4338CA", // indigo
-  "Prep Buddy": "#C84F08", // orange
-  Memories: "#DB2777", // pink
-  Interviews: "#0F766E", // teal
-  "Content & Publishing": "#7E22CE", // purple
-  "Users & Access": "#475569", // slate
-  "Reviews & Support": "#0E7490", // cyan
-  "Business Operations": "#4D7C0F", // lime
-  Platform: "#27272A", // charcoal
-  "Disabled Features": "#71717A",
-};
-
-const PATH_ACCENT = {
-  "/admin/transactions": "#CA8A04", // yellow
-  "/admin/memories": "#DB2777", // pink
-  "/admin/interviews": "#0F766E",
-};
-
-const DEFAULT_ACCENT = "#C84F08";
-
-const accentFor = (route) =>
-  PATH_ACCENT[route.path] ||
-  CATEGORY_ACCENT[route.category] ||
-  DEFAULT_ACCENT;
-
-const categoryAccent = (name) =>
-  CATEGORY_ACCENT[name] || DEFAULT_ACCENT;
-
-/* ==========================================================
-   COMPACT DASHBOARD UI
-
-   One short tile per tool (icon, name, one-line summary), grouped
-   by area, with search, category chips, favourites and recents.
-   Priority tools come first in an "Essentials" group.
-========================================================== */
-
-const GRID =
-  "grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
-
-const LAYOUT_KEY = "targettrek_admin_layout";
-
-function Tile({
-  route,
-  isFavorite,
-  onFavorite,
-  onOpen,
-  list = false,
-}) {
-  const Icon = route.icon;
-  const accent = accentFor(route);
-
+function ProductCard({ p, pinned, onPin, onOpen }) {
+  const Icon = p.icon;
   return (
-    <div className="group relative min-w-0">
-      <Link
-        to={route.path}
-        onClick={() => onOpen(route.path)}
-        title={route.description}
-        className={cx(
-          "flex items-center gap-3 rounded-xl pr-10 text-white shadow-sm",
-          "transition duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-          list ? "px-3 py-2" : "px-3 py-3.5"
-        )}
-        style={{
-          backgroundColor: accent,
-          backgroundImage:
-            "linear-gradient(135deg, rgba(255,255,255,0.14), rgba(0,0,0,0.12))",
-          outlineColor: accent,
-        }}
-      >
-        <span
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/20"
-          aria-hidden="true"
-        >
-          <Icon size={20} />
+    <article className="adx-product" style={{ "--c": p.color }}>
+      <Link to={p.path} className="adx-product-main" onClick={() => onOpen(p.path)}>
+        <span className="ico" aria-hidden><Icon size={24} /></span>
+        <span className="txt">
+          <small>{p.tag}</small>
+          <b>{p.name}</b>
+          <span>{p.description}</span>
         </span>
-
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-bold leading-5">
-            {route.name}
-          </span>
-
-          {!list && (
-            <span className="mt-0.5 line-clamp-2 text-[12px] leading-[17px] text-white/90">
-              {route.description}
-            </span>
-          )}
-        </span>
+        <span className="go" aria-hidden><ArrowRight size={18} /></span>
       </Link>
+      {p.links.length > 1 && (
+        <nav className="adx-quick" aria-label={`${p.name} shortcuts`}>
+          {p.links.map(([label, to]) => <Link key={to} to={to} onClick={() => onOpen(p.path)}>{label}</Link>)}
+        </nav>
+      )}
+      <Star_ on={pinned} name={p.name} onToggle={() => onPin(p.path)} />
+    </article>
+  );
+}
 
-      <button
-        type="button"
-        onClick={() => onFavorite(route.path)}
-        aria-label={
-          isFavorite
-            ? `Remove ${route.name} from favourites`
-            : `Add ${route.name} to favourites`
-        }
-        aria-pressed={isFavorite}
-        className={cx(
-          "absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg text-white transition-opacity hover:bg-white/20",
-          "focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white",
-          isFavorite
-            ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-70"
-        )}
-      >
-        <Star
-          size={15}
-          fill={isFavorite ? "currentColor" : "none"}
-        />
-      </button>
+function Tile({ t, pinned, onPin, onOpen }) {
+  const Icon = t.icon;
+  return (
+    <div className="adx-tile" style={{ "--c": t.color || accent(t.area) }}>
+      <Link to={t.path} onClick={() => onOpen(t.path)} title={t.description}>
+        <span className="ico" aria-hidden><Icon size={19} /></span>
+        <span className="txt"><b>{t.name}</b><small>{t.description}</small></span>
+        <ChevronRight size={16} className="chev" aria-hidden />
+      </Link>
+      <Star_ on={pinned} name={t.name} onToggle={() => onPin(t.path)} />
     </div>
   );
 }
 
-function DisabledTile({ route, colors }) {
-  const Icon = route.icon;
-
+function Section({ title, count, color, action, children }) {
   return (
-    <div
-      className="flex items-center gap-3 rounded-xl border border-dashed px-3 py-3 opacity-70"
-      style={{ borderColor: colors.border }}
-      aria-disabled="true"
-    >
-      <span
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
-        style={{
-          backgroundColor: colors.subtle,
-          color: colors.muted,
-        }}
-        aria-hidden="true"
-      >
-        <Icon size={19} />
-      </span>
-
-      <span className="min-w-0">
-        <span
-          className="block truncate text-[14px] font-bold"
-          style={{ color: colors.muted }}
-        >
-          {route.name}
-        </span>
-        <span
-          className="line-clamp-2 text-[12px] leading-[17px]"
-          style={{ color: colors.muted }}
-        >
-          {route.description}
-        </span>
-      </span>
-    </div>
-  );
-}
-
-function Section({ title, count, colors, accent, children }) {
-  return (
-    <section className="mt-6">
-      <div className="mb-2.5 flex items-center gap-3">
-        {accent && (
-          <span
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: accent }}
-            aria-hidden="true"
-          />
-        )}
-
-        <h2
-          className="text-[12px] font-extrabold uppercase tracking-[0.14em]"
-          style={{ color: colors.text }}
-        >
-          {title}
-        </h2>
-
-        <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-          style={{
-            backgroundColor: accent || colors.orange,
-          }}
-        >
-          {count}
-        </span>
-
-        <span
-          className="h-px flex-1"
-          style={{ backgroundColor: colors.divider }}
-        />
-      </div>
-
+    <section className="adx-sec">
+      <header>
+        <span className="dot" style={{ background: color }} aria-hidden />
+        <h2>{title}</h2>
+        {count != null && <em>{count}</em>}
+        <span className="line" aria-hidden />
+        {action}
+      </header>
       {children}
     </section>
   );
 }
 
-const matchesQuery = (route, query) =>
-  !query ||
-  [
-    route.name,
-    route.description,
-    route.category,
-    route.keywords,
-    route.path,
-  ]
-    .join(" ")
-    .toLowerCase()
-    .includes(query);
-
+/* ---------- page ---------- */
 export default function AdminDashboard() {
   useArenaChrome();
-
-  const user = useSelector((state) => state.auth?.user);
-  const { isDark } = useSyncedTheme();
-
-  const colors = useMemo(
-    () => getColors(isDark),
-    [isDark]
-  );
-
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
-  const [quick, setQuick] = useState("all"); // all | favorites | recent
-  const [list, setList] = useState(() => {
-    try {
-      return localStorage.getItem(LAYOUT_KEY) === "list";
-    } catch {
-      return false;
-    }
-  });
-
-  const [favorites, setFavorites] = useState(() =>
-    readArray(FAVORITES_KEY)
-  );
-  const [recent, setRecent] = useState(() =>
-    readArray(RECENT_KEY)
-  );
-
-  const searchRef = useRef(null);
-
-  /* --------------------------------------------------------
-     ROLE / PERMISSIONS
-  -------------------------------------------------------- */
-
+  const user = useSelector((s) => s.auth?.user);
   const role = String(user?.role || "").trim().toLowerCase();
   const isAdmin = role === "admin";
   const isEmployee = role === "employee";
-  const authorized = isAdmin || isEmployee;
 
-  const routes = useMemo(() => {
-    if (isAdmin) return ADMIN_ROUTES;
-    if (isEmployee) return EMPLOYEE_ROUTES;
-    return [];
-  }, [isAdmin, isEmployee]);
+  const [query, setQuery] = useState("");
+  const [area, setArea] = useState("All");
+  const [favorites, setFavorites] = useState(() => readArray(FAVORITES_KEY));
+  const [recent, setRecent] = useState(() => readArray(RECENT_KEY));
+  const searchRef = useRef(null);
 
-  const paths = useMemo(
-    () => new Set(routes.map((r) => r.path)),
-    [routes]
-  );
+  const allow = useCallback((t) => isAdmin || (isEmployee && EMPLOYEE_PATHS.has(t.path)), [isAdmin, isEmployee]);
+  const products = useMemo(() => PRODUCTS.filter(allow), [allow]);
+  const essentials = useMemo(() => ESSENTIALS.filter(allow), [allow]);
+  const tools = useMemo(() => TOOLS.filter(allow), [allow]);
+  const everything = useMemo(() => [...products, ...essentials, ...tools], [products, essentials, tools]);
+  const byPath = useMemo(() => new Map(everything.map((t) => [t.path, t])), [everything]);
 
-  const priority = useMemo(
-    () => PRIORITY_ROUTES.filter((r) => paths.has(r.path)),
-    [paths]
-  );
+  const togglePin = useCallback((path) => setFavorites((prev) => { const next = prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]; saveArray(FAVORITES_KEY, next); return next; }), []);
+  const trackOpen = useCallback((path) => setRecent((prev) => { const next = [path, ...prev.filter((p) => p !== path)].slice(0, 12); saveArray(RECENT_KEY, next); return next; }), []);
 
-  const others = useMemo(
-    () => OTHER_ADMIN_ROUTES.filter((r) => paths.has(r.path)),
-    [paths]
-  );
-
-  const validFavorites = useMemo(
-    () => favorites.filter((p) => paths.has(p)),
-    [favorites, paths]
-  );
-
-  const validRecent = useMemo(
-    () => recent.filter((p) => paths.has(p)),
-    [recent, paths]
-  );
-
-  const categories = useMemo(
-    () =>
-      CATEGORY_ORDER.filter((name) =>
-        routes.some((r) => r.category === name)
-      ),
-    [routes]
-  );
-
-  const byPath = useMemo(
-    () => new Map(routes.map((r) => [r.path, r])),
-    [routes]
-  );
-
-  /* --------------------------------------------------------
-     ACTIONS
-  -------------------------------------------------------- */
-
-  const toggleFavorite = useCallback((path) => {
-    setFavorites((previous) => {
-      const next = previous.includes(path)
-        ? previous.filter((item) => item !== path)
-        : [...previous, path];
-
-      saveArray(FAVORITES_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const trackOpen = useCallback((path) => {
-    setRecent((previous) => {
-      const next = [
-        path,
-        ...previous.filter((item) => item !== path),
-      ].slice(0, 12);
-
-      saveArray(RECENT_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const chooseLayout = (asList) => {
-    setList(asList);
-    try {
-      localStorage.setItem(LAYOUT_KEY, asList ? "list" : "grid");
-    } catch {
-      // Layout choice is a convenience only.
-    }
-  };
-
-  // "/" jumps to the search box (unless you're already typing).
   useEffect(() => {
-    const onKey = (event) => {
+    const onKey = (e) => {
       const el = document.activeElement;
-      const typing =
-        el &&
-        (el.tagName === "INPUT" ||
-          el.tagName === "TEXTAREA" ||
-          el.tagName === "SELECT" ||
-          el.isContentEditable);
-
-      if (event.key === "/" && !typing) {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
+      const typing = el && (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || el.isContentEditable);
+      if (e.key === "/" && !typing) { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key === "Escape" && el === searchRef.current) setQuery("");
     };
-
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  /* --------------------------------------------------------
-     WHAT TO SHOW
-  -------------------------------------------------------- */
-
   const q = query.trim().toLowerCase();
-  const browsing = !q && category === "All" && quick === "all";
+  const pinned = favorites.map((p) => byPath.get(p)).filter(Boolean);
+  const recents = recent.map((p) => byPath.get(p)).filter(Boolean).slice(0, 6);
+  const areas = AREA_ORDER.filter((a) => tools.some((t) => t.area === a));
+  const results = q ? everything.filter((t) => matches(t, q)) : [];
+  const shownTools = area === "All" ? tools : tools.filter((t) => t.area === area);
+  const groups = areas.map((a) => ({ a, items: shownTools.filter((t) => t.area === a) })).filter((g) => g.items.length);
+  const isPinned = (path) => favorites.includes(path);
+  const tile = (t) => <Tile key={t.path} t={t} pinned={isPinned(t.path)} onPin={togglePin} onOpen={trackOpen} />;
 
-  const results = useMemo(
-    () =>
-      [...priority, ...others].filter((route) => {
-        if (!matchesQuery(route, q)) return false;
-        if (category !== "All" && route.category !== category)
-          return false;
-        if (
-          quick === "favorites" &&
-          !validFavorites.includes(route.path)
-        )
-          return false;
-        if (quick === "recent" && !validRecent.includes(route.path))
-          return false;
-        return true;
-      }),
-    [priority, others, q, category, quick, validFavorites, validRecent]
-  );
-
-  const grouped = useMemo(() => {
-    const source = browsing ? others : results;
-
-    return categories
-      .map((name) => ({
-        name,
-        items: source.filter((r) => r.category === name),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [browsing, others, results, categories]);
-
-  const recentRoutes = validRecent
-    .map((path) => byPath.get(path))
-    .filter(Boolean)
-    .slice(0, 6);
-
-  const categoryCount = (name) =>
-    routes.filter((r) => r.category === name).length;
-
-  const reset = () => {
-    setQuery("");
-    setCategory("All");
-    setQuick("all");
-  };
-
-  const tile = (route, extra = {}) => (
-    <Tile
-      key={route.path}
-      route={route}
-      colors={colors}
-      isFavorite={validFavorites.includes(route.path)}
-      onFavorite={toggleFavorite}
-      onOpen={trackOpen}
-      list={list}
-      {...extra}
-    />
-  );
-
-  /* ========================================================
-     ACCESS DENIED
-  ======================================================== */
-
-  if (!authorized) {
+  if (!isAdmin && !isEmployee) {
     return (
-      <>
-        <Helmet>
-          <title>Access Denied | Target Trek</title>
-          <meta name="robots" content="noindex,nofollow" />
-        </Helmet>
-
-        <main
-          className="flex min-h-[75vh] items-center justify-center px-4 pt-[calc(var(--arena-nav-h,5rem)+1rem)]"
-          style={{
-            backgroundColor: colors.page,
-            color: colors.text,
-          }}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border p-8 text-center"
-            style={{
-              backgroundColor: colors.panel,
-              borderColor: colors.border,
-            }}
-          >
-            <div
-              className="mx-auto grid h-14 w-14 place-items-center rounded-2xl"
-              style={{
-                backgroundColor: colors.redSoft,
-                color: colors.red,
-              }}
-            >
-              <LockKeyhole size={26} />
-            </div>
-
-            <h1 className="mt-5 text-2xl font-black">Access Denied</h1>
-
-            <p
-              className="mt-3 text-sm leading-6"
-              style={{ color: colors.muted }}
-            >
-              You need an authorized administrator or employee account
-              to access this workspace.
-            </p>
-
-            <Link
-              to="/"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
-              style={{
-                backgroundColor: colors.orange,
-                color: "#1B1B1B",
-              }}
-            >
-              Back to Home
-              <ArrowRight size={16} />
-            </Link>
+      <Page title="Access denied · Target Trek" top={false}>
+        <div className="arx rlx adx">
+          <div className="adx-wrap adx-denied">
+            <span className="ico"><LockKeyhole size={26} /></span>
+            <h1>Access denied</h1>
+            <p>You need an administrator or employee account to open this page.</p>
+            <Link to="/" className="rv-btn rv-btn-primary">Back to home<ArrowRight size={16} /></Link>
           </div>
-        </main>
-      </>
+        </div>
+      </Page>
     );
   }
 
-  /* ========================================================
-     MAIN PAGE
-  ======================================================== */
-
   return (
-    <>
-      <Helmet>
-        <title>
-          {isAdmin ? "Admin Dashboard" : "Employee Dashboard"}
-          {" | Target Trek"}
-        </title>
-        <meta name="robots" content="noindex,nofollow" />
-      </Helmet>
-
+    <Page title={`${isAdmin ? "Admin" : "Employee"} dashboard · Target Trek`} top={false}>
       {isAdmin && <NewQueriesNotice />}
-
-      <main
-        className="min-h-screen pb-16 pt-[calc(var(--arena-nav-h,5rem)+1rem)] transition-colors"
-        style={{
-          backgroundColor: colors.page,
-          color: colors.text,
-        }}
-      >
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          {/* ---------- title + search ---------- */}
-          <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <p
-                className="text-[11px] font-extrabold uppercase tracking-[0.16em]"
-                style={{ color: colors.orangeText }}
-              >
-                {isAdmin ? "Administrator" : "Employee"}
-              </p>
-
-              <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-[28px]">
-                {isAdmin ? "Admin" : "Employee"}{" "}
-                <span style={{ color: colors.orangeDark }}>
-                  Dashboard
-                </span>
-              </h1>
-
-              <p
-                className="mt-1 text-[13px]"
-                style={{ color: colors.muted }}
-              >
-                {user?.name ? `Welcome back, ${user.name}. ` : ""}
-                {routes.length} tools across {categories.length} areas.
-              </p>
+      <div className="arx rlx adx">
+        <div className="adx-wrap">
+          {/* ---------- header ---------- */}
+          <header className="adx-head">
+            <div className="hello">
+              <span className="eyebrow">{isAdmin ? "Administrator" : "Employee"} · {today()}</span>
+              <h1>{greeting()}{user?.name ? `, ${String(user.name).split(" ")[0]}` : ""}</h1>
+              <p>{everything.length} tools across {areas.length + (products.length ? 1 : 0)} areas<span className="adx-hint">. Press <kbd>/</kbd> to search</span>.</p>
             </div>
-
-            <div className="relative w-full lg:max-w-sm">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"
-                style={{ color: colors.muted }}
-                aria-hidden="true"
-              />
-
-              <input
-                ref={searchRef}
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search tools   ( press / )"
-                aria-label="Search dashboard tools"
-                className="h-11 w-full rounded-xl border pl-10 pr-10 text-sm outline-none transition focus:border-[var(--focus)]"
-                style={{
-                  backgroundColor: colors.input,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                  "--focus": colors.orange,
-                }}
-              />
-
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label="Clear search"
-                  className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg"
-                  style={{ color: colors.muted }}
-                >
-                  <X size={15} />
-                </button>
-              )}
+            <div className="adx-search">
+              <Search size={18} aria-hidden />
+              <input ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search every tool…" aria-label="Search dashboard tools" />
+              {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={16} /></button> : <kbd aria-hidden>/</kbd>}
             </div>
           </header>
 
-          {/* ---------- chips + view toggle ---------- */}
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div
-              className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-1 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
-              role="tablist"
-              aria-label="Filter by area"
-            >
-              {[
-                ["All", routes.length],
-                ...categories.map((name) => [name, categoryCount(name)]),
-              ].map(([name, count]) => {
-                const on = category === name;
-
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    role="tab"
-                    aria-selected={on}
-                    onClick={() => setCategory(name)}
-                    className="shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition-colors"
-                    style={{
-                      borderColor: on ? categoryAccent(name) : colors.border,
-                      backgroundColor: on ? categoryAccent(name) : colors.panel,
-                      color: on ? "#FFFFFF" : colors.muted,
-                    }}
-                  >
-                    {name !== "All" && (
-                      <span
-                        className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
-                        style={{
-                          backgroundColor: categoryAccent(name),
-                          boxShadow: on ? "0 0 0 1.5px #fff" : "none",
-                        }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    {name}
-                    <span className="ml-1.5 opacity-70">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-1.5 sm:ml-auto">
-              {[
-                ["all", "All"],
-                ["favorites", `Favourites ${validFavorites.length}`],
-                ["recent", "Recent"],
-              ].map(([value, label]) => {
-                const on = quick === value;
-
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setQuick(value)}
-                    className="rounded-lg border px-2.5 py-1.5 text-xs font-bold"
-                    style={{
-                      borderColor: on ? colors.orange : colors.border,
-                      backgroundColor: on ? colors.orangeSoft : "transparent",
-                      color: on ? colors.orangeText : colors.muted,
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-
-              <span
-                className="mx-1 h-5 w-px"
-                style={{ backgroundColor: colors.divider }}
-                aria-hidden="true"
-              />
-
-              {[
-                [false, Grid2X2, "Grid view"],
-                [true, List, "List view"],
-              ].map(([asList, ViewIcon, label]) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => chooseLayout(asList)}
-                  aria-label={label}
-                  aria-pressed={list === asList}
-                  className="grid h-8 w-8 place-items-center rounded-lg border"
-                  style={{
-                    borderColor: list === asList ? colors.orange : colors.border,
-                    backgroundColor:
-                      list === asList ? colors.orangeSoft : "transparent",
-                    color:
-                      list === asList ? colors.orangeText : colors.muted,
-                  }}
-                >
-                  <ViewIcon size={15} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ---------- recently opened ---------- */}
-          {browsing && recentRoutes.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span
-                className="text-[11px] font-extrabold uppercase tracking-[0.14em]"
-                style={{ color: colors.muted }}
-              >
-                Jump back in
-              </span>
-
-              {recentRoutes.map((route) => (
-                <Link
-                  key={route.path}
-                  to={route.path}
-                  onClick={() => trackOpen(route.path)}
-                  className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
-                  style={{
-                    borderColor: colors.border,
-                    backgroundColor: colors.panel,
-                    color: colors.text,
-                  }}
-                >
-                  <route.icon
-                    size={13}
-                    style={{ color: accentFor(route) }}
-                    aria-hidden="true"
-                  />
-                  {route.name}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* ---------- tools ---------- */}
-          {browsing && priority.length > 0 && (
-            <Section
-              title="Essentials"
-              count={priority.length}
-              colors={colors}
-              accent={colors.orange}
-            >
-              <div className={GRID}>
-                {priority.map((route) => tile(route, { accent: true }))}
-              </div>
+          {q ? (
+            /* ---------- search results ---------- */
+            <Section title={`Results for “${query.trim()}”`} count={results.length} color="#0F766E">
+              {results.length === 0 ? (
+                <div className="adx-empty"><b>No tools match</b><span>Try another word, like “payments”, “coupon” or “users”.</span><button type="button" className="rv-btn rv-btn-ghost rv-btn-sm" onClick={() => setQuery("")}>Clear search</button></div>
+              ) : <div className="adx-grid">{results.map(tile)}</div>}
             </Section>
-          )}
+          ) : (
+            <>
+              {/* ---------- recent + pinned ---------- */}
+              {(recents.length > 0 || pinned.length > 0) && (
+                <div className="adx-strips">
+                  {pinned.length > 0 && (
+                    <div className="adx-strip"><span><Star size={13} fill="currentColor" />Pinned</span>
+                      <div>{pinned.map((t) => <Link key={t.path} to={t.path} onClick={() => trackOpen(t.path)} style={{ "--c": t.color || accent(t.area) }}><t.icon size={14} aria-hidden />{t.name}</Link>)}</div>
+                    </div>
+                  )}
+                  {recents.length > 0 && (
+                    <div className="adx-strip"><span><Clock3 size={13} />Recent</span>
+                      <div>{recents.map((t) => <Link key={t.path} to={t.path} onClick={() => trackOpen(t.path)} style={{ "--c": t.color || accent(t.area) }}><t.icon size={14} aria-hidden />{t.name}</Link>)}</div>
+                    </div>
+                  )}
+                </div>
+              )}
 
-          {grouped.map((group) => (
-            <Section
-              key={group.name}
-              title={group.name}
-              count={group.items.length}
-              colors={colors}
-              accent={categoryAccent(group.name)}
-            >
-              <div className={GRID}>
-                {group.items.map((route) => tile(route))}
-              </div>
-            </Section>
-          ))}
+              {/* ---------- 1. products ---------- */}
+              {products.length > 0 && (
+                <Section title="Products" count={products.length} color={AREAS.Products}>
+                  <div className="adx-products">
+                    {products.map((p) => <ProductCard key={p.path} p={p} pinned={isPinned(p.path)} onPin={togglePin} onOpen={trackOpen} />)}
+                  </div>
+                </Section>
+              )}
 
-          {!browsing && results.length === 0 && (
-            <div
-              className="mt-8 rounded-2xl border border-dashed px-6 py-12 text-center"
-              style={{ borderColor: colors.border }}
-            >
-              <p className="text-base font-bold">No tools match</p>
+              {/* ---------- 2. essentials ---------- */}
+              {essentials.length > 0 && (
+                <Section title="Essentials" count={essentials.length} color="#CA8A04">
+                  <div className="adx-grid">{essentials.map(tile)}</div>
+                </Section>
+              )}
 
-              <p
-                className="mt-1 text-sm"
-                style={{ color: colors.muted }}
-              >
-                Try a different word, or clear the filters.
-              </p>
+              {/* ---------- 3. all tools by area ---------- */}
+              <Section title="All tools" count={tools.length} color="#64748B">
+                <div className="adx-chips" role="tablist" aria-label="Filter by area">
+                  {[["All", tools.length], ...areas.map((a) => [a, tools.filter((t) => t.area === a).length])].map(([a, n]) => (
+                    <button key={a} type="button" role="tab" aria-selected={area === a} onClick={() => setArea(a)} style={{ "--c": a === "All" ? "#0F766E" : accent(a) }}>
+                      {a !== "All" && <i aria-hidden />}{a}<em>{n}</em>
+                    </button>
+                  ))}
+                </div>
+                <div className="adx-groups">
+                  {groups.map(({ a, items }) => (
+                    <div key={a} className="adx-group">
+                      <h3 style={{ "--c": accent(a) }}><i aria-hidden />{a}<em>{items.length}</em></h3>
+                      <div className="adx-grid">{items.map(tile)}</div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
 
-              <button
-                type="button"
-                onClick={reset}
-                className="mt-4 rounded-xl px-4 py-2 text-sm font-bold"
-                style={{
-                  backgroundColor: colors.orange,
-                  color: "#1B1B1B",
-                }}
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
-
-          {/* ---------- unavailable ---------- */}
-          {browsing && isAdmin && DISABLED_ROUTES.length > 0 && (
-            <Section
-              title="Unavailable"
-              count={DISABLED_ROUTES.length}
-              colors={colors}
-            >
-              <div className={GRID}>
-                {DISABLED_ROUTES.map((route) => (
-                  <DisabledTile
-                    key={route.path}
-                    route={route}
-                    colors={colors}
-                  />
-                ))}
-              </div>
-            </Section>
+              {/* ---------- unavailable ---------- */}
+              {isAdmin && (
+                <details className="adx-off">
+                  <summary><ChevronDown size={16} aria-hidden />Unavailable tools<em>{DISABLED.length}</em></summary>
+                  <div className="adx-grid">
+                    {DISABLED.map((t) => (
+                      <div key={t.path} className="adx-tile off" aria-disabled="true">
+                        <div><span className="ico" aria-hidden><t.icon size={19} /></span><span className="txt"><b>{t.name}</b><small>{t.description}</small></span></div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
           )}
         </div>
-      </main>
-    </>
+      </div>
+    </Page>
   );
 }

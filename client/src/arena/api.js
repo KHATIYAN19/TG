@@ -77,6 +77,12 @@ export const referralAdminHttp = axios.create({
   timeout: 30000,
 });
 export const REFERRAL_WS_URL = `${API_ROOT.replace(/^http/, "ws")}/ws/referral`;
+// Account centre (/profile): profile, devices, activity, password, affiliate sales. Paths start at /api.
+export const accountHttp = axios.create({
+  baseURL: `${API_ROOT}/api`,
+  withCredentials: true,
+  timeout: 30000,
+});
 export const uploadsHttp = axios.create({
   baseURL: `${API_ROOT}/api/uploads`,
   withCredentials: true,
@@ -125,7 +131,7 @@ const refreshAccessToken = () => {
   return refreshing;
 };
 
-for (const instance of [http, adminHttp, mailHttp, bookStorageHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, referralHttp, referralAdminHttp, uploadsHttp]) {
+for (const instance of [http, adminHttp, mailHttp, bookStorageHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, referralHttp, referralAdminHttp, uploadsHttp, accountHttp]) {
   instance.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
@@ -161,7 +167,7 @@ for (const instance of [http, adminHttp, mailHttp, bookStorageHttp, campaignHttp
 
       // 404 from the API itself (not a missing record) means the server is running an
       // older version without this feature. Say so, instead of a bare "not found".
-      if (status === 404 && /not found/i.test(String(error.response?.data?.message || "")) && !error.response?.data?.code) {
+      if (status === 404 && instance !== accountHttp && /not found/i.test(String(error.response?.data?.message || "")) && !error.response?.data?.code) {
         error.response.data.message =
           "This part of the arena isn't available on the server yet. The backend needs to be updated to the latest version.";
         error.response.data.code = "SERVER_OUTDATED";

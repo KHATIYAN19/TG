@@ -19,6 +19,11 @@ import {
   getMyActivities,
 } from "../controllers/activityController.js";
 
+import {
+  getMyAccount,
+  getMySales,
+} from "../controllers/accountController.js";
+
 const router = express.Router();
 
 router.use(auth);
@@ -26,6 +31,12 @@ router.use(auth);
 /* READ-ONLY PROFILE */
 
 router.get("/me", me);
+
+// One call for the whole /profile page: profile, 5 devices, 5 activities, affiliate sales.
+router.get("/account", getMyAccount);
+
+// Affiliates: sales numbers only (chart range change / refresh).
+router.get("/account/sales", getMySales);
 
 /* SESSION CONTROL */
 
