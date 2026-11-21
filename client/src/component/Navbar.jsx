@@ -98,7 +98,6 @@ function buildModel(active) {
       { title: "Resources", path: ROUTES.resources, icon: FileText, selected: active("/resources") || active("/resource") },
       { title: "Blogs", path: ROUTES.blogs, icon: Edit3, selected: active("/blogs") || active("/blog") },
       { title: "About Us", path: ROUTES.about, icon: Contact, selected: active(ROUTES.about) },
-      { title: "Contact", path: ROUTES.contact, icon: Mail, selected: active(ROUTES.contact) },
     ],
   };
 }
@@ -304,8 +303,13 @@ const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin
                 {item.title}
               </NavLink>
             ))}
+            {/* MEMORIES BUTTON (desktop): hidden for now. Uncomment the NavLink below to bring it back; nothing else needs to change.
             <NavLink to={model.memories.path} className="tt-chip-memories" data-active={model.memories.selected} aria-current={model.memories.selected ? "page" : undefined}>
               <Heart size={14} fill="currentColor" aria-hidden="true" /> Memories
+            </NavLink>
+            */}
+            <NavLink to={ROUTES.contact} className="tt-link" data-active={active(ROUTES.contact)} aria-current={active(ROUTES.contact) ? "page" : undefined}>
+              Contact Us
             </NavLink>
             <MoreMenu items={model.more} isAdmin={isAdmin} pathname={pathname} onNavigate={onNavigate} />
           </>
@@ -415,7 +419,9 @@ const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDar
                 <Tile to={ROUTES.books} icon={BookOpen} label="Books" active={model.primary[1].selected} onClick={onClose} />
                 <Tile to={ROUTES.interviews} icon={Users} label="Interviews" active={model.primary[2].selected} onClick={onClose} />
                 <Tile to={ROUTES.mockInterviews} icon={CalendarCheck2} label="Mock Interviews" active={model.primary[3].selected} onClick={onClose} />
+                {/* MEMORIES TILE (mobile menu): hidden for now. Uncomment to bring it back.
                 <Tile to={ROUTES.memories} icon={Heart} label="Memories" tone="heart" active={model.memories.selected} onClick={onClose} />
+                */}
               </div>
 
               <div className="tt-dr-label">More</div>

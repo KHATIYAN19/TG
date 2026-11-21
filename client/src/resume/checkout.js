@@ -1,4 +1,5 @@
 import { registerRunner, runCheckout as run } from "../payment/checkoutRunner.js";
+import { savedReferralCode } from "../lib/referralCode.js";
 import { buyPlan, payPlan, verifyPayment } from "./api";
 
 /*
@@ -29,8 +30,8 @@ const open = async (pay, description, user) =>
  *   { status: "dismissed" }                     the buyer closed the popup
  */
 export const payForPlan = async ({ packageId, description, user }) =>
-  open(await buyPlan({ packageId, returnOrigin: window.location.origin }), description, user);
+  open(await buyPlan({ packageId, returnOrigin: window.location.origin, referralCode: savedReferralCode() }), description, user);
 
 /* pay again for a plan that was started but not finished */
 export const payForExisting = async ({ purchaseId, description, user }) =>
-  open(await payPlan(purchaseId, { returnOrigin: window.location.origin }), description, user);
+  open(await payPlan(purchaseId, { returnOrigin: window.location.origin, referralCode: savedReferralCode() }), description, user);

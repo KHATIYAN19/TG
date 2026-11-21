@@ -20,6 +20,7 @@ const partnerSettingsSchema = new Schema(
     maxHistoryDays: { type: Number, default: 0, min: 0 },
     maskTransactionIds: { type: Boolean, default: false },
     hiddenTxns: { type: [String], default: [] }, // never shown to any partner
+    hiddenDays: { type: [Schema.Types.Mixed], default: [] }, // [{ from, to }] IST days never shown to any partner
     includeUnpaid: { type: Boolean, default: undefined }, // legacy: replaced by statuses
     notice: { type: String, default: "", maxlength: 500 },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },

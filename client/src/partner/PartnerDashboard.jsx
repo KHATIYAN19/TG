@@ -441,22 +441,15 @@ function Controls({ perms, range, setRange, custom, setCustom, product, setProdu
   );
 }
 
-/* "You can see payments from … to …" plus any other rule that changes what they see */
+/* "You can see payments from … to …". Never mentions what is held back (hidden payments, dates, codes, delays, limits). */
 const fmtDay = (v) => (v ? day(`${v}T00:00:00+05:30`) : "");
 function VisibleLine({ perms }) {
   const v = perms.visible || {};
-  const L = perms.limits || {};
   const parts = [];
   if (v.empty) parts.push("No dates are shared with you right now.");
   else if (v.from && v.to) parts.push(`You can see payments from ${fmtDay(v.from)} to ${fmtDay(v.to)}.`);
   else if (v.from) parts.push(`You can see payments from ${fmtDay(v.from)} onwards.`);
   else if (v.to) parts.push(`You can see payments up to ${fmtDay(v.to)}.`);
-  if (perms.delayDays) parts.push(perms.delayDays === 1 ? "Today's payments appear tomorrow." : `The newest ${perms.delayDays} days are not shown yet.`);
-  if (L.codes?.length) parts.push(`Only payments with ${L.codes.length === 1 ? "code" : "codes"} ${L.codes.join(", ")}.`);
-  if (L.books) parts.push(`Book sales are limited to ${L.books} ${L.books === 1 ? "book" : "books"}.`);
-  if (L.gateways?.length) parts.push(`Only ${L.gateways.join(", ")} payments.`);
-  if (L.minAmount !== null && L.minAmount !== undefined) parts.push(`Payments from ${inr(L.minAmount)}.`);
-  if (L.maxAmount !== null && L.maxAmount !== undefined) parts.push(`Payments up to ${inr(L.maxAmount)}.`);
   if (perms.expiresAt) parts.push(`Your access runs until ${fmtDay(perms.expiresAt)}.`);
   if (!parts.length) return null;
   return <p className="pt-hint"><Info size={14} aria-hidden /><span>{parts.join(" ")}</span></p>;
@@ -522,7 +515,7 @@ export function PartnerView({ api, preview = false, onHide }) {
       {view === "overview" && <Overview key={JSON.stringify(query)} api={api} perms={perms} query={query} go={go} openCode={openCode} onHide={preview ? onHide : undefined} />}
       {view === "transactions" && <Transactions api={api} perms={perms} query={query} code={code} setCode={setCode} preview={preview} onHide={preview ? onHide : undefined} />}
       {view === "codes" && <Codes api={api} perms={perms} query={query} openCode={openCode} />}
-      <p className="pt-privacy"><ShieldCheck size={15} weight="fill" aria-hidden />Customer names, emails and phone numbers are never shown here.{perms.maskTransactionIds && " IDs are partly hidden."}</p>
+      <p className="pt-privacy"><ShieldCheck size={15} weight="fill" aria-hidden />Customer names, emails and phone numbers are never shown here.</p>
     </>
   );
 

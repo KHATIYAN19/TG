@@ -28,6 +28,7 @@ const referralOrderSchema = new Schema(
     source: { type: String, default: "", maxlength: 20 },
     // the member closed the "you got free credits" message (signup grants); until then the app keeps showing it
     noticeClosedAt: { type: Date, default: null },
+    referralCode: { type: String, default: "", maxlength: 40, index: true }, // label only (utils/referralCode.js): nothing is calculated from it
     payment: {
       amount: { type: Number, default: 0 }, // paise
       currency: { type: String, default: "INR" },

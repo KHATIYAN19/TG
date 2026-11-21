@@ -21,6 +21,7 @@ const memoryOrderSchema = new Schema(
       "upgrade" = pays only the DIFFERENCE to move an existing page to a dearer look: fulfilled by raising what that page was bought for.
       A "page" order that has `upgradeCredit` also pays only the difference: it raises a paid page the user has not used yet, instead of making a second one.
     */
+    referralCode: { type: String, default: "", maxlength: 40, index: true }, // label only (utils/referralCode.js): nothing is calculated from it
     kind: { type: String, enum: ["page", "addon", "upgrade"], default: "page", index: true },
     occasion: { type: Schema.Types.ObjectId, ref: "MemoryOccasion", default: null },
     theme: { type: String, default: "" },

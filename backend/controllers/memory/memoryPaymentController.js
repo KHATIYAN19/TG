@@ -12,6 +12,7 @@ import { buildQuote, findCoveringCredit, findUpgradeCredit, priceOf, resolveThem
 import { activeGateways, getGateway, pickGateway, publicUrls } from "../../services/memory/payments/index.js";
 import { refreshOrder, settleOrder } from "../../services/memory/payments/settle.js";
 import { buildAttribution } from "../../utils/attribution.js";
+import { cleanReferralCode } from "../../utils/referralCode.js";
 import { captureRequestContext } from "../../services/memory/metaCapi.js";
 import { dropLegacyMemoryIndexes, isLegacyIndexError } from "../../services/memory/migrate.js";
 
@@ -120,7 +121,7 @@ export const quote = handler(async (req, res) => {
 
 /* ---------- create ---------- */
 export const createPayment = handler(async (req, res) => {
-  const b = parse(z.object({ gateway: z.string().max(30).optional(), returnOrigin: z.string().max(120).optional(), attribution: z.any().optional(), ...buyBody }), req.body);
+  const b = parse(z.object({ gateway: z.string().max(30).optional(), returnOrigin: z.string().max(120).optional(), attribution: z.any().optional(), referralCode: z.string().max(64).optional(), ...buyBody }), req.body);
   const s = await getSettings();
   const r = await priceRequest(req, b, s);
   const amountPaise = r.quote.totalPaise;
@@ -159,6 +160,7 @@ export const createPayment = handler(async (req, res) => {
   }
   const doc = {
     _id: orderId, user: uid(req), amount: amountPaise, gateway: adapter.id, gatewayOrderId, returnOrigin: b.returnOrigin ? allowedReturnOrigin(b.returnOrigin) : "",
+    referralCode: cleanReferralCode(b.referralCode),
     kind: r.kind, occasion: r.occasion?._id || null, theme: r.themeId || "", page: r.page?._id || null, basePaise: r.quote.basePaise, addons: r.quote.addons,
     upgradeCredit: r.credit?._id || null, fullPricePaise: r.upgrade?.fullPaise || 0, // (a room-only order on a pass has no look price to add)
   };

@@ -148,7 +148,7 @@ const SOURCES = {
           amount: { $ifNull: ["$amount", 0] },
           discount: { $literal: 0 },
           coupon: { $literal: null },
-          referralCode: upper({ $first: "$_r.code" }),
+          referralCode: { $ifNull: [upper("$referralCode"), upper({ $first: "$_r.code" })] },
           referralAmount: { $literal: 0 },
           refunded: { $literal: 0 },
           status: { $switch: { branches: [{ case: { $eq: ["$status", "paid"] }, then: "paid" }, { case: { $eq: ["$status", "created"] }, then: "pending" }], default: "failed" } },
@@ -173,7 +173,7 @@ const SOURCES = {
           amount: { $ifNull: ["$payment.amount", 0] },
           discount: { $max: [0, { $subtract: [{ $ifNull: ["$packageSnapshot.pricePaise", 0] }, { $ifNull: ["$payment.amount", 0] }] }] },
           coupon: { $literal: null },
-          referralCode: { $literal: null },
+          referralCode: upper("$referralCode"),
           referralAmount: { $literal: 0 },
           refunded: { $literal: 0 },
           status: { $switch: { branches: [{ case: { $eq: ["$payment.status", "paid"] }, then: "paid" }, { case: { $eq: ["$payment.status", "created"] }, then: "pending" }], default: "failed" } },
@@ -198,7 +198,7 @@ const SOURCES = {
           amount: { $ifNull: ["$payment.amount", 0] },
           discount: { $literal: 0 },
           coupon: { $literal: null },
-          referralCode: { $literal: null },
+          referralCode: upper("$referralCode"),
           referralAmount: { $literal: 0 },
           refunded: { $literal: 0 },
           status: { $switch: { branches: [{ case: { $eq: ["$payment.status", "paid"] }, then: "paid" }, { case: { $eq: ["$payment.status", "created"] }, then: "pending" }], default: "failed" } },
@@ -223,7 +223,7 @@ const SOURCES = {
                 amount: { $ifNull: ["$amountPaise", 0] },
                 discount: { $literal: 0 },
                 coupon: { $literal: null },
-                referralCode: { $literal: null },
+                referralCode: upper({ $first: "$_s.referralCode" }),
                 referralAmount: { $literal: 0 },
                 refunded: { $cond: [{ $eq: ["$status", "refunded"] }, { $ifNull: ["$amountPaise", 0] }, 0] },
                 status: { $switch: { branches: [{ case: { $eq: ["$status", "paid"] }, then: "paid" }, { case: { $eq: ["$status", "refunded"] }, then: "refunded" }], default: "failed" } },
@@ -276,6 +276,11 @@ const unionPipeline = ({ perms, scope, product, from, to, status, search, code, 
   }
   // hidden by an admin: matched against both the gateway transaction id and our order id
   if (scope.hidden?.length) and.push({ txnId: { $nin: scope.hidden } }, { ref: { $nin: scope.hidden } });
+  // hidden dates: matched on the payment time, as IST days
+  if (scope.hiddenDays?.length) and.push({ $nor: scope.hiddenDays.map((r) => ({ at: { $gte: r.from, $lt: r.to } })) });
+  // referral codes an admin chose to show / hide, for every product
+  if (scope.refShow?.length) and.push({ referralCode: { $in: scope.refShow } });
+  if (scope.refHide?.length) and.push({ referralCode: { $nin: scope.refHide } });
   if (Number.isFinite(scope.minAmount)) and.push({ amount: { $gte: scope.minAmount } });
   if (Number.isFinite(scope.maxAmount)) and.push({ amount: { $lte: scope.maxAmount } });
   // book restriction only narrows Books; other products are untouched
@@ -354,4 +359,19 @@ export const totalOf = async (q) => {
   if (!built) return { count: 0, amount: 0, refunded: 0 };
   const [res] = await run(built, [{ $group: { _id: null, count: { $sum: 1 }, amount: { $sum: "$amount" }, refunded: { $sum: "$refunded" } } }]);
   return res || { count: 0, amount: 0, refunded: 0 };
+};
+
+/* Every referral code seen on a paid payment, in every product, with its sales: lets an admin pick which codes a partner sees. */
+export const referralCodes = async () => {
+  const perms = { products: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, true])) };
+  const scope = { statuses: PAID_STATUSES, gateways: null, hidden: [], hiddenDays: [], refShow: null, refHide: [], codes: null, books: null };
+  const built = unionPipeline({ perms, scope, paidOnly: true });
+  if (!built) return [];
+  const rows = await run(built, [
+    { $match: { referralCode: { $ne: null } } },
+    { $group: { _id: "$referralCode", count: { $sum: 1 }, amount: { $sum: "$amount" }, products: { $addToSet: "$product" }, last: { $max: "$at" } } },
+    { $sort: { count: -1, _id: 1 } },
+    { $limit: 500 },
+  ]);
+  return rows.map((r) => ({ code: r._id, count: r.count, amount: r.amount, products: r.products.sort(), last: r.last }));
 };

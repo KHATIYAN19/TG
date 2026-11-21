@@ -449,6 +449,67 @@ await test("hidden transactions: gone from lists, totals, codes and CSV, for one
   assert.equal((await setAccess({ hiddenTxns: Array.from({ length: 501 }, (_, i) => `id_${i}`) })).statusCode, 400);
 });
 
+await test("referral code field on resume / referral / subscription orders; admin shows or hides codes and dates; partner payload hides the rules", async () => {
+  await setAccess({ products: ALL_ON, fields: FIELDS_ON, sections: SECTIONS_ON, hiddenTxns: [], codes: [], maskTransactionIds: false });
+  await ResumePurchase.updateOne({ "payment.gatewayOrderId": "cf_res1" }, { $set: { referralCode: "res-ref" } });
+  await ReferralOrder.updateOne({ "payment.gatewayOrderId": "order_ref1" }, { $set: { referralCode: "UNL-REF" } });
+  await ReferralSubscription.updateOne({ _id: sub._id }, { $set: { referralCode: "SUB-REF" } });
+  const all = await txns();
+  const codeOf = (ref) => all.body.data.rows.find((x) => x.ref === ref)?.referralCode;
+  assert.equal(codeOf("cf_res1"), "RES-REF", "resume shows its own field, upper-cased");
+  assert.equal(codeOf("order_ref1"), "UNL-REF");
+  assert.equal(codeOf("inv_sub1"), "SUB-REF");
+  const total = all.body.data.total;
+
+  // hide a code: those payments disappear everywhere, in every product
+  let r = await setAccess({ refHide: ["res-ref", "SUB-REF"] });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.data.access.refHide, ["RES-REF", "SUB-REF"]);
+  let t = await txns();
+  assert.equal(t.body.data.total, total - 2);
+  assert.ok(!t.body.data.rows.some((x) => ["RES-REF", "SUB-REF"].includes(x.referralCode)));
+  const o = await call(C.partnerOverview, { user: asPartner, query: { range: "30d" } });
+  assert.ok(!(o.body.data.codes.referrals || []).some((c) => c.code === "RES-REF"));
+
+  // show only: just the sales through those codes
+  r = await setAccess({ refHide: [], refShow: ["UNL-REF"] });
+  t = await txns();
+  assert.equal(t.body.data.total, 1);
+  assert.equal(t.body.data.rows[0].referralCode, "UNL-REF");
+  await setAccess({ refShow: [] });
+
+  // the admin's list of codes to choose from
+  const seen = await call(C.adminReferralCodes, { user: asAdmin });
+  assert.ok(["RES-REF", "UNL-REF", "SUB-REF", "CREATOR20"].every((c) => seen.body.data.codes.some((x) => x.code === c)));
+
+  // hidden dates: one day, a range, and Settings for everyone
+  const dayOf = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
+  const day7 = dayOf(daysAgo(7));
+  const onDay7 = all.body.data.rows.filter((x) => dayOf(new Date(x.at)) === day7).length;
+  assert.ok(onDay7 > 0);
+  r = await setAccess({ hiddenDays: [{ from: day7 }] });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.data.access.hiddenDays, [{ from: day7, to: day7 }]);
+  assert.equal((await txns()).body.data.total, total - onDay7);
+  assert.equal((await setAccess({ hiddenDays: [{ from: "2026-02-10", to: "2026-02-01" }] })).statusCode, 400);
+  r = await setAccess({ hiddenDays: [{ from: dayOf(daysAgo(60)), to: dayOf(new Date(now + 86400000)) }] });
+  assert.equal((await txns()).body.data.total, 0, "a range covering every payment hides them all");
+  await setAccess({ hiddenDays: [] });
+  assert.equal((await txns()).body.data.total, total);
+  const gs = await call(C.adminUpdateSettings, { user: asAdmin, body: { hiddenDays: [{ from: day7, to: day7 }] } });
+  assert.equal(gs.statusCode, 200, JSON.stringify(gs.body));
+  assert.equal((await txns()).body.data.total, total - onDay7, "Settings hide the day for every partner");
+  await call(C.adminUpdateSettings, { user: asAdmin, body: { hiddenDays: [] } });
+
+  // the partner is never told about any of it
+  await setAccess({ refHide: ["RES-REF"], hiddenDays: [{ from: day7 }], delayDays: 1, maskTransactionIds: true, minAmount: 1 });
+  const me = await call(C.partnerMe, { user: asPartner });
+  const s2 = JSON.stringify(me.body.data.permissions);
+  for (const k of ["limits", "delayDays", "maskTransactionIds", "hiddenDays", "refHide", "refShow", "RES-REF"]) assert.ok(!s2.includes(k), `partner payload mentions ${k}`);
+  assert.ok(!("hiddenCount" in (await txns()).body.data));
+  await setAccess({ refHide: [], hiddenDays: [], delayDays: 0, maskTransactionIds: false, minAmount: null });
+});
+
 await test("partner routes are role-guarded", async () => {
   const { partnerRouter, partnerAdminRouter } = await import(`${B}/routes/partnerRoutes.js`);
   assert.ok(partnerRouter.stack.length >= 5 && partnerAdminRouter.stack.length >= 8);

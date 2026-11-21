@@ -18,6 +18,7 @@ const referralSubscriptionSchema = new Schema(
     plan: { type: Schema.Types.ObjectId, ref: "ReferralSubPlan", required: true },
     kind: { type: String, enum: ["unlimited", "priority"], required: true },
     planName: { type: String, default: "", maxlength: 80 },
+    referralCode: { type: String, default: "", maxlength: 40, index: true }, // label only (utils/referralCode.js): nothing is calculated from it
     pricePaise: { type: Number, required: true },
     status: { type: String, enum: ["created", "active", "past_due", "cancelled", "expired", "failed"], default: "created", index: true },
     gateway: { type: String, default: "" },

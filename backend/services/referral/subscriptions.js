@@ -7,6 +7,7 @@ import ReferralOrder from "../../models/referral/ReferralOrder.js";
 import { createSubscription, fetchSubscription, listSubscriptionCharges, cancelSubscription, verifySubscriptionPayment, pickSubscriptionGateway, resolvePayment, PaymentError } from "../payments/index.js";
 import { BACKEND_URL } from "../../config/urls.js";
 import { gatewayPhone } from "../../utils/phone.js";
+import { cleanReferralCode } from "../../utils/referralCode.js";
 import { ResumeError, toRupees } from "../resume/service.js";
 import { autoUnlockFor, getSettings, hasPriority, liveSubFilter, GRACE_MS } from "./core.js";
 import { emitToUser } from "./hub.js";
@@ -81,7 +82,7 @@ export const accessChanged = async (userId) => {
   `replace`: a subscription whose renewal failed. Paying again starts a fresh subscription at the SAME price, charged now; the failing one
   is cancelled only after this one is paid (so walking away from the checkout loses nothing, and the gateway keeps retrying meanwhile).
 */
-export const startSubscription = async ({ userId, planId, returnOrigin = "", replace = null }) => {
+export const startSubscription = async ({ userId, planId, returnOrigin = "", replace = null, referralCode = "" }) => {
   const s = await getSettings();
   const plan = replace ? await ReferralSubPlan.findOne({ _id: replace.plan }) : await ReferralSubPlan.findOne({ _id: planId, isActive: true, billing: "monthly" });
   if (!plan) throw new ResumeError(404, "This plan isn't available right now.", "PLAN_UNAVAILABLE");
@@ -94,7 +95,7 @@ export const startSubscription = async ({ userId, planId, returnOrigin = "", rep
 
   // an earlier checkout that was never finished is abandoned, not left dangling
   await ReferralSubscription.updateMany({ user: userId, kind: plan.kind, status: "created" }, { $set: { status: "failed", lastFailureReason: "Checkout not completed" } });
-  const sub = await ReferralSubscription.create({ user: userId, plan: plan._id, kind: plan.kind, planName: replace?.planName || plan.name, pricePaise: plan.pricePaise, returnOrigin, replaces: replace?._id || null, events: [{ at: new Date(), type: "created", note: replace ? "Paying again after a failed renewal" : "Checkout started" }] });
+  const sub = await ReferralSubscription.create({ user: userId, plan: plan._id, kind: plan.kind, planName: replace?.planName || plan.name, pricePaise: plan.pricePaise, returnOrigin, referralCode: cleanReferralCode(referralCode) || replace?.referralCode || "", replaces: replace?._id || null, events: [{ at: new Date(), type: "created", note: replace ? "Paying again after a failed renewal" : "Checkout started" }] });
   try {
     const gateway = pickSubscriptionGateway(PRODUCT);
     const mode = resolvePayment(PRODUCT, { gateway }).mode;

@@ -1,3 +1,4 @@
+import { cleanReferralCode } from "../../utils/referralCode.js";
 import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -423,7 +424,7 @@ const startPayment = async (req, order) => {
   const user = await User.findById(uid(req)).select("name email mobile countryCode").lean();
   if (!user) throw new ResumeError(404, "User not found.", "USER_NOT_FOUND");
   const { gateway, gatewayOrderId, checkout } = await startCheckout({ order, user, preferredGateway: req.body?.gateway });
-  await ReferralOrder.updateOne({ _id: order._id, "payment.status": { $ne: "paid" } }, { $set: { "payment.gateway": gateway, "payment.gatewayOrderId": gatewayOrderId, "payment.status": "created", "payment.failureReason": null, "payment.returnOrigin": allowedReturnOrigin(req.body?.returnOrigin) }, $push: { "payment.attempts": { gateway, gatewayOrderId } } });
+  await ReferralOrder.updateOne({ _id: order._id, "payment.status": { $ne: "paid" } }, { $set: { "payment.gateway": gateway, "payment.gatewayOrderId": gatewayOrderId, "payment.status": "created", "payment.failureReason": null, "payment.returnOrigin": allowedReturnOrigin(req.body?.returnOrigin), ...(cleanReferralCode(req.body?.referralCode) ? { referralCode: cleanReferralCode(req.body.referralCode) } : {}) }, $push: { "payment.attempts": { gateway, gatewayOrderId } } });
   return { orderId: String(order._id), gateway, amount: order.payment.amount, currency: "INR", checkout };
 };
 export const unlock = handler(async (req, res) => {
@@ -481,7 +482,7 @@ export const buyPlan = handler(async (req, res) => {
   await assertNotBlocked(uid(req));
   const settings = await live();
   if (!settings.plansEnabled) throw new ResumeError(409, "Credit plans aren't on sale right now.", "PLANS_OFF");
-  const b = parse(z.object({ planId: z.string(), returnOrigin: z.string().max(120).optional(), gateway: z.string().max(30).optional() }), req.body);
+  const b = parse(z.object({ planId: z.string(), returnOrigin: z.string().max(120).optional(), gateway: z.string().max(30).optional(), referralCode: z.string().max(64).optional() }), req.body);
   assertId(b.planId, "plan");
   const plan = await ReferralPlan.findOne({ _id: b.planId, isActive: true }).lean();
   if (!plan) throw new ResumeError(404, "This plan isn't available right now.", "PLAN_UNAVAILABLE");
@@ -501,9 +502,9 @@ export const startSub = handler(async (req, res) => {
   const me = uid(req);
   await assertNotBlocked(me);
   await live();
-  const b = parse(z.object({ planId: z.string(), returnOrigin: z.string().max(120).optional(), gateway: z.string().max(30).optional() }), req.body);
+  const b = parse(z.object({ planId: z.string(), returnOrigin: z.string().max(120).optional(), gateway: z.string().max(30).optional(), referralCode: z.string().max(64).optional() }), req.body);
   assertId(b.planId, "plan");
-  ok(res, await startSubscription({ userId: me, planId: b.planId, returnOrigin: allowedReturnOrigin(b.returnOrigin) }), 201);
+  ok(res, await startSubscription({ userId: me, planId: b.planId, returnOrigin: allowedReturnOrigin(b.returnOrigin), referralCode: b.referralCode }), 201);
 });
 export const verifySub = handler(async (req, res) => {
   const sub = await ownSub(req);
@@ -525,7 +526,7 @@ export const cancelSub = handler(async (req, res) => {
 export const retrySub = handler(async (req, res) => {
   const sub = await ownSub(req);
   if (sub.status !== "past_due") throw new ResumeError(409, "This subscription has no failed payment to fix.", "NOT_PAST_DUE");
-  ok(res, await startSubscription({ userId: uid(req), replace: sub, returnOrigin: allowedReturnOrigin(req.body?.returnOrigin) }), 201);
+  ok(res, await startSubscription({ userId: uid(req), replace: sub, returnOrigin: allowedReturnOrigin(req.body?.returnOrigin), referralCode: req.body?.referralCode }), 201);
 });
 /* hide the "payment failed" message until the next failure */
 export const closeFailNotice = handler(async (req, res) => {
@@ -539,7 +540,7 @@ export const buyPriority = handler(async (req, res) => {
   await assertNotBlocked(me);
   const s = await live();
   if (!s.priorityEnabled) throw new ResumeError(409, "Priority isn't on sale right now.", "PLAN_OFF");
-  const b = parse(z.object({ planId: z.string(), returnOrigin: z.string().max(120).optional(), gateway: z.string().max(30).optional() }), req.body);
+  const b = parse(z.object({ planId: z.string(), returnOrigin: z.string().max(120).optional(), gateway: z.string().max(30).optional(), referralCode: z.string().max(64).optional() }), req.body);
   assertId(b.planId, "plan");
   const plan = await ReferralSubPlan.findOne({ _id: b.planId, isActive: true, kind: "priority", billing: "once" }).lean();
   if (!plan) throw new ResumeError(404, "This plan isn't available right now.", "PLAN_UNAVAILABLE");

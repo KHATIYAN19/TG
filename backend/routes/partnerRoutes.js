@@ -4,7 +4,7 @@ import { auth, isAdmin, authorizeRoles } from "../Middleware/auth.js";
 import {
   partnerMe, partnerOverview, partnerTransactions, partnerExport,
   previewMe, previewOverview, previewTransactions,
-  adminListPartners, adminUpdateSettings, adminGetPartner, adminUpdateAccess, adminHideTransactions,
+  adminListPartners, adminUpdateSettings, adminGetPartner, adminUpdateAccess, adminHideTransactions, adminReferralCodes,
 } from "../controllers/partner/partnerController.js";
 
 /* Partner dashboard: /api/partner (role "partner" only). The controller re-checks role and permissions on every call. */
@@ -21,6 +21,7 @@ export const partnerAdminRouter = express.Router();
 partnerAdminRouter.use(auth, isAdmin);
 partnerAdminRouter.use((req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
 partnerAdminRouter.get("/", adminListPartners);
+partnerAdminRouter.get("/referral-codes", adminReferralCodes);
 partnerAdminRouter.put("/settings", adminUpdateSettings);
 partnerAdminRouter.get("/:userId", adminGetPartner);
 partnerAdminRouter.put("/:userId/access", adminUpdateAccess);

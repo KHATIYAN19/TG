@@ -1,3 +1,4 @@
+import { cleanReferralCode } from "../../utils/referralCode.js";
 import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -90,12 +91,12 @@ const startPayment = async (req, purchase, b) => {
   const { gateway, gatewayOrderId, checkout } = await startCheckout({ purchase, user, preferredGateway: b.gateway });
   await ResumePurchase.updateOne(
     { _id: purchase._id, "payment.status": { $ne: "paid" } },
-    { $set: { "payment.gateway": gateway, "payment.gatewayOrderId": gatewayOrderId, "payment.status": "created", "payment.failureReason": null, "payment.returnOrigin": b.returnOrigin ? allowedReturnOrigin(b.returnOrigin) : "" }, $push: { "payment.attempts": { gateway, gatewayOrderId } } }
+    { $set: { "payment.gateway": gateway, "payment.gatewayOrderId": gatewayOrderId, "payment.status": "created", "payment.failureReason": null, "payment.returnOrigin": b.returnOrigin ? allowedReturnOrigin(b.returnOrigin) : "", ...(cleanReferralCode(b.referralCode) ? { referralCode: cleanReferralCode(b.referralCode) } : {}) }, $push: { "payment.attempts": { gateway, gatewayOrderId } } }
   );
   return { purchaseId: String(purchase._id), gateway, amount: purchase.payment.amount, currency: "INR", checkout };
 };
 
-const payBody = z.object({ gateway: z.string().max(30).optional(), returnOrigin: z.string().max(120).optional() });
+const payBody = z.object({ gateway: z.string().max(30).optional(), returnOrigin: z.string().max(120).optional(), referralCode: z.string().max(64).optional() });
 
 /* One call: makes the order for a plan (reusing an unpaid one for the same plan) and starts the payment. */
 export const buyPlan = handler(async (req, res) => {

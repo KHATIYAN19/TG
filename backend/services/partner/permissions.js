@@ -18,6 +18,9 @@ import mongoose from "mongoose";
     expiresAt    per partner: access ends after this day.
     hiddenTxns   transaction / order IDs that are never shown (per partner, plus a list in Settings for everyone).
                  A hidden payment is gone everywhere: lists, totals, charts, codes and CSV.
+    hiddenDays   date ranges (IST days, inclusive) whose payments are never shown (per partner, plus Settings for everyone).
+    refShow      per partner: only payments that came through one of these referral codes (any product). Empty = no limit.
+    refHide      per partner: payments that came through one of these referral codes are never shown (any product).
 
   Never shown, and deliberately not in any list below, so no setting can turn them on:
     customer name, email, phone, user id, IP address, device, address, notes, messages, uploaded files, gateway raw payloads.
@@ -85,6 +88,7 @@ export const MAX_CODES = 50;
 export const MAX_BOOKS = 100;
 export const MAX_HIDDEN = 500; // per partner
 export const MAX_HIDDEN_ALL = 2000; // in Settings, for every partner
+export const MAX_HIDDEN_DAYS = 60; // date ranges, per partner and in Settings
 
 const pickBools = (keys, src, fallback) => {
   const out = {};
@@ -108,6 +112,7 @@ export const DEFAULT_SETTINGS = {
   maxHistoryDays: 0,
   maskTransactionIds: false,
   hiddenTxns: [],
+  hiddenDays: [],
   notice: "",
 };
 
@@ -128,6 +133,9 @@ export const DEFAULT_ACCESS = {
   books: [],
   expiresAt: "",
   hiddenTxns: [],
+  hiddenDays: [],
+  refShow: [],
+  refHide: [],
   maskTransactionIds: false,
   note: "",
 };
@@ -195,6 +203,22 @@ const cleanHidden = (input, current, max) => {
   return list;
 };
 
+/* [{ from, to }] IST days, both inclusive; a single day may leave "to" empty. Overlaps are merged by the query, not here. */
+const cleanRanges = (input, current, max = MAX_HIDDEN_DAYS) => {
+  if (input === undefined) return current;
+  if (!Array.isArray(input)) return current;
+  const out = [];
+  for (const r of input) {
+    const from = cleanDay(r?.from);
+    const to = cleanDay(r?.to) || from;
+    if (!from) throw new PermissionInputError("Each hidden date needs a valid start day.");
+    if (to < from) throw new PermissionInputError("A hidden date range must end on or after its start.");
+    if (!out.some((x) => x.from === from && x.to === to)) out.push({ from, to });
+  }
+  if (out.length > max) throw new PermissionInputError(`Up to ${max} hidden date ranges.`);
+  return out.sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
+};
+
 /* older documents had a single includeUnpaid flag instead of statuses */
 const legacyStatuses = (src, fallback) => {
   if (src?.statuses && typeof src.statuses === "object" && Object.keys(src.statuses).length) return pickBools(STATUS_KEYS, src.statuses, fallback);
@@ -214,6 +238,7 @@ export const cleanSettings = (input = {}, current = DEFAULT_SETTINGS) => ({
   maxHistoryDays: pickChoice(HISTORY_CHOICES, input.maxHistoryDays, current.maxHistoryDays),
   maskTransactionIds: typeof input.maskTransactionIds === "boolean" ? input.maskTransactionIds : current.maskTransactionIds,
   hiddenTxns: cleanHidden(input.hiddenTxns, current.hiddenTxns, MAX_HIDDEN_ALL),
+  hiddenDays: cleanRanges(input.hiddenDays, current.hiddenDays),
   notice: input.notice === undefined ? current.notice : cleanText(input.notice, 500),
 });
 
@@ -234,6 +259,9 @@ export const cleanAccess = (input = {}, current = DEFAULT_ACCESS) => {
     codes: cleanCodes(input.codes, current.codes),
     books: cleanBooks(input.books, current.books),
     hiddenTxns: cleanHidden(input.hiddenTxns, current.hiddenTxns, MAX_HIDDEN),
+    hiddenDays: cleanRanges(input.hiddenDays, current.hiddenDays),
+    refShow: cleanCodes(input.refShow, current.refShow),
+    refHide: cleanCodes(input.refHide, current.refHide),
     expiresAt: input.expiresAt === undefined ? current.expiresAt : input.expiresAt === null ? "" : cleanDay(input.expiresAt),
     maskTransactionIds: typeof input.maskTransactionIds === "boolean" ? input.maskTransactionIds : current.maskTransactionIds,
     note: input.note === undefined ? current.note : cleanText(input.note, 300),
@@ -247,19 +275,22 @@ const storedAccess = (doc) => {
   const d = doc || {};
   const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
   return {
-    ...cleanAccess({ ...d, minAmount: undefined, maxAmount: undefined, window: undefined, hiddenTxns: undefined }, DEFAULT_ACCESS),
+    ...cleanAccess({ ...d, minAmount: undefined, maxAmount: undefined, window: undefined, hiddenTxns: undefined, hiddenDays: undefined }, DEFAULT_ACCESS),
     window: safe(() => cleanWindow(d.window || undefined, DEFAULT_ACCESS.window), DEFAULT_ACCESS.window),
     minAmount: Number.isFinite(d.minAmount) && d.minAmount >= 0 ? d.minAmount : null,
     maxAmount: Number.isFinite(d.maxAmount) && d.maxAmount >= 0 ? d.maxAmount : null,
     books: (d.books || []).map(String),
     hiddenTxns: Array.isArray(d.hiddenTxns) ? d.hiddenTxns.map(String) : [],
+    hiddenDays: safe(() => cleanRanges(d.hiddenDays || [], []), []),
   };
 };
 export const settingsView = (doc) => {
   const d = doc || {};
   const hiddenTxns = Array.isArray(d.hiddenTxns) ? d.hiddenTxns.map(String) : [];
-  try { return { ...cleanSettings({ ...d, hiddenTxns: undefined }, DEFAULT_SETTINGS), hiddenTxns }; }
-  catch { return { ...cleanSettings({ ...d, window: null, hiddenTxns: undefined }, DEFAULT_SETTINGS), hiddenTxns }; }
+  let hiddenDays = [];
+  try { hiddenDays = cleanRanges(d.hiddenDays || [], []); } catch { /* ignore a malformed stored list */ }
+  try { return { ...cleanSettings({ ...d, hiddenTxns: undefined, hiddenDays: undefined }, DEFAULT_SETTINGS), hiddenTxns, hiddenDays }; }
+  catch { return { ...cleanSettings({ ...d, window: null, hiddenTxns: undefined, hiddenDays: undefined }, DEFAULT_SETTINGS), hiddenTxns, hiddenDays }; }
 };
 export { cleanHidden };
 export const accessView = (doc) => storedAccess(doc);
@@ -310,8 +341,13 @@ export const effectivePermissions = (settingsDoc, accessDoc) => {
     books: a.books.length ? a.books : null,
     maskTransactionIds: Boolean(s.maskTransactionIds || a.maskTransactionIds),
     hiddenTxns: [...new Set([...s.hiddenTxns, ...a.hiddenTxns])],
+    hiddenDays: [...s.hiddenDays, ...a.hiddenDays],
+    refShow: a.refShow.length ? a.refShow : null,
+    refHide: a.refHide,
     hiddenOwn: a.hiddenTxns.length,
     hiddenAll: s.hiddenTxns.length,
+    hiddenDaysOwn: a.hiddenDays.length,
+    hiddenDaysAll: s.hiddenDays.length,
     notice: s.notice,
   };
 };
@@ -328,9 +364,16 @@ export const scopeOf = (perms) => ({
   codes: perms.codes,
   books: perms.books,
   hidden: perms.hiddenTxns,
+  // hidden days as [start, end) instants (IST midnight to the next IST midnight)
+  hiddenDays: perms.hiddenDays.map((r) => ({
+    from: new Date(Date.parse(`${r.from}T00:00:00Z`) - IST_OFFSET_MS),
+    to: new Date(Date.parse(`${r.to}T00:00:00Z`) + 86400000 - IST_OFFSET_MS),
+  })),
+  refShow: perms.refShow,
+  refHide: perms.refHide,
 });
 
 export const catalog = () => ({
   products: PRODUCTS, sections: SECTIONS, fields: FIELDS, statuses: STATUSES, gateways: GATEWAYS,
-  historyChoices: HISTORY_CHOICES, delayChoices: DELAY_CHOICES, maxCodes: MAX_CODES, maxBooks: MAX_BOOKS, maxHidden: MAX_HIDDEN, maxHiddenAll: MAX_HIDDEN_ALL,
+  historyChoices: HISTORY_CHOICES, delayChoices: DELAY_CHOICES, maxCodes: MAX_CODES, maxBooks: MAX_BOOKS, maxHidden: MAX_HIDDEN, maxHiddenAll: MAX_HIDDEN_ALL, maxHiddenDays: MAX_HIDDEN_DAYS,
 });

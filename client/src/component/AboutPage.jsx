@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { Btn, Page, cx, useReveal } from "../resume/ui";
+import { OPERATOR, HAS_OPERATOR_INFO } from "../config/operator";
 import "./about.css";
 
 /* =====================================================================
@@ -25,15 +26,14 @@ const OG_IMAGE = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?a
 
 /*
   Business / operator details come from .env:
-    VITE_OPERATOR_NAME=...   VITE_OPERATOR_MOBILE=...   VITE_OPERATOR_ADDRESS=...
+    VITE_OPERATOR_NAME / _EMAIL / _ADDRESS / _MOBILE (see config/operator.js)
   A row is shown only when its variable has a value (restart the dev server after editing .env).
 */
-const readEnv = (v) => String(v || "").trim();
-const OPERATOR_NAME = readEnv(import.meta.env.VITE_OPERATOR_NAME);
-const OPERATOR_MOBILE = readEnv(import.meta.env.VITE_OPERATOR_MOBILE);
-const OPERATOR_ADDRESS = readEnv(import.meta.env.VITE_OPERATOR_ADDRESS);
+const OPERATOR_NAME = OPERATOR.name;
+const OPERATOR_EMAIL = OPERATOR.email;
+const OPERATOR_MOBILE = OPERATOR.mobile;
+const OPERATOR_ADDRESS = OPERATOR.address;
 const OPERATOR_PHONE_HREF = OPERATOR_MOBILE ? `tel:${OPERATOR_MOBILE.replace(/[^\d+]/g, "")}` : "";
-const HAS_OPERATOR_INFO = Boolean(OPERATOR_NAME || OPERATOR_MOBILE || OPERATOR_ADDRESS);
 
 /* =====================================================================
    CONTENT
@@ -119,6 +119,7 @@ function Head() {
       knowsAbout: ["Software Engineering", "System Design", "High-Level Design", "Low-Level Design", "Java", "Backend Engineering", "Generative AI", "Retrieval-Augmented Generation", "Model Context Protocol", "Google ADK", "AI Agents", "Software Engineering Interviews"],
     };
     if (OPERATOR_NAME) org.founder = { "@type": "Person", name: OPERATOR_NAME };
+    if (OPERATOR_EMAIL) org.email = OPERATOR_EMAIL;
     if (OPERATOR_MOBILE) org.telephone = OPERATOR_MOBILE;
     if (OPERATOR_ADDRESS) org.address = { "@type": "PostalAddress", streetAddress: OPERATOR_ADDRESS.replace(/\s*\n\s*/g, ", ") };
 
@@ -374,6 +375,9 @@ export default function AboutPage() {
                   )}
                   {OPERATOR_MOBILE && (
                     <div><span className="tt-ico"><Phone size={20} weight="duotone" aria-hidden /></span><div><dt>Mobile</dt><dd><a href={OPERATOR_PHONE_HREF}>{OPERATOR_MOBILE}</a></dd></div></div>
+                  )}
+                  {OPERATOR_EMAIL && (
+                    <div><span className="tt-ico"><Envelope size={20} weight="duotone" aria-hidden /></span><div><dt>Email</dt><dd><a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a></dd></div></div>
                   )}
                   <div><span className="tt-ico"><Envelope size={20} weight="duotone" aria-hidden /></span><div><dt>Support email</dt><dd><a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></dd></div></div>
                   {OPERATOR_ADDRESS && (

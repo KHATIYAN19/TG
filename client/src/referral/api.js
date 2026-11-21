@@ -1,4 +1,5 @@
 import axios from "axios";
+import { savedReferralCode } from "../lib/referralCode.js";
 
 import { API_ROOT, referralAdminHttp as admin, referralHttp as http } from "../arena/api";
 import { formatINR, uploadDocument, dateFmt, dayFmt } from "../resume/api";
@@ -35,7 +36,7 @@ export const getPlans = () => http.get("/plans").then(d);
 export const getWallet = () => http.get("/wallet").then(d);
 export const startSubscription = async (planId, user, retryOf) => {
   // retryOf: pay again for a subscription whose renewal failed (a fresh checkout at the same price)
-  const r = await (retryOf ? http.post(`/subscriptions/${retryOf}/retry`, { returnOrigin: window.location.origin }) : http.post("/subscriptions", { planId, returnOrigin: window.location.origin })).then(d);
+  const r = await (retryOf ? http.post(`/subscriptions/${retryOf}/retry`, { returnOrigin: window.location.origin, referralCode: savedReferralCode() }) : http.post("/subscriptions", { planId, returnOrigin: window.location.origin, referralCode: savedReferralCode() })).then(d);
   const res = await runCheckout({
     checkout: r.checkout, name: "Referrals by Target Trek", description: r.planName, theme: "#0f766e", prefill: { name: user?.name || "", email: user?.email || "" },
     // Razorpay answers in the popup; Cashfree redirects away and comes back to the Credits page (handled there)
@@ -47,7 +48,7 @@ export const retrySubscription = (id, user) => startSubscription(null, user, id)
 export const closeFailNotice = (id) => http.post(`/subscriptions/${id}/notice/close`).then(d);
 export const getSubscription = (id) => http.get(`/subscriptions/${id}`).then(d);
 export const cancelSubscription = (id, reason) => http.post(`/subscriptions/${id}/cancel`, { reason }).then(d);
-export const buyPriority = async (planId, user) => open(await http.post("/priority/buy", { planId, returnOrigin: window.location.origin }).then(d), "Priority pass", user);
+export const buyPriority = async (planId, user) => open(await http.post("/priority/buy", { planId, returnOrigin: window.location.origin, referralCode: savedReferralCode() }).then(d), "Priority pass", user);
 export const listPayments = (params) => http.get("/payments", { params }).then(d); // every order + subscription charge, newest first
 export const orderStatus = (id) => http.get(`/orders/${id}/status`).then(d);
 
@@ -64,12 +65,12 @@ const open = async (pay, description, user) => ({
 });
 /* unlock a chat: resolves { unlocked } or the payment outcome ({ status: paid | pending | failed | redirect | dismissed }) */
 export const unlockChat = async (id, { useCredit, user } = {}) => {
-  const r = await http.post(`/requests/${id}/unlock`, { useCredit, returnOrigin: window.location.origin }).then(d);
+  const r = await http.post(`/requests/${id}/unlock`, { useCredit, returnOrigin: window.location.origin, referralCode: savedReferralCode() }).then(d);
   if (r.unlocked) return { unlocked: true, via: r.via };
   return open(r.payment, "Open a referral chat", user);
 };
-export const buyPlan = async (planId, user) => open(await http.post("/plans/buy", { planId, returnOrigin: window.location.origin }).then(d), "Chat credits", user);
-export const payAgain = async (orderId, user) => open(await http.post(`/orders/${orderId}/pay`, { returnOrigin: window.location.origin }).then(d), "Referral payment", user);
+export const buyPlan = async (planId, user) => open(await http.post("/plans/buy", { planId, returnOrigin: window.location.origin, referralCode: savedReferralCode() }).then(d), "Chat credits", user);
+export const payAgain = async (orderId, user) => open(await http.post(`/orders/${orderId}/pay`, { returnOrigin: window.location.origin, referralCode: savedReferralCode() }).then(d), "Referral payment", user);
 
 /* ---- admin ---- */
 export const A = {

@@ -9,7 +9,7 @@ import {
   MAX_HIDDEN, MAX_HIDDEN_ALL, cleanHidden,
   catalog, cleanAccess, cleanSettings, settingsView, accessView, effectivePermissions, enabledProducts, visibleStatuses, scopeOf,
 } from "../../services/partner/permissions.js";
-import { listRows, exportRows, summarize, totalOf, EXPORT_CAP } from "../../services/partner/ledger.js";
+import { listRows, exportRows, summarize, totalOf, referralCodes, EXPORT_CAP } from "../../services/partner/ledger.js";
 
 /*
   PARTNERS
@@ -20,6 +20,7 @@ import { listRows, exportRows, summarize, totalOf, EXPORT_CAP } from "../../serv
       GET  /api/partner/export          CSV of the payments they can see
     Admin:
       GET  /api/admin/partners                       settings + every partner
+      GET  /api/admin/partners/referral-codes        every referral code seen on a paid payment
       PUT  /api/admin/partners/settings              the ceiling for all partners
       GET  /api/admin/partners/:userId               one partner's access
       PUT  /api/admin/partners/:userId/access        change it
@@ -217,18 +218,11 @@ const permsForClient = (perms) => {
   expiresAt: perms.expiresAt,
   // first and last visible day (inclusive), for the date pickers and the "you can see…" line
   visible: { from: dayOut(floor), to: ceil ? dayOut(new Date(ceil.getTime() - DAY)) : "", empty },
-  window: perms.window,
-  delayDays: perms.delayDays,
-  limits: {
-    minAmount: perms.minAmount, maxAmount: perms.maxAmount,
-    codes: perms.codes || [], books: perms.books ? perms.books.length : 0,
-    gateways: perms.gateways ? GATEWAYS.filter((g) => perms.gateways.includes(g.key)).map((g) => g.label) : [],
-  },
+  // Nothing here says what is held back (hidden payments, days, codes, delays, limits): the partner just sees their data.
   products: PRODUCTS.filter((p) => perms.products[p.key]),
   sections: perms.sections,
   fields: perms.fields,
   historyDays: perms.historyDays,
-  maskTransactionIds: perms.maskTransactionIds,
   includeUnpaid: visibleStatuses(perms).some((x) => !["paid", "partial_refund", "refunded"].includes(x)),
   statuses: perms.fields.status ? visibleStatuses(perms) : [],
   searchable: searchableFields(perms),
@@ -412,6 +406,8 @@ const partnerCard = (u, access, settings) => {
       minAmount: eff.minAmount, maxAmount: eff.maxAmount,
       codes: eff.codes || [], books: eff.books || [],
       hiddenOwn: eff.hiddenOwn, hiddenAll: eff.hiddenAll,
+      hiddenDaysOwn: eff.hiddenDaysOwn, hiddenDaysAll: eff.hiddenDaysAll,
+      refShow: eff.refShow || [], refHide: eff.refHide || [],
     },
   };
 };
@@ -434,6 +430,11 @@ export const adminListPartners = handle(async (req, res) => {
       partners: users.map((u) => partnerCard(u, byUser.get(String(u._id)), settings)),
     },
   });
+});
+
+/* GET /api/admin/partners/referral-codes: every referral code that has a paid payment, to pick from */
+export const adminReferralCodes = handle(async (req, res) => {
+  res.json({ success: true, data: { codes: await referralCodes() } });
 });
 
 export const adminUpdateSettings = handle(async (req, res) => {

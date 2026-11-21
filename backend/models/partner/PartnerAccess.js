@@ -23,6 +23,9 @@ const partnerAccessSchema = new Schema(
     codes: { type: [String], default: [] },
     books: { type: [Schema.Types.ObjectId], ref: "Book", default: [] },
     hiddenTxns: { type: [String], default: [] }, // transaction / order IDs never shown to this partner
+    hiddenDays: { type: [Schema.Types.Mixed], default: [] }, // [{ from, to }] IST days whose payments are never shown to this partner
+    refShow: { type: [String], default: [] }, // only payments through these referral codes (empty = no limit)
+    refHide: { type: [String], default: [] }, // payments through these referral codes are never shown
     expiresAt: { type: String, default: "" }, // "YYYY-MM-DD": access ends after this IST day
     maskTransactionIds: { type: Boolean, default: false },
     includeUnpaid: { type: Boolean, default: undefined }, // legacy: replaced by statuses

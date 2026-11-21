@@ -6,11 +6,12 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import {
   ArrowRight, BookOpen, CaretRight, ChatCircleText, Check, CheckCircle, Clock, Copy, CreditCard, DownloadSimple,
-  Envelope, Headset, PaperPlaneTilt, ShieldCheck,
+  Envelope, Headset, MapPin, PaperPlaneTilt, ShieldCheck, User,
 } from "@phosphor-icons/react";
 
 import BASE_URL from "../utils/Url.js";
 import { Btn, Field, Page, cx, useReveal } from "../resume/ui";
+import { OPERATOR, HAS_OPERATOR_INFO } from "../config/operator";
 import "./about.css";
 
 /* =====================================================================
@@ -119,6 +120,19 @@ function MailCard() {
           <a href={`mailto:${SUPPORT_EMAIL}`} className="ct-mail-v">{SUPPORT_EMAIL}</a>
         </div>
       </div>
+      {HAS_OPERATOR_INFO && (
+        <dl className="ct-op">
+          {OPERATOR.name && (
+            <div><User size={18} weight="duotone" aria-hidden /><span><dt>Operated by</dt><dd>{OPERATOR.name}</dd></span></div>
+          )}
+          {OPERATOR.email && (
+            <div><Envelope size={18} weight="duotone" aria-hidden /><span><dt>Email</dt><dd><a href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a></dd></span></div>
+          )}
+          {OPERATOR.address && (
+            <div><MapPin size={18} weight="duotone" aria-hidden /><span><dt>Business address</dt><dd><address>{OPERATOR.address}</address></dd></span></div>
+          )}
+        </dl>
+      )}
       <div className="ct-mail-btns">
         <Btn as="a" href={`mailto:${SUPPORT_EMAIL}`} variant="ghost" size="sm"><Envelope size={16} weight="bold" aria-hidden />Open email</Btn>
         <Btn variant="ghost" size="sm" onClick={copy} aria-live="polite">

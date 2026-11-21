@@ -32,6 +32,7 @@ const API = {
   list: () => accountHttp.get("/admin/partners").then((r) => r.data.data),
   saveSettings: (body) => accountHttp.put("/admin/partners/settings", body).then((r) => r.data),
   saveAccess: (id, body) => accountHttp.put(`/admin/partners/${id}/access`, body).then((r) => r.data),
+  referralCodes: () => accountHttp.get("/admin/partners/referral-codes").then((r) => r.data.data.codes),
   hide: (id, body) => accountHttp.patch(`/admin/partners/${id}/hidden`, body).then((r) => r.data), // id "all" = every partner
 };
 
@@ -226,6 +227,108 @@ function BookPicker({ books, value, onChange, disabled, max }) {
   );
 }
 
+/* ------------------------------------------------------------ referral codes: which to show, which to hide (every product) */
+const CODE_RX = /^[A-Z0-9_-]{2,40}$/;
+function CodeList({ label, tone, list, onChange, placeholder }) {
+  const [text, setText] = useState("");
+  const add = () => {
+    const next = codesOf(text).filter((c) => CODE_RX.test(c));
+    if (next.length) onChange([...new Set([...list, ...next])]);
+    setText("");
+  };
+  return (
+    <div className="ptx-group">
+      <h4>{tone === "hide" ? <EyeSlash size={14} weight="bold" aria-hidden /> : <Eye size={14} weight="bold" aria-hidden />}{label}</h4>
+      <div className="ptx-dates">
+        <input className="rv-input" value={text} placeholder={placeholder} aria-label={label} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <Btn variant="ghost" size="sm" onClick={add} disabled={!codesOf(text).length}>Add</Btn>
+      </div>
+      {list.length > 0 && (
+        <div className="ptx-chips">
+          {list.map((c) => (
+            <span key={c} className="ptx-idchip">
+              <span className="mono">{c}</span>
+              <button type="button" onClick={() => onChange(list.filter((x) => x !== c))} aria-label={`Remove ${c}`}><X size={12} weight="bold" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RefCodesBox({ show, hide, onShow, onHide, max, seen }) {
+  const [q, setQ] = useState("");
+  const rows = (seen || []).filter((r) => !q || r.code.includes(q.trim().toUpperCase())).slice(0, 40);
+  const toggle = (code, list, setList, other, setOther) => {
+    setOther(other.filter((c) => c !== code));
+    setList(list.includes(code) ? list.filter((c) => c !== code) : [...list, code]);
+  };
+  return (
+    <div className="ptx-grid">
+      <CodeList label="Only show these referral codes" tone="show" list={show} onChange={onShow} placeholder="e.g. RAHUL10   (empty = every referral code)" />
+      <CodeList label="Hide these referral codes" tone="hide" list={hide} onChange={onHide} placeholder="e.g. TEST99" />
+      <p className={cx("acx-note", (show.length > max || hide.length > max) && "ptx-bad")}>
+        {show.length > max || hide.length > max ? `Up to ${max} codes in each list.` : "Applies to every product (books, memories, resume, referrals, Prep Buddy). A hidden code's payments are left out of their lists, totals, charts and CSV. “Only show” keeps just the payments that came through those codes."}
+      </p>
+      <div className="ptx-group">
+        <h4><Tag size={14} weight="bold" aria-hidden />Referral codes seen on payments</h4>
+        {seen === null ? <p className="acx-note">Loading…</p> : seen.length === 0 ? <p className="acx-note">No referral codes on any paid payment yet.</p> : (
+          <>
+            <label className="pt-search"><MagnifyingGlass size={17} aria-hidden /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search codes" aria-label="Search referral codes" /></label>
+            <div className="ptx-chips">
+              {rows.map((r) => (
+                <span key={r.code} className="ptx-idchip">
+                  <span className="mono">{r.code}</span><small>&nbsp;{count(r.count)}</small>
+                  <button type="button" className={show.includes(r.code) ? "on" : undefined} onClick={() => toggle(r.code, show, onShow, hide, onHide)} title={show.includes(r.code) ? "Stop showing only this code" : "Only show this code"} aria-label={`Only show ${r.code}`}><Eye size={12} weight="bold" /></button>
+                  <button type="button" className={hide.includes(r.code) ? "on" : undefined} onClick={() => toggle(r.code, hide, onHide, show, onShow)} title={hide.includes(r.code) ? "Show this code again" : "Hide this code"} aria-label={`Hide ${r.code}`}><EyeSlash size={12} weight="bold" /></button>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* dates whose payments are never shown: single days or ranges (IST, inclusive) */
+function DaysBox({ value, onChange, max, everyone, inherited = 0 }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const bad = Boolean(from && to && to < from);
+  const add = () => {
+    if (!from || bad) return;
+    const r = { from, to: to || from };
+    if (!value.some((x) => x.from === r.from && x.to === r.to)) onChange([...value, r].sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0)));
+    setFrom(""); setTo("");
+  };
+  return (
+    <div className="ptx-group">
+      <div className="ptx-dates">
+        <label><span>From</span><input type="date" className="rv-input" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <span className="ptx-dash" aria-hidden>–</span>
+        <label><span>To (optional)</span><input type="date" className="rv-input" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></label>
+        <Btn size="sm" onClick={add} disabled={!from || bad}>Hide these dates</Btn>
+      </div>
+      {value.length > 0 && (
+        <div className="ptx-chips">
+          {value.map((r) => (
+            <span key={`${r.from}_${r.to}`} className="ptx-idchip">
+              <span>{r.from === r.to ? fmtDay(r.from) : `${fmtDay(r.from)} – ${fmtDay(r.to)}`}</span>
+              <button type="button" onClick={() => onChange(value.filter((x) => x !== r))} aria-label="Show these dates again" title="Show again"><X size={12} weight="bold" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+      <p className={cx("acx-note", (bad || value.length > max) && "ptx-bad")}>
+        {bad ? "The end date must be on or after the start date." : value.length > max ? `Up to ${max} date ranges.` : `Every payment made on these days (IST) is left out of ${everyone ? "every partner's" : "this partner's"} lists, totals, charts and CSV. Leave “To” empty for a single day.`}
+      </p>
+      {inherited > 0 && <p className="acx-note">Also hidden for every partner in Settings: <b>{inherited}</b> {inherited === 1 ? "range" : "ranges"}.</p>}
+    </div>
+  );
+}
+
 /* transaction / order IDs that are never shown. value is a list; the text box is free-form (lines, commas or spaces). */
 const idsOf = (text) => [...new Set(String(text || "").split(/[\s,;]+/).map((v) => v.trim()).filter(Boolean))];
 const ID_RX = /^[A-Za-z0-9_\-.:|/]{3,120}$/;
@@ -282,7 +385,8 @@ function SettingsView({ data, onSaved }) {
   useEffect(() => setDraft(settings), [settings]);
   const dirty = !same(draft, settings);
   const invalid = Boolean((draft.window.from && draft.window.to && draft.window.from > draft.window.to)
-    || draft.hiddenTxns.length > catalog.maxHiddenAll || draft.hiddenTxns.some((v) => !ID_RX.test(v)));
+    || draft.hiddenTxns.length > catalog.maxHiddenAll || draft.hiddenTxns.some((v) => !ID_RX.test(v))
+    || draft.hiddenDays.length > catalog.maxHiddenDays);
   useUnsavedGuard(dirty);
   const set = (k) => (v) => setDraft((d) => ({ ...d, [k]: v }));
 
@@ -336,6 +440,10 @@ function SettingsView({ data, onSaved }) {
 
       <Card icon={EyeSlash} title="Hidden transactions (every partner)" caption="Payments no partner should ever see, e.g. test orders, staff purchases or disputed payments.">
         <HiddenBox value={draft.hiddenTxns} onChange={set("hiddenTxns")} max={catalog.maxHiddenAll} everyone />
+      </Card>
+
+      <Card icon={CalendarBlank} title="Hidden dates (every partner)" caption="Payments made on these days are never shown to any partner, e.g. a testing day or a day with a billing problem.">
+        <DaysBox value={draft.hiddenDays} onChange={set("hiddenDays")} max={catalog.maxHiddenDays} everyone />
       </Card>
 
       <Card icon={Info} title="Message for partners" caption="Shown at the top of every partner's dashboard. Leave empty for none.">
@@ -423,6 +531,8 @@ function PartnerPage({ id, data, back, onSaved }) {
   const [draft, setDraft] = useState(() => (p ? toDraft(p.access) : null));
   const [saving, setSaving] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+  const [seenCodes, setSeenCodes] = useState(null);
+  useEffect(() => { API.referralCodes().then(setSeenCodes).catch(() => setSeenCodes([])); }, []);
   const [ask, dialog] = useConfirm();
   const dirtyRef = useRef(false);
   useEffect(() => {
@@ -436,7 +546,9 @@ function PartnerPage({ id, data, back, onSaved }) {
     (draft.window.from && draft.window.to && draft.window.from > draft.window.to)
     || (draft.minAmount !== "" && draft.maxAmount !== "" && Number(draft.minAmount) > Number(draft.maxAmount))
     || codesOf(draft.codes).length > catalog.maxCodes
-    || draft.hiddenTxns.length > catalog.maxHidden || draft.hiddenTxns.some((v) => !ID_RX.test(v))));
+    || draft.hiddenTxns.length > catalog.maxHidden || draft.hiddenTxns.some((v) => !ID_RX.test(v))
+    || draft.hiddenDays.length > catalog.maxHiddenDays
+    || draft.refShow.length > catalog.maxCodes || draft.refHide.length > catalog.maxCodes));
   useUnsavedGuard(dirty);
 
   if (!p) return (
@@ -515,6 +627,8 @@ function PartnerPage({ id, data, back, onSaved }) {
               {(eff.minAmount !== null || eff.maxAmount !== null) && <div><dt>Amount</dt><dd>{eff.minAmount !== null ? `from ₹${eff.minAmount / 100}` : ""}{eff.minAmount !== null && eff.maxAmount !== null ? " " : ""}{eff.maxAmount !== null ? `up to ₹${eff.maxAmount / 100}` : ""}</dd></div>}
               {eff.codes?.length > 0 && <div><dt>Codes</dt><dd>{eff.codes.map((c) => <span key={c} className="pt-code">{c}</span>)}</dd></div>}
               {eff.books?.length > 0 && <div><dt>Books</dt><dd>{eff.books.length} selected</dd></div>}
+              {(eff.refShow?.length > 0 || eff.refHide?.length > 0) && <div><dt>Referral codes</dt><dd>{eff.refShow?.length > 0 && <>Only: {eff.refShow.map((c) => <span key={c} className="pt-code">{c}</span>)} </>}{eff.refHide?.length > 0 && <>Hidden: {eff.refHide.map((c) => <span key={c} className="pt-code">{c}</span>)}</>}</dd></div>}
+              {(eff.hiddenDaysOwn > 0 || eff.hiddenDaysAll > 0) && <div><dt>Hidden dates</dt><dd>{eff.hiddenDaysOwn > 0 && `${eff.hiddenDaysOwn} for this partner`}{eff.hiddenDaysOwn > 0 && eff.hiddenDaysAll > 0 && " · "}{eff.hiddenDaysAll > 0 && `${eff.hiddenDaysAll} for everyone`}</dd></div>}
               {(eff.hiddenOwn > 0 || eff.hiddenAll > 0) && <div><dt>Hidden</dt><dd>{eff.hiddenOwn > 0 && `${eff.hiddenOwn} for this partner`}{eff.hiddenOwn > 0 && eff.hiddenAll > 0 && " · "}{eff.hiddenAll > 0 && `${eff.hiddenAll} for everyone`}</dd></div>}
               {p.access.expiresAt && <div><dt>Ends</dt><dd>{eff.expired ? <Badge tone="bad">Ended {fmtDay(p.access.expiresAt)}</Badge> : fmtDay(p.access.expiresAt)}</dd></div>}
             </dl>
@@ -569,6 +683,14 @@ function PartnerPage({ id, data, back, onSaved }) {
 
           <Card icon={EyeSlash} title="Hidden transactions" caption={`Payments ${p.name} should never see, whatever product they belong to.`}>
             <HiddenBox value={draft.hiddenTxns} onChange={set("hiddenTxns")} max={catalog.maxHidden} inherited={settings.hiddenTxns} />
+          </Card>
+
+          <Card icon={Tag} title="Referral codes" caption={`Choose which referral codes ${p.name} can see and which stay hidden, for every product.`}>
+            <RefCodesBox show={draft.refShow} hide={draft.refHide} onShow={set("refShow")} onHide={set("refHide")} max={catalog.maxCodes} seen={seenCodes} />
+          </Card>
+
+          <Card icon={CalendarBlank} title="Hidden dates" caption={`Payments made on these days never show up for ${p.name}.`}>
+            <DaysBox value={draft.hiddenDays} onChange={set("hiddenDays")} max={catalog.maxHiddenDays} inherited={settings.hiddenDays.length} />
           </Card>
 
           <Card icon={Timer} title="Access period" caption="Access switches itself off after this day. Their settings are kept, so you can extend it later.">

@@ -38,6 +38,8 @@ const resumePurchaseSchema = new Schema(
     revokeReason: { type: String, default: "", maxlength: 300 },
     grantedBy: { type: Schema.Types.ObjectId, ref: "User", default: null }, // set when an admin gave the plan for free
 
+    referralCode: { type: String, default: "", maxlength: 40, index: true }, // label only (utils/referralCode.js): nothing is calculated from it
+
     payment: {
       amount: { type: Number, default: 0 }, // paise
       currency: { type: String, default: "INR" },

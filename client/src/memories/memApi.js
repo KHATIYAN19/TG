@@ -1,3 +1,4 @@
+import { savedReferralCode } from "../lib/referralCode.js";
 import { useCallback, useEffect, useState } from "react";
 
 import axios from "axios";
@@ -24,7 +25,7 @@ export const claimFreeCredit = (occasionId, theme) => memoriesHttp.post("/credit
 export const getQuote = (buy) => memoriesHttp.post("/payments/quote", buy).then(data);
 /* the buyer's mobile number is read from their account on the server, so nothing about it is sent; `returnOrigin` brings the buyer back to this same site (and login) after paying */
 export const createPayment = (gateway, buy) =>
-  memoriesHttp.post("/payments/create", { gateway, ...buy, returnOrigin: window.location.origin, attribution: getAttribution() }).then(data);
+  memoriesHttp.post("/payments/create", { gateway, ...buy, returnOrigin: window.location.origin, referralCode: savedReferralCode(), attribution: getAttribution() }).then(data);
 export const verifyPayment = (orderId, payload) => memoriesHttp.post("/payments/verify", { orderId, payload }).then(data);
 export const getPaymentStatus = (orderId) => memoriesHttp.get(`/payments/${encodeURIComponent(orderId)}/status`).then(data);
 export const createPage = (body) => memoriesHttp.post("/pages", body).then(data);

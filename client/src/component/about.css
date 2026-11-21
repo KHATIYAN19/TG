@@ -176,3 +176,11 @@
 @media (min-width: 1100px) { .ab .rl-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .ab-mv-card .ab-quote { font-size: clamp(24px, 3.2vw, 34px); line-height: 1.15; color: var(--rv-text); }
 .ab-mv-card.is-dark .ab-quote { color: var(--rv-panel-text); }
+
+/* operator details on the contact card (rendered only when VITE_OPERATOR_* are set) */
+.ct-op { display: grid; gap: 12px; margin: 0; padding-top: 14px; border-top: 1px solid var(--rv-border-strong); }
+.ct-op > div { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.ct-op > div > span { display: grid; min-width: 0; }
+.ct-op dt { font-size: 12px; opacity: .7; }
+.ct-op dd { margin: 0; overflow-wrap: anywhere; }
+.ct-op address { font-style: normal; white-space: pre-line; }
