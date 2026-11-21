@@ -3,6 +3,7 @@ import redis from "../utils/redis.js";
 
 import User from "../models/User.js";
 import UserSession from "../models/UserSession.js";
+import { untrustDevices } from "../utils/authUtils.js";
 
 export const authKeys = {
   user: id => `auth:user:${String(id)}`,
@@ -224,6 +225,9 @@ export const changeAccountSecurityState = async ({
       },
     }
   );
+
+  // Logged-out rows were skipped above but can still remember a device: clear those too.
+  await untrustDevices(userId);
 
   await provisionUserAuth(user);
 

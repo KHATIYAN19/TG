@@ -1888,8 +1888,9 @@ function FaqItem({ faq, index, open, onToggle }) {
 export default function Books() {
   const [theme, setTheme] = useState(readTheme);
 
-  const [books, setBooks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Paint straight from a warm catalog cache (back navigation, build-time prerender) instead of a loading state.
+  const [books, setBooks] = useState(() => peekCatalog()?.books || []);
+  const [loading, setLoading] = useState(() => !peekCatalog());
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
 
@@ -1899,7 +1900,7 @@ export default function Books() {
   const [sort, setSort] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const [offers, setOffers] = useState([]);
+  const [offers, setOffers] = useState(() => (peekCatalog()?.offers || []).filter((o) => o.available !== false));
 
   const [view, setView] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
@@ -1915,7 +1916,7 @@ export default function Books() {
   // The book open in Quick view (null = closed)
   const [peek, setPeek] = useState(null);
 
-  const [packData, setPackData] = useState(null);
+  const [packData, setPackData] = useState(() => peekCatalog()?.plans || null);
 
   const isDark = theme === "dark";
 

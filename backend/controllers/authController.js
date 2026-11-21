@@ -17,6 +17,8 @@ import {
 import {
   randomToken,
   hashToken,
+  untrustDevices,
+  hashPassword,
   verifyPassword,
   secureEqual,
   cookieNames,
@@ -56,7 +58,27 @@ const PRIVILEGED_ROLES = new Set([
   "admin",
   "affiliate",
   "Employee",
+  "partner",
 ]);
+
+/*
+  LOGIN OTP
+  Only staff accounts (admin, Employee, partner) need an emailed code at login, and only on a browser that
+  is not remembered yet. After a correct code the browser is remembered for TRUSTED_DEVICE_TTL_DAYS
+  (default 30), renewed on each login from it; logout keeps it remembered, while "forget this device",
+  revoking it, logging out other devices / all devices, and a password reset make it ask again.
+  Members and affiliates sign in with their password only (LOGIN_OTP_ENABLED=true turns the code on
+  for them too). Signing UP is a separate flow: new members still confirm their email with a code.
+*/
+const LOGIN_OTP_ROLES = new Set([
+  "admin",
+  "Employee",
+  "partner",
+]);
+
+export const needsLoginOtp = user =>
+  LOGIN_OTP_ROLES.has(user?.role) ||
+  process.env.LOGIN_OTP_ENABLED === "true";
 
 const lockMinutesFor = user =>
   PRIVILEGED_ROLES.has(user.role)
@@ -127,6 +149,55 @@ const safeUser = user => {
   delete obj.lockedUntil;
   delete obj.googleId;
   return obj;
+};
+
+/* ---------------------------------------------------------------------------
+   ACCOUNT ENUMERATION DEFENCE
+   A wrong password and an unknown email must be indistinguishable: same JSON,
+   same "N attempts left" countdown, same 24 h lock after 5 tries, and the same
+   bcrypt cost (an unknown email used to answer ~250 ms faster).
+   Unknown identifiers are tracked in Redis by a SHA-256 of the identifier only.
+--------------------------------------------------------------------------- */
+
+const invalidCredentials = (res, attempts, lockMinutes) => {
+  const attemptsLeft = Math.max(0, authConfig.maxLoginAttempts - attempts);
+  return res.status(401).json({
+    success: false,
+    code: "INVALID_CREDENTIALS",
+    message:
+      attemptsLeft <= 2
+        ? `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left before your account is locked for ${lockLabel(lockMinutes)}.`
+        : "Invalid credentials",
+    attemptsLeft,
+  });
+};
+
+let dummyHashPromise = null;
+const dummyPasswordHash = () => {
+  if (!dummyHashPromise) dummyHashPromise = hashPassword(randomToken());
+  return dummyHashPromise;
+};
+
+const unknownLoginKey = (identifier) =>
+  `tt:login-unknown:${hashToken(String(identifier).trim().toLowerCase())}`;
+
+const unknownLoginLockedUntil = async (identifier) => {
+  const until = Number(await redis.get(`${unknownLoginKey(identifier)}:lock`));
+  return Number.isFinite(until) && until > Date.now() ? new Date(until) : null;
+};
+
+const recordUnknownLoginFailure = async (identifier) => {
+  const key = unknownLoginKey(identifier);
+  const windowSeconds = authConfig.userLockMinutes * 60;
+  const attempts = Number(await redis.incr(key)) || 1;
+  if (attempts === 1) await redis.expire(key, windowSeconds);
+
+  if (attempts < authConfig.maxLoginAttempts) return { attempts, lockedUntil: null };
+
+  const lockedUntil = minutesFromNow(authConfig.userLockMinutes);
+  await redis.set(`${key}:lock`, String(lockedUntil.getTime()), { ex: windowSeconds });
+  await redis.del(key);
+  return { attempts, lockedUntil };
 };
 
 const generateOtp = () =>
@@ -336,6 +407,19 @@ export const completeLogin = async ({
 
   await retireReplacedSessions({ req, user, session, deviceToken: finalDeviceToken });
 
+  // The trust now lives on this session. Clear the copies left on older (logged-out) rows of the same
+  // browser, so there is exactly one record to remove when the device is forgotten or revoked.
+  if (finalDeviceToken) {
+    try {
+      await untrustDevices(user._id, {
+        hashes: [hashToken(finalDeviceToken)],
+        exceptSessionId: session.sessionId,
+      });
+    } catch (error) {
+      console.error("Move device trust:", error.message);
+    }
+  }
+
   try {
     await registerSessionAuth(user, session);
   } catch (error) {
@@ -412,10 +496,19 @@ export const login = async (req, res) => {
     const user = await findLoginUser(identifier);
 
     if (!user) {
+      // Answer exactly like a member account with a wrong password (same timing, same JSON, same
+      // countdown and lock), so the login form cannot be used to test whether an email is registered.
+      await verifyPassword(password, await dummyPasswordHash());
+
+      const phantomUntil = await unknownLoginLockedUntil(identifier);
+      if (phantomUntil) return lockedResponse(res, phantomUntil);
+
+      const { attempts, lockedUntil } = await recordUnknownLoginFailure(identifier);
       const tipped = await countIpFailure(req);
-      return tipped
-        ? sendIpLock(res, tipped)
-        : fail(res, 401, "Invalid credentials");
+
+      if (lockedUntil) return lockedResponse(res, lockedUntil);
+      if (tipped) return sendIpLock(res, tipped);
+      return invalidCredentials(res, attempts, authConfig.userLockMinutes);
     }
 
     if (
@@ -515,18 +608,7 @@ export const login = async (req, res) => {
         return sendIpLock(res, ipTipped);
       }
 
-      const attemptsLeft =
-        authConfig.maxLoginAttempts - attempts;
-
-      return res.status(401).json({
-        success: false,
-        code: "INVALID_CREDENTIALS",
-        message:
-          attemptsLeft <= 2
-            ? `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left before your account is locked for ${lockLabel(lockMinutesFor(user))}.`
-            : "Invalid credentials",
-        attemptsLeft,
-      });
+      return invalidCredentials(res, attempts, lockMinutesFor(user));
     }
 
     // A lock deletes the cached auth state so no session can be used
@@ -555,28 +637,10 @@ export const login = async (req, res) => {
       );
     }
 
-    // Admin is exempted from OTP as requested.
-    // if (user.role === "admin") {
-    //   const session = await createPendingSession(
-    //     user, req
-    //   );
-
-    //   return completeLogin({
-    //     req,
-    //     res,
-    //     user,
-    //     session,
-    //   });
-    // }
-    // No OTP at login: a correct password signs the user in.
-    // (Email codes are used only to verify a NEW signup.)
-    // To bring login OTPs back for everyone, set LOGIN_OTP_ENABLED=true.
-    // Admin and affiliate accounts have always skipped the OTP.
-    if (
-      process.env.LOGIN_OTP_ENABLED !== "true" ||
-      user.role === "admin" ||
-      user.role === "affiliate"
-    ) {
+    // Members and affiliates: password only (see LOGIN_OTP above). Staff (admin / Employee / partner)
+    // need the emailed code on any browser that is not remembered, so one phished or reused password
+    // cannot open the admin console on its own.
+    if (!needsLoginOtp(user)) {
       const session = await createPendingSession(user, req);
 
       return completeLogin({
@@ -594,7 +658,10 @@ export const login = async (req, res) => {
 
     let trustedSession = null;
 
-    if (typeof rawDeviceToken === "string") {
+    if (
+      typeof rawDeviceToken === "string" &&
+      /^[a-f0-9]{64}$/.test(rawDeviceToken)
+    ) {
       trustedSession = await UserSession.findOne({
         user: user._id,
         isTrusted: true,
@@ -933,8 +1000,13 @@ export const refreshToken = async (req, res) => {
       refreshExpiresAt: { $gt: new Date() },
     }).select("+refreshTokenHash");
 
+    /*
+      No cookie clearing on a failed rotation. Two tabs (or a retried request) can send the same refresh
+      cookie at once: the first rotates it and receives a fresh cookie, the second lands here. Clearing
+      cookies in this response would delete the winner's fresh cookie and sign the user out everywhere.
+      An invalid refresh cookie is useless on its own, so leaving it in place is safe.
+    */
     if (!session) {
-      clearAuthCookies(res);
       return fail(res, 401, "Invalid refresh token");
     }
 
@@ -981,7 +1053,7 @@ export const refreshToken = async (req, res) => {
       );
 
     if (!updated) {
-      clearAuthCookies(res);
+      // Lost a concurrent rotation (see above): keep the winner's cookie intact.
       return fail(res, 401, "Refresh token used");
     }
 

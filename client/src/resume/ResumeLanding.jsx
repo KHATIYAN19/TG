@@ -20,7 +20,7 @@ import { schemaJson } from "./seo";
 import { Btn, Page, cx } from "./ui";
 import { loginUrl } from "../auth/authRedirect";
 
-const OG_IMAGE = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+const OG_IMAGE = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 /* ============================ head: SEO, AEO and GEO ============================ */
@@ -116,6 +116,7 @@ function Hero({ paid, signedIn, cheapest }) {
               : !signedIn ? <>Already bought a plan? <Link to={loginUrl("/resume-review/app")} className="rl-textlink">Log in</Link></>
               : <Link to="/resume-review/app/plans" className="rl-textlink">Choose a plan to get started <ArrowRight size={14} weight="bold" aria-hidden /></Link>}
           </p>
+          <p className="rl-hero-alt">Just want a number? <Link to="/resume-review/ats-score-checker" className="rl-textlink">Check your ATS score free <ArrowRight size={14} weight="bold" aria-hidden /></Link></p>
           <dl className="rl-facts">
             {HERO_FACTS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
           </dl>
@@ -369,6 +370,13 @@ function Ats() {
       <div className="rl-dodont">
         <div className="do"><h3><Check size={18} weight="bold" aria-hidden />Do</h3><ul>{ATS_DO.map((x) => <li key={x}>{x}</li>)}</ul></div>
         <div className="dont"><h3><X size={18} weight="bold" aria-hidden />Don't</h3><ul>{ATS_DONT.map((x) => <li key={x}>{x}</li>)}</ul></div>
+      </div>
+      <div className="rl-ats-cta">
+        <div>
+          <b>Check your ATS score free</b>
+          <p>Paste your resume and a job description to see your score out of 100 and the keywords you're missing. No sign-up, nothing uploaded.</p>
+        </div>
+        <Btn as={Link} to="/resume-review/ats-score-checker" variant="ghost"><Gauge size={17} weight="bold" aria-hidden />Free ATS checker</Btn>
       </div>
     </Section>
   );

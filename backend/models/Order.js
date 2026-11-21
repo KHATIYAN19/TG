@@ -721,6 +721,8 @@ const orderSchema = new mongoose.Schema(
         adId: { type: String, default: null },
         landingPath: { type: String, default: null },
         touchedAt: { type: String, default: null },
+        /* buyer's marketing-consent choice (DPDP). false = never report this sale to an ad platform */
+        adConsent: { type: Boolean, default: true },
       },
     },
 

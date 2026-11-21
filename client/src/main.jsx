@@ -69,10 +69,21 @@ import store from "./Redux/store.js";
 import { HelmetProvider } from "react-helmet-async";
 
 import { captureAttribution } from "./lib/attribution.js";
+import { onConsentChange } from "./lib/consent.js";
+import { ensureGoogleAdsTag } from "./lib/googleAds.js";
 
 // Remember paid-ad clicks (Meta / Google) before the app renders.
 captureAttribution();
+// Google Ads tag (always on, like Meta Pixel); does nothing until VITE_GOOGLE_ADS_ID is set.
+ensureGoogleAdsTag();
+
+// Analytics starts only after the visitor opts in; sales measurement is always on (lib/consent.js).
+// A change made later in this page view applies straight away; Meta Pixel's own loader lives in index.html.
 initClarity();
+onConsentChange((choice) => {
+  if (choice.analytics) initClarity();
+  if (choice.marketing) window.__ttLoadMetaPixel?.();
+});
 
 // After a new deploy, an open tab may request lazy chunks whose hashed
 // filenames no longer exist. Reload once to pick up the new build.

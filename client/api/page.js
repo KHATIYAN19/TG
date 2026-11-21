@@ -8,6 +8,7 @@ import {
   SITE_URL,
   SITE_NAME,
   LOGO_URL,
+  SAME_AS,
   esc,
   truncate,
   jsonLd,
@@ -82,6 +83,7 @@ const orgSchema = {
   name: SITE_NAME,
   url: SITE_URL,
   logo: LOGO_URL,
+  sameAs: SAME_AS,
 };
 
 /* pages that sell more than one book (e.g. /book/docker): each book's contents */
@@ -90,15 +92,34 @@ const multiBookHtml = (x = {}) => {
   if (x.HANDBOOK) {
     const h = x.HANDBOOK;
     let n = 0;
-    out.push(`<h2>${esc(h.title)} (${esc(h.pages)} pages)</h2><p>${esc(h.tagline)}</p>${li((h.includes || []).map(esc))}`);
+    out.push(`<h2>${esc(h.title)}${h.pages ? ` (${esc(h.pages)} pages)` : ""}</h2><p>${esc(h.tagline)}</p>${li((h.includes || []).map(esc))}`);
+    /* the short, quotable answer (e.g. /book/cloud/aws) */
+    if (x.QUICK_ANSWER) out.push(`<h2>What is ${esc(h.title)}?</h2><p>${esc(x.QUICK_ANSWER)}</p>`);
+    if (x.PARTS_RAW?.length && typeof x.PARTS_RAW[0]?.chapters?.[0] !== "string") out.push("<h2>Table of contents</h2>");
     (x.PARTS_RAW || []).forEach((part) => {
-      out.push(`<h3>Part ${esc(part.number)}: ${esc(part.title)}</h3>${li((part.chapters || []).map((c) => { n += 1; return `Chapter ${n}: ${esc(c)}`; }))}`);
+      /* chapters are plain titles (e.g. /book/docker) or { n?, title, topics? } (e.g. /book/cloud/gcp) */
+      const label = /^\d+$/.test(String(part.number)) ? `Part ${esc(Number(part.number))}: ${esc(part.title)}` : esc(part.title);
+      out.push(`<h3>${label}</h3>${part.summary ? `<p>${esc(part.summary)}</p>` : ""}${li((part.chapters || []).map((c) => {
+        if (typeof c === "string") { n += 1; return `Chapter ${n}: ${esc(c)}`; }
+        const topics = (c.topics || []).length ? ` – ${esc(c.topics.join(", "))}` : "";
+        return `${c.n ? `${esc(c.n)} ` : ""}${esc(c.title)}${topics}`;
+      }))}`);
     });
     /* books without parts (e.g. /book/git): a flat chapter list of { title, detail } */
     if (Array.isArray(x.CHAPTERS_RAW) && x.CHAPTERS_RAW.length) {
       out.push(`<h3>Chapters</h3>${li(x.CHAPTERS_RAW.map((c, i) => `Chapter ${i + 1}: ${esc(c.title)}${c.detail ? ` – ${esc(c.detail)}` : ""}`))}`);
     }
     if (x.APPENDIX) out.push(`<p>${esc(x.APPENDIX.title)} – ${esc(x.APPENDIX.detail)}</p>`);
+  }
+  /* "which service should I use?" lists and reference designs (e.g. /book/cloud/aws) */
+  if (Array.isArray(x.PICKER) && x.PICKER.length) {
+    out.push(`<h2>Which service should you use?</h2>${li(x.PICKER.map((p) => `<strong>${esc(p.need)}: ${esc(p.pick)}</strong> – ${esc(p.why)} ${esc(p.alt)} (${esc(p.where)})`))}`);
+  }
+  if (Array.isArray(x.REF_ARCHS) && x.REF_ARCHS.length) {
+    out.push(`<h2>Reference architectures</h2>${li(x.REF_ARCHS.map((r) => `<strong>${esc(r.title)}</strong> – ${esc(r.copy)} ${esc((r.flow || []).join(" → "))}`))}`);
+  }
+  if (Array.isArray(x.LABS) && x.LABS.length) {
+    out.push(`<h2>Hands-on labs</h2>${li(x.LABS.map((l, i) => `Lab ${i + 1}: <strong>${esc(l.title)}</strong> – ${esc(l.copy)}`))}`);
   }
   if (x.CHEATSHEET) {
     const c = x.CHEATSHEET;
@@ -109,9 +130,94 @@ const multiBookHtml = (x = {}) => {
   return out.join("\n");
 };
 
+/* ------------------------------------------------------------------ prerendered book pages
+   scripts/prerender.mjs renders every book page with React at build time (full contents, FAQs, schema).
+   Here we only bring the price up to date, so a price change in the admin reaches search results without
+   a redeploy. Falls back to the hand-built page below when the file is missing. */
+async function getPrerendered(req, route) {
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  try {
+    const r = await fetch(`${proto}://${host}/prerendered${route}.html`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const html = await r.text();
+    // a failed prerender writes the bare shell: no <h1>, so use the fallback instead
+    return /<div id="root">[\s\S]*?<h1[\s>]/i.test(html) ? html : null;
+  } catch {
+    return null;
+  }
+}
+
+const isProduct = (t) => (Array.isArray(t) ? t.includes("Product") : t === "Product");
+
+/* every Product node that describes this page gets the live price */
+function patchOffers(node, canonical, live) {
+  if (Array.isArray(node)) return node.forEach((n) => patchOffers(n, canonical, live));
+  if (!node || typeof node !== "object") return;
+  if (isProduct(node["@type"])) {
+    const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
+    const own = node.url === canonical || offer?.url === canonical || String(node["@id"] || "").startsWith(`${canonical}#`);
+    if (own) {
+      if (offer) {
+        offer.price = live.price;
+        offer.priceCurrency = live.currency;
+      } else {
+        node.offers = {
+          "@type": "Offer", url: canonical, price: live.price, priceCurrency: live.currency,
+          priceValidUntil: `${new Date().getFullYear() + 1}-12-31`, availability: "https://schema.org/InStock",
+          seller: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+        };
+      }
+      if (live.image && !node.image) node.image = [live.image];
+    }
+  }
+  Object.values(node).forEach((v) => v && typeof v === "object" && patchOffers(v, canonical, live));
+}
+
+function withLivePrice(html, product, canonical) {
+  const price = Number(product?.price) || 0;
+  if (price <= 0) return html;
+  const live = { price, currency: product.currency || "INR", image: absoluteUrl(product.coverPageUrl) };
+  return html
+    .replace(/(<script[^>]*application\/ld\+json[^>]*>)([\s\S]*?)(<\/script>)/gi, (all, open, json, close) => {
+      try {
+        const data = JSON.parse(json);
+        patchOffers(data, canonical, live);
+        return `${open}${JSON.stringify(data).replace(/</g, "\\u003c")}${close}`;
+      } catch {
+        return all;
+      }
+    })
+    .replace(/(<meta[^>]*property="product:price:amount"[^>]*content=")[^"]*/i, `$1${price}`)
+    .replace(/(<meta[^>]*property="product:price:currency"[^>]*content=")[^"]*/i, `$1${esc(live.currency)}`);
+}
+
 export default async function handler(req, res) {
   const route = String(req.query.p || "").replace(/\/+$/, "") || "/";
   const data = SEO[route];
+
+  if (route !== "/learn") {
+    const file = route === "/book" ? "/books" : route;
+    const pre = await getPrerendered(req, file);
+    if (pre) {
+      let product = null;
+      if (file !== "/books") {
+        try {
+          const r = await fetchApi(`/book/product?redirectUrl=${encodeURIComponent(file)}`, { timeout: 15000 });
+          product = r.body?.success ? r.body.data : null;
+        } catch {
+          /* backend asleep: the build-time price stays */
+        }
+      }
+      const canonical = `${SITE_URL}${file}`;
+      return send(res, 200, product ? withLivePrice(pre, product, canonical) : pre, {
+        cache: product || file === "/books"
+          ? "public, max-age=0, s-maxage=3600, stale-while-revalidate=604800"
+          : "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+      });
+    }
+  }
+
   const template = await getTemplate(req);
 
   if (!data || !template) {

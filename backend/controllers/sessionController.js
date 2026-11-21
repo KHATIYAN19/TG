@@ -11,6 +11,7 @@ import {
 import {
   logActivity,
   cookieNames,
+  untrustDevices,
 } from "../utils/authUtils.js";
 
 import { authConfig } from "../config/auth.js";
@@ -164,7 +165,7 @@ const revokeDevice = async ({
     sessionId,
     purpose: "login",
     state: "active",
-  });
+  }).select("+deviceTokenHash");
 
   if (!session) {
     return fail(res, 404, "Active session not found");
@@ -191,6 +192,11 @@ const revokeDevice = async ({
       },
     }
   );
+
+  // A revoked device must sign in with the OTP again: clear its trust on every row (logged-out copies too).
+  if (session.deviceTokenHash) {
+    await untrustDevices(userId, { hashes: [session.deviceTokenHash] });
+  }
 
   if (req.sessionId === sessionId) {
     for (const name of Object.values(cookieNames)) {
@@ -274,6 +280,18 @@ export const revokeMyOtherSessions = async (
   try {
     const userId = req.user.userId;
 
+    // Other devices must also lose "remembered" status (including ones that are logged out but still
+    // remembered), so each of them needs the OTP again. This device keeps its own.
+    const current = await UserSession.findOne({
+      user: userId,
+      sessionId: req.sessionId,
+    }).select("+deviceTokenHash").lean();
+
+    const forgotten = await untrustDevices(userId, {
+      exceptHash: current?.deviceTokenHash || null,
+      exceptSessionId: req.sessionId,
+    });
+
     const others = await UserSession.find({
       user: userId,
       purpose: "login",
@@ -284,7 +302,9 @@ export const revokeMyOtherSessions = async (
     if (!others.length) {
       return res.json({
         success: true,
-        message: "There are no other devices to log out.",
+        message: forgotten
+          ? "Other devices will need a sign-in code next time."
+          : "There are no other devices to log out.",
         count: 0,
       });
     }
@@ -345,25 +365,24 @@ export const forgetMyDevice = async (
   req, res
 ) => {
   try {
-    const session = await UserSession.findOneAndUpdate(
-      {
-        user: req.user.userId,
-        sessionId: req.params.sessionId,
-        isTrusted: true,
-      },
-      {
-        $set: {
-          isTrusted: false,
-          trustedUntil: null,
-          deviceTokenHash: null,
-        },
-      },
-      { new: true }
-    );
+    const session = await UserSession.findOne({
+      user: req.user.userId,
+      sessionId: req.params.sessionId,
+      isTrusted: true,
+    }).select("+deviceTokenHash");
 
     if (!session) {
       return fail(res, 404, "Trusted device not found");
     }
+
+    // Clear this row AND every other row remembering the same browser, or it would still skip the OTP.
+    await untrustDevices(req.user.userId, {
+      hashes: [session.deviceTokenHash],
+    });
+    await UserSession.updateOne(
+      { _id: session._id },
+      { $set: { isTrusted: false, trustedUntil: null, deviceTokenHash: null } }
+    );
 
     if (session.sessionId === req.sessionId) {
       res.clearCookie(cookieNames.device, {

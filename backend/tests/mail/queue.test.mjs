@@ -13,6 +13,9 @@ process.env.AMAZON_REGION = "ap-south-1";
 process.env.SQS_EMAIL_QUEUE_NAME = "tt-email";
 process.env.MAIL_PROVIDER = "resend";
 process.env.RESEND_API_KEY = "re_test";
+// No real fallback provider in tests: dotenv never overrides a variable that is already set, so the
+// real MAILTRAP_TOKEN from .env cannot leak in and send a live mail when Resend is made to fail.
+process.env.MAILTRAP_TOKEN = "";
 process.env.MAIL_WORKER_RATE_PER_SEC = "1000";
 
 const calls = [];

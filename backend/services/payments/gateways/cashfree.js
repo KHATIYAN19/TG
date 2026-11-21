@@ -1,6 +1,7 @@
 import axios from "axios";
 import crypto from "crypto";
 import { PaymentError } from "../errors.js";
+import { verifyCashfreeWebhookSignature } from "../../../utils/cashfreeWebhook.js";
 
 /*
   Cashfree: server creates an order -> the browser opens Cashfree's JS checkout with payment_session_id
@@ -112,10 +113,8 @@ export default {
   parseWebhook({ credentials: c }, { rawBody, headers }) {
     const signature = headers["x-webhook-signature"];
     const timestamp = headers["x-webhook-timestamp"];
-    if (!rawBody || !signature || !timestamp) return { valid: false };
-    const expected = Buffer.from(crypto.createHmac("sha256", c.secret).update(`${timestamp}${rawBody}`).digest("base64"));
-    const got = Buffer.from(String(signature));
-    if (expected.length !== got.length || !crypto.timingSafeEqual(expected, got)) return { valid: false };
+    const check = verifyCashfreeWebhookSignature({ rawBody, signature, timestamp, secret: c.secret });
+    if (!check.valid) return { valid: false, reason: check.reason };
     let evt;
     try { evt = JSON.parse(rawBody); } catch { return { valid: false }; }
     const id = evt?.data?.order?.order_id;
@@ -179,10 +178,8 @@ export default {
   /* Same signature scheme as order webhooks: base64(HMAC-SHA256(timestamp + rawBody)) with the client secret. */
   parseSubscriptionWebhook({ credentials: c }, { rawBody, headers }) {
     const signature = headers["x-webhook-signature"], timestamp = headers["x-webhook-timestamp"];
-    if (!rawBody || !signature || !timestamp) return { valid: false, subscription: false };
-    const expected = Buffer.from(crypto.createHmac("sha256", c.secret).update(`${timestamp}${rawBody}`).digest("base64"));
-    const got = Buffer.from(String(signature));
-    if (expected.length !== got.length || !crypto.timingSafeEqual(expected, got)) return { valid: false, subscription: false };
+    const check = verifyCashfreeWebhookSignature({ rawBody, signature, timestamp, secret: c.secret });
+    if (!check.valid) return { valid: false, subscription: false, reason: check.reason };
     let evt;
     try { evt = JSON.parse(rawBody); } catch { return { valid: false, subscription: false }; }
     const type = String(evt?.type || "");

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import geoip from "geoip-country";
+import geoip from "geoip-lite";
 import { UAParser } from "ua-parser-js";
 
 const UUID_PATTERN =

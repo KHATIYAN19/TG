@@ -392,7 +392,10 @@ export function ReviewView({ r, canAsk, pool, asking = false, onAsk, sent = fals
       <header className="rs-rv-head">
         <div className="rs-stack sm">
           <span className={cx("rs-chip", st.tone)} style={{ width: "fit-content" }}><span>{st.label}</span></span>
-          <h1 className="rs-h1">{p.targetRole || "Resume review"}</h1>
+          {/* the landing-page sample must not add a second <h1> to that page */}
+          {preview
+            ? <h3 className="rs-h1">{p.targetRole || "Resume review"}</h3>
+            : <h1 className="rs-h1">{p.targetRole || "Resume review"}</h1>}
           <div className="rs-rv-meta">
             <span><CalendarBlank size={14} weight="bold" aria-hidden /><em>{dateFmt(r.createdAt)}</em></span>
             {r.resume?.filename && <span><FilePdf size={14} weight="bold" aria-hidden /><em>{r.resume.filename}</em></span>}

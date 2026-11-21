@@ -99,8 +99,8 @@ const campaignSchema = z.object({
   preheader: z.string().max(200).default(""),
   html: z.string().min(1).max(500_000),
   templateKey: z.string().max(80).default(""),
-  content: contentSchema.default({}),
-  audience: audienceSchema.default({}),
+  content: contentSchema.prefault({}),
+  audience: audienceSchema.prefault({}),
   replyTo: z.string().max(254).refine((v) => !v || isValidEmail(normalizeEmail(v)), "invalid e-mail").default(""),
   scheduledAt: optionalDate,
 });
@@ -196,7 +196,7 @@ export const previewRender = handler(async (req, res) => {
       subject: z.string().max(300).default(""),
       preheader: z.string().max(200).default(""),
       html: z.string().max(500_000),
-      content: contentSchema.default({}),
+      content: contentSchema.prefault({}),
     })
     .parse(req.body);
 

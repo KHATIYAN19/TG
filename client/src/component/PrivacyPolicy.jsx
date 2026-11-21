@@ -22,13 +22,14 @@ import LegalPage, {
   Template,
   UL,
 } from "./legal/LegalKit.jsx";
+import GrievanceDetails from "./legal/GrievanceDetails.jsx";
 
 /* ======================================================
-   CONSTANTS (dates are intentionally unchanged)
+   CONSTANTS (update the dates whenever the content changes)
 ====================================================== */
 
-const LAST_UPDATED = "October 3, 2026";
-const DATE_MODIFIED = "2026-10-03";
+const LAST_UPDATED = "November 21, 2026";
+const DATE_MODIFIED = "2026-11-21";
 
 const SEO = {
   title: "Privacy Policy | Target Trek",
@@ -172,7 +173,8 @@ const sections = [
       <>
         <Table
           rows={[
-            ["Account details", "Name, email address, mobile number (where asked) and a password (stored only in hashed form). We may send a one-time code to verify your email. If you sign in with Google, we receive your name, email and profile photo."],
+            ["Account details", "Name, email address, mobile number (where asked) and a password (stored only in hashed form). When you sign up we send a one-time code to verify your email. If you sign in with Google, we receive your name, email and profile photo."],
+            ["Sign-in and device records", "For each signed-in device: browser and device type, IP address, approximate location and sign-in times, so you can see and sign out your devices. Staff and partner accounts also get a one-time sign-in code by email on a new device, and we remember a device that passed it."],
             ["Purchase records", "What you bought, price, order ID, date, payment status and the payment reference returned by the payment gateway."],
             ["Content you give us", "Resumes and job descriptions for Resume Lab; photos, videos, voice notes and messages for Memories; your profile and chats in Prep Arena; booking details for mock interviews."],
             ["Messages to support", "Emails, bug reports and anything you attach to them."],
@@ -200,6 +202,7 @@ const sections = [
             "To send order confirmations, receipts, access links, booking details and security alerts.",
             "To answer support questions, handle refunds and resolve payment issues.",
             "To understand how the website is used and improve pages, speed and features.",
+            "To measure which of our Meta and Google ads lead to a purchase.",
             "To send product news and offers, if you haven't unsubscribed.",
             "To prevent fraud, abuse, unauthorised sharing of paid content and security problems.",
             "To meet legal, tax and accounting duties.",
@@ -256,6 +259,7 @@ const sections = [
             ["Payment gateway", "Only the details needed to process, verify or refund a payment."],
             ["Services that run the website", "Hosting, storage and email delivery providers that process data only to run Target Trek for us, and only as we instruct."],
             ["Analytics tools", "Usage and device data used to measure traffic, as explained below."],
+            ["Advertising platforms (Meta, Google)", "To measure our ads: the pages you view and, when you buy, the order value and ID, the ad click ID, your IP address and browser, and your email, phone and name in hashed (SHA-256) form so Meta can match the sale to its ad. Pages with a private link are never sent."],
             ["Other members, by your choice", "In Prep Arena, members see only what you choose to show on your profile. A Memories page is seen by the people you share its link with."],
             ["The law", "If we are required to by law, court order or a government authority, or to protect users from fraud or harm."],
           ]}
@@ -285,11 +289,21 @@ const sections = [
         />
         <P>
           We look at this information mostly as totals and trends, such as “how many people read this page”, not to watch
-          what one person does. We don’t use analytics to show you third-party ads.
+          what one person does.
         </P>
+        <H3>Which tools, and when they run</H3>
+        <Table
+          rows={[
+            ["Always on (no consent needed)", "Anonymous page counts from our own servers and Vercel Web Analytics. No advertising cookies and nothing that identifies you to another company."],
+            ["Analytics — only if you say yes", "Microsoft Clarity (heatmaps and session replays of clicks and scrolling) and Google Analytics. Pages that contain a private link, such as your purchase page or a password link, are never recorded."],
+            ["Sales measurement — always on", "Meta Pixel and Meta Conversions API, and Google Ads conversion tags. They tell us which of our ads led to a purchase, and are part of how we run the website, so they are not affected by “Reject all”. Pages with a private link, such as your purchase page, are never sent."],
+          ]}
+        />
         <Note tone="info" title="You're in control">
-          You can block or delete cookies in your browser settings, use private browsing, or use a browser extension that
-          blocks analytics. The website will still work, though you may need to sign in again.
+          Analytics runs only after you choose “Accept all” (or switch Analytics on) in the cookie banner. You can change that
+          any time from <b>Cookie settings</b> at the bottom of every page; it takes one click and doesn’t affect anything
+          you’ve bought. Sales measurement is always on. If you don’t want it, you can block third-party cookies or use an
+          ad blocker in your browser, or email us and we will answer your request under the DPDP Act.
         </Note>
       </>
     ),
@@ -300,9 +314,10 @@ const sections = [
     body: (
       <Table
         rows={[
-          ["Essential", "Keep you signed in, protect your session and remember items during checkout. These are needed for the website to work."],
+          ["Essential", "Keep you signed in (a secure, http-only cookie that page scripts cannot read), protect your session, remember items during checkout and remember your privacy choices. For staff and partner accounts, a secure “remembered device” cookie skips the sign-in code on that browser for up to 30 days. These are needed for the website to work."],
           ["Preferences", "Remember choices like light or dark theme and recently viewed pages."],
-          ["Analytics", "Help us count visits and understand how pages are used."],
+          ["Analytics (opt-in)", "Microsoft Clarity and Google Analytics cookies. Set only after you accept analytics."],
+          ["Sales measurement (always on)", "Meta and Google Ads cookies (for example _fbp, _fbc, _gcl_au) that tell us which of our ads led to a purchase. You can block them in your browser settings."],
         ]}
       />
     ),
@@ -356,6 +371,8 @@ const sections = [
           items={[
             "All pages are served over encrypted HTTPS connections.",
             "Passwords are stored only as secure hashes, never in plain text.",
+            "Staff and partner accounts need a one-time code emailed to them to sign in on a new device. A device can be remembered for up to 30 days; forgetting it, signing out of other devices or resetting the password makes it ask for a code again.",
+            "Payment notifications from the payment gateway are accepted only with a valid signature and a recent timestamp.",
             "Payments are handled on the payment gateway's secure checkout.",
             "Access to personal data inside Target Trek is limited to people who need it to help you.",
             "Private files, like resumes, are not public and are not shown to search engines.",
@@ -382,6 +399,7 @@ const sections = [
           ["Product content", "Resumes, memory pages and arena profiles are kept for as long as the product needs them, or until you delete them or ask us to."],
           ["Support emails", "As long as needed to resolve the issue and keep a record of it."],
           ["Analytics data", "Kept in summary form to understand trends over time."],
+          ["Sign-in and device records", "While the device is signed in. A remembered staff or partner device: up to 30 days after its last sign-in, or until it is forgotten or signed out everywhere."],
         ]}
       />
     ),
@@ -397,10 +415,18 @@ const sections = [
             <><b>See</b> the personal data we hold about you.</>,
             <><b>Correct</b> details that are wrong or out of date.</>,
             <><b>Delete</b> your account and personal data.</>,
-            <><b>Withdraw consent</b> to marketing emails (unsubscribe).</>,
+            <><b>Withdraw consent</b> to marketing emails (unsubscribe link in every email) and to analytics tools
+              (<b>Cookie settings</b> at the bottom of every page).</>,
+            <><b>Object</b> to sales measurement by emailing us.</>,
+            <><b>Nominate</b> someone to exercise these rights for you if you die or become unable to do so.</>,
             <><b>Ask a question</b> or raise a concern about how your data is used.</>,
           ]}
         />
+        <P>
+          These are your rights under India’s Digital Personal Data Protection Act, 2023. If you aren’t satisfied with our
+          answer, contact our Grievance Officer (see below). If the matter is still not resolved, you may complain to the
+          Data Protection Board of India.
+        </P>
         <P>
           Email <Mail subject={PRIVACY_SUBJECT} body={PRIVACY_BODY} /> from the email address on your account. To protect
           you, we may ask you to confirm you own the account before we act.
@@ -435,11 +461,30 @@ const sections = [
     title: "Children's privacy",
     body: (
       <P>
-        Target Trek is meant for students and working professionals. If you are under 18, please use Target Trek and make
-        purchases only with the consent and supervision of a parent or guardian. We don’t knowingly collect data from young
-        children. If you think a child has shared data with us, email {SUPPORT_EMAIL} and we will delete it.
+        Target Trek is meant for adults: college students and working professionals aged 18 or over. Accounts and purchases
+        are for people aged 18 and above; a parent or guardian may create an account and buy on behalf of a younger
+        learner. We don’t knowingly collect personal data from anyone under 18, and we never use tracking, behavioural
+        monitoring or targeted advertising directed at children. If you think a child has shared data with us, email{" "}
+        {SUPPORT_EMAIL} and we will delete it.
       </P>
     ),
+  },
+  {
+    id: "data-breach",
+    title: "If something goes wrong",
+    body: (
+      <P>
+        If a security incident affects your personal data, we will tell you without delay: what happened, what data may be
+        affected, what we are doing about it and what you can do to protect yourself. We will also report it to the Data
+        Protection Board of India and to CERT-In as Indian law requires.
+      </P>
+    ),
+  },
+  {
+    id: "grievance-officer",
+    title: "Grievance Officer and who we are",
+    sub: "A named person who answers privacy questions and complaints.",
+    body: <GrievanceDetails />,
   },
   {
     id: "third-party",
@@ -480,7 +525,7 @@ const faqs = [
   },
   {
     q: "Do you track my visits?",
-    a: "We use analytics tools to measure website traffic: pages visited, device type, referring site and approximate location. We use this to improve the website, not to show third-party ads.",
+    a: "Anonymous page counts are always on. Analytics tools (Microsoft Clarity, Google Analytics) run only if you choose “Accept all” in the cookie banner. You can change that any time from Cookie settings at the bottom of every page. Sales measurement (Meta, Google Ads), which tells us which of our ads led to a purchase, is always on.",
   },
   {
     q: "How do I stop marketing emails?",

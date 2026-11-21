@@ -1,3 +1,4 @@
+import { getAccessToken } from "../lib/authSession";
 
 import React, {
   useCallback,
@@ -77,28 +78,8 @@ const readTheme = () => {
   }
 };
 
-const getToken = () => {
-  try {
-    const token = localStorage.getItem("token");
-
-    if (token) return token;
-
-    const persisted = localStorage.getItem("persist:root");
-
-    if (persisted) {
-      const root = JSON.parse(persisted);
-      const auth = root.auth
-        ? JSON.parse(root.auth)
-        : null;
-
-      return auth?.token || auth?.user?.token || null;
-    }
-  } catch {
-    // Ignore invalid persisted storage.
-  }
-
-  return null;
-};
+// In-memory access token (never stored in localStorage).
+const getToken = () => getAccessToken() || null;
 
 const n = (value) => Number(value || 0);
 

@@ -1,3 +1,4 @@
+import { hasConsent, onConsentChange } from "../lib/consent";
 // import React, { useEffect, useState } from "react";
 // import {
 //   ArrowRight,
@@ -2366,23 +2367,30 @@ root_agent = SequentialAgent(
         window.dataLayer.push(arguments);
       };
 
-    const existingScript = document.querySelector(
-      `script[data-google-analytics="${GA_MEASUREMENT_ID}"]`
-    );
+    // Google Analytics loads only with "analytics" consent (DPDP). Without it, gtag() calls just queue in
+    // window.dataLayer on this page and nothing is sent to Google. A later "yes" starts it straight away.
+    const startGoogleAnalytics = () => {
+      if (!hasConsent("analytics")) return;
+      const existingScript = document.querySelector(
+        `script[data-google-analytics="${GA_MEASUREMENT_ID}"]`
+      );
 
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.async = true;
-      script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
-      script.setAttribute("data-google-analytics", GA_MEASUREMENT_ID);
-      document.head.appendChild(script);
-    }
+      if (!existingScript) {
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+        script.setAttribute("data-google-analytics", GA_MEASUREMENT_ID);
+        document.head.appendChild(script);
 
-    window.gtag("js", new Date());
-    window.gtag("config", GA_MEASUREMENT_ID, {
-      page_title: document.title,
-      page_location: window.location.href,
-    });
+        window.gtag("js", new Date());
+        window.gtag("config", GA_MEASUREMENT_ID, {
+          page_title: document.title,
+          page_location: window.location.href,
+        });
+      }
+    };
+    startGoogleAnalytics();
+    const stopWatchingConsent = onConsentChange(startGoogleAnalytics);
 
     const updateProgress = () => {
       const total = document.documentElement.scrollHeight - window.innerHeight;
@@ -2411,6 +2419,7 @@ root_agent = SequentialAgent(
     return () => {
       window.removeEventListener("scroll", updateProgress);
       revealObserver.disconnect();
+      stopWatchingConsent();
     };
   }, []);
 

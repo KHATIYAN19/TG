@@ -8,6 +8,7 @@ import { Page } from "../resume/ui";
 import { Avatar, Ico, ResumeBoost, Vip } from "./ui";
 import { publicInfo } from "./api";
 import { ANSWER, FACTS, HELP_EMAIL, HOWTO_NAME, OG_IMAGE, PAGE_URL, REFERRER_STEPS, SEEKER_STEPS, SEO, UPDATED_ISO, UPDATED_LABEL, faqFor, featuresFor, offered, schemaJson } from "./referralContent";
+import { loginUrl } from "../auth/authRedirect";
 import "./referral.css";
 
 /* ============================ head: SEO, AEO and GEO ============================ */
@@ -89,6 +90,29 @@ const COMPARE = [
   ["Knowing what happened", "Often silence", "Accepted or declined, here"],
   ["Cost to ask", "Free", "Free"],
 ];
+
+/*
+  The docked card at the bottom of the screen (same pattern as /resume-review and /prep-buddy).
+    signed out   Log in  +  Get started free
+    signed in    Open Referrals
+  Styles: .rv-stick in resume/resume.css. Phones hide the text line and the buttons share the row.
+*/
+function StickyBar({ token, go, note }) {
+  return (
+    <div className="rv-stick" role="region" aria-label="Open Referrals">
+      <div className="rv-stick-in">
+        <div className="rv-stick-txt">
+          <b>{token ? "Welcome back" : "Target Trek Referrals"}</b>
+          <span>{note}</span>
+        </div>
+        <div className="rv-stick-btns">
+          {!token && <Link to={loginUrl("/referral/app")} className="rv-btn rv-btn-ghost">Log in</Link>}
+          <Link to="/referral/app" className="rv-btn rv-btn-primary">{go}<ArrowRight size={16} weight="bold" aria-hidden /></Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ReferralLanding() {
   const token = useSelector((s) => s.auth?.token);
@@ -186,6 +210,12 @@ export default function ReferralLanding() {
           <div className="rf-btns"><Link to="/referral/app" className="rv-btn rv-btn-primary rv-btn-lg">{go}<ArrowRight size={17} weight="bold" aria-hidden /></Link><Link to="/learn" className="rv-btn rv-btn-ghost rv-btn-lg">More on Target Trek</Link></div>
         </div></div>
       </section>
+
+      <StickyBar
+        token={token}
+        go={go}
+        note={token ? "Your requests, chats and referrers are in your space." : info?.stats?.referrers > 0 ? `${info.stats.referrers.toLocaleString("en-IN")} referrers across ${info.stats.companies.toLocaleString("en-IN")} companies · free to ask` : "Free to ask · pay only when a referrer accepts"}
+      />
     </Page>
   );
 }

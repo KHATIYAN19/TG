@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
+import { openConsentSettings } from "../../lib/consent";
 
 import { Logo } from "../ui";
 import { BRAND, LEGAL_LINKS, SUPPORT_EMAIL } from "./constants";
@@ -16,6 +17,7 @@ export default function MemoriesFooter({ className = "" }) {
         <div className="flex flex-col gap-3 md:items-end">
           <nav className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Legal">
             {LEGAL_LINKS.map(([label, to]) => <Link key={to} to={to} className="font-medium hover:text-rose-600">{label}</Link>)}
+            <button type="button" onClick={openConsentSettings} className="font-medium hover:text-rose-600">Cookie settings</button>
           </nav>
           <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-1.5 font-semibold text-rose-600 hover:underline"><Mail className="h-4 w-4" aria-hidden /> {SUPPORT_EMAIL}</a>
         </div>

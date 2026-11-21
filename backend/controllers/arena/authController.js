@@ -222,7 +222,8 @@ export const verifySignup = handle(async (req, res) => {
 
 const RESET_TTL = 10 * 60;
 const resetKey = (email) => `arena:reset:${email}`;
-const RESET_ROLES = new Set(["normal"]);
+// Every non-admin account type can recover its password by email (admins reset through the admin console).
+const RESET_ROLES = new Set(["normal", "Employee", "affiliate", "partner"]);
 const GENERIC_SENT = "If an account exists for this email, we've sent a 6-digit code to it.";
 const BAD_CODE = "That code is invalid or has expired. Request a new one.";
 

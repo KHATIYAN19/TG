@@ -105,9 +105,26 @@ export const buildAttribution = (raw = {}, utm = {}) => {
 
     landingPath: clean(r.landingPath),
     touchedAt: clean(r.touchedAt),
+
+    // The buyer's marketing-consent choice from the cookie banner (DPDP). Only an explicit false is
+    // stored as "no": checkouts from an older cached app (no field) keep the previous behaviour.
+    adConsent: r.adConsent === false ? false : true,
   };
 
-  return { ...a, platform: detectPlatform(a) };
+  /*
+    A buyer who switched ad measurement off (or pressed the old "Reject all") arrives WITHOUT the ad click ids
+    (fbclid / gclid): the browser strips them so nothing identifying reaches Meta or Google. Re-detecting from what
+    is left would label an ad sale "organic" and hide it from our own ad-sales reports. The browser detected the
+    platform before stripping and sends just that label ("meta" / "google"), so keep it. Only the label is stored;
+    adConsent=false still stops every report to an ad platform (services/metaCapi.js, Google Ads tag).
+  */
+  let platform = detectPlatform(a);
+  const hinted = String(r.platform || "").toLowerCase();
+  if (platform === "organic" && a.adConsent === false && Object.hasOwn(PLATFORMS, hinted)) {
+    platform = hinted;
+  }
+
+  return { ...a, platform };
 };
 
 /** Safe subset returned to the browser for pixel tracking. */

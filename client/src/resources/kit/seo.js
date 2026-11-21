@@ -10,7 +10,7 @@
     DefinedTermSet the glossary, so assistants can quote exact definitions
 */
 export const SITE = "https://www.targettrek.in";
-export const LOGO = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+export const LOGO = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 const ORG_ID = `${SITE}/#organization`;
 
 const iso8601Minutes = (m) => `PT${Math.max(1, Math.round(m))}M`;

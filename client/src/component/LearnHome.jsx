@@ -69,6 +69,7 @@ import "./learn.css";
 const SITE_URL = "https://www.targettrek.in";
 // "/" and "/learn" render this same page; "/" is the canonical home URL.
 const PAGE_URL = `${SITE_URL}/`;
+const LOGO_URL = `${SITE_URL}/brand/target-trek-logo.jpg`;
 
 const THEME_KEY = "theme";
 const THEME_EVENT = "targettrek-theme-change";
@@ -76,7 +77,7 @@ const THEME_EVENT = "targettrek-theme-change";
 const SEO_TITLE = "Learn System Design, Java LLD & GenAI | Target Trek";
 
 const SEO_DESCRIPTION =
-  "Free system design and backend guides, interview preparation ebooks, real interview experiences, mock interviews, resume reviews and more, all in one place on Target Trek.";
+  "Free system design guides, interview prep ebooks (HLD, LLD, Java, SQL, GenAI), real interview experiences, mock interviews and resume reviews on Target Trek.";
 
 const FONT_URL =
   "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap";
@@ -801,13 +802,37 @@ export default function LearnHome() {
     return {
       "@context": "https://schema.org",
       "@graph": [
+        // The home page is where search and answer engines learn who "Target Trek" is: name, logo, profiles.
+        {
+          "@type": "Organization",
+          "@id": `${SITE_URL}/#organization`,
+          name: "Target Trek",
+          alternateName: "TargetTrek",
+          url: `${SITE_URL}/`,
+          logo: { "@type": "ImageObject", url: LOGO_URL, width: 512, height: 512 },
+          image: LOGO_URL,
+          description: SEO_DESCRIPTION,
+          email: "supporttargettrek@gmail.com",
+          sameAs: ["https://www.linkedin.com/company/target-trek/", "https://www.facebook.com/targettreks/"],
+          knowsAbout: ["System Design", "High-Level Design", "Low-Level Design", "Java", "Spring Boot", "SQL", "AWS", "Google Cloud", "Docker", "Git", "Generative AI", "Model Context Protocol", "Retrieval-Augmented Generation", "Technical Interview Preparation", "Resume Review", "ATS Resume"],
+        },
+        {
+          "@type": "WebSite",
+          "@id": `${SITE_URL}/#website`,
+          name: "Target Trek",
+          alternateName: "TargetTrek",
+          url: `${SITE_URL}/`,
+          inLanguage: "en-IN",
+          publisher: { "@id": `${SITE_URL}/#organization` },
+        },
         {
           "@type": "CollectionPage",
           "@id": `${PAGE_URL}#page`,
           name: SEO_TITLE,
           description: SEO_DESCRIPTION,
           url: PAGE_URL,
-          isPartOf: { "@type": "WebSite", name: "Target Trek", url: SITE_URL },
+          isPartOf: { "@id": `${SITE_URL}/#website` },
+          about: { "@id": `${SITE_URL}/#organization` },
         },
         {
           "@type": "BreadcrumbList",
@@ -862,7 +887,11 @@ export default function LearnHome() {
         <meta property="og:title" content={SEO_TITLE} />
         <meta property="og:description" content={SEO_DESCRIPTION} />
         <meta property="og:url" content={PAGE_URL} />
+        <meta property="og:locale" content="en_IN" />
+        <meta property="og:image" content={LOGO_URL} />
+        <meta property="og:image:alt" content="Target Trek logo" />
         <meta name="twitter:card" content="summary" />
+        <meta name="twitter:image" content={LOGO_URL} />
         <meta name="twitter:title" content={SEO_TITLE} />
         <meta name="twitter:description" content={SEO_DESCRIPTION} />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>

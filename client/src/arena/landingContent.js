@@ -7,15 +7,16 @@
 */
 export const SITE = "https://www.targettrek.in";
 export const PAGE_URL = `${SITE}/prep-buddy`;
-export const UPDATED_ISO = "2026-11-18";
-export const OG_IMAGE = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+export const UPDATED_ISO = "2026-11-20";
+export const UPDATED_LABEL = "20 November 2026";
+export const OG_IMAGE = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 
 export const SEO = {
-  title: "Prep Buddy Arena: Find an Interview Preparation Partner | Target Trek",
+  title: "Find a Mock Interview Partner & Prep Buddy | Prep Buddy Arena",
   description:
-    "Find a serious interview prep buddy for system design, DSA, frontend, backend, DevOps, SDET and GenAI. Browse anonymous profiles, match only when both accept, chat privately and practise mock interviews together.",
+    "Find an interview prep partner for system design, DSA, backend, frontend, DevOps and GenAI. Match only when both accept, chat privately and run mock interviews.",
   keywords:
-    "interview prep buddy, mock interview partner, study partner for interviews, system design practice partner, DSA study buddy, coding interview partner India, peer mock interview, interview preparation group, accountability partner for placements",
+    "interview prep buddy, mock interview partner, find a mock interview partner, study partner for interviews, system design practice partner, DSA study buddy, coding interview partner India, peer mock interview, practice interview with a friend, interview preparation group, accountability partner for placements, LeetCode study partner, placement preparation partner, FAANG interview practice partner",
 };
 
 /* the one-paragraph answer that answer engines quote */
@@ -28,8 +29,17 @@ export const PAGE_NAV = [
   ["visibility", "What others see"],
   ["topics", "Topics"],
   ["pricing", "Pricing & rules"],
+  ["plan", "4-week plan"],
+  ["compare", "Compare"],
   ["safety", "Safety"],
   ["faq", "FAQ"],
+];
+
+/* quick, quotable answers right under the hero: each one is a question people type into search or ask an assistant */
+export const QUICK_ANSWERS = [
+  ["How do I find a mock interview partner?", "Create a free account, add your topics, level and availability, pay the one-time entry, then browse members and send a request. When they accept, a private chat opens."],
+  ["Is a prep buddy better than practising alone?", "For interviews, yes. Speaking your answer out loud to a real person, under time pressure, is the skill being tested. A partner also keeps you on schedule."],
+  ["How often should we practise?", "Two or three 60-minute sessions a week works for most people: swap roles each time so both of you interview and get interviewed."],
 ];
 
 export const STEPS = [
@@ -57,6 +67,65 @@ export const SAFETY = [
   ["Verified members", "Every account confirms its email with a one-time code. Code requests are limited per IP, email and mobile number."],
   ["No off-platform shortcuts", "Emails, phone numbers, links and social handles are blocked in public fields and request messages, so nobody can skip the accept step."],
   ["You're in control", "Block, report or end a partnership whenever you like. Our team reviews reports and can suspend accounts."],
+];
+
+/* a practical plan for the first month with a buddy: what people search as "how to practise mock interviews with a friend" */
+export const PLAN_INTRO =
+  "A good prep partnership has a fixed rhythm: two or three sessions a week, roles swapped every time, and written feedback after each round. Here is a four-week plan you can copy into your first chat.";
+
+export const PLAN = [
+  {
+    week: "Week 1",
+    title: "Set the baseline",
+    goal: "Agree on the rules and find out where each of you stands.",
+    items: [
+      "Share your target role, companies and interview date in the first chat.",
+      "Fix two or three 60-minute slots a week and put them in your calendars.",
+      "Run one warm-up DSA round each: 30 minutes interviewing, 30 minutes being interviewed.",
+      "Write down three weak areas each, honestly. That list drives the next three weeks.",
+    ],
+  },
+  {
+    week: "Week 2",
+    title: "Core rounds",
+    goal: "Practise the round your target companies weight most.",
+    items: [
+      "Two DSA or coding rounds each, timed at 45 minutes, solving out loud.",
+      "One system design (HLD) or low-level design (LLD) round, using a shared whiteboard.",
+      "After each round the interviewer gives two things that went well and two to fix.",
+    ],
+  },
+  {
+    week: "Week 3",
+    title: "Pressure and follow-ups",
+    goal: "Make it feel like the real interview.",
+    items: [
+      "Interviewer asks follow-ups: \"Why that data structure?\", \"What if traffic grows 10x?\".",
+      "Camera on, no notes, strict timer. Practise saying \"Let me think for a minute\".",
+      "Add one behavioural round each: tell a STAR story about a conflict and a failure.",
+    ],
+  },
+  {
+    week: "Week 4",
+    title: "Full mock loop",
+    goal: "Run a complete interview day, then review it together.",
+    items: [
+      "One back-to-back loop: coding, design and behavioural, with a 10-minute break.",
+      "Score each round from 1 to 4 (no hire, lean no, lean yes, strong yes) and explain why.",
+      "Compare with week 1. Decide together whether to continue, change focus or end the partnership.",
+    ],
+  },
+];
+
+/* how a prep buddy compares with the other ways people prepare */
+export const COMPARE_COLS = ["Prep buddy (Prep Buddy Arena)", "Preparing alone", "Paid 1:1 mock interview"];
+export const COMPARE_ROWS = [
+  ["Cost", "One-time entry fee, then unlimited sessions with your buddy", "Free", "Paid per session, usually the most expensive option"],
+  ["Speaking answers out loud", "Every session", "Rarely", "Every session"],
+  ["Live feedback", "From a peer, every session", "None", "From an experienced interviewer"],
+  ["Accountability", "A person expects you at a fixed time", "Only self-discipline", "Only for the booked slot"],
+  ["You also practise interviewing", "Yes, you swap roles", "No", "No"],
+  ["Best for", "Steady weekly practice over weeks", "Learning concepts and solving problems", "A final check before a big interview"],
 ];
 
 export const WHO_FOR = [
@@ -115,6 +184,12 @@ export function buildFaq(info, gw) {
     { q: "Which topics can I practise?", a: "System design (HLD), low-level design, DSA, frontend, backend, full stack, DevOps and cloud, SDET and QA, mobile, data engineering, GenAI and behavioural rounds. You pick your topics on your profile and filter other members by them." },
     { q: "Is my payment safe?", a: gw ? `Payments are processed by ${gw.name} (${gw.methods.join(", ")}). We never see or store your card details.` : "Payments are processed by our payment gateway using UPI, cards or netbanking. We never see or store your card details." },
     { q: "What if someone behaves badly?", a: "Block them and your partnership ends instantly. You can also report them. Every member verifies their email, and admins can suspend accounts." },
+    { q: "How do I practise mock interviews with a friend or partner?", a: "Fix two or three 60-minute sessions a week. In each, one person interviews for 30 minutes and the other answers out loud, then you swap. The interviewer uses a timer, asks follow-up questions and ends with two things that went well and two to fix. The 4-week plan on this page gives a ready schedule." },
+    { q: "Can I find a partner for system design interview practice?", a: "Yes. Pick \"System design (HLD)\" or \"Low-level design (LLD)\" as a topic on your profile and filter members by it. Many working engineers join specifically for regular design mocks with a peer at a similar level." },
+    { q: "Can I find a DSA or LeetCode study partner here?", a: "Yes. Choose \"Data structures & algorithms\" as a topic, filter by level and availability, and send a request to someone who solves at a similar pace. Most pairs solve problems separately and meet to explain solutions out loud." },
+    { q: "Is Prep Buddy Arena useful for campus placements?", a: "Yes. Final-year students use it to find someone for DSA, aptitude-style coding and HR rounds before placement season. Filter by level \"Student\" or by your target companies." },
+    { q: "Do I need to show my real name?", a: "No. In the arena you appear only as an anonymous member ID such as Member-K7QX2. After you match, you decide whether your buddy sees your name, email, phone or LinkedIn." },
+    { q: "Is it a subscription?", a: "No. You pay once to enter. There are no monthly charges and nothing renews automatically." },
   ];
 }
 
@@ -150,7 +225,10 @@ export function buildSchema(faq, info) {
         about: { "@id": `${PAGE_URL}#service` },
         dateModified: UPDATED_ISO,
         breadcrumb: { "@id": `${PAGE_URL}#breadcrumb` },
-        speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1", ".pb-answer"] },
+        speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1", ".pb-answer", ".pb-qa-a"] },
+        keywords: SEO.keywords,
+        primaryImageOfPage: { "@type": "ImageObject", url: OG_IMAGE },
+        mainEntity: { "@id": `${PAGE_URL}#faq` },
       },
       {
         "@type": "BreadcrumbList",
@@ -167,6 +245,26 @@ export function buildSchema(faq, info) {
         "@id": `${PAGE_URL}#howto`,
         name: "How to find an interview prep buddy on Prep Buddy Arena",
         step: STEPS.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.text, url: `${PAGE_URL}#how-it-works` })),
+      },
+      {
+        "@type": "HowTo",
+        "@id": `${PAGE_URL}#plan`,
+        name: "A 4-week mock interview practice plan with a prep buddy",
+        description: PLAN_INTRO,
+        totalTime: "P4W",
+        step: PLAN.map((w, i) => ({
+          "@type": "HowToStep",
+          position: i + 1,
+          name: `${w.week}: ${w.title}`,
+          text: `${w.goal} ${w.items.join(" ")}`,
+          url: `${PAGE_URL}#plan`,
+        })),
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${PAGE_URL}#topics`,
+        name: "Interview topics you can practise with a prep buddy",
+        itemListElement: TOPICS.flatMap(([, list]) => list).map((t, i) => ({ "@type": "ListItem", position: i + 1, name: t })),
       },
     ],
   };

@@ -587,7 +587,7 @@ export default function MemoriesAuth() {
                     {cooldown > 60 ? `Try again in ${Math.ceil(cooldown / 60)} min` : <>Send my code <ArrowRight size={16} weight="bold" aria-hidden /></>}
                   </Submit>
                   <p className="caption-5 text-center text-[#8a6a80]">
-                    By continuing you agree to our <Link className="ml-link font-semibold underline" to="/memories/terms">Terms</Link> and <Link className="ml-link font-semibold underline" to="/memories/privacy">Privacy Policy</Link>.
+                    By continuing you confirm you are 18 or older and agree to our <Link className="ml-link font-semibold underline" to="/memories/terms">Terms</Link> and <Link className="ml-link font-semibold underline" to="/memories/privacy">Privacy Policy</Link>.
                   </p>
                 </form>
               )}

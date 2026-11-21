@@ -15,10 +15,10 @@ import { OCCASION } from "./landingUi";
 */
 export const SITE = "https://www.targettrek.in";
 export const URL = `${SITE}/memories`;
-const IMAGE = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+const IMAGE = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 
 export const TITLE = "Birthday, Proposal & Anniversary Page Maker Online | Memories";
-export const DESCRIPTION = "Make an interactive page for a birthday, proposal, anniversary, apology, thank you or Christmas. Add your words, photos, videos and voice, then share one private or public link. Pay once in INR with UPI. No app needed.";
+export const DESCRIPTION = "Make an interactive birthday, proposal, anniversary or thank-you page with photos, video and voice, and share it as one link. Pay once with UPI. No app needed.";
 
 const STEPS = [
   ["Pick an occasion and a look", "Sign up with Google or your email, choose a template and the look that fits them. The price is on screen before you pay."],

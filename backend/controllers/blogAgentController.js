@@ -312,7 +312,7 @@ const saveSchema = z.object({
       ogImageUrl: z.string().trim().optional().default(""),
       noIndex: z.boolean().optional().default(false),
     })
-    .default({}),
+    .prefault({}),
 
   sources: z
     .array(

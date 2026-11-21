@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
 import User from "../models/User.js";
+import PartnerAccess from "../models/partner/PartnerAccess.js";
 import UserSession from "../models/UserSession.js";
 import UserActivity from "../models/UserActivity.js";
 import { purgeUser } from "../services/arena/purge.js";
@@ -40,6 +41,7 @@ const ROLES = [
   "Employee",
   "normal",
   "affiliate",
+  "partner",
 ];
 
 const STATUSES = [
@@ -1288,6 +1290,11 @@ export const updateUser = async (
             "Admin changed account role or email",
         });
 
+      // No longer a partner: forget what they were allowed to see, so it never comes back with the role.
+      if (roleChanged && existing.role === "partner") {
+        await PartnerAccess.deleteOne({ user: userId }).catch(() => {});
+      }
+
       await audit({
         req,
         user: userId,
@@ -1755,6 +1762,7 @@ export const deleteUser = async (
     // HARD DELETE: the user, their sessions and all their arena data are removed from the database.
     await purgeUser(userId, { mode: "hard" });
     await UserActivity.deleteMany({ user: userId });
+    await PartnerAccess.deleteOne({ user: userId }).catch(() => {});
 
     // The account is gone, so the record is kept on the acting admin's activity log.
     await audit({

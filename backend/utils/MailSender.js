@@ -743,6 +743,15 @@ export const sendMailWith = async (provider, ...args) => {
 ===================================================== */
 
 const assertSendingEnabled = (args) => {
+  // Tests that need a "sent" mail (e.g. to read a login code): MAIL_DISABLE_SEND=outbox records it in
+  // globalThis.__MAIL_OUTBOX and reports success. Nothing is ever sent.
+  if (process.env.MAIL_DISABLE_SEND === "outbox") {
+    const [to, subject, text, html, options] = args;
+    if (!Array.isArray(globalThis.__MAIL_OUTBOX)) globalThis.__MAIL_OUTBOX = [];
+    globalThis.__MAIL_OUTBOX.push({ to, subject, text, html, options });
+    return { provider: "outbox", messageId: `outbox-${globalThis.__MAIL_OUTBOX.length}` };
+  }
+
   // Safety switch for tests / dry runs: never contact a provider.
   if (process.env.MAIL_DISABLE_SEND === "true") {
     // Tests may collect what WOULD have been sent: set globalThis.__MAIL_OUTBOX = [].
@@ -755,7 +764,8 @@ const assertSendingEnabled = (args) => {
 };
 
 export const deliverMail = async (...args) => {
-  assertSendingEnabled(args);
+  const recorded = assertSendingEnabled(args);
+  if (recorded) return recorded;
 
   const settings = await getMailSettings();
 
@@ -779,7 +789,12 @@ export const deliverMail = async (...args) => {
     return sendMailWith(chosen, ...args);
   }
 
-  const primary = healthy.includes(chosen) ? chosen : configured[0];
+  // Failover OFF means "only ever use the provider I picked": never switch away from it, even when its key
+  // was rejected a moment ago (that switch is itself a failover). Failover ON skips a rejected key first.
+  const primary =
+    (!settings.fallbackEnabled && all.includes(chosen)) || healthy.includes(chosen)
+      ? chosen
+      : configured[0];
 
   if (primary !== chosen && !authBlockedUntil[chosen]) {
     console.warn(
@@ -836,7 +851,8 @@ export const deliverMail = async (...args) => {
 
 const sendMail = async (to, subject, text, html, options = {}) => {
   if (canQueueMail(options)) {
-    assertSendingEnabled([to, subject, text, html, options]);
+    const recorded = assertSendingEnabled([to, subject, text, html, options]);
+    if (recorded) return recorded;
 
     try {
       return await enqueueMail(to, subject, text, html, options);

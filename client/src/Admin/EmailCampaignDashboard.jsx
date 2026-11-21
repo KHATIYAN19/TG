@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 import BASE_URL from "../utils/Url.js";
+import { getAccessToken } from "../lib/authSession";
 
 const CAMPAIGN_API =
   `${BASE_URL}/api/admin/email-campaigns`;
@@ -96,11 +97,7 @@ const EmailCampaignDashboard = () => {
       html: "",
     });
 
-  const getToken = () => {
-    return localStorage.getItem(
-      "token"
-    );
-  };
+  const getToken = () => getAccessToken();
 
   const getHeaders = () => {
     const token =

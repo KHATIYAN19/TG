@@ -1,16 +1,31 @@
+/*
+  Resets one existing ADMIN account to a clean login state and signs it out everywhere.
+  The password is NOT changed. Use it to unlock / re-enable an admin, or after auth changes.
 
+    node scripts/bootstrapAdminAuth.js --email=admin@example.com
+
+  Writes to whatever database MONGO_URI (backend/.env) points at. There is no dry run.
+*/
 import "dotenv/config";
 import mongoose from "mongoose";
 
-import User from "./models/User.js";
-import UserSession from "./models/UserSession.js";
-import redis from "./utils/redis.js";
-import connectDB from "./utils/dbConnection.js";
+import User from "../models/User.js";
+import UserSession from "../models/UserSession.js";
+import redis from "../utils/redis.js";
+import connectDB from "../utils/dbConnection.js";
+
 /* =====================================================
-   CONFIGURATION — CHANGE ONLY THIS EMAIL
+   CONFIGURATION — pass the admin's email with --email=
 ===================================================== */
 
-const USER_EMAIL = "lavikhatiyan43177@gmail.com";
+const USER_EMAIL = (
+  process.argv.find((a) => a.startsWith("--email="))?.slice("--email=".length) || ""
+).trim();
+
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(USER_EMAIL)) {
+  console.error("Usage: node scripts/bootstrapAdminAuth.js --email=admin@example.com");
+  process.exit(1);
+}
 
 /* =====================================================
    MIGRATE SINGLE USER

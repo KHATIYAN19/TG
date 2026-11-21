@@ -22,7 +22,7 @@ export const generateReviewLink = async (req, res) => {
     const { email } = req.body;
     const validationResult = emailSchema.safeParse(email);
     if (!validationResult.success) {
-        const errorMessage = validationResult.error.errors[0]?.message || 'Invalid input.';
+        const errorMessage = validationResult.error.issues[0]?.message || 'Invalid input.';
         return res.status(400).json({ message: errorMessage });
     }
 

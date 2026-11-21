@@ -84,6 +84,13 @@ export function loadProduct(url, { force = false } = {}) {
   return promise;
 }
 
+/* build-time prerender (scripts/prerender.mjs) seeds the cache with live products so the static HTML that
+   crawlers read carries real titles, prices and covers instead of loading placeholders */
+export function primeProducts(map = {}) {
+  const now = Date.now();
+  Object.entries(map).forEach(([url, product]) => { if (product) products.set(url, { product, at: now }); });
+}
+
 /* warm the cache (e.g. on link hover) without caring about the result */
 export const prefetchProducts = (urls) => { urls.forEach((u) => loadProduct(u).catch(() => {})); };
 
@@ -111,5 +118,8 @@ export function loadCatalog({ force = false } = {}) {
   })();
   return catalogInflight;
 }
+
+/* build-time prerender only: same shape loadCatalog() resolves to */
+export const primeCatalog = (data) => { if (data) catalog = { data, at: Date.now() }; };
 
 export const peekCatalog = () => (catalog && Date.now() - catalog.at < CATALOG_TTL ? catalog.data : null);

@@ -172,7 +172,8 @@ export default function AuthPage() {
     if (!data?.token || !data?.user) throw new Error("Incomplete sign-in response");
     dispatch(loginAction({ token: data.token, user: data.user }));
     toast.success("You're signed in", { id: "signed-in" });
-    navigate(redirectTo, { replace: true });
+    // Partners land on their dashboard unless they were sent here from a specific page.
+    navigate(data.user.role === "partner" && redirectTo === DEFAULT_AFTER_LOGIN ? "/partners/dashboard" : redirectTo, { replace: true });
   }, [dispatch, navigate, redirectTo]);
 
   const applyLock = (e) => {
@@ -363,7 +364,7 @@ export default function AuthPage() {
                 </div>
                 <Button type="submit" loading={busy} disabled={locked}>Send me a code</Button>
                 <p className="ta-sm">Already have an account? <button type="button" className="ta-link" onClick={() => switchTab("login")}>Log in</button></p>
-                <p className="ta-hint ta-center">By continuing you agree to the <Link to="/terms-of-service">Terms</Link> and <Link to="/privacy-policy">Privacy Policy</Link>.</p>
+                <p className="ta-hint ta-center">By continuing you confirm you are 18 or older and agree to the <Link to="/terms-of-service">Terms</Link> and <Link to="/privacy-policy">Privacy Policy</Link>.</p>
               </form>
             )}
 

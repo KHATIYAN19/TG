@@ -1,3 +1,4 @@
+import { getAccessToken } from "../lib/authSession";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
@@ -130,8 +131,7 @@ export default function FinanceDashboard() {
   const reduxToken = useSelector(state => state.auth?.token ?? state.auth?.accessToken ?? null);
   const api = useMemo(() => axios.create({ baseURL: API, withCredentials: true, timeout: 45000 }), []);
   const apiCall = useCallback(async (method, path, data, signal) => {
-    const storedToken = (() => { try { return localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("accessToken") || ""; } catch { return ""; } })();
-    const token = reduxToken || storedToken;
+    const token = reduxToken || getAccessToken();
     const result = await api.request({ method, url: path, data, signal, headers: token ? { Authorization: `Bearer ${token}` } : {} });
     if (result.data?.success === false) throw new Error(result.data.message || "Request failed");
     return result.data?.data ?? result.data;

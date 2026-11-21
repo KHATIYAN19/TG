@@ -270,7 +270,7 @@ const askSchema = z.object({
   info: z.object({
     currentRole: z.string().trim().min(2, "Enter your current role").max(100),
     currentCompany: z.string().trim().max(100).default(""),
-    yearsExp: z.coerce.number({ invalid_type_error: "Enter your years of experience" }).min(0).max(60),
+    yearsExp: z.coerce.number({ error: "Enter your years of experience" }).min(0).max(60),
     noticePeriod: z.string().trim().max(40).default(""),
     linkedin: z.string().trim().min(1, "Your LinkedIn link is required").max(200).refine((v) => LINKEDIN.test(v), "Enter a LinkedIn link like https://linkedin.com/in/your-name"),
     portfolio: url,

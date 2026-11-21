@@ -2,9 +2,11 @@ import React, {
   useMemo,
 } from "react";
 
-import ReactQuill from "react-quill";
+import ReactQuill from "react-quill-new";
 
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
+
+import { useLegacyQuillValue } from "../utils/quillHtml.js";
 
 const RichTextEditor = ({
   value,
@@ -14,6 +16,10 @@ const RichTextEditor = ({
   disabled = false,
   minHeight = 420,
 }) => {
+  /* Quill 2 inside, Quill-1-style HTML out (see utils/quillHtml.js), so saved posts look the same as before. */
+  const [editorValue, handleChange] =
+    useLegacyQuillValue(value, onChange);
+
   const modules = useMemo(
     () => ({
       toolbar: {
@@ -200,7 +206,6 @@ const RichTextEditor = ({
     "code",
 
     "list",
-    "bullet",
     "indent",
 
     "align",
@@ -313,7 +318,8 @@ const RichTextEditor = ({
                   border-color: #475569;
                 }
 
-                .tt-rich-editor .ql-editor pre.ql-syntax {
+                .tt-rich-editor .ql-editor pre.ql-syntax,
+                .tt-rich-editor .ql-editor .ql-code-block-container {
                   background: #07101f;
                   color: #e2e8f0;
                 }
@@ -365,10 +371,10 @@ const RichTextEditor = ({
       <ReactQuill
         theme="snow"
         value={
-          value || ""
+          editorValue
         }
         onChange={
-          onChange
+          handleChange
         }
         modules={
           modules

@@ -444,7 +444,7 @@ export const OS_BOOK = {
   productName: "Operating Systems: The Placement Handbook",
   seo: {
     title: "Operating System Ebook: Interview & Placement Guide | Target Trek",
-    description: "Master Operating Systems for exams, placements and real jobs: processes, threads, CPU scheduling, synchronization, deadlocks, memory, virtual memory, file systems, Linux toolkit and solved problems.",
+    description: "Operating Systems ebook for placements and interviews: processes, threads, CPU scheduling, deadlocks, virtual memory, file systems and solved problems. PDF.",
     keywords: "operating system ebook, OS interview questions, operating system notes, CPU scheduling, deadlock, paging, virtual memory, process synchronization, GATE operating system, placement preparation, Linux",
     long: "A complete Operating Systems handbook for students, placement candidates and working engineers: processes, threads, CPU scheduling, synchronization, deadlocks, memory management, virtual memory, file systems, I/O, virtualization and a Linux toolkit, with 16 solved problems and 60 interview questions.",
     category: "Operating Systems Ebook",

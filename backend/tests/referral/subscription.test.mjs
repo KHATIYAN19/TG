@@ -70,7 +70,7 @@ test("SUBSCRIPTION_PAYMENT_GATEWAY chooses the gateway for new subscriptions, an
 });
 
 const cfSign = (body, ts) => crypto.createHmac("sha256", "cfsecret").update(`${ts}${body}`).digest("base64");
-const cf = (obj) => { const body = JSON.stringify(obj), ts = "1700000000"; return parseSubscriptionWebhook({ product: "REFERRAL", gateway: "cashfree", rawBody: body, headers: { "x-webhook-signature": cfSign(body, ts), "x-webhook-timestamp": ts } }); };
+const cf = (obj) => { const body = JSON.stringify(obj), ts = String(Date.now()); return parseSubscriptionWebhook({ product: "REFERRAL", gateway: "cashfree", rawBody: body, headers: { "x-webhook-signature": cfSign(body, ts), "x-webhook-timestamp": ts } }); };
 
 test("Cashfree: a signed payment-success webhook becomes a charge; a bad signature is rejected", () => {
   const ok = cf({ type: "SUBSCRIPTION_PAYMENT_SUCCESS", event_time: "2026-11-19T10:00:00+05:30", data: { subscription_id: "RSUB_1", cf_payment_id: "cfp_1", payment_id: "pay_a", payment_type: "AUTH", payment_amount: 99, payment_status: "SUCCESS", payment_initiated_date: "2026-11-19T10:00:00+05:30" } });

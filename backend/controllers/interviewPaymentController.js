@@ -1818,6 +1818,8 @@
 
 import crypto from "crypto";
 
+import { verifyCashfreeWebhookSignature } from "../utils/cashfreeWebhook.js";
+
 import {
   InterviewSlot,
   InterviewBooking,
@@ -3340,42 +3342,21 @@ function verifyCashfreeWebhook(req) {
     );
   }
 
-  const expected = crypto
-    .createHmac(
-      "sha256",
-      secret
-    )
-    .update(
-      timestamp +
-        req.body.toString(
-          "utf8"
-        )
-    )
-    .digest("base64");
+  /* Signature + timestamp window (utils/cashfreeWebhook.js). */
+  const check =
+    verifyCashfreeWebhookSignature({
+      rawBody: req.body,
+      signature,
+      timestamp,
+      secret,
+    });
 
-  const actualBuffer =
-    Buffer.from(
-      String(signature),
-      "utf8"
-    );
-
-  const expectedBuffer =
-    Buffer.from(
-      expected,
-      "utf8"
-    );
-
-  if (
-    actualBuffer.length !==
-      expectedBuffer.length ||
-    !crypto.timingSafeEqual(
-      actualBuffer,
-      expectedBuffer
-    )
-  ) {
+  if (!check.valid) {
     fail(
       401,
-      "Invalid Cashfree webhook signature"
+      check.reason === "signature"
+        ? "Invalid Cashfree webhook signature"
+        : "Expired or invalid Cashfree webhook timestamp"
     );
   }
 }

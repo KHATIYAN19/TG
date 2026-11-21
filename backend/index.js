@@ -88,6 +88,7 @@ import authRoutes from "./routes/authRoutes.js";
 import { sweepSessions } from "./services/sessionCleanup.js";
 import { resendMissedMetaPurchases } from "./services/metaSweep.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
+import { partnerRouter, partnerAdminRouter } from "./routes/partnerRoutes.js";
 import mailSettingsRoutes from "./routes/mailSettingsRoutes.js";
 import bookStorageRoutes from "./routes/bookStorageRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
@@ -115,6 +116,8 @@ import {
 import { gatewayWebhook as referralGatewayWebhook } from "./controllers/referral/userController.js";
 import { attachReferralSocket } from "./services/referral/socket.js";
 import userRoutes from "./routes/userRoutes.js";
+import cspReportRoute from "./routes/cspReportRoute.js";
+import { bodyParsers } from "./Middleware/bodyLimits.js";
 
 /* =====================================================
    MOCK INTERVIEW ROUTES
@@ -443,6 +446,9 @@ app.use(
   analyticsRoutes
 );
 
+// Content-Security-Policy violation reports (own tiny JSON parser; never counts against a visitor's quota).
+app.use("/api/csp-report", cspReportRoute);
+
 // Cloud Scheduler hook (secret-protected, no body).
 app.use(
   "/internal/analytics",
@@ -461,14 +467,8 @@ app.use(
    Gateway webhooks are handled above (raw body).
 ===================================================== */
 
-app.use(express.json({ limit: "10mb" }));
-
-app.use(
-  express.urlencoded({
-    extended: true,
-    limit: "10mb",
-  })
-);
+// 1 MB for anonymous requests, 10 MB with a genuinely signed access token (see Middleware/bodyLimits.js).
+app.use(bodyParsers);
 
 // Strip MongoDB operator keys ($ne, $gt, ...) from request bodies.
 app.use(sanitizeInput);
@@ -543,8 +543,7 @@ app.get("/health", (req, res) => {
     success: true,
     status: "OK",
     service: "Target Trek Backend",
-    environment:
-      process.env.NODE_ENV || "development",
+    // No environment / version details: they only help someone fingerprint the server.
     timestamp: new Date().toISOString(),
   });
 });
@@ -567,6 +566,10 @@ app.use(
   "/api/admin/users",
   adminUserRoutes
 );
+
+/* Partners: a read-only revenue dashboard with admin-controlled permissions (no customer details). */
+app.use("/api/partner", partnerRouter);
+app.use("/api/admin/partners", partnerAdminRouter);
 
 /* =====================================================
    PREP BUDDY ARENA
@@ -792,7 +795,7 @@ app.use((req, res) => {
   return res.status(404).json({
     success: false,
     message: "Resource not found on this server.",
-    path: req.originalUrl,
+    // The requested URL is not echoed back: it can carry tokens and is a reflection vector.
   });
 });
 

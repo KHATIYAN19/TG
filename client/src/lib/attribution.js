@@ -1,3 +1,4 @@
+import { hasConsent } from "./consent";
 /**
  * ============================================================
  * AD ATTRIBUTION (browser side)
@@ -150,8 +151,23 @@ export const captureAttribution = () => {
  * Attribution payload sent to the backend at checkout.
  * Always an object; platform is "organic" when no paid touch.
  */
+const AD_IDENTIFIERS = ["fbclid", "fbc", "fbp", "gclid", "gbraid", "wbraid"];
+
 export const getAttribution = () => {
   if (!isBrowser()) return { platform: "organic" };
+
+  const a = rawAttribution();
+
+  // Sales measurement is always on (lib/consent.js), so this branch no longer runs. It is kept so a future
+  // opt-out switch only has to change hasConsent("marketing").
+  if (!hasConsent("marketing")) {
+    const rest = Object.fromEntries(Object.entries(a).filter(([key]) => !AD_IDENTIFIERS.includes(key)));
+    return { ...rest, adConsent: false };
+  }
+  return { ...a, adConsent: true };
+};
+
+const rawAttribution = () => {
 
   const stored = readStore();
 

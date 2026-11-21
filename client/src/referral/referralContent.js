@@ -9,7 +9,7 @@ export const APP_URL = `${SITE}/referral/app`;
 export const UPDATED_ISO = "2026-11-19";
 export const HELP_EMAIL = "supporttargettrek@gmail.com";
 export const UPDATED_LABEL = "19 November 2026";
-export const OG_IMAGE = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+export const OG_IMAGE = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 
 export const SEO = {
   title: "Job Referrals: Ask Employees at Your Dream Company | Target Trek",

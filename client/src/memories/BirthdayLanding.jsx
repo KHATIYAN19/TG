@@ -114,8 +114,8 @@ export default function BirthdayLanding() {
   const days = info?.pageLifetimeDays ?? 30;
   const price = info ? formatPrice(info.price) : null;
   const faq = faqItems(days, price);
-  const title = "Birthday Surprise Page Maker: an online birthday party in one link | Memories";
-  const description = "Make a personalised birthday surprise website for your partner, best friend, mum, dad, brother or sister. Balloons to pop, a cake to cut, gifts, a pinata, your photos, video and voice, and a wish they send back. Share one link.";
+  const title = "Birthday Surprise Page Maker Online | Memories";
+  const description = "Make a personalised birthday surprise website for your partner, friend or family: balloons, a cake to cut, gifts, your photos, video and voice. Share one link.";
 
   return (
     <div ref={root} className="mem-root ml-root min-h-screen overflow-x-clip">

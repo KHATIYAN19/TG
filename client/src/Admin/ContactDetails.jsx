@@ -3,8 +3,9 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { Helmet } from 'react-helmet';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+import { useLegacyQuillValue } from '../utils/quillHtml.js';
 import BASE_URL from "../utils/Url.js";
 import {
   ArrowLeft, Trash2, Eye, EyeOff, Mail, Phone, Briefcase, Clock, MessageSquare, Send, Loader2,
@@ -24,7 +25,22 @@ const QUILL_MODULES = {
     ['clean'],
   ],
 };
-const QUILL_FORMATS = ['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'blockquote', 'link'];
+const QUILL_FORMATS = ['header', 'bold', 'italic', 'underline', 'list', 'blockquote', 'link'];
+
+/* Quill 2 editor that hands back Quill-1-style HTML (real <ul>/<ol>), which is what email clients render correctly. */
+const ReplyEditor = ({ value, onChange, placeholder }) => {
+  const [editorValue, handleChange] = useLegacyQuillValue(value, onChange);
+  return (
+    <ReactQuill
+      theme="snow"
+      value={editorValue}
+      onChange={handleChange}
+      modules={QUILL_MODULES}
+      formats={QUILL_FORMATS}
+      placeholder={placeholder}
+    />
+  );
+};
 
 const SUGGESTIONS = [
   'Write a friendly reply thanking them and offering a call this week',
@@ -350,12 +366,9 @@ const ContactDetail = () => {
                 <div>
                   <label className="text-xs font-medium text-slate-500">Body</label>
                   <div className="mt-1 contact-reply-editor">
-                    <ReactQuill
-                      theme="snow"
+                    <ReplyEditor
                       value={bodyHtml}
                       onChange={setBodyHtml}
-                      modules={QUILL_MODULES}
-                      formats={QUILL_FORMATS}
                       placeholder="Write your reply, or ask the AI assistant to draft it…"
                     />
                   </div>

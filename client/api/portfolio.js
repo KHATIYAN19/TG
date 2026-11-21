@@ -165,6 +165,8 @@ ${(item.tags || []).length ? `<p>Tags: ${item.tags.map(esc).join(", ")}</p>` : "
         description,
         canonical,
         image: absoluteUrl(items[0]?.imageUrl),
+        // an empty list is thin content: keep it out of the index until projects are published
+        ...(items.length ? {} : { robots: "noindex, follow" }),
         extra: jsonLd(schema),
       }),
       bodyHtml,

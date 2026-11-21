@@ -19,13 +19,14 @@ import LegalPage, {
   Table,
   UL,
 } from "./legal/LegalKit.jsx";
+import GrievanceDetails from "./legal/GrievanceDetails.jsx";
 
 /* ======================================================
    CONSTANTS (dates are intentionally unchanged)
 ====================================================== */
 
-const LAST_UPDATED = "October 3, 2026";
-const DATE_MODIFIED = "2026-10-03";
+const LAST_UPDATED = "November 20, 2026";
+const DATE_MODIFIED = "2026-11-20";
 
 const SEO = {
   title: "Terms of Service | Target Trek",
@@ -146,7 +147,7 @@ const sections = [
           "Keep your password and sign-in codes private. You are responsible for activity on your account.",
           "One account is for one person. Don't share your login or let others use your paid access.",
           "Tell us straight away at " + SUPPORT_EMAIL + " if you think someone else has used your account.",
-          "If you are under 18, use Target Trek with the consent and supervision of a parent or guardian.",
+          "You must be 18 or older to create an account or buy. A parent or guardian may create an account and buy on behalf of a younger learner, and is responsible for that use.",
         ]}
       />
     ),
@@ -452,10 +453,16 @@ const sections = [
         </P>
         <P>
           If you have a problem, please email us first. Most issues are resolved quickly and directly. If a dispute can’t be
-          resolved this way, it will be handled by the competent courts in India.
+          resolved this way, it will be handled by the competent courts in India. You may also approach the consumer
+          commission under the Consumer Protection Act, 2019, or the National Consumer Helpline (1915 / consumerhelpline.gov.in).
         </P>
       </>
     ),
+  },
+  {
+    id: "grievance-officer",
+    title: "Grievance Officer and who we are",
+    body: <GrievanceDetails />,
   },
   {
     id: "general",

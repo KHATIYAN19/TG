@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  ArrowLeft, ArrowRight, CalendarBlank, CaretLeft, CaretRight, CaretRight as Chevron, ChartBar, Check, CheckCircle,
+  ArrowLeft, ArrowRight, CalendarBlank, ChartLineUp, CaretLeft, CaretRight, CaretRight as Chevron, ChartBar, Check, CheckCircle,
   ClockCounterClockwise, Copy, Crown, Devices, DownloadSimple, Envelope, FunnelSimple, GoogleLogo, Handshake,
   HourglassMedium, Key, Lock, MagnifyingGlass, PaperPlaneTilt, PencilSimple, Phone, Prohibit, Pulse, Receipt,
   ShieldWarning, ShoppingCart, SignOut, SquaresFour, Trash, User, UserPlus, Users, WarningCircle, WifiHigh, X,
@@ -56,11 +57,12 @@ const API = {
 const ROLES = [
   { value: "normal", label: "Member", icon: User },
   { value: "affiliate", label: "Affiliate", icon: Handshake },
+  { value: "partner", label: "Partner", icon: ChartLineUp },
   { value: "Employee", label: "Employee", icon: Users },
   { value: "admin", label: "Admin", icon: Crown },
 ];
 const roleLabel = (r) => ROLES.find((x) => x.value === r)?.label || "Member";
-const ROLE_TONE = { admin: "warn", Employee: "info", affiliate: "brand", normal: "muted" };
+const ROLE_TONE = { admin: "warn", Employee: "info", affiliate: "brand", partner: "ok", normal: "muted" };
 const STATUSES = ["active", "inactive", "suspended", "blocked"];
 const STATUS_HELP = {
   active: "Can sign in and use everything.",
@@ -596,6 +598,10 @@ function PersonPage({ id, me, back, backLabel, onChanged }) {
 
           {u.status !== "active" && (
             <div className="aux-alert"><ShieldWarning size={18} weight="fill" /><div><b>{titleCase(u.status)}</b>{u.statusReason ? ` — ${u.statusReason}` : ""}<small>{STATUS_HELP[u.status]}{u.statusChangedAt ? ` Changed ${ago(u.statusChangedAt)}${u.statusChangedBy ? ` by ${u.statusChangedBy.name}` : ""}.` : ""}</small></div><Btn variant="ghost" size="sm" onClick={() => pick("manage")}>Manage</Btn></div>
+          )}
+
+          {u.role === "partner" && (
+            <div className="aux-alert"><ChartLineUp size={18} weight="fill" /><div><b>Partner account</b><small>Choose which products, numbers and columns this partner can see on their dashboard. Customer details are never shown to partners.</small></div><Btn variant="ghost" size="sm" as={Link} to={`/admin/partners#partner=${u.id}`}>Partner access</Btn></div>
           )}
 
           <nav className="aux-ptabs" aria-label="Sections">

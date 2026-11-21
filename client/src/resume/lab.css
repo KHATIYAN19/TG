@@ -919,3 +919,11 @@ html.dark .rv, [data-theme="dark"] .rv {
 .rvb-checks .ok span { color: var(--rv-ok); }
 .rvb-checks .mid span { color: var(--rv-warn); }
 .rvb-checks .bad span { color: var(--rv-bad); }
+
+/* link from the ATS section to the free ATS score checker */
+.rl-ats-cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; margin-top: 20px; padding: 18px 20px; border-radius: 18px; background: var(--rv-surface); border: 1px dashed var(--rv-border-strong); min-width: 0; }
+.rl-ats-cta > div { min-width: 0; flex: 1 1 260px; }
+.rl-ats-cta b { display: block; font-family: var(--rl-display); font-size: 18px; letter-spacing: -0.015em; }
+.rl-ats-cta p { margin-top: 4px; font-size: 14.5px; line-height: 1.55; color: var(--rv-muted); }
+.rl-ats-cta .rv-btn { flex: 0 0 auto; }
+@media (max-width: 479px) { .rl-ats-cta .rv-btn { flex: 1 1 100%; } }

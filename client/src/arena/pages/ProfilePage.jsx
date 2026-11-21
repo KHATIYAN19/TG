@@ -367,7 +367,8 @@ export function ProfileForm({ me, refresh, onSaved, saveLabel }) {
       </Section>
 
       {/* Sticky action bar: always reachable on phones */}
-      <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e5] dk:border-[#1f302c] bg-white/95 dk:bg-[#101c1a]/95 p-3 shadow-lg shadow-teal-950/15 dk:shadow-black/40 backdrop-blur sm:px-5">
+      {/* Save bar: stays in its place at the end of the form (not docked), so it never stacks on the bottom tab bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e5] dk:border-[#1f302c] bg-white dk:bg-[#101c1a] p-3 shadow-sm sm:px-5">
         <p className="hidden text-sm text-stone-600 dk:text-[#a3b8b2] sm:block">
           Your entry includes <strong className="text-teal-800 dk:text-teal-300">{matchesPerEntry} {matchesPerEntry === 1 ? "match" : "matches"}</strong>, one after another.
         </p>

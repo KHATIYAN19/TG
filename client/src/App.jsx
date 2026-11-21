@@ -34,8 +34,10 @@ import {
 } from "./Redux/authSlice.js";
 import Navbar from "./component/Navbar";
 import Footer from "./component/Footer.jsx";
+import ConsentBanner from "./component/ConsentBanner.jsx";
 import {
   refreshAccessToken,
+  restoreSession,
   tokenIsExpired,
   tokenExpiresAt,
 } from "./lib/authSession";
@@ -62,9 +64,6 @@ const PortfolioPage = lazy(() =>
 );
 const PortfolioDetailPage = lazy(() =>
   import("./component/PortfolioDetailPage")
-);
-const CareerPage = lazy(() =>
-  import("./component/CareerPage.jsx")
 );
 const UserProfile = lazy(() =>
   import("./component/UserProfile.jsx")
@@ -185,6 +184,7 @@ const MemoriesApp = lazy(() =>
 const ResumeLanding = lazy(() => import("./resume/ResumeLanding.jsx"));
 const ResumeApp = lazy(() => import("./resume/ResumeApp.jsx"));
 const ResumePaymentResult = lazy(() => import("./resume/ResumePaymentResult.jsx"));
+const AtsChecker = lazy(() => import("./resume/AtsChecker.jsx"));
 const AdminResumeReviews = lazy(() => import("./Admin/AdminResumeReviews.jsx"));
 const ReferralApp = lazy(() => import("./referral/ReferralApp.jsx"));
 const ReferralLanding = lazy(() => import("./referral/ReferralLanding.jsx"));
@@ -385,6 +385,12 @@ const AddPortfolioPage = lazy(() =>
 const ManagePortfolio = lazy(() =>
   import("./Admin/ManagePortFolio")
 );
+const PartnerDashboard = lazy(() =>
+  import("./partner/PartnerDashboard.jsx")
+);
+const AdminPartners = lazy(() =>
+  import("./Admin/AdminPartners.jsx")
+);
 const AffiliateList = lazy(() =>
   import("./Admin/AffiliateList.jsx")
 );
@@ -538,6 +544,7 @@ function accessTokenExpired(token) {
   }
 }
 function destinationForRole(role) {
+  if (role === "partner") return "/partners/dashboard";
   return ADMIN_ROLES.includes(role)
     ? "/dashboard"
     : "/profile";
@@ -553,6 +560,8 @@ function removeStoredAuth() {
   const theme =
     localStorage.getItem("theme");
   const referralCode = localStorage.getItem("referralCode");
+  // The privacy (cookie) choice belongs to the visitor, not the session: signing out must not erase it.
+  const consent = localStorage.getItem("tt_consent");
   localStorage.clear();
   sessionStorage.clear();
   if (theme) {
@@ -560,6 +569,9 @@ function removeStoredAuth() {
   }
   if (referralCode) {
     localStorage.setItem("referralCode", referralCode);
+  }
+  if (consent) {
+    localStorage.setItem("tt_consent", consent);
   }
 }
 /* ============================================================
@@ -813,9 +825,13 @@ function App() {
      before it expires, after the tab wakes up, and on first load).
      They are only signed out if the server rejects the refresh.
   ====================================================== */
-  const [authReady, setAuthReady] = useState(
-    () => !token || !tokenIsExpired(token)
+  // The access token is kept in memory only, so a reload starts without one. If this browser was
+  // signed in (user hint present), hold the routes until the refresh cookie has been swapped for a
+  // fresh token; otherwise the guards would bounce a still-valid session to the login page.
+  const restoring = useSelector(
+    (state) => state.auth?.restoring
   );
+  const authReady = !restoring;
   const tokenRef = useRef(token);
   tokenRef.current = token;
 
@@ -834,12 +850,9 @@ function App() {
     [forceSignOut]
   );
 
-  // First load with a stale token: renew BEFORE the route guards run,
-  // otherwise they would bounce a still-valid session to the login page.
   useEffect(() => {
-    if (authReady) return;
-    renewIfNeeded().finally(() => setAuthReady(true));
-  }, [authReady, renewIfNeeded]);
+    if (restoring) restoreSession();
+  }, [restoring]);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -880,6 +893,15 @@ function App() {
       {element}
     </ProtectedRoute>
   );
+  const requirePartner = (element) => (
+    <ProtectedRoute
+      token={token}
+      user={user}
+      roles={["partner"]}
+    >
+      {element}
+    </ProtectedRoute>
+  );
   const requireSignedIn = (element) => (
     <ProtectedRoute
       token={token}
@@ -893,6 +915,7 @@ function App() {
     <div className="tt-app min-h-screen w-full font-inter">
       <Toaster />
       <Analytics />
+      {!siteDown && <ConsentBanner />}
       {!hideNavbar && !siteDown && <Navbar />}
       {adminMaintenanceOn.length > 0 && (
         <div
@@ -941,10 +964,6 @@ function App() {
             path="/portfolio/:slug"
             element={<PortfolioDetailPage />}
           />
-          {/* <Route
-            path="/carrers"
-            element={<CareerPage />}
-          /> */}
           <Route
             path="/profile"
             element={requireSignedIn(
@@ -1136,6 +1155,7 @@ function App() {
               authorised on the server.
           ======================================== */}
           <Route path="/resume-review" element={<ResumeLanding />} />
+          <Route path="/resume-review/ats-score-checker" element={<AtsChecker />} />
           <Route path="/resume-review/login" element={<LegacyAuthRedirect mode="login" fallback="/resume-review/app" />} />
           <Route path="/resume-review/signup" element={<LegacyAuthRedirect mode="signup" fallback="/resume-review/app" />} />
           <Route path="/resume-review/payment-result" element={<ResumePaymentResult />} />
@@ -1608,6 +1628,27 @@ function App() {
               <AdminSlotsPage />
             )}
           /> */}
+          {/* ========================================
+              PARTNERS
+              Partner: read-only revenue dashboard.
+              Admin: permissions + global settings.
+          ======================================== */}
+          <Route
+            path="/partners/dashboard"
+            element={requirePartner(
+              <PartnerDashboard />
+            )}
+          />
+          <Route
+            path="/partners"
+            element={<Navigate to="/partners/dashboard" replace />}
+          />
+          <Route
+            path="/admin/partners"
+            element={requireAdmin(
+              <AdminPartners />
+            )}
+          />
           {/* ========================================
               AFFILIATE ADMIN
           ======================================== */}

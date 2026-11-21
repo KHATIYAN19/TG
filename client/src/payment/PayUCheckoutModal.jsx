@@ -1,3 +1,4 @@
+import store from "../Redux/store";
 import API_BASE_URL from "../utils/Url";
 import { trackInitiateCheckout } from "../lib/metaPixel";
 import { getAttribution } from "../lib/attribution";
@@ -127,13 +128,12 @@ const validateField = (name, rawValue) => {
 
 const FIELD_ORDER = ["firstname", "email", "phone"];
 
-// Logged-in member's saved details, read synchronously from the same
-// localStorage entry the auth slice uses (no network call, no latency).
+// Logged-in member's saved details, read synchronously from the auth store
+// (no network call, no latency). Only used while a session is live in memory.
 const getSavedProfile = () => {
   try {
-    if (!localStorage.getItem("token")) return null;
-
-    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const { token, user } = store.getState().auth || {};
+    if (!token) return null;
     if (!user) return null;
 
     const dial = String(user.countryCode || "+91").replace(/\D/g, "");

@@ -8,6 +8,7 @@ import { ArrowUpRight, Headphones, Rocket } from "lucide-react";
 import "./Footer.css";
 
 import { Link } from "react-router-dom";
+import { openConsentSettings } from "../lib/consent";
 
 /* =========================================================
    CONFIGURATION
@@ -326,6 +327,7 @@ export default function Footer() {
               {LEGAL_LINKS.map((l) => (
                 <li key={l.href}><Link to={l.href} className="tt-foot-link">{l.name}</Link></li>
               ))}
+              <li><button type="button" onClick={openConsentSettings} className="tt-foot-link" style={{ background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit", textAlign: "left" }}>Cookie settings</button></li>
             </ul>
           </div>
         </nav>

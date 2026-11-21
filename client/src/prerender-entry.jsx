@@ -2,7 +2,7 @@
 // scripts/prerender.mjs). Not part of the browser bundle.
 import React from "react";
 import { renderToString } from "react-dom/server";
-import { StaticRouter } from "react-router-dom/server";
+import { StaticRouter } from "react-router"; // v7: StaticRouter lives in react-router (no react-router-dom/server)
 import { HelmetProvider } from "react-helmet-async";
 import { Provider } from "react-redux";
 

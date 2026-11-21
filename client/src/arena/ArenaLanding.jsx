@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  ArrowRight, Ban, BadgeCheck, Briefcase, CalendarClock, Check, Clock, CreditCard, Eye, EyeOff, Flag, Handshake, Landmark, Lock,
+  ArrowRight, Ban, BadgeCheck, Briefcase, CalendarClock, Check, Clock, CreditCard, Eye, EyeOff, Flag, Handshake, Landmark, LogIn, Lock,
   MailCheck, MessageCircle, RefreshCw, Send, ShieldCheck, Smartphone, Timer, Users, Wallet,
 } from "lucide-react";
 
@@ -13,7 +13,8 @@ import { resolveGateway } from "./gateway";
 import { useArenaChrome } from "./chrome";
 import OfferBanner from "./OfferBanner";
 import {
-  BENEFITS, FALLBACK_FIELDS, OG_IMAGE, PAGE_NAV, PAGE_URL, SAFETY, SEO, STEPS, TOPICS, UPDATED_ISO, WHAT_IS, WHO_FOR, buildFaq, schemaJson,
+  BENEFITS, COMPARE_COLS, COMPARE_ROWS, FALLBACK_FIELDS, OG_IMAGE, PAGE_NAV, PAGE_URL, PLAN, PLAN_INTRO, QUICK_ANSWERS, SAFETY, SEO, STEPS, TOPICS,
+  UPDATED_ISO, UPDATED_LABEL, WHAT_IS, WHO_FOR, buildFaq, schemaJson,
 } from "./landingContent";
 import "./prep.css";
 import { loginUrl } from "../auth/authRedirect";
@@ -46,6 +47,9 @@ function Head({ faq, info }) {
       <meta name="twitter:description" content={SEO.description} />
       <meta name="twitter:image" content={OG_IMAGE} />
       <meta property="article:modified_time" content={UPDATED_ISO} />
+      <meta name="geo.region" content="IN" />
+      <meta name="geo.placename" content="India" />
+      <meta name="theme-color" content="#0f766e" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       <link rel="stylesheet" href={FONTS} />
@@ -245,6 +249,74 @@ function Pricing({ info, gw, cta, ctaLabel }) {
   );
 }
 
+/* ============================ quick answers (answer-first, for search and AI answers) ============================ */
+function QuickAnswers() {
+  return (
+    <section className="pb-qa" aria-labelledby="qa-h">
+      <div className="pb-shell">
+        <h2 id="qa-h" className="pb-sr">Quick answers</h2>
+        <dl className="pb-qa-grid">
+          {QUICK_ANSWERS.map(([q, a]) => (
+            <div key={q} className="pb-qa-item">
+              <dt>{q}</dt>
+              <dd className="pb-qa-a">{a}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+/* ============================ 4-week plan ============================ */
+function Plan() {
+  return (
+    <Section id="plan" eyebrow="Free guide" title="How to practise mock interviews with a partner: a 4-week plan" lead={PLAN_INTRO}>
+      <ol className="pb-plan">
+        {PLAN.map((w) => (
+          <li key={w.week} className="pb-card pb-plan-week">
+            <div className="pb-plan-top">
+              <span className="pb-plan-k pb-mono">{w.week}</span>
+              <h3>{w.title}</h3>
+              <p>{w.goal}</p>
+            </div>
+            <ul className="pb-checks">
+              {w.items.map((t) => <li key={t}><Check size={16} strokeWidth={2.5} aria-hidden /><span>{t}</span></li>)}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
+/* ============================ comparison ============================ */
+function Compare() {
+  return (
+    <Section id="compare" eyebrow="Compare" title="Prep buddy vs. preparing alone vs. paid mock interviews" lead="Each has a place. A buddy is the cheapest way to practise out loud, every week, with someone expecting you." tint>
+      <div className="pb-cmp-wrap">
+        <table className="pb-cmp">
+          <caption className="pb-sr">How a prep buddy compares with preparing alone and paid one-to-one mock interviews</caption>
+          <thead>
+            <tr>
+              <td />
+              {COMPARE_COLS.map((c, i) => <th key={c} scope="col" className={i === 0 ? "is-us" : ""}>{c}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARE_ROWS.map(([label, ...cells]) => (
+              <tr key={label}>
+                <th scope="row">{label}</th>
+                {cells.map((c, i) => <td key={COMPARE_COLS[i]} data-label={COMPARE_COLS[i]} className={i === 0 ? "is-us" : ""}>{c}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
 /* ============================ FAQ ============================ */
 function Faq({ faq }) {
   return (
@@ -254,6 +326,7 @@ function Faq({ faq }) {
           <span className="pb-eyebrow">Questions</span>
           <h2 id="faq-h" className="pb-h2">Prep buddy questions, answered</h2>
           <p>Still unsure? Write to <b>supporttargettrek@gmail.com</b> and a person replies.</p>
+          <p className="pb-updated">Last updated <time dateTime={UPDATED_ISO}>{UPDATED_LABEL}</time></p>
         </header>
         <div className="pb-faq-list">
           {faq.map((f, i) => (
@@ -268,13 +341,27 @@ function Faq({ faq }) {
   );
 }
 
-/* the docked bar: appears once the hero has scrolled away */
-function StickyBar({ show, cta, ctaLabel, note }) {
+/*
+  The entry card: docked at the bottom of the screen the whole time (the Resume Lab pattern), with the next step for each visitor.
+    signed out            Log in  +  Join the arena
+    signed in             one button that names their step (add details, pay, open arena, open chat...)
+  Phones hide the text line and the buttons share the row, so it never wraps or overflows.
+*/
+function StickyBar({ signedIn, cta, ctaLabel, title, note }) {
   return (
-    <div className={cx("pb-stick", show && "is-on")} role="region" aria-label="Quick action" aria-hidden={!show}>
+    <div className="pb-stick" role="region" aria-label="Enter Prep Buddy Arena">
       <div className="pb-stick-in">
-        <div><b>Prep Buddy Arena</b><span>{note}</span></div>
-        <Link to={cta} className="pb-btn pb-btn-primary" tabIndex={show ? 0 : -1}>{ctaLabel}<ArrowRight size={16} aria-hidden /></Link>
+        <span className="pb-stick-ico" aria-hidden><Handshake size={20} /></span>
+        <div className="pb-stick-txt">
+          <b>{title}</b>
+          <span>{note}</span>
+        </div>
+        <div className="pb-stick-btns">
+          {!signedIn && (
+            <Link to={loginUrl("/prep-buddy/app")} className="pb-btn pb-btn-ghost"><LogIn size={16} aria-hidden className="pb-stick-login" />Log in</Link>
+          )}
+          <Link to={cta} className="pb-btn pb-btn-primary">{ctaLabel}<ArrowRight size={16} aria-hidden /></Link>
+        </div>
       </div>
     </div>
   );
@@ -286,8 +373,6 @@ export default function ArenaLanding() {
   const signedIn = useSelector((s) => Boolean(s.auth?.token));
   const [info, setInfo] = useState(null);
   const [stage, setStage] = useState(null); // none | draft | active | matched | suspended
-  const [stick, setStick] = useState(false);
-  const heroRef = useRef(null);
 
   // shown once, right after "Delete my account" finished and the page reloaded here
   useEffect(() => {
@@ -310,14 +395,6 @@ export default function ArenaLanding() {
     http.get("/me").then(({ data }) => setStage(data.data.profile?.status ?? "none")).catch(() => setStage(null));
   }, [signedIn]);
 
-  useEffect(() => {
-    const el = heroRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return undefined;
-    const io = new IntersectionObserver(([e]) => setStick(!e.isIntersecting), { rootMargin: "-80px 0px 0px 0px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
   const gw = resolveGateway(info?.paymentGateway);
   const faq = useMemo(() => buildFaq(info, gw), [info, gw?.key]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = info?.matchesPerEntry;
@@ -330,11 +407,11 @@ export default function ArenaLanding() {
     : { none: "Add your details", draft: "Continue to payment", active: "Open my arena", matched: "Open my buddy chat", suspended: "View my account" }[stage] ?? "Open my arena";
 
   return (
-    <div className="pb" style={{ paddingTop: "var(--arena-nav-h, 4rem)" }}>
+    <div className="pb pb-landing" style={{ paddingTop: "var(--arena-nav-h, 4rem)" }}>
       <Head faq={faq} info={info} />
 
       {/* ================================ HERO ================================ */}
-      <header className="pb-hero" ref={heroRef}>
+      <header className="pb-hero">
         <div className="pb-shell pb-hero-grid">
           <div className="pb-hero-copy">
             <span className="pb-pill"><span className="pb-dot" />Prep Buddy Arena by Target Trek</span>
@@ -366,6 +443,8 @@ export default function ArenaLanding() {
       </header>
 
       <main>
+        <QuickAnswers />
+
         {/* ============================ WHAT IT IS ============================ */}
         <Section id="what-is" eyebrow="What it is" title="What is Prep Buddy Arena?">
           <p className="pb-answer">{WHAT_IS}</p>
@@ -409,6 +488,10 @@ export default function ArenaLanding() {
 
         <Pricing info={info} gw={gw} cta={cta} ctaLabel={ctaLabel} />
 
+        <Plan />
+
+        <Compare />
+
         {/* ============================ SAFETY ============================ */}
         <Section id="safety" eyebrow="Safety" title="Built so conversations stay safe" lead="A few quiet rules that keep the arena useful for everyone.">
           <div className="pb-grid pb-grid-3">
@@ -441,10 +524,21 @@ export default function ArenaLanding() {
             </div>
           </div>
         </section>
-        <div className="pb-end-pad" aria-hidden />
       </main>
 
-      <StickyBar show={stick} cta={cta} ctaLabel={ctaLabel} note={price ? `${price} once · ${m ? `${m} ${m === 1 ? "match" : "matches"} included` : "no subscription"}` : "Find your interview prep partner"} />
+      <StickyBar
+        signedIn={signedIn}
+        cta={cta}
+        ctaLabel={ctaLabel}
+        title={signedIn && stage && stage !== "none" ? "Welcome back" : "Prep Buddy Arena"}
+        note={
+          signedIn && stage === "matched" ? "Your buddy chat is waiting."
+            : signedIn && stage === "active" ? "Your profile is live. Browse members or check requests."
+            : signedIn && stage === "draft" ? "Your details are saved. One payment puts you in the arena."
+            : price ? `${price} once · ${m ? `${m} ${m === 1 ? "match" : "matches"} included` : "no subscription"}`
+            : "Find your interview prep partner · pay once, no subscription"
+        }
+      />
     </div>
   );
 }

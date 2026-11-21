@@ -62,10 +62,10 @@ const sinceText = (v) => {
   return days < 1 ? "Today" : plural(days, "day");
 };
 const initials = (s = "") => s.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "U";
-const ROLE = { admin: "Administrator", Employee: "Employee", normal: "Member", affiliate: "Affiliate partner" };
+const ROLE = { admin: "Administrator", Employee: "Employee", normal: "Member", affiliate: "Affiliate partner", partner: "Partner" };
 const roleText = (r) => ROLE[r] || "Member";
 // Members just see their account; the role is only worth showing for partners and the team.
-const showRole = (r) => r === "affiliate" || r === "admin" || r === "Employee";
+const showRole = (r) => r === "affiliate" || r === "partner" || r === "admin" || r === "Employee";
 const phoneText = (u) => (u?.mobile ? `${u.countryCode ? `${u.countryCode} ` : ""}${u.mobile}` : null);
 const titleCase = (s) => String(s || "").toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -136,8 +136,10 @@ function useAccount(cacheKey) {
 
 const leave = () => {
   const theme = localStorage.getItem("theme");
+  const consent = localStorage.getItem("tt_consent"); // privacy choice outlives the session
   localStorage.clear(); sessionStorage.clear();
   if (theme) localStorage.setItem("theme", theme);
+  if (consent) localStorage.setItem("tt_consent", consent);
   memo = null;
   window.location.replace("/login");
 };
@@ -238,6 +240,12 @@ function Overview({ data, go }) {
       </div>
 
       {u.role === "affiliate" && <AffiliateTerms user={u} go={go} />}
+
+      {u.role === "partner" && (
+        <Card icon={ChartBar} title="Partner dashboard" caption="Revenue and transactions for the products shared with you.">
+          <div className="rf-btns"><Btn as={Link} to="/partners/dashboard" size="sm"><ChartBar size={15} />Open partner dashboard</Btn></div>
+        </Card>
+      )}
 
       {(u.role === "admin" || u.role === "Employee") && (
         <Card icon={UserGear} title="Team tools" caption={u.role === "admin" ? "You have administrator access." : "You have reviewer access."}>

@@ -10,7 +10,7 @@
 export const LOGIN_PATH = "/login";
 export const SIGNUP_PATH = "/signup";
 export const DEFAULT_AFTER_LOGIN = "/";
-export const ALLOWED_ROLES = ["admin", "Employee", "affiliate", "normal"];
+export const ALLOWED_ROLES = ["admin", "Employee", "affiliate", "partner", "normal"];
 
 // Pages that must never be a redirect target (they would bounce straight back to the login).
 const AUTH_ONLY = /^\/(login|signup|admin\/login|resume-review\/(login|signup)|prep-buddy\/signup)(\/|$)/i;

@@ -22,13 +22,14 @@ import LegalPage, {
   Template,
   UL,
 } from "./legal/LegalKit.jsx";
+import GrievanceDetails from "./legal/GrievanceDetails.jsx";
 
 /* ======================================================
    CONSTANTS (dates are intentionally unchanged)
 ====================================================== */
 
-const LAST_UPDATED = "October 3, 2026";
-const DATE_MODIFIED = "2026-10-03";
+const LAST_UPDATED = "November 20, 2026";
+const DATE_MODIFIED = "2026-11-20";
 
 const INTERVIEW_CANCELLATION_FEE = 199;
 const INTERVIEW_NOTICE_HOURS = 24;
@@ -485,6 +486,11 @@ const sections = [
         excluded by agreement. If the law gives you a right to a refund in a situation not listed here, we will honour it.
       </P>
     ),
+  },
+  {
+    id: "grievance-officer",
+    title: "Complaints and Grievance Officer",
+    body: <GrievanceDetails />,
   },
   {
     id: "changes",

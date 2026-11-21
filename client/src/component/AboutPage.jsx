@@ -18,7 +18,7 @@ const PAGE_URL = `${SITE_URL}/about`;
 const SUPPORT_EMAIL = "supporttargettrek@gmail.com";
 const SEO_TITLE = "About Target Trek | System Design, GenAI & Developer Books";
 const SEO_DESCRIPTION =
-  "Learn about Target Trek, a developer learning platform creating practical books and resources on System Design HLD, LLD Java, RAG, MCP, Google ADK, Backend Engineering, GenAI and software engineering interviews.";
+  "Target Trek is an Indian developer learning platform making practical ebooks and free guides on system design, Java LLD, backend, GenAI and tech interviews.";
 const SEO_KEYWORDS =
   "Target Trek, Target Trek books, developer books, developer ebooks, software engineering books, system design book, system design ebook, HLD book, high level design book, LLD book, low level design Java, LLD Java book, GenAI book, RAG book, RAG pipeline, MCP book, Model Context Protocol book, Google ADK book, AI agents book, backend engineering, software engineering interview preparation, system design interview preparation";
 const OG_IMAGE = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80";

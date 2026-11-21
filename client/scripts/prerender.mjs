@@ -25,9 +25,7 @@ const ROUTES = {
   "/": "src/component/LearnHome.jsx",
   "/about": "src/component/AboutPage.jsx",
   "/contact": "src/component/ContactPage.jsx",
-  "/carrers": "src/component/CareerPage.jsx",
   "/mock-interviews": "src/component/InterviewBookingPage.jsx",
-  "/others/book/how-to-sell-ebook": "src/component/HowToSellEbook.jsx",
   "/privacy-policy": "src/component/PrivacyPolicy.jsx",
   "/terms-of-service": "src/component/TermsOfService.jsx",
   "/refund-policy": "src/component/RefundPolicy.jsx",
@@ -44,14 +42,65 @@ const ROUTES = {
   "/memories": "src/memories/MemoriesLanding.jsx",
   "/memories/birthday": "src/memories/BirthdayLanding.jsx",
   "/resume-review": "src/resume/ResumeLanding.jsx",
+  "/resume-review/ats-score-checker": "src/resume/AtsChecker.jsx",
   "/referral": "src/referral/ReferralLanding.jsx",
   "/prep-buddy": "src/arena/ArenaLanding.jsx",
   "/books/bundle-offers": "src/Ebooks/BundleOffers.jsx",
 };
 
+/* Book and pack pages. Rendered here with live data seeded into the page caches, so the HTML carries the
+   whole page (contents, FAQs, case studies, price) and not a loading state. They are served through
+   api/page.js, which reads these files and swaps in the current price at request time. */
+const BOOK_ROUTES = {
+  "/books": "src/Ebooks/Books.jsx",
+  "/book/system-design/hld": "src/component/SystemDesignHLD.jsx",
+  "/book/system-design/lld": "src/component/SystemDesignLLD.jsx",
+  "/book/system-design/hld-lld/combo": "src/component/SystemDesignCombo.jsx",
+  "/book/cloud/aws": "src/component/AwsHandbook.jsx",
+  "/book/cloud/gcp": "src/component/GcpHandbook.jsx",
+  "/book/docker": "src/component/DockerBooks.jsx",
+  "/book/git": "src/component/GitBooks.jsx",
+  "/book/database/sql": "src/component/SqlInterviewHandbook.jsx",
+  "/book/computer-network": "src/component/ComputerNetworkBook.jsx",
+  "/books/operating-systems": "src/component/OperatingSystemBook.jsx",
+  "/book/java-interview-handbook": "src/component/JavaInterviewHandbook.jsx",
+  "/book/springboot-interview-handbook": "src/component/SpringBootInterviewHandbook.jsx",
+  "/book/genai/google-adk": "src/component/GenAiGoogleAdk.jsx",
+  "/book/genai/mcp": "src/component/GenaiMCP.jsx",
+  "/book/genai/rag": "src/component/GenaiRAG.jsx",
+  "/book/all-books": "src/Ebooks/AllAccess.jsx",
+  "/book/life-type-combo": "src/Ebooks/AllAccess.jsx",
+  "/others/book/how-to-sell-ebook": "src/component/HowToSellEbook.jsx",
+};
+Object.assign(ROUTES, BOOK_ROUTES);
+
+/* ------------------------------------------------------------------ live data for the book pages */
+const API_URL = (process.env.VITE_BASE_URL || "https://tg-540700086743.asia-south2.run.app").replace(/\/+$/, "");
+const getJson = async (p) => {
+  try {
+    const res = await fetch(`${API_URL}${p}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(30000) });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+};
+const [catalogRes, plansRes] = await Promise.all([getJson("/book/catalog"), getJson("/api/membership/plans")]);
+const catalogData = catalogRes?.success
+  ? { books: catalogRes.data || [], offers: catalogRes.offers || [], plans: catalogRes.plans || null }
+  : null;
+const productUrls = [...new Set([...Object.keys(BOOK_ROUTES), ...(catalogData?.books || []).map((b) => b.redirectUrl).filter(Boolean)])];
+// the backend answers at most 10 URLs per batch request
+const productMap = {};
+for (let i = 0; i < productUrls.length; i += 10) {
+  const r = await getJson(`/book/products?redirectUrls=${encodeURIComponent(productUrls.slice(i, i + 10).join(","))}`);
+  if (r?.success) Object.assign(productMap, r.data || {});
+}
+console.log(`live data: catalog=${catalogData ? catalogData.books.length : "unavailable"} products=${Object.values(productMap).filter(Boolean).length} packs=${plansRes?.data?.packs?.length ?? "unavailable"}`);
+
 // Keep the pristine SPA shell: dist/index.html is overwritten below with the
 // prerendered home page, and the serverless functions + catch-all rewrite use
 // shell.html as their template.
+const DEFAULT_OG_IMAGE = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 const shellFile = path.join(dist, "shell.html");
 if (!fs.existsSync(shellFile)) {
   fs.copyFileSync(path.join(dist, "index.html"), shellFile);
@@ -154,7 +203,12 @@ const vite = await createServer({
   logLevel: "error",
   appType: "custom",
   server: { middlewareMode: true },
-  ssr: { noExternal: ["react-helmet-async"] },
+  ssr: {
+    noExternal: ["react-helmet-async"],
+    // react-router v7 publishes its ESM build for Node under the "module-sync" export condition. Without it Vite
+    // resolves externals to the CommonJS build, whose named exports (Link, StaticRouter, ...) Node cannot detect.
+    resolve: { externalConditions: ["module-sync"] },
+  },
   // SSR only: skip the browser dependency scan, otherwise closing the server
   // cancels esbuild mid-scan and logs "[ERROR] The build was canceled".
   optimizeDeps: { noDiscovery: true, include: [], entries: [] },
@@ -165,9 +219,17 @@ const failed = [];
 
 try {
   const { renderPage } = await vite.ssrLoadModule("/src/prerender-entry.jsx");
+  const bookApi = await vite.ssrLoadModule("/src/utils/bookApi.js");
+  const packSections = await vite.ssrLoadModule("/src/Ebooks/PackSections.jsx");
 
   for (const [route, file] of Object.entries(ROUTES)) {
     try {
+      if (BOOK_ROUTES[route]) {
+        // re-seed before every page: the caches have short TTLs and the render loop can take a while
+        bookApi.primeProducts(productMap);
+        bookApi.primeCatalog(catalogData);
+        packSections.primePacks(plansRes?.success ? plansRes.data : null);
+      }
       const mod = await vite.ssrLoadModule(`/${file}`);
       const Component = mod.default;
       const { body, head } = renderPage(Component, route);
@@ -176,8 +238,12 @@ try {
         throw new Error("no <h1> or <title> in output");
       }
 
+      // every shared link needs a preview image (WhatsApp, LinkedIn, X, Slack): fall back to the logo
+      const imageTags = /property="og:image"/.test(head)
+        ? ""
+        : `<meta property="og:image" content="${DEFAULT_OG_IMAGE}" />\n<meta property="og:image:alt" content="Target Trek" />${/name="twitter:image"/.test(head) ? "" : `\n<meta name="twitter:image" content="${DEFAULT_OG_IMAGE}" />`}`;
       let html = strip(template);
-      html = html.replace(/<\/head>/i, `${assetLinks(route)}\n${head}\n</head>`);
+      html = html.replace(/<\/head>/i, `${assetLinks(route)}\n${head}\n${imageTags}\n</head>`);
       html = html.replace(/<div id="root">\s*<\/div>/i, `<div id="root">${body}</div>`);
       write(route, html);
       ok += 1;
@@ -185,7 +251,7 @@ try {
     } catch (err) {
       failed.push(route);
       write(route, template); // keep the rewrite target valid
-      console.log(`  ✗ ${route}: ${String(err.message).split("\n")[0]}`);
+      console.log(`  ✗ ${route}: ${String(err.message).split("\n")[0]}`); if (process.env.PRERENDER_DEBUG) console.log(err.stack);
     }
   }
 } finally {

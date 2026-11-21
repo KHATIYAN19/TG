@@ -23,9 +23,13 @@ export const inr = (n) => `₹${Math.round(Number(n) || 0).toLocaleString("en-IN
 export const errText = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
 
+/* build-time prerender (scripts/prerender.mjs) seeds the live packs here so crawlers get real prices */
+let primedPacks = null;
+export const primePacks = (data) => { primedPacks = data || null; };
+
 export function usePacks() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => primedPacks);
+  const [loading, setLoading] = useState(() => !primedPacks);
   const [error, setError] = useState("");
 
   const load = useCallback(async (signal) => {

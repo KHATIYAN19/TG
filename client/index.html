@@ -67,11 +67,11 @@
          FAVICON
     ========================================= -->
 
-    <link
-      rel="icon"
-      type="image/jpeg"
-      href="/src/utils/target_Trek_logo_2.jpg"
-    />
+    <!-- Google shows the favicon in search results: square, a multiple of 48px, on a stable URL. -->
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0B1524" />
 
     <!-- ========================================
          OPEN GRAPH / SOCIAL SHARING
@@ -89,8 +89,12 @@
 
     <meta
       property="og:image"
-      content="https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg"
+      content="https://www.targettrek.in/brand/target-trek-logo.jpg"
     />
+
+    <meta property="og:site_name" content="Target Trek" />
+    <meta property="og:locale" content="en_IN" />
+    <meta name="twitter:card" content="summary" />
 
     <meta
       property="og:url"
@@ -200,12 +204,20 @@
           n.version = "2.0";
           n.queue = [];
 
-          t = b.createElement(e);
-          t.async = true;
-          t.src = v;
+          // Sales measurement is always on (see src/lib/consent.js): Facebook's script loads on every page
+          // except pages whose URL carries a private access token.
+          var loaded = false;
+          f.__ttLoadMetaPixel = function () {
+            if (loaded || isSensitivePaymentUrl()) return;
+            loaded = true;
+            t = b.createElement(e);
+            t.async = true;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+          };
 
-          s = b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t, s);
+          f.__ttLoadMetaPixel();
 
         }(
           window,
@@ -246,7 +258,8 @@
         ) {
           console.log("[Meta Pixel] Initialized", {
             pixelId: PIXEL_ID,
-            pageViewAllowed: !isSensitivePaymentUrl()
+            pageViewAllowed: !isSensitivePaymentUrl(),
+            scriptLoadedWithConsent: Boolean(document.querySelector('script[src*="fbevents.js"]'))
           });
         }
       })();

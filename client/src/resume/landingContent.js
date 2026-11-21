@@ -14,7 +14,7 @@ export const SEO = {
   description:
     "Not getting interview calls? Get your resume and LinkedIn reviewed by AI in minutes, then by working professionals. Fix ATS mistakes and get more shortlists.",
   keywords:
-    "resume review, resume review by professionals, ATS resume checker, resume not getting interview calls, why am I not getting interview calls, resume mistakes, LinkedIn profile review, resume rewrite, resume review India, fresher resume review, software engineer resume review",
+    "resume review, resume review by professionals, ATS resume checker, free ATS score checker, ATS score calculator, resume not getting interview calls, why am I not getting interview calls, resume mistakes, LinkedIn profile review, resume rewrite, resume review India, fresher resume review, software engineer resume review",
 };
 
 /* ------------------------------------------------------------------ jump links under the hero */
@@ -378,6 +378,10 @@ export const FACTS = [
 
 /* ------------------------------------------------------------------ FAQ. These exact answers also feed the FAQPage schema. */
 export const FAQ = [
+  {
+    q: "Is there a free ATS score checker?",
+    a: "Yes. Resume Lab's free ATS Score Checker at targettrek.in/resume-review/ats-score-checker gives your resume a score out of 100, lists the job keywords you match and miss, and explains eight checks with a fix for each. Paste your resume or upload a PDF; it runs in your browser, needs no sign-up and uploads nothing.",
+  },
   {
     q: "Why am I not getting interview calls?",
     a: "Usually because of your resume, not your ability. The most common causes are: your resume lacks the job's keywords so an ATS ranks it low; bullets describe duties instead of results; your target role is unclear; the formatting breaks when software reads it; and the same resume is sent to every job. A resume review finds which of these apply to you and shows you how to fix each one.",

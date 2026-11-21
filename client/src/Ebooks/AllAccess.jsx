@@ -303,11 +303,21 @@ export default function AllAccess() {
   const onCta = () => (focus ? buy(focus) : goTo("packs"));
 
   /* ---------- SEO ---------- */
-  const title = focus && current ? `${focus.title} | Target Trek` : "All Books and Lifetime Packs | Target Trek";
+  /* Titles name what people search for ("all ebooks", "lifetime pack", the count), not just the pack name. */
+  const title = focus && current
+    ? focusLifetime
+      ? `Lifetime Ebook Pack: All ${packCount || ""} Books + Future Books | Target Trek`.replace(/\s+/g, " ")
+      : `All ${packCount || ""} Interview Ebooks in One Pack (PDF) | Target Trek`.replace(/\s+/g, " ")
+    : "All Books and Lifetime Packs | Target Trek";
   const cheapest = packs[0];
-  const description = cheapest
-    ? `Get every Target Trek interview book from ${inr(cheapest.price)}, or go Lifetime and get every future book free${lifetimePack ? " plus a free Memories page" : ""}.${anyMatches ? ` Includes up to ${maxMatches} Prep Arena credits.` : ""} One payment, no subscription.`
-    : "Get every Target Trek interview book in one pack. One payment, no subscription.";
+  /* one description per pack page (two pages sharing one description look like duplicates to Google) */
+  const description = focus && current
+    ? focusLifetime
+      ? `All ${packCount} Target Trek interview ebooks as PDFs for ${inr(focus.price)}, plus every future book emailed free. System design, Java, Spring Boot, SQL, cloud, GenAI. One payment.`
+      : `All ${packCount} Target Trek interview ebooks as PDFs in one pack for ${inr(focus.price)}: system design, Java, Spring Boot, SQL, AWS, GCP, GenAI. One payment, no subscription.`
+    : cheapest
+      ? `Get every Target Trek interview book from ${inr(cheapest.price)}, or go Lifetime and get every future book free${lifetimePack ? " plus a free Memories page" : ""}.${anyMatches ? ` Includes up to ${maxMatches} Prep Arena credits.` : ""} One payment, no subscription.`
+      : "Get every Target Trek interview book in one pack. One payment, no subscription.";
   const canonical = `${SITE_URL}${current?.redirectUrl || "/book/all-books"}`;
   const faqs = useMemo(() => faqList(anyMatches, Boolean(lifetimePack)), [anyMatches, lifetimePack]);
 
@@ -330,11 +340,20 @@ export default function AllAccess() {
       },
       {
         "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: "Books", item: `${SITE_URL}/books` },
+          { "@type": "ListItem", position: 3, name: focus?.title || "All books", item: canonical },
+        ],
+      },
+      {
+        "@context": "https://schema.org",
         "@type": "FAQPage",
         mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
       },
     ],
-    [packs, faqs]
+    [packs, faqs, focus, canonical]
   );
 
   /* Hero covers: HLD, LLD, Java, Spring Boot when present, else the first ones with a cover. */

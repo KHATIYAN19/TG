@@ -156,17 +156,17 @@ const button = (href, label) => `
 /* The one-time code: one box per digit (like the boxes on the login page), large and easy to read. */
 const codeBox = (code) => {
   const digits = String(code).split("");
-  const cell = (d) => `<td align="center" width="${Math.floor(100 / digits.length)}%" style="padding:0 4px;">
+  const cell = (d) => `<td align="center" width="${Math.floor(100 / digits.length)}%" style="padding:0 3px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
-          <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;border:2px solid ${C.codeBorder};border-radius:10px;padding:12px 0;font-family:${MONO};font-size:30px;line-height:34px;font-weight:700;color:${C.codeInk};">${esc(d)}</td>
+          <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;border:2px solid ${C.codeBorder};border-radius:10px;padding:14px 0;font-family:${MONO};font-size:42px;line-height:48px;font-weight:700;color:${C.codeInk};">${esc(d)}</td>
         </tr></table>
       </td>`;
   return `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:8px 0 20px;">
   <tr>
-    <td align="center" bgcolor="${C.codeBg}" style="background-color:${C.codeBg};border:1px solid ${C.tintBorder};border-radius:14px;padding:20px 10px 22px;">
+    <td align="center" bgcolor="${C.codeBg}" style="background-color:${C.codeBg};border:1px solid ${C.tintBorder};border-radius:14px;padding:16px 6px 18px;">
       <div style="font-family:${FONT};font-size:12px;line-height:16px;letter-spacing:2px;font-weight:700;color:${C.accent};text-transform:uppercase;padding-bottom:12px;">Your verification code</div>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:380px;"><tr>${digits.map(cell).join("")}</tr></table>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:480px;"><tr>${digits.map(cell).join("")}</tr></table>
     </td>
   </tr>
 </table>`;
@@ -236,8 +236,8 @@ const shell = ({ title, preheader, eyebrow, heading, lead, bodyHtml, reason, not
   const site = siteUrl();
   const year = new Date().getFullYear();
   const pad = compact
-    ? { outer: "8px 6px 12px", head: "16px 20px 14px", card: "18px 20px 2px", foot: "2px 20px 16px", h1: "24px", h1lh: "30px" }
-    : { outer: "28px 12px 36px", head: "30px 32px 28px", card: "34px 32px 8px", foot: "8px 32px 30px", h1: "28px", h1lh: "34px" };
+    ? { outer: "8px 8px 12px", head: "16px 20px 14px", card: "18px 20px 2px", foot: "2px 20px 16px", h1: "24px", h1lh: "30px" }
+    : { outer: "16px 8px 24px", head: "24px 24px 22px", card: "26px 24px 6px", foot: "6px 24px 24px", h1: "28px", h1lh: "34px" };
 
   const out = `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -406,10 +406,8 @@ const buildOtpEmail = ({ purpose = "signup", name, otp, minutes = 10 }) => {
       `<strong style="color:${C.warnInk};">Keep it private.</strong> Never share this code with anyone. ${BRAND} staff will never ask you for it, by email, phone or chat.`,
       { bg: C.warnBg, border: C.warnBorder }
     ),
-    h2("What to do next"),
-    ol(c.steps.map(esc)),
     p(esc(c.notYou), "font-size:15px;line-height:23px;color:" + C.muted + ";"),
-    helpBlock(c.tips),
+    p(`Need any help? Write us at ${link(supportLink(), supportEmail())}.`, "font-size:15px;line-height:23px;"),
   ].join("");
 
   const html = shell({
@@ -429,9 +427,8 @@ const buildOtpEmail = ({ purpose = "signup", name, otp, minutes = 10 }) => {
     `YOUR CODE: ${otp}`,
     `This code expires in ${plural(minutes, "minute")} and works only once.`,
     `Keep it private. Never share this code with anyone. ${BRAND} staff will never ask you for it, by email, phone or chat.`,
-    ["WHAT TO DO NEXT", ...c.steps.map((s, i) => `${i + 1}. ${s}`)].join("\n"),
     c.notYou,
-    textHelp(c.textTips),
+    `Need any help? Write us at ${supportEmail()}.`,
     textFooter(c.reason),
   ]);
 

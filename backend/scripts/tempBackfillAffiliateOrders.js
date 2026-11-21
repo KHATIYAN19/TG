@@ -26,10 +26,10 @@
  *
  * USAGE (from the backend folder):
  *
- *   node tempBackfillAffiliateOrders.js --code=BBB            preview one code
- *   node tempBackfillAffiliateOrders.js --code=BBB --apply    write it
- *   node tempBackfillAffiliateOrders.js                       preview ALL affiliates
- *   node tempBackfillAffiliateOrders.js --apply               write ALL affiliates
+ *   node scripts/tempBackfillAffiliateOrders.js --code=BBB            preview one code
+ *   node scripts/tempBackfillAffiliateOrders.js --code=BBB --apply    write it
+ *   node scripts/tempBackfillAffiliateOrders.js                       preview ALL affiliates
+ *   node scripts/tempBackfillAffiliateOrders.js --apply               write ALL affiliates
  *
  * NOTE: the commission uses each affiliate's CURRENT commission
  * settings, because the rate at the time of the order was not saved on
@@ -39,9 +39,9 @@
 import "dotenv/config";
 import mongoose from "mongoose";
 
-import User from "./models/User.js";
-import Order from "./models/Order.js";
-import connectDB from "./utils/dbConnection.js";
+import User from "../models/User.js";
+import Order from "../models/Order.js";
+import connectDB from "../utils/dbConnection.js";
 
 /* ---------------------------------------------------
    ARGUMENTS

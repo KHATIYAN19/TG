@@ -45,19 +45,19 @@ export const memoriesOtpEmail = ({ purpose = "signup", name, otp, minutes = 10 }
   if (!c) throw new Error(`Unknown Memories OTP email purpose: ${purpose}`);
   const who = firstName(name);
   const subject = c.subject(otp);
-  const digits = String(otp).split("").map((d) => `<td style="padding:0 3px;"><div style="width:42px;height:54px;line-height:54px;text-align:center;font-family:'Courier New',monospace;font-size:30px;font-weight:bold;color:${C.ink};background:${C.card};border:1px solid ${C.line};border-radius:12px;">${esc(d)}</div></td>`).join("");
+  const digits = String(otp).split("").map((d) => `<td style="padding:0 2px;"><div style="width:44px;height:64px;line-height:64px;text-align:center;font-family:'Courier New',monospace;font-size:40px;font-weight:bold;color:${C.ink};background:${C.card};border:1px solid ${C.line};border-radius:12px;">${esc(d)}</div></td>`).join("");
 
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"><title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${C.bg};">${esc(c.preheader(minutes))}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg};"><tr><td align="center" style="padding:28px 14px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg};"><tr><td align="center" style="padding:14px 8px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
     <tr><td align="center" style="padding:0 0 16px;font-family:Arial,Helvetica,sans-serif;">
       <span style="display:inline-block;background:${C.accent};background-image:linear-gradient(135deg,${C.accent},${C.accent2});color:#ffffff;font-size:20px;line-height:36px;width:36px;height:36px;border-radius:12px;text-align:center;vertical-align:middle;">&#9829;</span>
       <span style="font-size:22px;font-weight:bold;color:${C.ink};vertical-align:middle;padding-left:8px;">${BRAND}</span>
     </td></tr>
-    <tr><td style="background:${C.card};border:1px solid ${C.line};border-radius:22px;padding:30px 26px;font-family:Arial,Helvetica,sans-serif;color:${C.ink};">
+    <tr><td style="background:${C.card};border:1px solid ${C.line};border-radius:22px;padding:24px 20px;font-family:Arial,Helvetica,sans-serif;color:${C.ink};">
       <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:bold;color:${C.accent};text-align:center;">${esc(c.eyebrow)}</div>
       <h1 style="margin:10px 0 0;font-size:24px;line-height:30px;text-align:center;color:${C.ink};">${esc(c.heading(who))}</h1>
       <p style="margin:12px 0 0;font-size:15px;line-height:23px;color:${C.muted};text-align:center;">${esc(c.lead)}</p>
@@ -66,9 +66,8 @@ export const memoriesOtpEmail = ({ purpose = "signup", name, otp, minutes = 10 }
       <p style="margin:14px 0 0;font-size:14px;line-height:21px;color:${C.muted};text-align:center;">This code expires in <strong>${esc(plural(minutes, "minute"))}</strong> and works only once.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0;"><tr><td style="background:${C.warnBg};border:1px solid ${C.warnLine};border-radius:12px;padding:12px 14px;font-size:13px;line-height:20px;color:${C.warnInk};">
         <strong>Keep it private.</strong> Never share this code with anyone. The ${BRAND} team will never ask you for it.</td></tr></table>
-      <h2 style="margin:22px 0 6px;font-size:15px;color:${C.ink};">What to do next</h2>
-      <ol style="margin:0;padding-left:20px;font-size:14px;line-height:22px;color:${C.muted};">${c.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
       <p style="margin:18px 0 0;font-size:13px;line-height:20px;color:${C.muted};">${esc(c.notYou)}</p>
+      <p style="margin:12px 0 0;font-size:13px;line-height:20px;color:${C.muted};">Need any help? Write us at <a href="mailto:${esc(support())}" style="color:${C.accent};">${esc(support())}</a>.</p>
     </td></tr>
     <tr><td align="center" style="padding:16px 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:${C.muted};">
       ${esc(c.reason)}<br>Questions? Reply to this email or write to <a href="mailto:${esc(support())}" style="color:${C.accent};">${esc(support())}</a>.<br>
@@ -85,8 +84,8 @@ export const memoriesOtpEmail = ({ purpose = "signup", name, otp, minutes = 10 }
     `YOUR CODE: ${otp}`,
     `It expires in ${plural(minutes, "minute")} and works only once.`, "",
     `Keep it private. Never share this code with anyone. The ${BRAND} team will never ask you for it.`, "",
-    "What to do next:", ...c.steps.map((s, i) => `${i + 1}. ${s}`), "",
     c.notYou, "",
+    `Need any help? Write us at ${support()}.`, "",
     "--", c.reason, `Questions? Reply to this email or write to ${support()}.`, `Memories by Target Trek: ${SITE}`,
   ].join("\n");
 

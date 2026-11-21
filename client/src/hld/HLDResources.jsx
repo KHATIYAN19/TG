@@ -22,8 +22,8 @@ const UPDATED = "2026-11-18";
 const VISITED_KEY = "tt:resources:visited";
 
 const SEO = {
-  title: "System Design (HLD) Resources: Free Guides for Interviews | Target Trek",
-  description: "Free high level design guides for system design interviews, in the order to learn them: load balancing, API gateway, rate limiting, caching, database design and message queues. Diagrams, trade-offs, interview Q&A and quizzes.",
+  title: "Free System Design (HLD) Interview Guides | Target Trek",
+  description: "Free high-level design guides for system design interviews: load balancing, API gateway, rate limiting, caching, databases and message queues, with diagrams.",
   keywords: "system design resources, HLD, high level design, system design interview preparation, load balancing, api gateway, rate limiting, caching, database design, message queue, distributed systems, backend architecture",
 };
 

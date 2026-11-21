@@ -90,6 +90,22 @@
       "destination": "/api/page?p=/book/computer-network"
     },
     {
+      "source": "/books/operating-systems",
+      "destination": "/api/page?p=/books/operating-systems"
+    },
+    {
+      "source": "/book/all-books",
+      "destination": "/api/page?p=/book/all-books"
+    },
+    {
+      "source": "/book/life-type-combo",
+      "destination": "/api/page?p=/book/life-type-combo"
+    },
+    {
+      "source": "/others/book/how-to-sell-ebook",
+      "destination": "/api/page?p=/others/book/how-to-sell-ebook"
+    },
+    {
       "source": "/resources",
       "destination": "/prerendered/resources.html"
     },
@@ -158,6 +174,10 @@
       "destination": "/prerendered/resume-review.html"
     },
     {
+      "source": "/resume-review/ats-score-checker",
+      "destination": "/prerendered/resume-review/ats-score-checker.html"
+    },
+    {
       "source": "/referral",
       "destination": "/prerendered/referral.html"
     },
@@ -174,16 +194,8 @@
       "destination": "/prerendered/contact.html"
     },
     {
-      "source": "/carrers",
-      "destination": "/prerendered/carrers.html"
-    },
-    {
       "source": "/mock-interviews",
       "destination": "/prerendered/mock-interviews.html"
-    },
-    {
-      "source": "/others/book/how-to-sell-ebook",
-      "destination": "/prerendered/others/book/how-to-sell-ebook.html"
     },
     {
       "source": "/privacy-policy",
@@ -226,7 +238,9 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" }
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
+        { "key": "Content-Security-Policy", "value": "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests" },
+        { "key": "Content-Security-Policy-Report-Only", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://*.clarity.ms https://checkout.razorpay.com https://sdk.cashfree.com https://accounts.google.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://tg-540700086743.asia-south2.run.app wss://tg-540700086743.asia-south2.run.app https://*.targettrek.in wss://*.targettrek.in https://*.clarity.ms https://www.facebook.com https://connect.facebook.net https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://api.razorpay.com https://lumberjack.razorpay.com https://*.cashfree.com https://accounts.google.com https://*.amazonaws.com https://*.cloudfront.net https://res.cloudinary.com https://api.cloudinary.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://*.cashfree.com https://accounts.google.com https://www.youtube.com https://www.youtube-nocookie.com https://www.facebook.com; form-action 'self' https://secure.payu.in https://test.payu.in https://api.razorpay.com https://*.cashfree.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri https://tg-540700086743.asia-south2.run.app/api/csp-report" }
       ]
     },
     {
@@ -428,6 +442,15 @@
       ]
     },
     {
+      "source": "/partners/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/shell.html",
       "headers": [
         {
@@ -443,8 +466,48 @@
   ],
   "redirects": [
     {
+      "source": "/carrers",
+      "destination": "/about",
+      "permanent": true
+    },
+    {
+      "source": "/careers",
+      "destination": "/about",
+      "permanent": true
+    },
+    {
       "source": "/interviews/:slug",
       "destination": "/interview/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/ats-score-checker",
+      "destination": "/resume-review/ats-score-checker",
+      "permanent": true
+    },
+    {
+      "source": "/ats-checker",
+      "destination": "/resume-review/ats-score-checker",
+      "permanent": true
+    },
+    {
+      "source": "/ats-score-calculator",
+      "destination": "/resume-review/ats-score-checker",
+      "permanent": true
+    },
+    {
+      "source": "/ats-resume-checker",
+      "destination": "/resume-review/ats-score-checker",
+      "permanent": true
+    },
+    {
+      "source": "/resume-checker",
+      "destination": "/resume-review/ats-score-checker",
+      "permanent": true
+    },
+    {
+      "source": "/resume-score-checker",
+      "destination": "/resume-review/ats-score-checker",
       "permanent": true
     }
   ]

@@ -1,3 +1,4 @@
+import { getAccessToken } from "../lib/authSession";
 import API_BASE_URL from "../utils/Url";
 // import React, { useCallback, useEffect, useMemo, useState } from "react";
 // import { AnimatePresence, motion } from "framer-motion";
@@ -368,12 +369,7 @@ export default function InterviewAdminDashboard({ authToken, token: tokenProp })
     const jwt = useMemo(() => {
         if (authToken || tokenProp)
             return authToken || tokenProp;
-        try {
-            return localStorage.getItem("token") || localStorage.getItem("authToken") || "";
-        }
-        catch {
-            return "";
-        }
+        return getAccessToken();
     }, [authToken, tokenProp]);
     const request = useCallback(async (path, { method = "GET", body, signal } = {}) => {
         const headers = { Accept: "application/json" };

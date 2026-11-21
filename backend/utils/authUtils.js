@@ -205,6 +205,48 @@ export const logActivity = async ({
   }
 };
 
+/*
+  REMEMBERED (TRUSTED) DEVICES
+  A remembered browser is identified by its device-token hash, and that same hash can sit on more than one
+  session row: logging out keeps the row (so the next password login can skip the OTP), and the next login
+  copies the trust onto its new session. Removing trust therefore has to clear EVERY row holding the hash,
+  otherwise a "forgotten" or revoked device keeps skipping the OTP.
+
+    untrustDevices(userId)                          every remembered device of the user
+    untrustDevices(userId, { hashes })              only these devices
+    untrustDevices(userId, { exceptHash })          all but this device (log out other devices)
+    untrustDevices(userId, { hashes, exceptSessionId })  move trust: clear the copies, keep one row
+*/
+export const untrustDevices = async (
+  userId,
+  { hashes = null, exceptHash = null, exceptSessionId = null } = {}
+) => {
+  const filter = {
+    user: userId,
+    $or: [{ isTrusted: true }, { deviceTokenHash: { $ne: null } }],
+  };
+
+  if (hashes) {
+    const list = hashes.filter(Boolean);
+    if (!list.length) return 0;
+    filter.deviceTokenHash = { $in: list };
+  } else if (exceptHash) {
+    filter.deviceTokenHash = { $ne: exceptHash };
+  }
+
+  if (exceptSessionId) filter.sessionId = { $ne: exceptSessionId };
+
+  const result = await UserSession.updateMany(filter, {
+    $set: {
+      isTrusted: false,
+      trustedUntil: null,
+      deviceTokenHash: null,
+    },
+  });
+
+  return result.modifiedCount || 0;
+};
+
 export const revokeUserSessions = async (
   userId,
   actorId = null,
@@ -228,6 +270,9 @@ export const revokeUserSessions = async (
       },
     }
   );
+
+  // Logged-out rows were skipped above but can still remember a device: clear those too.
+  await untrustDevices(userId);
 };
 
 // Session activation after password-only or OTP login.

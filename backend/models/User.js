@@ -363,7 +363,7 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ["admin", "normal", "Employee", "affiliate"],
+      enum: ["admin", "normal", "Employee", "affiliate", "partner"],
       default: "normal",
       required: true,
       index: true,

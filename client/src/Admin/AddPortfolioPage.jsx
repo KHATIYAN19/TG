@@ -16,7 +16,7 @@ const portfolioSchema = z.object({
     .min(1, "Tags input is required")
     .transform(val => val.split(',').map(tag => tag.trim()).filter(tag => tag !== ''))
     .pipe(z.string().array().min(1, "At least one tag is required")),
-  imageOption: z.enum(['url', 'file'], { required_error: "Please select an image source" }),
+  imageOption: z.enum(['url', 'file'], { error: "Please select an image source" }),
   imageUrl: z.string().optional(),
   imageFile: z.any().optional(),
   altText: z.string().trim().optional(),

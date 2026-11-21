@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import LegalLayout, { Mail_, Note, P, UL } from "./LegalLayout";
 import { D } from "./useLifetime";
 import { BRAND, SUPPORT_EMAIL } from "./constants";
+import { GRIEVANCE_OFFICER, GRIEVANCE_SLA } from "../../config/businessInfo";
 
 const sections = [
   {
@@ -113,6 +114,20 @@ const sections = [
   {
     id: "children", title: "Children",
     body: <P>Memories is for adults. We don&apos;t knowingly collect information from children under 18 for an account. If you believe a child has made an account, tell us and we will remove it. Pages can be made for children, but the account holder must be an adult.</P>,
+  },
+  {
+    id: "grievance", title: "Grievance Officer",
+    body: (
+      <P>
+        Complaints about your data or a purchase go to our Grievance Officer
+        {GRIEVANCE_OFFICER.name ? <> ({GRIEVANCE_OFFICER.name}, {GRIEVANCE_OFFICER.designation})</> : null} at{" "}
+        <a className="font-semibold text-rose-600 underline-offset-2 hover:underline" href={`mailto:${GRIEVANCE_OFFICER.email}`}>{GRIEVANCE_OFFICER.email}</a>.
+        We acknowledge within {GRIEVANCE_SLA.acknowledgeHours} hours and resolve within {GRIEVANCE_SLA.resolveDays} days.
+        You can also withdraw consent to analytics tools any time from <b>Cookie settings</b> in the footer. Sales measurement (Meta / Google Ads) is always on; see the main Privacy Policy.
+        Full business details are in the{" "}
+        <Link className="font-semibold text-rose-600 hover:underline" to="/privacy-policy#grievance-officer">Target Trek Privacy Policy</Link>.
+      </P>
+    ),
   },
   {
     id: "changes", title: "Changes to this policy",

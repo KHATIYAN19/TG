@@ -3,7 +3,10 @@
 
 export const SITE_URL = "https://www.targettrek.in";
 export const SITE_NAME = "Target Trek";
-export const LOGO_URL = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+// Served from our own domain (client/public/brand): a third-party image host can vanish and take the logo
+// out of every rich result with it.
+export const LOGO_URL = "https://www.targettrek.in/brand/target-trek-logo.jpg";
+export const SAME_AS = ["https://www.linkedin.com/company/target-trek/", "https://www.facebook.com/targettreks/"];
 
 export const API_URL = (
   process.env.BLOG_API_URL ||

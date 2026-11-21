@@ -2,7 +2,7 @@ import axios from "axios";
 
 import BASE_URL from "../utils/Url";
 import store from "../Redux/store";
-import { login, logout } from "../Redux/authSlice";
+import { login, logout, sessionRestoreFailed } from "../Redux/authSlice";
 
 const ROOT = String(BASE_URL).replace(/\/$/, "");
 
@@ -30,10 +30,33 @@ export const tokenIsExpired = (token, skewMs = 0) => !token || Date.now() >= tok
    really gone; network trouble is NOT treated as a logout. */
 let inflight = null;
 
+/* The current access token. It lives only in memory (Redux), never in localStorage. */
+export const getAccessToken = () => store.getState().auth?.token || "";
+
+const postRefresh = () => axios.post(`${ROOT}/api/auth/refresh`, null, { withCredentials: true, timeout: 15000 });
+
+/* Each tab holds its own in-memory token, but they all share ONE rotating refresh cookie. Two tabs
+   refreshing at the same moment would both send the same cookie and the slower one would lose. A
+   cross-tab Web Lock makes them take turns, so each refresh sends the newest cookie. Browsers without
+   Web Locks fall back to a single retry: by then the winning tab's new cookie is in the jar. */
+const withRefreshLock = (fn) =>
+  typeof navigator !== "undefined" && navigator.locks?.request
+    ? navigator.locks.request("tt-auth-refresh", fn)
+    : fn();
+
+const refreshOnce = async () => {
+  try {
+    return await postRefresh();
+  } catch (error) {
+    if (error?.response?.status !== 401) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return postRefresh(); // lost a race with another tab: retry with the cookie it received
+  }
+};
+
 export const refreshAccessToken = () => {
   if (!inflight) {
-    inflight = axios
-      .post(`${ROOT}/api/auth/refresh`, null, { withCredentials: true, timeout: 15000 })
+    inflight = withRefreshLock(refreshOnce)
       .then(({ data }) => {
         if (!data?.token) throw Object.assign(new Error("No token returned"), { authRejected: true });
         store.dispatch(login({ token: data.token, user: store.getState().auth.user }));
@@ -49,6 +72,25 @@ export const refreshAccessToken = () => {
       });
   }
   return inflight;
+};
+
+/* Start-up: a returning visitor has no token in memory yet. If this browser was signed in, swap the
+   httpOnly refresh cookie for a fresh access token before the route guards run.
+   - server says the session is gone -> sign out locally (clears the stale user hint)
+   - network trouble                 -> stay "signed out" for this page view, keep the hint for next time */
+export const restoreSession = async () => {
+  const { auth } = store.getState();
+  if (auth?.token || !auth?.user) {
+    if (auth?.restoring) store.dispatch(sessionRestoreFailed());
+    return Boolean(auth?.token);
+  }
+  try {
+    await refreshAccessToken();
+    return true;
+  } catch (error) {
+    store.dispatch(error?.authRejected ? logout() : sessionRestoreFailed());
+    return false;
+  }
 };
 
 /* -------------------------------------------------------------- real logout

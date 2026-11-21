@@ -32,6 +32,13 @@ const exec = (cmd) => {
   if (o === "incr") { const v = (alive(args[0]) ? Number(store.get(args[0])) : 0) + 1; store.set(args[0], String(v)); return { result: v }; }
   if (o === "expire") { if (!alive(args[0])) return { result: 0 }; expiry.set(args[0], clock.now() + Number(args[1]) * 1000); return { result: 1 }; }
   if (o === "ttl") { if (!alive(args[0])) return { result: -2 }; const e = expiry.get(args[0]); return { result: e === undefined ? -1 : Math.ceil((e - clock.now()) / 1000) }; }
+  if (o === "eval" || o === "evalsha") {                // only the OTP lock release script (compare-and-delete) is needed
+    const [script, numKeys, ...rest] = args; const keys = rest.slice(0, Number(numKeys)), argv = rest.slice(Number(numKeys));
+    if (String(script).includes('redis.call("GET", KEYS[1]) == ARGV[1]')) {
+      if (alive(keys[0]) && store.get(keys[0]) === argv[0]) { store.delete(keys[0]); expiry.delete(keys[0]); return { result: 1 }; }
+      return { result: 0 };
+    }
+  }
   return { error: "unsupported in fake" };            // rate limiters then fail-open (as designed)
 };
 const redisServer = http.createServer((req, res) => {
@@ -88,6 +95,7 @@ const authCtl = await import(`${B}/controllers/authController.js`);
 const { hashPassword } = await import(`${B}/utils/authUtils.js`);
 const { provisionUserAuth } = await import(`${B}/services/authStateService.js`);
 app.post("/api/auth/login", authCtl.login);                // the rate limiter is bypassed here; it needs real Redis
+app.post("/api/auth/verify-otp", authCtl.verifyOtp);
 const { forgotPassword, resetPassword } = await import(`${B}/controllers/arena/authController.js`);
 const { signup: signupHandler, verifySignup: verifySignupHandler, resendSignupOtp: resendSignupHandler } = await import(`${B}/controllers/arena/authController.js`);
 app.post("/api/arena/signup", signupHandler);              // route limiter needs real Redis; handler logic is real
@@ -149,11 +157,12 @@ const inventory = (router, prefix) => {
 };
 const memberRoutes = inventory(arenaRouter, "/api/arena");
 const adminRoutes = inventory(adminRouter, "/api/admin/arena");
-const PUBLIC_OK = new Set(["GET /api/arena/public", "POST /api/arena/signup", "POST /api/arena/signup/verify", "POST /api/arena/signup/resend", "POST /api/arena/password/forgot", "POST /api/arena/password/reset"]);
+// Google sign-in verifies Google's signed ID token (members only); /payments/return only redirects to the join page with a validated order id.
+const PUBLIC_OK = new Set(["GET /api/arena/public", "POST /api/arena/signup", "POST /api/arena/signup/verify", "POST /api/arena/signup/resend", "POST /api/arena/google", "POST /api/arena/google/complete", "POST /api/arena/password/forgot", "POST /api/arena/password/reset", "_ALL /api/arena/payments/return"]);
 console.log(`\nRoute inventory: ${memberRoutes.length} member routes, ${adminRoutes.length} admin routes`);
 console.log("  public (by design):", memberRoutes.filter((r) => !r.protected).map((r) => `${r.method} ${r.path.replace("/api/arena", "")}`).join(", "));
 
-await t("INVENTORY: the only public member routes are public info + signup/OTP", () => {
+await t("INVENTORY: the only public member routes are public info, signup/OTP, Google sign-in, password reset and the payment return redirect", () => {
   const open = memberRoutes.filter((r) => !r.protected).map((r) => `${r.method} ${r.path}`);
   assert.deepEqual(new Set(open), PUBLIC_OK, `unexpected public routes: ${open.join(", ")}`);
 });
@@ -310,7 +319,11 @@ await t("BLOCKS: a member can only remove their OWN blocks", async () => {
 });
 
 
-/* ================= LOGIN: no OTP ================= */
+/* ================= LOGIN: OTP only for staff (admin / Employee / partner) on a new device ================= */
+const UserSession = await m("models/UserSession.js");
+const { cookieNames, untrustDevices, revokeUserSessions } = await import(`${B}/utils/authUtils.js`);
+const sessionCtl = await import(`${B}/controllers/sessionController.js`);
+
 const loginUser = async (role) => {
   n += 1;
   const u = await User.create({ name: `Login${n}`, email: `login${n}@t.com`, mobile: `98200${String(10000 + n)}`, password: await hashPassword("Str0ng!Pass#1"), role, mustChangePassword: false, status: "active",
@@ -319,18 +332,135 @@ const loginUser = async (role) => {
   await provisionUserAuth(full);
   return u;
 };
-const login = (identifier, password) => api("POST", "/api/auth/login", { body: { identifier, password } });
 
-for (const role of ["normal", "Employee", "admin", "affiliate"]) {
+/* raw fetch so the Set-Cookie headers can be read (the device cookie is what makes a browser "remembered") */
+const authPost = async (path, body, cookie) => {
+  const r = await fetch(`${BASE}${path}`, { method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
+  let j = null; try { j = await r.json(); } catch { /* none */ }
+  const set = r.headers.getSetCookie ? r.headers.getSetCookie() : [];
+  const device = set.map((c) => c.split(";")[0]).find((c) => c.startsWith(`${cookieNames.device}=`)) || null;
+  return { status: r.status, body: j, device };
+};
+const login = (identifier, password, cookie) => authPost("/api/auth/login", { identifier, password }, cookie);
+
+/* Login codes are captured instead of mailed (MAIL_DISABLE_SEND=outbox) */
+const withOutbox = async (fn) => {
+  const prev = process.env.MAIL_DISABLE_SEND;
+  process.env.MAIL_DISABLE_SEND = "outbox"; globalThis.__MAIL_OUTBOX = [];
+  try { return await fn(); } finally { if (prev === undefined) delete process.env.MAIL_DISABLE_SEND; else process.env.MAIL_DISABLE_SEND = prev; delete globalThis.__MAIL_OUTBOX; }
+};
+const codeSentTo = (email) => {
+  const mail = [...(globalThis.__MAIL_OUTBOX || [])].reverse().find((x) => x.to === email);
+  return mail ? String(mail.text).match(/\b(\d{6})\b/)?.[1] : null;
+};
+
+/* password -> code -> signed in on a remembered browser; returns the device cookie */
+const staffSignIn = async (u, cookie) => {
+  const first = await login(u.email, "Str0ng!Pass#1", cookie);
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.equal(first.body.requiresOtp, true, "staff on a new browser must get a code");
+  assert.equal(first.body.token, undefined, "no token before the code");
+  const code = codeSentTo(u.email);
+  assert.match(String(code), /^\d{6}$/, "the code was emailed to the account's own address");
+  const done = await authPost("/api/auth/verify-otp", { challengeId: first.body.challengeId, otp: code, rememberDevice: true }, cookie);
+  assert.equal(done.status, 200, JSON.stringify(done.body));
+  assert.ok(done.body.token && done.body.user, "token + user after the code");
+  assert.ok(done.device, "the browser is remembered (device cookie set)");
+  return done.device;
+};
+
+for (const role of ["normal", "affiliate"]) {
   await t(`LOGIN (${role}): a correct password signs in immediately: no OTP, token issued`, async () => {
-    const u = await loginUser(role);
-    const r = await login(u.email, "Str0ng!Pass#1");
-    assert.equal(r.status, 200, JSON.stringify(r.body));
-    assert.equal(r.body.requiresOtp, false);
-    assert.ok(r.body.token && r.body.user, "token + user returned");
-    assert.equal(r.body.challengeId, undefined);
+    await withOutbox(async () => {
+      const u = await loginUser(role);
+      const r = await login(u.email, "Str0ng!Pass#1");
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.requiresOtp, false);
+      assert.ok(r.body.token && r.body.user, "token + user returned");
+      assert.equal(r.body.challengeId, undefined);
+      assert.equal(globalThis.__MAIL_OUTBOX.length, 0, "no code is emailed");
+    });
   });
 }
+
+for (const role of ["admin", "Employee", "partner"]) {
+  await t(`LOGIN (${role}): a new browser needs the emailed code; then it is remembered and skips the code`, async () => {
+    await withOutbox(async () => {
+      const u = await loginUser(role);
+      const device = await staffSignIn(u);
+      const again = await login(u.email, "Str0ng!Pass#1", device);
+      assert.equal(again.status, 200, JSON.stringify(again.body));
+      assert.equal(again.body.requiresOtp, false, "remembered browser: no code");
+      assert.ok(again.body.token);
+      // a different browser (no cookie) still needs the code
+      assert.equal((await login(u.email, "Str0ng!Pass#1")).body.requiresOtp, true);
+    });
+  });
+}
+
+await t("TRUSTED DEVICE: logging out keeps the browser remembered, and the trust lives on ONE session row", async () => {
+  await withOutbox(async () => {
+    const u = await loginUser("admin");
+    const device = await staffSignIn(u);
+    for (let i = 0; i < 3; i++) {
+      // what POST /logout does to the current session: revoke it, keep the device trust
+      await UserSession.updateMany({ user: u._id, state: "active" }, { $set: { state: "revoked", refreshTokenHash: null } });
+      const r = await login(u.email, "Str0ng!Pass#1", device);
+      assert.equal(r.body.requiresOtp, false, `login ${i + 1} after logout: still remembered`);
+    }
+    assert.equal(await UserSession.countDocuments({ user: u._id, isTrusted: true }), 1, "trust moved, not copied");
+  });
+});
+
+await t("TRUSTED DEVICE: 'forget this device' really forgets it (even after earlier logouts)", async () => {
+  await withOutbox(async () => {
+    const u = await loginUser("Employee");
+    const device = await staffSignIn(u);
+    await UserSession.updateMany({ user: u._id, state: "active" }, { $set: { state: "revoked", refreshTokenHash: null } });
+    await login(u.email, "Str0ng!Pass#1", device);                     // remembered login after a logout
+    const trusted = await UserSession.findOne({ user: u._id, isTrusted: true, state: "active" });
+    const res = { code: 200, body: null, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; }, clearCookie() { return this; } };
+    await sessionCtl.forgetMyDevice({ user: { userId: String(u._id) }, sessionId: trusted.sessionId, params: { sessionId: trusted.sessionId }, get: () => "", ip: "127.0.0.1" }, res);
+    assert.equal(res.code, 200, JSON.stringify(res.body));
+    assert.equal(await UserSession.countDocuments({ user: u._id, isTrusted: true }), 0);
+    assert.equal((await login(u.email, "Str0ng!Pass#1", device)).body.requiresOtp, true, "forgotten browser needs the code again");
+  });
+});
+
+await t("TRUSTED DEVICE: a security revocation (password reset / admin) also clears logged-out remembered rows", async () => {
+  await withOutbox(async () => {
+    const u = await loginUser("partner");
+    const device = await staffSignIn(u);
+    await UserSession.updateMany({ user: u._id, state: "active" }, { $set: { state: "revoked", refreshTokenHash: null } });   // logged out, still remembered
+    await revokeUserSessions(u._id, null, "Password reset");
+    assert.equal((await login(u.email, "Str0ng!Pass#1", device)).body.requiresOtp, true);
+  });
+});
+
+await t("TRUSTED DEVICE: another account's device cookie, a forged cookie, or a wrong code never skip the code", async () => {
+  await withOutbox(async () => {
+    const a = await loginUser("admin"), b = await loginUser("admin");
+    const deviceOfA = await staffSignIn(a);
+    assert.equal((await login(b.email, "Str0ng!Pass#1", deviceOfA)).body.requiresOtp, true, "cookie belongs to a different account");
+    assert.equal((await login(a.email, "Str0ng!Pass#1", `${cookieNames.device}=${"f".repeat(64)}`)).body.requiresOtp, true, "forged cookie");
+    const first = await login(b.email, "Str0ng!Pass#1");
+    const code = codeSentTo(b.email);
+    const wrong = await authPost("/api/auth/verify-otp", { challengeId: first.body.challengeId, otp: code === "123456" ? "654321" : "123456", rememberDevice: true });
+    assert.equal(wrong.status, 401); assert.equal(wrong.body.token, undefined); assert.equal(wrong.device, null);
+  });
+});
+
+await t("TRUSTED DEVICE: untrustDevices(user, { exceptHash }) keeps only the current browser", async () => {
+  await withOutbox(async () => {
+    const u = await loginUser("admin");
+    const d1 = await staffSignIn(u), d2 = await staffSignIn(u);   // two browsers
+    const keep = await UserSession.findOne({ user: u._id, isTrusted: true }).sort({ createdAt: -1 }).select("+deviceTokenHash");
+    await untrustDevices(u._id, { exceptHash: keep.deviceTokenHash });
+    assert.equal((await login(u.email, "Str0ng!Pass#1", d2)).body.requiresOtp, false, "this browser stays remembered");
+    assert.equal((await login(u.email, "Str0ng!Pass#1", d1)).body.requiresOtp, true, "the other browser must use the code");
+  });
+});
+
 await t("LOGIN: the issued token really works on a protected arena route", async () => {
   const u = await loginUser("normal");
   const r = await login(u.email, "Str0ng!Pass#1");
@@ -340,18 +470,22 @@ await t("LOGIN: wrong password is still refused (no OTP bypass of the password)"
   const u = await loginUser("normal");
   const r = await login(u.email, "wrong-password");
   assert.equal(r.status, 401); assert.equal(r.body.token, undefined);
+  const s = await loginUser("admin");
+  const r2 = await login(s.email, "wrong-password");
+  assert.equal(r2.status, 401); assert.equal(r2.body.challengeId, undefined, "a wrong staff password never sends a code");
 });
-await t("LOGIN: OTP can be switched back on with LOGIN_OTP_ENABLED=true (members only; admin stays exempt)", async () => {
+await t("LOGIN: LOGIN_OTP_ENABLED=true turns the code on for members too (staff always need it)", async () => {
   process.env.LOGIN_OTP_ENABLED = "true";
-  const origErr = console.error; console.error = () => {};
   try {
-    const m = await loginUser("normal");
-    const r = await login(m.email, "Str0ng!Pass#1");
-    assert.notEqual(r.body.requiresOtp, false, "member must NOT get a direct login when OTP is enabled");
-    assert.equal(r.body.token, undefined);
-    const ad = await loginUser("admin");
-    assert.equal((await login(ad.email, "Str0ng!Pass#1")).body.requiresOtp, false);
-  } finally { console.error = origErr; delete process.env.LOGIN_OTP_ENABLED; }
+    await withOutbox(async () => {
+      const mem = await loginUser("normal");
+      const r = await login(mem.email, "Str0ng!Pass#1");
+      assert.equal(r.body.requiresOtp, true, "member must NOT get a direct login when OTP is enabled");
+      assert.equal(r.body.token, undefined);
+      const ad = await loginUser("admin");
+      assert.equal((await login(ad.email, "Str0ng!Pass#1")).body.requiresOtp, true);
+    });
+  } finally { delete process.env.LOGIN_OTP_ENABLED; }
 });
 
 /* ================= ADMIN: repair paid-but-inactive members ================= */
@@ -722,11 +856,14 @@ await t("ADMIN DELETE: a MEMBER is erased from the database with everything link
   assert.equal(await Audit.countDocuments({ action: "member_deleted" }), before + 1);
   assert.equal((await api("DELETE", `${AR}/members/${P4.a.user._id}`, { token: admin.token })).status, 404);
 });
-await t("ADMIN DELETE: can't delete yourself, other admins, or non-member accounts", async () => {
+await t("ADMIN DELETE: can't delete yourself; any other account (any role) can be deleted and is logged", async () => {
   assert.equal((await api("DELETE", `${AR}/members/${admin.user._id}`, { token: admin.token })).body.code, "SELF_DELETE");
+  assert.ok(await User.findById(admin.user._id));
+  // Deliberate product rule (controllers/arena/adminPurgeController.js): any role can be removed from the arena portal.
   const other = await makeUser("Boss2", { paid: null, role: "admin" });
-  assert.equal((await api("DELETE", `${AR}/members/${other.user._id}`, { token: admin.token })).body.code, "PROTECTED_ACCOUNT");
-  assert.ok(await User.findById(other.user._id));
+  assert.equal((await api("DELETE", `${AR}/members/${other.user._id}`, { token: admin.token })).status, 200);
+  assert.equal(await User.findById(other.user._id), null);
+  assert.equal((await api("DELETE", `${AR}/members/${other.user._id}`, { token: normal.token })).status, 403);
   assert.equal((await api("DELETE", `${AR}/members/not-an-id`, { token: admin.token })).status, 400);
 });
 await t("ADMIN DELETE: every permanent delete is written to the activity log", async () => {
@@ -987,8 +1124,9 @@ await t("PUBLIC LIMITS: coupon checks are capped per network (30 / 10 min by def
 });
 await t("PUBLIC LIMITS: every unauthenticated money / booking / form / counter endpoint carries a budget limiter", async () => {
   const covered = [];
-  const routers = [["routes/cashfreeRoute.js", "/payment/cashfree"], ["routes/payuRoutes.js", "/payment/payu"], ["routes/razorpayRoute.js", "/payment/razorpay"], ["routes/couponRoute.js", "/api/coupon"], ["routes/interviewRoutes.js", "/api/interviews"], ["routes/bookReviewRoute.js", "/api/book/review"], ["routes/Blog.js", "/blogs"], ["routes/Contact.js", "/messages"], ["routes/Interest.js", "/interest"], ["routes/Review.js", "/review"], ["routes/InterviewExperience.js", "/api/interview"]];
-  const MUST = new Set(["POST /payment/cashfree/create", "GET /payment/cashfree/status/:orderId", "GET /payment/cashfree/return", "POST /payment/payu/create", "POST /payment/payu/success", "POST /payment/payu/failure", "GET /payment/payu/access", "POST /payment/razorpay/create", "POST /payment/razorpay/verify", "POST /api/coupon/validate", "GET /api/coupon/available", "POST /api/interviews/bookings", "POST /api/interviews/bookings/:id/payment", "POST /api/interviews/bookings/:id/reconcile", "GET /api/interviews/bookings/:id/status", "POST /api/book/review/link/:token", "POST /blogs/:slug/view", "POST /messages/us", "POST /interest/add", "POST /review/:token", "POST /api/interview/"]);
+  // Book payments for every gateway now go through ONE router (routes/bookPaymentRoute.js at /payment/books).
+  const routers = [["routes/bookPaymentRoute.js", "/payment/books"], ["routes/bookAccessRoute.js", "/payment/payu"], ["routes/couponRoute.js", "/api/coupon"], ["routes/interviewRoutes.js", "/api/interviews"], ["routes/bookReviewRoute.js", "/api/book/review"], ["routes/Blog.js", "/blogs"], ["routes/Contact.js", "/messages"], ["routes/Interest.js", "/interest"], ["routes/Review.js", "/review"], ["routes/InterviewExperience.js", "/api/interview"]];
+  const MUST = new Set(["POST /payment/books/create", "POST /payment/books/verify", "_ALL /payment/books/return", "GET /payment/books/status/:orderId", "GET /payment/books/invoice", "GET /payment/payu/access", "POST /api/coupon/validate", "GET /api/coupon/available", "POST /api/interviews/bookings", "POST /api/interviews/bookings/:id/payment", "POST /api/interviews/bookings/:id/reconcile", "GET /api/interviews/bookings/:id/status", "POST /api/book/review/link/:token", "POST /blogs/:slug/view", "POST /messages/us", "POST /interest/add", "POST /review/:token", "POST /api/interview/"]);
   for (const [file, mount] of routers) {
     const router = await m(file);
     for (const layer of router.stack) {
@@ -1027,38 +1165,40 @@ await t("ACCOUNTS: deleted list shows self-deleted shells (anonymous, dated) and
   const found = await ACC(`kind=deleted&q=${encodeURIComponent(byAdmin.user.email)}`); assert.deepEqual(found.body.data.items.map((x) => x.id), [String(byAdmin.user._id)]);
   const byId = await ACC(`kind=deleted&q=${self.user._id}`); assert.equal(byId.body.data.total, 1, "a deleted shell can be found by its id");
 });
-await t("ACCOUNTS: 'signed up, no profile': arena sign-ups only by default; members with a profile, deleted accounts and staff never appear", async () => {
+/* Entry is pay-first, so the admin list is "signed up but never paid" (kind=unpaid; it replaced kind=no_profile). */
+await t("ACCOUNTS: 'signed up, never paid': arena sign-ups only by default; paying members, deleted accounts and staff never appear", async () => {
   const lonely = await makeUser("AccLonely", { paid: null }); await User.collection.updateOne({ _id: lonely.user._id }, { $set: { emailVerifiedAt: new Date(Date.now() - 3 * 864e5), createdAt: new Date(Date.now() - 3 * 864e5) } });   // createdAt is immutable in the model, so write it directly
   const buyer = await makeUser("AccBuyer", { paid: null });                                        // book buyer: no email verification, no profile
   const member = await makeUser("AccMember"); await User.updateOne({ _id: member.user._id }, { $set: { emailVerifiedAt: new Date() } });
-  const draft = await makeUser("AccDraft", { paid: false }); await User.updateOne({ _id: draft.user._id }, { $set: { emailVerifiedAt: new Date() } });   // created a profile, hasn't paid
+  const draft = await makeUser("AccDraft", { paid: false }); await User.updateOne({ _id: draft.user._id }, { $set: { emailVerifiedAt: new Date() } });   // started a profile, hasn't paid
   const staff = await makeUser("AccStaff", { paid: null, role: "Employee" }); await User.updateOne({ _id: staff.user._id }, { $set: { emailVerifiedAt: new Date() } });
   const gone = await makeUser("AccGone", { paid: null }); await User.updateOne({ _id: gone.user._id }, { $set: { emailVerifiedAt: new Date(), isDeleted: true, status: "inactive", deletedAt: new Date() } });
-  const r = await ACC("kind=no_profile&pageSize=100"); assert.equal(r.status, 200);
+  const r = await ACC("kind=unpaid&pageSize=100"); assert.equal(r.status, 200, JSON.stringify(r.body));
   const ids = new Set(r.body.data.items.map((x) => x.id));
-  assert.ok(ids.has(String(lonely.user._id)), "verified sign-up without a profile is listed");
-  for (const [who, label] of [[buyer, "book buyer (scope=arena)"], [member, "member with a profile"], [draft, "member with an unpaid profile"], [staff, "employee"], [gone, "deleted account"]]) assert.ok(!ids.has(String(who.user._id)), `${label} must not be listed`);
+  assert.ok(ids.has(String(lonely.user._id)), "verified sign-up that never paid is listed");
+  assert.ok(ids.has(String(draft.user._id)), "an unpaid draft profile is still 'never paid'");
+  for (const [who, label] of [[buyer, "book buyer (scope=arena)"], [member, "paying member"], [staff, "employee"], [gone, "deleted account"]]) assert.ok(!ids.has(String(who.user._id)), `${label} must not be listed`);
   const row = r.body.data.items.find((x) => x.id === String(lonely.user._id));
-  assert.equal(row.verified, true); assert.equal(row.email, lonely.user.email); assert.ok(row.daysSinceSignup >= 3); assert.equal(row.source, "Prep Buddy sign-up");
-  const all = await ACC("kind=no_profile&scope=all&pageSize=100"); const allIds = new Set(all.body.data.items.map((x) => x.id));
+  assert.equal(row.verified, true); assert.equal(row.email, lonely.user.email); assert.ok(row.signedUpAt); assert.equal(row.reminderCount, 0);
+  const all = await ACC("kind=unpaid&scope=all&pageSize=100"); const allIds = new Set(all.body.data.items.map((x) => x.id));
   assert.ok(allIds.has(String(buyer.user._id)) && allIds.has(String(lonely.user._id)), "scope=all also lists book buyers"); assert.ok(!allIds.has(String(member.user._id)) && !allIds.has(String(gone.user._id)));
   assert.equal(all.body.data.items.find((x) => x.id === String(buyer.user._id)).verified, false);
-  assert.ok(all.body.data.counts.noProfile >= r.body.data.counts.noProfile);
+  assert.ok(all.body.data.counts.unpaid >= r.body.data.counts.unpaid);
 });
-await t("ACCOUNTS: no-profile list: search, paging, newest first, counts; a profile created later removes the account from it", async () => {
+await t("ACCOUNTS: unpaid list: search, paging, newest first, counts; paying later removes the account from it", async () => {
   const tag = `zzacc${Date.now() % 100000}`; const made = [];
   for (let i = 0; i < 5; i++) { const u = await makeUser(`${tag}${i}`, { paid: null }); await User.collection.updateOne({ _id: u.user._id }, { $set: { emailVerifiedAt: new Date(), createdAt: new Date(Date.now() - i * 3600e3) } }); made.push(u); }
-  const page1 = await ACC(`kind=no_profile&q=${tag}&pageSize=2&page=1`), page3 = await ACC(`kind=no_profile&q=${tag}&pageSize=2&page=3`);
+  const page1 = await ACC(`kind=unpaid&q=${tag}&pageSize=2&page=1`), page3 = await ACC(`kind=unpaid&q=${tag}&pageSize=2&page=3`);
   assert.equal(page1.body.data.total, 5); assert.equal(page1.body.data.items.length, 2); assert.equal(page3.body.data.items.length, 1);
   assert.equal(page1.body.data.items[0].id, String(made[0].user._id), "newest sign-up first");
-  assert.equal((await ACC(`kind=no_profile&q=${tag}3`)).body.data.total, 1);
-  await Profile.create({ user: made[0].user._id, alias: generateAlias(), realName: "Now Has Profile", topics: ["DSA"], level: "beginner", skills: ["arrays"], availability: ["weekday_evening"], companyType: "student", companyName: "X" });
-  assert.equal((await ACC(`kind=no_profile&q=${tag}`)).body.data.total, 4, "creating a profile removes them from the list");
+  assert.equal((await ACC(`kind=unpaid&q=${tag}3`)).body.data.total, 1);
+  await Entry.create({ user: made[0].user._id, profile: null, listPricePaise: 29900, paidPaise: 29900, cancellationFeePercent: 10, status: "paid", paidAt: new Date(), payment: { gateway: "cashfree", orderId: `ARENA_acc_${tag}` } });
+  assert.equal((await ACC(`kind=unpaid&q=${tag}`)).body.data.total, 4, "paying removes them from the list");
 });
-await t("ACCOUNTS: an account in the no-profile list can be removed with the existing permanent-delete; it then shows nowhere", async () => {
+await t("ACCOUNTS: an account in the unpaid list can be removed with the existing permanent-delete; it then shows nowhere", async () => {
   const u = await makeUser("AccRemove", { paid: null }); await User.updateOne({ _id: u.user._id }, { $set: { emailVerifiedAt: new Date() } });
   assert.equal((await api("DELETE", `${AR}/members/${u.user._id}`, { token: admin.token })).status, 200);
-  assert.ok(!(await ACC("kind=no_profile&pageSize=100")).body.data.items.some((x) => x.id === String(u.user._id)));
+  assert.ok(!(await ACC("kind=unpaid&pageSize=100")).body.data.items.some((x) => x.id === String(u.user._id)));
   assert.ok(!(await ACC("kind=deleted&pageSize=100")).body.data.items.some((x) => x.id === String(u.user._id)), "a hard delete leaves nothing to list");
 });
 
@@ -1229,9 +1369,11 @@ await t("SES: failover chain: Mailtrap fails → Resend fails → SES delivers; 
   const info = await sendMail("a@x.com", "CHAIN", "t", "<p>h</p>");
   assert.equal(info.provider, "ses"); assert.equal(resendCalls.filter((c) => c.body.subject === "CHAIN").length, 1, "Resend tried first");
   assert.equal(sesCalls.filter((c) => simple(c).Subject.Data === "CHAIN").length, 1);
+  // Resend answered 403 in the test-send above, so its key counts as rejected for 5 minutes: the healthy SES goes
+  // first and, as it succeeds, nothing after it is tried.
   resendReply = { status: 200, body: { id: "re_ok" } }; resendCalls.length = 0; sesCalls.length = 0;
-  assert.equal((await sendMail("a@x.com", "CHAIN2", "t", "<p>h</p>")).provider, "resend");
-  assert.equal(sesCalls.length, 0, "SES untouched when Resend succeeds");
+  assert.equal((await sendMail("a@x.com", "CHAIN2", "t", "<p>h</p>")).provider, "ses");
+  assert.equal(resendCalls.filter((c) => c.body.subject === "CHAIN2").length, 0, "stops at the first success");
 });
 await t("SES: an unconfigured provider is skipped by failover; with failover off nothing else is tried", async () => {
   sesOff(); resendReply = { status: 429, body: { message: "limit" } }; sesCalls.length = 0;

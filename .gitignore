@@ -1,0 +1,5 @@
+
+# 🔐 Customer / personal-data exports from one-off scripts (never commit)
+*.csv
+backend/lld-customers.json
+backend/exports/

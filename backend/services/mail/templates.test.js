@@ -25,8 +25,8 @@ test("every email carries the support address (link + text) and a Reply hint", (
   for (const m of ALL()) {
     assert.ok(m.html.includes(`mailto:${SUPPORT}`), `${m.subject}: mailto missing`);
     assert.ok(m.text.includes(SUPPORT), `${m.subject}: support address missing from text`);
-    assert.match(m.text, /NEED HELP\?/);
-    assert.match(m.html, /Need help\?/);
+    assert.match(m.text, /need (any )?help/i);
+    assert.match(m.html, /need (any )?help/i);
   }
 });
 
@@ -74,9 +74,9 @@ test("OTP emails: the code, expiry and the safety warning appear in HTML and tex
 
 test("OTP emails: purpose-specific help (limits and what happens next)", () => {
   const signup = otpEmail({ purpose: "signup", name: "A", otp: "111111", minutes: 15 });
-  assert.match(signup.html, /5 codes in 24 hours/); assert.match(signup.html, /10 wrong attempts/); assert.match(signup.html, /No account is created/);
+  assert.match(signup.html, /No account is created/); assert.match(signup.html, /Need any help\? Write us at/); assert.ok(!/What to do next/.test(signup.html));
   const reset = otpEmail({ purpose: "reset", name: "A", otp: "111111", minutes: 10 });
-  assert.match(reset.html, /password stays exactly as it is/); assert.match(reset.html, /5 wrong codes or resends/); assert.match(reset.html, /signed out of every other device/);
+  assert.match(reset.html, /password stays exactly as it is/);
   assert.throws(() => otpEmail({ purpose: "nope", name: "A", otp: "1", minutes: 1 }), /Unknown OTP email purpose/);
 });
 

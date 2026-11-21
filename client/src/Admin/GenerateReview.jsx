@@ -23,7 +23,7 @@ const GenerateReviewLinkPage = () => {
 
         const validationResult = emailSchema.safeParse(email);
         if (!validationResult.success) {
-            const errorMessage = validationResult.error.errors[0]?.message || 'Invalid email.';
+            const errorMessage = validationResult.error.issues[0]?.message || 'Invalid email.';
             setError(errorMessage);
             toast.error(errorMessage, { id: toastId });
             setIsLoading(false);

@@ -21,6 +21,9 @@ export const resendMissedMetaPurchases = async () => {
   const books = await Order.find({
     orderStatus: "PAID",
     "metadata.attribution.platform": "meta",
+    // Opted-out buyers keep the "meta" label for our own reports but are never sent; leave them out so they
+    // can't fill the 50-order batch on every run.
+    "metadata.attribution.adConsent": { $ne: false },
     "metadata.metaPurchaseSentAt": null,
     "payment.paidAt": { $gte: since, $lte: settled },
   }).limit(50);
@@ -30,6 +33,7 @@ export const resendMissedMetaPurchases = async () => {
   const mems = await MemoryOrder.find({
     status: "paid",
     "attribution.platform": "meta",
+    "attribution.adConsent": { $ne: false },
     metaPurchaseSentAt: null,
     paidAt: { $gte: since, $lte: settled },
   }).limit(50);

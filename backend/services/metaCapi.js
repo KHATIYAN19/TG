@@ -20,7 +20,9 @@ const API_VERSION = () => process.env.META_GRAPH_VERSION || "v21.0";
 export const capiEnabled = () => Boolean(process.env.META_CAPI_ACCESS_TOKEN);
 
 /** The one rule for "report this sale to Meta". */
-export const isMetaAttributed = (attribution) => attribution?.platform === "meta";
+// Report a sale to Meta only when it came from a Meta ad AND the buyer allowed marketing tracking.
+export const isMetaAttributed = (attribution) =>
+  attribution?.platform === "meta" && attribution?.adConsent !== false;
 
 const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 const hashed = (v, norm = (s) => s) => {

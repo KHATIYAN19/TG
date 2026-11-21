@@ -1,0 +1,112 @@
+/*
+  PREP BUDDY ARENA: signed-in shell (/prep-buddy/app/*)
+
+  Desktop (1024px and up): tabs sit in a sticky row under the header.
+  Phones and tablets: the same tabs move to a bottom tab bar (the Resume Lab /resume-review/app pattern), so every
+  section is one thumb-tap away and nothing scrolls sideways.
+
+  --arena-tabbar is the height the bottom bar takes (0 on desktop). Anything docked to the bottom of a page
+  (the profile "Save" bar, for example) adds it to its offset so the tab bar never covers it. While the shell is
+  mounted, <html> carries .arena-tabs, which also pads <body> so the site footer's last lines stay visible.
+*/
+:root { --arena-tabbar: 0px; }
+
+@media (max-width: 1023.98px) {
+  html.arena-tabs { --arena-tabbar: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  html.arena-tabs body { padding-bottom: var(--arena-tabbar); }
+}
+
+/* the shell never scrolls sideways, whatever a page puts inside it.
+   `clip` (not `hidden`) so the sticky tab row and the sticky save bar keep working; old browsers simply ignore it. */
+.arena-shell { width: 100%; overflow-x: clip; }
+.arena-shell :where(h1, h2, h3, p, span, a, li, dd) { overflow-wrap: break-word; }
+
+/* ---------------------------------------------------------------- bottom tab bar */
+.arena-tabbar {
+  --t-bg: rgba(255, 255, 255, 0.92);
+  --t-border: #dfe8e5;
+  --t-text: #6a7d76;
+  --t-active: #0f766e;
+  --t-pill: #e3f3ef;
+  --t-badge: #e11d48;
+  --t-ring: #ffffff;
+
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px));
+  background: var(--t-bg);
+  border-top: 1px solid var(--t-border);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+  box-shadow: 0 -8px 24px -18px rgba(12, 26, 23, 0.35);
+}
+html.dark .arena-tabbar, [data-theme="dark"] .arena-tabbar {
+  --t-bg: rgba(16, 28, 26, 0.92);
+  --t-border: #1f302c;
+  --t-text: #93aaa3;
+  --t-active: #5eead4;
+  --t-pill: #0f2b27;
+  --t-badge: #f43f5e;
+  --t-ring: #101c1a;
+}
+@media (min-width: 1024px) { .arena-tabbar { display: none; } }
+
+.arena-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  height: 64px;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--t-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.arena-tab:focus-visible { outline: 2px solid var(--t-active); outline-offset: -4px; border-radius: 12px; }
+.arena-tab-ico { position: relative; display: grid; place-items: center; width: 46px; height: 28px; border-radius: 999px; transition: background-color 0.2s, transform 0.2s; }
+.arena-tab:active .arena-tab-ico { transform: scale(0.94); }
+.arena-tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arena-tab.is-active { color: var(--t-active); }
+.arena-tab.is-active .arena-tab-ico { background: var(--t-pill); }
+
+.arena-tab-badge {
+  position: absolute;
+  top: -3px;
+  left: calc(50% + 6px);
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  background: var(--t-badge);
+  box-shadow: 0 0 0 2px var(--t-ring);
+}
+.arena-tab-dot { position: absolute; top: 1px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 2px var(--t-ring); }
+
+@media (max-width: 359px) {
+  .arena-tab { font-size: 10px; }
+  .arena-tab-ico { width: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-tab-ico { transition: none; }
+}

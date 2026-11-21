@@ -24,7 +24,7 @@ const refundSchema = z.object({
   amountPaise: z.number().int().min(100, "Minimum refund is ₹1").max(100_000_000),
   paymentId: z.string().min(1).max(100), // must match the entry's stored payment id
   note: z.string().trim().max(200).optional().default(""),
-  confirm: z.literal(true, { errorMap: () => ({ message: "Refund must be confirmed" }) }),
+  confirm: z.literal(true, { error: "Refund must be confirmed" }),
 });
 
 export const refundPayment = handle(async (req, res) => {

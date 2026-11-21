@@ -81,6 +81,7 @@ const ESSENTIALS = [
   { path: "/admin/transactions", name: "All Transactions", icon: Receipt, area: "Finance & Revenue", description: "Every order with filters and actions.", keywords: "transactions payments history refund access mail" },
   { path: "/admin/finance", name: "Finance", icon: CircleDollarSign, area: "Finance & Revenue", description: "Revenue, fees, expenses and profit.", keywords: "finance revenue costs profit expenses" },
   { path: "/admin/users", name: "Users", icon: UserCog, area: "Users & Access", description: "Accounts, roles, devices and access.", keywords: "users employee admin roles accounts" },
+  { path: "/admin/partners", name: "Partners", icon: Handshake, area: "Users & Access", description: "What each partner can see: products, revenue, columns.", keywords: "partners partner access permissions revenue dashboard hide" },
   { path: "/admin/website-analytics", name: "Website Analytics", icon: BarChart3, area: "Marketing", description: "Live visitors, traffic and journeys.", keywords: "website traffic visitors live analytics" },
   { path: "/admin/campaigns", name: "Campaign Studio", icon: Megaphone, area: "Marketing", description: "Targeted emails to book buyers.", keywords: "campaign audience buyers coupon template queue" },
   { path: "/admin/mock-interviews", name: "Mock Interviews", icon: Users, area: "Interviews", description: "Requests, sessions and feedback.", keywords: "mock interviews candidates sessions booking" },

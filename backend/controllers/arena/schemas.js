@@ -147,7 +147,7 @@ export const deleteAccountSchema = z
   .object({
     password: z.string().min(1, "Enter your password").max(128),
     confirmPassword: z.string().max(128),
-    confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm" }) }),
+    confirm: z.literal("DELETE", { error: "Type DELETE to confirm" }),
   })
   .refine((v) => v.password === v.confirmPassword, {
     path: ["confirmPassword"],

@@ -1,8 +1,6 @@
 import { loadProduct, peekProduct } from "../utils/bookApi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, CaretLeft, CaretRight, Check, Lightning, LockKey, ShieldCheck, Sparkle } from "@phosphor-icons/react";
-import { pdfjs } from "react-pdf";
-
 import { trackViewContent } from "../lib/metaPixel.js";
 
 import "./BookPage.css";
@@ -13,7 +11,18 @@ import "./BookPage.css";
   Every class starts with "hb-" and lives in BookPage.css.
 */
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+/* pdf.js is loaded only when a reader opens the preview. A top-level import touches browser-only globals
+   (DOMMatrix), which broke the build-time prerender of every book page, and it put ~1 MB of JS on the
+   critical path of pages that most visitors never preview. */
+const PDF_WORKER_SRC = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+let pdfjsPromise = null;
+const loadPdfjs = () => {
+  pdfjsPromise ||= import("react-pdf").then(({ pdfjs }) => {
+    pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
+    return pdfjs;
+  });
+  return pdfjsPromise;
+};
 
 export const SITE_URL = "https://www.targettrek.in";
 export const SITE_NAME = "Target Trek";
@@ -176,6 +185,8 @@ function usePreviewPages(file, start) {
     (async () => {
       try {
         setLoading(true); setError("");
+        const pdfjs = await loadPdfjs();
+        if (cancelled) return;
         task = pdfjs.getDocument(file);
         const pdf = await task.promise;
         if (cancelled) return;

@@ -31,6 +31,12 @@ const PRIVATE = [
   "/mock-interviews/failed",
   "/mock-interviews/payment-status",
   "/interview/create",
+  "/partners",
+  "/m/", // short links that redirect to private /memories/<code> pages
+  // internal copies of public pages (each public URL is served from these by a rewrite)
+  "/api/",
+  "/prerendered/",
+  "/shell.html",
 ];
 
 // Memories: every /memories/<code> is someone's personal page (and /memories/app, /login, /payment-result are private), so the whole
@@ -58,6 +64,11 @@ export default function handler(req, res) {
     "Applebot",
     "Applebot-Extended",
     "CCBot",
+    "Perplexity-User",
+    "DuckAssistBot",
+    "Amazonbot",
+    "meta-externalagent",
+    "MistralAI-User",
   ]
     .map((b) => `User-agent: ${b}\nAllow: /\n${disallow}\n`)
     .join("\n");

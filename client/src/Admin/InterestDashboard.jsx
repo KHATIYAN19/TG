@@ -3,6 +3,7 @@ import axios from "axios";
 import BASE_URL from "../utils/Url";
 import { Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { getAccessToken } from "../lib/authSession";
 
 const InterestDashboard = () => {
   const [data, setData] = useState([]);
@@ -20,7 +21,7 @@ const InterestDashboard = () => {
 
       const res = await axios.get(url, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -46,7 +47,7 @@ const InterestDashboard = () => {
     try {
       await axios.delete(`${BASE_URL}/interest/delete/${id}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${getAccessToken()}`,
         },
       });
 

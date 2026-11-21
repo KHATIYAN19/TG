@@ -5,7 +5,7 @@ import { FAQ, MISTAKES, PAGE_URL, SEO, SITE, STEPS, UPDATED_ISO } from "./landin
   to quote the page correctly. It is built from the same arrays that draw the page, so the two can never disagree.
   `plans` (optional) are the live plans from the API, added as offers once they load.
 */
-const LOGO = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+const LOGO = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 
 export function buildSchema(plans) {
   const org = { "@type": "Organization", "@id": `${SITE}/#organization`, name: "Target Trek", url: SITE, logo: LOGO, email: "supporttargettrek@gmail.com" };

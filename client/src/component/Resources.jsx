@@ -15,9 +15,9 @@ import "./resources.css";
 const SITE_URL = "https://www.targettrek.in";
 const PAGE_URL = `${SITE_URL}/resources`;
 const SITE_NAME = "TargetTrek";
-const SEO_TITLE = "Free Software Engineering Resources, System Design & Backend Guides | TargetTrek";
+const SEO_TITLE = "Free System Design & Backend Engineering Guides | Target Trek";
 const SEO_DESCRIPTION =
-  "Explore free software engineering resources from TargetTrek. Learn SQL, API engineering, REST, GraphQL, system design, API Gateway, caching, load balancing, databases, message queues, rate limiting and practical backend engineering concepts.";
+  "Free system design and backend guides: caching, load balancing, databases, message queues, rate limiting, API gateways, SQL and API design, with interview Q&A.";
 const SEO_KEYWORDS =
   "software engineering resources, SQL tutorial, SQL interview questions, API tutorial, REST API, GraphQL, system design resources, HLD tutorial, API gateway system design, caching system design, load balancing, database system design, message queues, rate limiting, backend engineering, TargetTrek";
 

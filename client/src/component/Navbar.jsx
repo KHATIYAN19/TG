@@ -42,6 +42,7 @@ const ROUTES = {
   contact: "/contact",
   profile: "/profile",
   dashboard: "/dashboard",
+  partnerDashboard: "/partners/dashboard",
   analytics: "/admin/book/analytics",
   prepBuddy: "/prep-buddy",
 };
@@ -203,6 +204,11 @@ const ProfileMenu = memo(function ProfileMenu({ user, isAdmin, onNavigate, onLog
           <button type="button" role="menuitem" className="tt-menu-item" onClick={() => go(ROUTES.profile)}>
             <UserRound size={17} /> My Profile
           </button>
+          {user?.role === "partner" && (
+            <button type="button" role="menuitem" className="tt-menu-item" onClick={() => go(ROUTES.partnerDashboard)}>
+              <BarChart3 size={17} /> Partner dashboard
+            </button>
+          )}
           {isAdmin && (
             <>
               <button type="button" role="menuitem" className="tt-menu-item" onClick={() => go(ROUTES.dashboard)}>
@@ -315,6 +321,12 @@ const DesktopBar = memo(function DesktopBar({ pathname, isLearn, isDark, isAdmin
       </nav>
 
       <div className="tt-right">
+        {(() => {
+          const isPartner = isAuthenticated && String(user?.role || "").toLowerCase() === "partner";
+          const [to, label] = isPartner ? [ROUTES.partnerDashboard, "Partner Dashboard"]
+            : isAdmin ? [ROUTES.dashboard, "Dashboard"] : [ROUTES.about, "About Us"];
+          return <NavLink to={to} className="tt-link" data-active={active(to)}>{label}</NavLink>;
+        })()}
         {isLearn && <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />}
         <ReferralsButton active={active(ROUTES.referrals)} />
         <ResumeLabButton active={active(ROUTES.resumeLab)} />
@@ -413,6 +425,9 @@ const MobileDrawer = memo(function MobileDrawer({ open, pathname, isLearn, isDar
                 {model.more.map((i) => (
                   <DrawerLink key={i.path} to={i.path} icon={i.icon} active={i.selected} onClick={onClose}>{i.title}</DrawerLink>
                 ))}
+                {user?.role === "partner" && (
+                  <DrawerLink to={ROUTES.partnerDashboard} icon={BarChart3} active={active(ROUTES.partnerDashboard)} onClick={onClose}>Partner dashboard</DrawerLink>
+                )}
                 {isAdmin && (
                   <>
                     <DrawerLink to={ROUTES.dashboard} icon={LayoutDashboard} active={active(ROUTES.dashboard)} onClick={onClose}>Dashboard</DrawerLink>

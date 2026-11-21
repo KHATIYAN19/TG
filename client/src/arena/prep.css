@@ -315,14 +315,92 @@ html.dark .pb, [data-theme="dark"] .pb {
 .pb-final .pb-btn-ghost:hover { border-color: #2dd4bf; }
 .pb-final .pb-mark { --pb-mark: #fde68a; --pb-mark-ink: #1c1917; }
 
-.pb-stick { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 8px max(10px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right)); pointer-events: none; transform: translateY(120%); transition: transform 0.35s var(--pb-ease); }
-.pb-stick.is-on { transform: none; }
-.pb-stick-in { pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 760px; margin: 0 auto; padding: 8px 8px 8px 16px; border-radius: 16px; background: var(--pb-surface); border: 1px solid var(--pb-border-strong); box-shadow: 0 18px 44px rgba(12, 26, 23, 0.2); }
-.pb-stick-in div { min-width: 0; }
-.pb-stick-in b { display: block; font-size: 14.5px; }
-.pb-stick-in span { display: block; font-size: 12.5px; color: var(--pb-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pb-stick .pb-btn { flex: 0 0 auto; min-height: 42px; padding: 10px 16px; font-size: 14.5px; }
-.pb-end-pad { height: 84px; background: var(--pb-bg); }
+/* ---------- the entry card docked at the bottom (same pattern as /resume-review) ---------- */
+.pb-landing { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 641px) { .pb-landing { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); } }
+
+.pb-stick { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: center; padding: 0 max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); pointer-events: none; }
+.pb-stick-in { pointer-events: auto; width: 100%; max-width: 780px; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 16px; border: 1px solid var(--pb-border-strong); background: color-mix(in srgb, var(--pb-surface) 90%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 18px 44px rgba(12, 26, 23, 0.2); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .pb-stick-in { background: var(--pb-surface); } }
+.pb-stick-ico { display: none; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; background: var(--pb-brand-soft); color: var(--pb-brand); }
+.pb-stick-txt { display: none; min-width: 0; flex: 1 1 auto; }
+.pb-stick-txt b { display: block; font-size: 14.5px; line-height: 20px; color: var(--pb-text); }
+.pb-stick-txt span { display: block; font-size: 12.5px; line-height: 18px; color: var(--pb-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-stick-btns { display: flex; gap: 8px; flex: 1 1 auto; min-width: 0; }
+.pb-stick .pb-btn { flex: 1 1 0; min-width: 0; min-height: 46px; padding: 10px 12px; font-size: 14.5px; white-space: nowrap; }
+.pb-stick .pb-btn-ghost { flex: 0 1 auto; }
+.pb-stick .pb-btn-primary { overflow: hidden; text-overflow: ellipsis; }
+.pb-stick-login { display: none; }
+@media (max-width: 359px) { .pb-stick .pb-btn { font-size: 13.5px; padding-inline: 10px; gap: 6px; } }
+/* tablets and desktops: icon + text on the left, buttons on the right, floating a little higher */
+@media (min-width: 641px) {
+  .pb-stick { padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+  .pb-stick-in { padding: 10px 10px 10px 12px; border-radius: 18px; gap: 14px; }
+  .pb-stick-ico { display: grid; }
+  .pb-stick-txt { display: block; }
+  .pb-stick-btns { flex: 0 0 auto; }
+  .pb-stick .pb-btn { flex: 0 0 auto; padding: 10px 18px; }
+  .pb-stick-login { display: inline; }
+}
+
+/* =====================================================================
+   QUICK ANSWERS (under the hero)
+===================================================================== */
+.pb-qa { padding: 28px 0 0; background: var(--pb-bg); }
+@media (min-width: 768px) { .pb-qa { padding-top: 40px; } }
+.pb-qa-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .pb-qa-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+.pb-qa-item { min-width: 0; padding: 16px 18px; border-radius: 16px; background: var(--pb-surface); border: 1px solid var(--pb-border); }
+.pb-qa-item dt { font-family: var(--pb-display); font-size: 16.5px; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em; color: var(--pb-text); }
+.pb-qa-item dd { margin-top: 6px; font-size: 14.5px; line-height: 1.6; color: var(--pb-muted); }
+
+/* =====================================================================
+   4-WEEK PLAN
+===================================================================== */
+.pb-plan { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); counter-reset: none; }
+@media (min-width: 700px) { .pb-plan { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+@media (min-width: 1100px) { .pb-plan { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; } }
+.pb-plan-week { display: grid; gap: 16px; align-content: start; }
+.pb-plan-top { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px dashed var(--pb-border-strong); }
+.pb-plan-k { justify-self: start; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--pb-mark); color: var(--pb-mark-ink); }
+.pb-plan-top h3 { font-family: var(--pb-display); font-size: 19px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.3; }
+.pb-plan-top p { font-size: 14.5px; line-height: 1.55; color: var(--pb-muted); }
+.pb-plan .pb-checks li { font-size: 14.5px; }
+.pb-plan .pb-checks span { min-width: 0; }
+
+/* =====================================================================
+   COMPARISON: a table on wide screens, stacked cards on phones
+===================================================================== */
+.pb-cmp-wrap { min-width: 0; border-radius: 18px; }
+.pb-cmp { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14.5px; line-height: 1.5; }
+.pb-cmp th, .pb-cmp td { text-align: left; vertical-align: top; }
+.pb-cmp thead th { font-family: var(--pb-display); font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.pb-cmp tbody th { font-weight: 800; color: var(--pb-text); }
+.pb-cmp td { color: var(--pb-muted); }
+.pb-cmp .is-us { color: var(--pb-text); font-weight: 600; }
+
+@media (max-width: 759.98px) {
+  .pb-cmp, .pb-cmp tbody, .pb-cmp tr, .pb-cmp th, .pb-cmp td { display: block; width: 100%; }
+  .pb-cmp thead { display: none; }
+  .pb-cmp tbody { display: grid; gap: 12px; }
+  .pb-cmp tr { padding: 16px; border-radius: 16px; background: var(--pb-surface); border: 1px solid var(--pb-border); }
+  .pb-cmp tbody th { font-family: var(--pb-display); font-size: 17px; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--pb-border); }
+  .pb-cmp td { display: grid; gap: 2px; padding: 8px 0 0; overflow-wrap: break-word; }
+  .pb-cmp td::before { content: attr(data-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pb-subtle); }
+  .pb-cmp td.is-us { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--pb-brand-soft); }
+  .pb-cmp td.is-us::before { color: var(--pb-brand); }
+}
+@media (min-width: 760px) {
+  .pb-cmp-wrap { overflow: hidden; border: 1px solid var(--pb-border); background: var(--pb-surface); }
+  .pb-cmp th, .pb-cmp td { padding: 14px 16px; border-bottom: 1px solid var(--pb-border); }
+  .pb-cmp tbody tr:last-child th, .pb-cmp tbody tr:last-child td { border-bottom: 0; }
+  .pb-cmp thead th { background: var(--pb-surface-2); }
+  .pb-cmp thead td { background: var(--pb-surface-2); width: 18%; }
+  .pb-cmp thead th.is-us { background: var(--pb-panel); color: var(--pb-panel-text); }
+  .pb-cmp td.is-us { background: var(--pb-brand-soft); }
+}
+
+.pb-updated { font-size: 13px !important; color: var(--pb-subtle) !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .pb *, .pb *::before, .pb *::after { animation: none !important; transition: none !important; }

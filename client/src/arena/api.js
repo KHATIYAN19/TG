@@ -1,8 +1,9 @@
+import { refreshAccessToken as sharedRefresh } from "../lib/authSession";
 import axios from "axios";
 
 import BASE_URL from "../utils/Url";
 import store from "../Redux/store";
-import { login, logout } from "../Redux/authSlice";
+import { logout } from "../Redux/authSlice";
 
 export const API_ROOT = String(BASE_URL).replace(/\/$/, "");
 export const WS_URL = `${API_ROOT.replace(/^http/, "ws")}/ws/arena`;
@@ -89,7 +90,7 @@ export const uploadsHttp = axios.create({
   timeout: 20000,
 });
 
-const getToken = () => store.getState().auth.token || localStorage.getItem("token") || "";
+const getToken = () => store.getState().auth.token || ""; // in-memory only (never localStorage)
 
 /*
   SESSION HANDLING
@@ -114,22 +115,9 @@ const sessionError = () => {
 // Endpoints a signed-out visitor may call (landing page, signup).
 const isPublicCall = (config) => /^\/(public|signup|password|google)(\/|$|\?)/.test(String(config.url || ""));
 
-let refreshing = null;
-const refreshAccessToken = () => {
-  if (!refreshing) {
-    refreshing = axios
-      .post(`${API_ROOT}/api/auth/refresh`, null, { withCredentials: true, timeout: 15000 })
-      .then(({ data }) => {
-        if (!data?.token) throw new Error("no token");
-        store.dispatch(login({ token: data.token, user: store.getState().auth.user }));
-        return data.token;
-      })
-      .finally(() => {
-        refreshing = null;
-      });
-  }
-  return refreshing;
-};
+/* One shared refresh for the whole app (lib/authSession): de-duplicated within the tab and serialised across
+   tabs, so this client and the main app never rotate the same refresh cookie at the same moment. */
+const refreshAccessToken = () => sharedRefresh();
 
 for (const instance of [http, adminHttp, mailHttp, bookStorageHttp, campaignHttp, membershipHttp, memoriesHttp, resumeHttp, resumeAdminHttp, referralHttp, referralAdminHttp, uploadsHttp, accountHttp]) {
   instance.interceptors.request.use((config) => {

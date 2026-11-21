@@ -12,7 +12,7 @@ import BASE_URL from "../utils/Url.js";
 export const SITE_URL = "https://www.targettrek.in";
 export const SITE_NAME = "Target Trek";
 export const BLOG_URL = `${SITE_URL}/blogs`;
-export const LOGO_URL = "https://i.postimg.cc/13B9k289/target-Trek-logo-2.jpg";
+export const LOGO_URL = "https://www.targettrek.in/brand/target-trek-logo.jpg";
 export const API = `${String(BASE_URL || "").replace(/\/+$/, "")}/blogs`;
 export const FONT_URL =
   "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap";

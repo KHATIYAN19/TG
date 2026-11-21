@@ -233,7 +233,13 @@ axios.defaults.adapter = async (config) => {
   const reply = (data, status = 200) => ({ data, status, statusText: "OK", headers: {}, config });
   if (cfMode === "401") { const e = new Error("Request failed with status code 401"); e.response = { status: 401, data: { message: "authentication failed" } }; throw e; }
   if (config.method === "post" && config.url.endsWith("/orders")) return reply({ payment_session_id: "session_abc", order_id: JSON.parse(config.data).order_id });
-  if (config.method === "get" && config.url.endsWith("/payments")) return reply([{ payment_status: "SUCCESS", cf_payment_id: 555 }]);
+  // GET /orders/:id/payments is what the payment service checks now: status, amount and currency per payment.
+  if (config.method === "get" && config.url.endsWith("/payments")) {
+    if (cfMode === "unpaid") return reply([]);
+    const id = decodeURIComponent(config.url.split("/orders/")[1].split("/")[0]);
+    const order = cfCalls.findLast((c) => c.method === "post" && c.url.endsWith("/orders") && c.data?.order_id === id)?.data;
+    return reply([{ payment_status: "SUCCESS", cf_payment_id: 555, payment_amount: order?.order_amount, payment_currency: "INR", payment_group: "upi" }]);
+  }
   if (config.method === "get" && /\/orders\/[^/]+$/.test(config.url)) {
     const amount = JSON.parse(JSON.stringify(cfCalls.findLast((c) => c.method === "post" && c.url.endsWith("/orders")).data.order_amount));
     return reply({ order_status: cfMode === "unpaid" ? "ACTIVE" : "PAID", order_amount: amount });
@@ -248,10 +254,10 @@ await t("GATE: unpaid member cannot browse or list requests (402)", async () => 
   const u = await draftMember("Gate1");
   await makeMember("Visible1");                       // someone is in the arena
   const r1 = await call(ctl.browse, { user: u.user });
-  assert.equal(r1.code, 402); assert.equal(r1.body.code, "ENTRY_REQUIRED");
+  assert.equal(r1.code, 402, JSON.stringify(r1.body)); assert.equal(r1.body.code, "ENTRY_REQUIRED");
   assert.equal(JSON.stringify(r1.body).includes("Member-"), false);   // nothing leaked
   const r2 = await call(ctl.listRequests, { user: u.user, query: { box: "incoming" } });
-  assert.equal(r2.code, 402);
+  assert.equal(r2.code, 402, JSON.stringify(r2.body));
 });
 
 await t("GATE: unpaid member cannot send requests, block or report", async () => {
@@ -264,7 +270,7 @@ await t("GATE: unpaid member cannot send requests, block or report", async () =>
 await t("GATE: paid member can browse and sees only anonymous fields", async () => {
   const me = await makeMember("Paid1"); await makeMember("Other1");
   const r = await call(ctl.browse, { user: me.user });
-  assert.equal(r.code, 200); assert.ok(r.body.data.items.length >= 1);
+  assert.equal(r.code, 200, JSON.stringify(r.body)); assert.ok(r.body.data.items.length >= 1);
   const json = JSON.stringify(r.body);
   for (const secret of ["realName", "other1", "contact", "@t.com", "9876"]) assert.equal(json.toLowerCase().includes(secret.toLowerCase().replace("other1","other1@")), false, secret);
   assert.equal(/"realName"/.test(json), false);
@@ -277,7 +283,7 @@ await t("PII: request message with contact info is rejected", async () => {
     assert.equal(r.code, 400, message);
   }
   const ok = await call(ctl.sendRequest, { user: a.user, body: { toProfileId: String(b.profile._id), message: "Hi! Also prepping HLD, evenings work for me." } });
-  assert.equal(ok.code, 201);
+  assert.equal(ok.code, 201, JSON.stringify(ok.body));
 });
 
 await t("PAY: checkout → Cashfree order payload, session returned, entry linked", async () => {
@@ -288,7 +294,8 @@ await t("PAY: checkout → Cashfree order payload, session returned, entry linke
   assert.equal(r.body.data.checkout.paymentSessionId, "session_abc");
   const order = cfCalls.find((c) => c.url.endsWith("/orders")).data;
   assert.equal(order.order_amount, 299); assert.equal(order.order_currency, "INR");
-  assert.match(order.order_meta.return_url, /\/prep-buddy\/app\/join\?order_id=\{order_id\}$/);
+  // Cashfree returns the buyer to a backend route, which forwards to the join page (redirect gateways can't post to a page).
+  assert.match(order.order_meta.return_url, /\/api\/arena\/payments\/return\?order_id=\{order_id\}$/);
   assert.match(order.customer_details.customer_phone, /^\d{10}$/);
   const e = await Entry.findOne({ user: u.user._id });
   assert.equal(e.payment.gateway, "cashfree"); assert.equal(e.payment.orderId, order.order_id);
@@ -301,7 +308,7 @@ await t("PAY: verify before paying → 202 processing, still not in arena", asyn
   const c = await call(pay.checkout, { user: u.user, body: {} });
   cfMode = "unpaid";
   const v = await call(pay.verifyPayment, { user: u.user, body: { orderId: c.body.data.orderId } });
-  assert.equal(v.code, 202);
+  assert.equal(v.code, 202, JSON.stringify(v.body));
   assert.equal((await Profile.findById(u.profile._id)).status, "draft");
 });
 
@@ -311,7 +318,7 @@ await t("PAY: verify after PAID → active; repeat is idempotent; another user c
   const orderId = c.body.data.orderId;
   assert.equal((await call(pay.verifyPayment, { user: other.user, body: { orderId } })).code, 404);
   const v = await call(pay.verifyPayment, { user: u.user, body: { orderId } });
-  assert.equal(v.code, 200); assert.equal(v.body.data.status, "paid");
+  assert.equal(v.code, 200, JSON.stringify(v.body)); assert.equal(v.body.data.status, "paid");
   const p = await Profile.findById(u.profile._id);
   assert.equal(p.status, "active");
   assert.equal((await Entry.findById(p.entry)).payment.paymentId, "555");
@@ -323,10 +330,10 @@ await t("PAY: forged amount (gateway says different amount) is rejected", async 
   const u = await draftMember("Pay4"); cfMode = "ok";
   const c = await call(pay.checkout, { user: u.user, body: {} });
   const real = axios.defaults.adapter;
-  axios.defaults.adapter = async (cfg) => (/\/orders\/[^/]+$/.test(cfg.url) && cfg.method === "get" ? { data: { order_status: "PAID", order_amount: 1 }, status: 200, statusText: "OK", headers: {}, config: cfg } : real(cfg));
+  axios.defaults.adapter = async (cfg) => (cfg.method === "get" && cfg.url.endsWith("/payments") ? { data: [{ payment_status: "SUCCESS", cf_payment_id: 556, payment_amount: 1, payment_currency: "INR" }], status: 200, statusText: "OK", headers: {}, config: cfg } : real(cfg));
   const v = await call(pay.verifyPayment, { user: u.user, body: { orderId: c.body.data.orderId } });
   axios.defaults.adapter = real;
-  assert.equal(v.code, 400); assert.equal((await Profile.findById(u.profile._id)).status, "draft");
+  assert.equal(v.code, 400, JSON.stringify(v.body)); assert.equal((await Profile.findById(u.profile._id)).status, "draft");
 });
 
 await t("PAY: gateway 401 → safe generic message, no secrets, coupon + entry released", async () => {
@@ -336,14 +343,14 @@ await t("PAY: gateway 401 → safe generic message, no secrets, coupon + entry r
   const origErr = console.error; let logged = ""; console.error = (...a) => { logged += a.join(" "); };
   const r = await call(pay.checkout, { user: u.user, body: { couponCode: "half" } });
   console.error = origErr; cfMode = "ok";
-  assert.equal(r.code, 503); assert.equal(r.body.code, "PAYMENT_UNAVAILABLE");
+  assert.equal(r.code, 503, JSON.stringify(r.body)); assert.equal(r.body.code, "PAYMENT_UNAVAILABLE");
   assert.ok(!JSON.stringify(r.body).includes("cfsk") && !JSON.stringify(r.body).includes("401"));
-  assert.match(logged, /rejected our credentials/);
+  assert.match(logged, /credentials rejected/);
   assert.ok(!logged.includes("cfsk_test_secret"));
   assert.equal((await Coupon.findOne({ code: "HALF" })).usedCount, 0);         // reservation released
   assert.equal((await Entry.findOne({ user: u.user._id, status: "expired" })) !== null, true);
   const retry = await call(pay.checkout, { user: u.user, body: {} });             // can try again
-  assert.equal(retry.code, 200);
+  assert.equal(retry.code, 200, JSON.stringify(retry.body));
 });
 
 await t("PAY: 100% coupon skips the gateway and activates the member", async () => {
@@ -377,7 +384,7 @@ await t("CANCEL: refund failure restores entry so member can retry (no double re
   cfMode = "401"; const origErr = console.error; console.error = () => {};
   const r = await call(pay.cancelEntry, { user: u.user });
   console.error = origErr; cfMode = "ok";
-  assert.equal(r.code, 502);
+  assert.equal(r.code, 502, JSON.stringify(r.body));
   assert.equal((await Entry.findOne({ user: u.user._id, status: "paid" })) !== null, true);
   assert.equal((await Profile.findById(u.profile._id)).status, "active");
   assert.equal((await call(pay.cancelEntry, { user: u.user })).code, 200);
@@ -440,7 +447,7 @@ await t("MULTI: same two people cannot be re-paired; browse hides past buddies",
   const r = await sendReq(b, a);
   await assert.rejects(acceptRequest({ requestId: r._id, userId: a.user._id }), /already been matched/);
   const send = await call(ctl.sendRequest, { user: b.user, body: { toProfileId: String(a.profile._id), message: "hi again" } });
-  assert.equal(send.code, 409); assert.equal(send.body.code, "PREVIOUS_BUDDY");
+  assert.equal(send.code, 409, JSON.stringify(send.body)); assert.equal(send.body.code, "PREVIOUS_BUDDY");
   const browse = await call(ctl.browse, { user: a.user });
   assert.ok(!browse.body.data.items.some((x) => x.id === String(b.profile._id)), "past buddy must be hidden");
 });
@@ -451,7 +458,7 @@ await t("MULTI: cannot cancel/refund once a match was used", async () => {
   await endMatch({ matchId: mt._id, byUserId: a.user._id, reason: "user_ended" });
   assert.equal((await stateOf(a)).profile, "active");
   const r = await call(pay.cancelEntry, { user: a.user });
-  assert.equal(r.code, 409); assert.equal(r.body.code, "MATCH_ALREADY_USED");
+  assert.equal(r.code, 409, JSON.stringify(r.body)); assert.equal(r.body.code, "MATCH_ALREADY_USED");
   assert.equal((await call(pay.cancelPreview, { user: a.user })).body.code, "MATCH_ALREADY_USED");
 });
 
@@ -474,8 +481,15 @@ await t("ADMIN: matchesPerEntry is snapshotted at checkout (later changes don't 
   await Settings.default.updateOne({ key: "global" }, { $set: { matchesPerEntry: 1 } }); Settings.invalidateArenaSettingsCache();
 });
 
+/* Pay-first flow: a member pays, THEN adds details. A paid entry with no profile yet is what checkout leaves behind. */
+const payFirst = (u) => Entry.create({
+  user: u._id, profile: null, listPricePaise: 29900, paidPaise: 29900, matchesAllowed: 1, cancellationFeePercent: 10,
+  status: "paid", paidAt: new Date(), payment: { gateway: "cashfree", orderId: `order_pf_${u._id}`, paymentId: `pay_pf_${u._id}` },
+});
+
 await t("PROFILE: multiple topics + new fields saved; company & role are PUBLIC in the arena", async () => {
   const u = await User.create({ name: "Tina Roy", email: "tina@t.com", mobile: "9812345678", password: "x".repeat(20), mustChangePassword: false });
+  await payFirst(u);                                                     // pay-first: details only after paying
   const body = { topics: ["HLD", "LLD", "GENAI"], level: "advanced", skills: ["Kafka", "redis", "kafka"], yearsExperience: 6, companyType: "product",
     companyName: "Observe.AI", designation: "Senior Backend Engineer", targetCompanies: ["Google", "Amazon", "Google"],
     languages: ["english", "hindi"], sessionsPerWeek: 3, sessionModes: ["voice", "video"], buddyPreference: "similar_level", timeline: "within_3_months",
@@ -502,6 +516,7 @@ await t("PROFILE: multiple topics + new fields saved; company & role are PUBLIC 
 
 await t("PROFILE: contact details in company / role / target companies are rejected; no topics rejected", async () => {
   const u = await User.create({ name: "Uma Jain", email: "uma@t.com", mobile: "9812345679", password: "x".repeat(20), mustChangePassword: false });
+  await payFirst(u);                                                     // pay-first: details only after paying
   const base = { topics: ["DSA"], level: "beginner", skills: ["java"], yearsExperience: 1, companyType: "student", availability: ["weekday_evening"], bio: "", goal: "", contact: {} };
   for (const bad of [{ companyName: "Acme, mail uma@acme.com" }, { designation: "call 9876543210" }, { targetCompanies: ["@uma_dev"] }, { companyName: "https://acme.com" }]) {
     assert.equal((await call(ctl.upsertProfile, { user: u, body: { ...base, ...bad } })).code, 400, JSON.stringify(bad));
@@ -529,17 +544,17 @@ await t("BUGS: user can report; validation; daily cap of 5; admin can triage", a
   assert.equal((await call(ctl.reportBug, { user: u.user, body: { ...good, title: "x" } })).code, 400);
   assert.equal((await call(ctl.reportBug, { user: u.user, body: { ...good, category: "nope" } })).code, 400);
   const first = await call(ctl.reportBug, { user: u.user, body: good });
-  assert.equal(first.code, 201);
+  assert.equal(first.code, 201, JSON.stringify(first.body));
   for (let i = 0; i < 4; i++) assert.equal((await call(ctl.reportBug, { user: u.user, body: { ...good, title: `Bug number ${i}` } })).code, 201);
   const sixth = await call(ctl.reportBug, { user: u.user, body: good });
-  assert.equal(sixth.code, 429); assert.equal(sixth.body.code, "BUG_LIMIT");
+  assert.equal(sixth.code, 429, JSON.stringify(sixth.body)); assert.equal(sixth.body.code, "BUG_LIMIT");
   const mine = await call(ctl.myBugs, { user: u.user });
   assert.equal(mine.body.data.length, 5);
   const adm = await User.create({ name: "Adm", email: "adm@t.com", mobile: "9812345680", password: "x".repeat(20), mustChangePassword: false, role: "admin" });
   const list = await call(admin.listBugs, { user: adm, query: { status: "open" } });
   assert.ok(list.body.data.items.length >= 5); assert.ok(list.body.data.items[0].reporter.email);
   const upd = await call(admin.updateBug, { user: adm, params: { id: first.body.data.id }, body: { status: "resolved", adminNote: "Fixed in v2" } });
-  assert.equal(upd.code, 200);
+  assert.equal(upd.code, 200, JSON.stringify(upd.body));
   assert.equal((await Bug.findById(first.body.data.id)).status, "resolved");
   assert.equal((await call(ctl.myBugs, { user: u.user })).body.data.find((b) => b.id === first.body.data.id).adminNote, "Fixed in v2");
 });
@@ -552,13 +567,13 @@ await t("PUBLIC INFO: exposes admin rules + one headline count only, and no memb
   await acceptRequest({ requestId: await reqTo(b, a), userId: a.user._id });           // a,b matched; c stays active
   const r = await call(ctl.publicInfo, { user: a.user });
   const d = r.body.data;
-  assert.equal(r.code, 200);
+  assert.equal(r.code, 200, JSON.stringify(r.body));
   assert.equal(d.activeMembers, before + 1);
   assert.deepEqual([d.matchesPerEntry, d.requestExpiryDays, d.maxOutgoingRequests, d.minMatchDaysBeforeEnd, d.cancellationFeePercent, d.entryPricePaise], [3, 9, 7, 2, 15, 39900]);
   assert.equal(d.paymentGateway, "cashfree");
   assert.ok(d.fields.some((f) => f.key === "companyName" && f.visibility === "public"));
   // nothing beyond the allow-list is exposed publicly
-  assert.deepEqual(Object.keys(d).sort(), ["activeMembers", "cancellationFeePercent", "couponsAvailable", "enabled", "entryPricePaise", "fields", "matchesPerEntry", "maxOutgoingRequests", "minMatchDaysBeforeEnd", "paymentGateway", "requestExpiryDays"].sort());
+  assert.deepEqual(Object.keys(d).sort(), ["activeMembers", "cancelRefundEnabled", "cancellationFeePercent", "couponsAvailable", "enabled", "entryPricePaise", "fields", "matchesPerEntry", "maxOutgoingRequests", "minMatchDaysBeforeEnd", "offer", "paymentGateway", "requestExpiryDays"].sort());
   const { fields: _docs, ...stats } = d;
   const json = JSON.stringify(stats);
   for (const secret of ["Pub1", "Pub2", "Pub3", "@t.com", "9876", "Member-"]) assert.equal(json.includes(secret), false, secret);
@@ -606,13 +621,13 @@ await t("STUCK PAYMENT: browse works for a stuck member (no 402), and heals them
 await t("STUCK PAYMENT: re-verifying an already-paid order heals instead of just saying 'ok'", async () => {
   const a = await stuckMember("Stuck3");
   const r = await call(pay.verifyPayment, { user: a.user, body: { orderId: a.entry.payment.orderId } });
-  assert.equal(r.code, 200); assert.equal((await Profile.findById(a.profile._id)).status, "active");
+  assert.equal(r.code, 200, JSON.stringify(r.body)); assert.equal((await Profile.findById(a.profile._id)).status, "active");
 });
 
 await t("STUCK PAYMENT: a stuck member who clicks Pay again is NOT charged twice", async () => {
   const a = await stuckMember("Stuck4"); cfCalls = []; cfMode = "ok";
   const r = await call(pay.checkout, { user: a.user, body: {} });
-  assert.equal(r.code, 409); assert.equal(r.body.code, "ALREADY_IN_ARENA");
+  assert.equal(r.code, 409, JSON.stringify(r.body)); assert.equal(r.body.code, "ALREADY_IN_ARENA");
   assert.equal(cfCalls.length, 0, "must not create a second gateway order");
   assert.equal(await Entry.countDocuments({ user: a.user._id }), 1);
 });
@@ -635,7 +650,7 @@ await t("ATOMIC: if activating the profile fails mid-payment, NOTHING is half-sa
   assert.equal((await Entry.findById(entryId)).status, "pending_payment");          // rolled back, not 'paid'
   assert.equal((await Profile.findById(u.profile._id)).status, "draft");
   const retry = await call(pay.verifyPayment, { user: u.user, body: { orderId: c.body.data.orderId } });
-  assert.equal(retry.code, 200);
+  assert.equal(retry.code, 200, JSON.stringify(retry.body));
   assert.equal((await Profile.findById(u.profile._id)).status, "active");
   assert.equal((await Entry.findById(entryId)).status, "paid");
 });
@@ -793,7 +808,7 @@ await t("ADMIN CHAT: admin reads a match's chat with real names; the view is aud
   await Message.create([{ match: mt._id, sender: a.user._id, text: "hello Cb1" }, { match: mt._id, sender: b.user._id, text: "hi Ca1, mock tonight?" }, { match: mt._id, sender: a.user._id, text: "yes 8pm" }]);
   const before = await auditCount("chat_viewed");
   const r = await call(ops.matchMessages, { user: adminUser, params: { id: String(mt._id) } });
-  assert.equal(r.code, 200); assert.equal(r.body.data.total, 3);
+  assert.equal(r.code, 200, JSON.stringify(r.body)); assert.equal(r.body.data.total, 3);
   assert.deepEqual(r.body.data.messages.map((x) => x.text), ["hello Cb1", "hi Ca1, mock tonight?", "yes 8pm"]);   // chronological
   assert.deepEqual(r.body.data.messages.map((x) => x.senderName), ["Ca1", "Cb1", "Ca1"]);
   assert.ok(r.body.data.messages[0].senderAlias.startsWith("Member-"));
@@ -886,7 +901,7 @@ await t("ADMIN MATCHES GRANT: a member who paid nothing gets a free entry: activ
   assert.equal((await call(ctl.browse, { user: u.user })).code, 200);
   const me2 = await call(ctl.me, { user: u.user }); assert.equal(me2.body.data.entry.complimentary, true); assert.equal(me2.body.data.entry.matchesAllowed, 3);
   const cancel = await call(pay.cancelEntry, { user: u.user });
-  assert.equal(cancel.code, 409); assert.equal(cancel.body.code, "COMPLIMENTARY_ENTRY");
+  assert.equal(cancel.code, 409, JSON.stringify(cancel.body)); assert.equal(cancel.body.code, "COMPLIMENTARY_ENTRY");
   assert.equal((await call(pay.cancelPreview, { user: u.user })).body.code, "COMPLIMENTARY_ENTRY");
   assert.equal(cfCalls.length, 0, "no payment-gateway call, so no money can move");
   assert.equal((await Entry.findOne({ user: u.user._id })).status, "paid");
@@ -898,8 +913,8 @@ await t("ADMIN MATCHES: increase / decrease a paying member's matches; never bel
   assert.equal((await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "add", amount: 2 } })).body.data.matchesAllowed, 4);
   assert.equal((await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "remove", amount: 3 } })).body.data.matchesAllowed, 1);
   const tooMany = await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "remove", amount: 5 } });
-  assert.equal(tooMany.code, 400); assert.equal(tooMany.body.code, "INVALID_AMOUNT");
-  assert.equal((await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "add", amount: 20 } })).body.code, "TOO_MANY");   // 1 + 20 > 20
+  assert.equal(tooMany.code, 400, JSON.stringify(tooMany.body)); assert.equal(tooMany.body.code, "INVALID_AMOUNT");
+  assert.equal((await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "add", amount: 100 } })).body.code, "TOO_MANY");   // 1 + 100 > MAX_MATCHES (100)
   assert.equal((await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "set", amount: 1 } })).body.code, "NO_CHANGE");
   assert.equal((await call(ops.adjustMatches, { user: adminUser, params: { id: String(a.profile._id) }, body: { action: "remove", amount: 0 } })).code, 400);
   // use a match, then try to drop below it
@@ -985,7 +1000,7 @@ await t("LEGACY: filtering by topic still finds old profiles", async () => {
   const viewer = await makeMember("LegViewer2");
   const legacy = await insertLegacyProfile(await mkLegacyUser("LegacyTwo"));
   const r = await call(ctl.browse, { user: viewer.user, query: { topic: "HLD" } });
-  assert.equal(r.code, 200);
+  assert.equal(r.code, 200, JSON.stringify(r.body));
   assert.ok(r.body.data.items.some((x) => x.id === String(legacy._id)));
 });
 
@@ -996,7 +1011,7 @@ await t("LEGACY: a settings record from an older version yields safe defaults (n
   const cfg = await Settings.getArenaSettings({ fresh: true });
   assert.deepEqual([cfg.entryPricePaise, cfg.matchesPerEntry, cfg.requestExpiryDays, cfg.maxOutgoingRequests, cfg.minMatchDaysBeforeEnd, cfg.cancellationFeePercent], [39900, 1, 14, 10, 0, 10]);
   const pub = await call(ctl.publicInfo, { user: (await makeMember("LegPub")).user });
-  assert.equal(pub.code, 200); assert.equal(pub.body.data.matchesPerEntry, 1);
+  assert.equal(pub.code, 200, JSON.stringify(pub.body)); assert.equal(pub.body.data.matchesPerEntry, 1);
 });
 
 await t("LEGACY MIGRATION: converts old profiles, entries and settings, and running it again changes nothing", async () => {
@@ -1045,7 +1060,7 @@ await t("LEGACY MIGRATION: a migrated member browses, opens /me, and the admin s
   assert.equal(me3.body.data.entry.matchesAllowed, 1);
   assert.equal((await call(ctl.browse, { user: viewer })).code, 200);
   const ledger = await call(ops.listPayments, { user: adminUser, query: { q: "order_OLDX" } });
-  assert.equal(ledger.code, 200); assert.equal(ledger.body.data.items[0].gateway, "razorpay"); assert.equal(ledger.body.data.items[0].paymentId, "pay_OLDX");
+  assert.equal(ledger.code, 200, JSON.stringify(ledger.body)); assert.equal(ledger.body.data.items[0].gateway, "razorpay"); assert.equal(ledger.body.data.items[0].paymentId, "pay_OLDX");
   assert.equal((await call(adminC.listProfiles, { user: adminUser, query: { q: "MigBrowse" } })).code, 200);
   assert.equal((await call(ops.listRequests, { user: adminUser, query: {} })).code, 200);
 });
@@ -1053,7 +1068,7 @@ await t("LEGACY MIGRATION: a migrated member browses, opens /me, and the admin s
 await t("LEGACY: the admin 'Repair' also upgrades old records and reports it", async () => {
   await insertLegacyProfile(await mkLegacyUser("RepairLeg"));
   const r = await call(adminC.repair, { user: adminUser });
-  assert.equal(r.code, 200); assert.ok(r.body.data.migrated.profilesTopics >= 1);
+  assert.equal(r.code, 200, JSON.stringify(r.body)); assert.ok(r.body.data.migrated.profilesTopics >= 1);
   assert.match(r.body.message, /older version|Activated|Nothing/);
 });
 
@@ -1119,7 +1134,7 @@ await t("ARENA BROWSE: paginates with total and stable, duplicate-free pages", a
   for (let i = 0; i < 14; i++) await makeMember(`PgBrowse${i}`);
   const p1 = await call(ctl.browse, { user: viewer.user, query: { page: "1" } });
   const p2 = await call(ctl.browse, { user: viewer.user, query: { page: "2" } });
-  assert.equal(p1.code, 200); assert.equal(p1.body.data.pageSize, 12); assert.ok(p1.body.data.total >= 14);
+  assert.equal(p1.code, 200, JSON.stringify(p1.body)); assert.equal(p1.body.data.pageSize, 12); assert.ok(p1.body.data.total >= 14);
   const ids = [...p1.body.data.items, ...p2.body.data.items].map((x) => x.id);
   assert.equal(new Set(ids).size, ids.length, "no member appears on two pages");
 });

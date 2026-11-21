@@ -269,7 +269,7 @@ export const resolveAudience = async (filters = {}) => {
     const users = await User.find({
       email: { $type: "string", $ne: "" },
       status: "active",
-      role: { $nin: ["admin", "Employee"] },
+      role: { $nin: ["admin", "Employee", "partner"] },
     })
       .select("name email")
       .lean();

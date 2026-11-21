@@ -27,7 +27,7 @@ import {
     GET  /api/admin/users/export?…same filters             CSV
 */
 
-const ROLES = ["admin", "Employee", "normal", "affiliate"];
+const ROLES = ["admin", "Employee", "normal", "affiliate", "partner"];
 const STATUSES = ["active", "inactive", "suspended", "blocked"];
 const RESTRICTED = ["inactive", "suspended", "blocked"];
 const SORTS = {

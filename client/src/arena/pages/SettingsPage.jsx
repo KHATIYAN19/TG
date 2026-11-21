@@ -133,7 +133,7 @@ export default function SettingsPage() {
             <p className="mt-2 text-sm text-stone-600 dk:text-[#a3b8b2]">
               Leave the arena before matching. A <strong>{preview.cancellationFeePercent}% cancellation fee</strong> applies.
             </p>
-            <dl className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-[#edf3f1] dk:bg-[#0a1312] p-4 text-center text-sm ring-1 ring-[#dfe8e5] dk:ring-[#1f302c]">
+            <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#edf3f1] dk:bg-[#0a1312] p-3 text-center sm:gap-3 sm:p-4 [&>div]:min-w-0 [&_dd]:break-words text-sm ring-1 ring-[#dfe8e5] dk:ring-[#1f302c]">
               <div><dt className="text-xs text-stone-500 dk:text-[#93aaa3]">You paid</dt><dd className="mt-1 font-semibold text-[#0c1a17] dk:text-[#e8f2ef]">{inr(preview.paidPaise)}</dd></div>
               <div><dt className="text-xs text-stone-500 dk:text-[#93aaa3]">Fee</dt><dd className="mt-1 font-semibold text-rose-600 dk:text-rose-400">−{inr(preview.feePaise)}</dd></div>
               <div><dt className="text-xs text-stone-500 dk:text-[#93aaa3]">Refund</dt><dd className="mt-1 font-semibold text-emerald-600 dk:text-emerald-400">{inr(preview.refundPaise)}</dd></div>

@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import fs from "node:fs/promises";
 
-import Order from "./models/Order.js";
-import Book from "./models/Book.js";
+import Order from "../models/Order.js";
+import Book from "../models/Book.js";
 
 dotenv.config();
 
