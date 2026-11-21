@@ -56,9 +56,11 @@ const otpResendRateLimit = createRateLimiter(
 );
 
 // Refresh: 30 requests per minute.
+// Every page load makes one refresh call, so quick reloads (or several people behind one office / mobile
+// IP) need headroom. A refresh only works with a valid 256-bit cookie, so a higher cap cannot be abused.
 const refreshRateLimit = createRateLimiter(
   "refresh",
-  30,
+  120,
   "1 m"
 );
 

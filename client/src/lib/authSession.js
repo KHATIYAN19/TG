@@ -78,18 +78,43 @@ export const refreshAccessToken = () => {
    httpOnly refresh cookie for a fresh access token before the route guards run.
    - server says the session is gone -> sign out locally (clears the stale user hint)
    - network trouble                 -> stay "signed out" for this page view, keep the hint for next time */
-export const restoreSession = async () => {
+let restoreInflight = null;
+
+export const restoreSession = () => {
+  if (!restoreInflight) {
+    restoreInflight = restoreSessionOnce().finally(() => {
+      restoreInflight = null;
+    });
+  }
+  return restoreInflight;
+};
+
+const restoreSessionOnce = async () => {
   const { auth } = store.getState();
   if (auth?.token || !auth?.user) {
     if (auth?.restoring) store.dispatch(sessionRestoreFailed());
     return Boolean(auth?.token);
   }
-  try {
-    await refreshAccessToken();
-    return true;
-  } catch (error) {
-    store.dispatch(error?.authRejected ? logout() : sessionRestoreFailed());
-    return false;
+  // A busy server (429 rate limit, 503) or a network blip is not "signed out": keep the session
+  // and try again a few times (honouring Retry-After) before giving up for this page view.
+  const delays = [800, 2000, 4000];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await refreshAccessToken();
+      return true;
+    } catch (error) {
+      if (error?.authRejected) {
+        store.dispatch(logout());
+        return false;
+      }
+      if (attempt >= delays.length) {
+        store.dispatch(sessionRestoreFailed());
+        return false;
+      }
+      const retryAfter = Number(error?.response?.headers?.["retry-after"]) * 1000;
+      const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 10000) : delays[attempt];
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
   }
 };
 

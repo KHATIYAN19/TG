@@ -36,6 +36,28 @@ const userSessionSchema = new Schema(
       default: null,
     },
 
+    // When the current refresh token was issued. A token younger than REFRESH_ROTATE_MIN_SECONDS
+    // is not rotated again, so rapid reloads reuse it instead of replacing it.
+    refreshRotatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Refresh tokens replaced in the last REFRESH_REUSE_GRACE_SECONDS. Each keeps working until its
+    // validUntil, so refreshes whose responses never reached the browser (reload mid-request, several
+    // in a row, two tabs at once) do not sign the user out. Capped at the 50 most recent.
+    recentRefreshHashes: {
+      type: [
+        {
+          _id: false,
+          hash: String,
+          validUntil: Date,
+        },
+      ],
+      select: false,
+      default: [],
+    },
+
     deviceTokenHash: {
       type: String,
       select: false,
@@ -154,6 +176,10 @@ userSessionSchema.index({
   user: 1,
   deviceTokenHash: 1,
 });
+
+// Refresh looks sessions up by token hash on every page load.
+userSessionSchema.index({ refreshTokenHash: 1 }, { sparse: true });
+userSessionSchema.index({ "recentRefreshHashes.hash": 1 }, { sparse: true });
 
 userSessionSchema.index(
   { expiresAt: 1 },

@@ -388,6 +388,8 @@ export const completeLogin = async ({
   session.purpose = "login";
   session.refreshTokenHash = hashToken(refreshToken);
   session.refreshExpiresAt = refreshExpiresAt;
+  session.refreshRotatedAt = new Date();
+  session.recentRefreshHashes = [];
   session.lastActiveAt = new Date();
 
   session.challengeHash = null;
@@ -991,21 +993,68 @@ export const resendOtp = async (req, res) => {
    REFRESH ACCESS TOKEN
 ========================================= */
 
+/*
+  Every refresh cookie value the browser sent. A browser can hold two cookies with the same name (an
+  older copy with different attributes) and send both; cookie-parser keeps only the first, which may be
+  the stale one. Trying each value means a leftover cookie can never mask the live one.
+*/
+const refreshCookieValues = req => {
+  const name = cookieNames.refresh;
+  const values = new Set();
+
+  if (typeof req.cookies?.[name] === "string") values.add(req.cookies[name]);
+
+  for (const part of String(req.headers?.cookie || "").split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0 || part.slice(0, eq).trim() !== name) continue;
+    let value = part.slice(eq + 1).trim();
+    try { value = decodeURIComponent(value); } catch { /* keep raw */ }
+    values.add(value);
+  }
+
+  return [...values].filter(v => /^[a-f0-9]{64}$/.test(v)).slice(0, 5);
+};
+
 export const refreshToken = async (req, res) => {
   try {
-    const raw = req.cookies?.[cookieNames.refresh];
+    const raws = refreshCookieValues(req);
 
-    if (typeof raw !== "string") {
+    if (!raws.length) {
       return fail(res, 401, "Refresh token missing");
     }
 
-    const oldHash = hashToken(raw);
+    const hashes = raws.map(hashToken);
 
-    const session = await UserSession.findOne({
-      refreshTokenHash: oldHash,
-      state: "active",
-      refreshExpiresAt: { $gt: new Date() },
-    }).select("+refreshTokenHash");
+    /*
+      RELOAD-SAFE ROTATION
+      A refresh used to replace the token every time. When the response never reached the browser
+      (page reloaded while the request was in flight, several quick reloads, two tabs at once) the
+      browser kept an older cookie, the server rejected it and the user was signed out although the
+      session was fine. Now:
+        1. A token younger than REFRESH_ROTATE_MIN_SECONDS (60) is reused, not rotated, so quick
+           reloads never replace it at all.
+        2. Every token replaced in the last REFRESH_REUSE_GRACE_SECONDS (60) keeps working until its
+           own deadline (last 50 kept), however many refreshes were lost in between. Using one
+           rotates to a fresh token.
+      Logout / revoke set the session to "revoked", which ends every one of these at once.
+    */
+    const findSession = () => {
+      const now = new Date();
+      return UserSession.findOne({
+        state: "active",
+        refreshExpiresAt: { $gt: now },
+        $or: [
+          { refreshTokenHash: { $in: hashes } },
+          {
+            recentRefreshHashes: {
+              $elemMatch: { hash: { $in: hashes }, validUntil: { $gt: now } },
+            },
+          },
+        ],
+      }).select("+refreshTokenHash");
+    };
+
+    let session = await findSession();
 
     /*
       No cookie clearing on a failed rotation. Two tabs (or a retried request) can send the same refresh
@@ -1028,54 +1077,82 @@ export const refreshToken = async (req, res) => {
 
     await assertUserAuthMatches(user);
 
-    const nextToken = randomToken();
-    const nextExpiry = daysFromNow(
-      authConfig.refreshDays
-    );
+    const issue = async (current) => {
+      await registerSessionAuth(user, current);
+      return res.json({
+        success: true,
+        token: issueAccessToken(user, current.sessionId),
+        expiresIn: authConfig.accessTtl,
+      });
+    };
 
-    const updated =
-      await UserSession.findOneAndUpdate(
+    // A few tries: a parallel request (another tab, an overlapping reload) may rotate first. Our
+    // token then sits in the recent list, so re-reading and trying again succeeds.
+    for (let attempt = 0; attempt < 3 && session; attempt += 1) {
+      const presentedIsCurrent = hashes.includes(session.refreshTokenHash);
+      const ageMs = session.refreshRotatedAt
+        ? Date.now() - new Date(session.refreshRotatedAt).getTime()
+        : Infinity;
+
+      // 1. Young current token: keep it (no new cookie, nothing for a lost response to break).
+      if (presentedIsCurrent && ageMs < authConfig.refreshRotateMinSeconds * 1000) {
+        const touched = await UserSession.findOneAndUpdate(
+          { _id: session._id, state: "active", refreshTokenHash: session.refreshTokenHash },
+          { $set: { lastActiveAt: new Date() } },
+          { new: true }
+        );
+        if (touched) return await issue(touched);
+        session = await findSession();
+        continue;
+      }
+
+      // 2. Rotate. Compare-and-swap on the token as read, so two parallel rotations cannot both win;
+      //    the replaced token stays valid for the grace period.
+      const nextToken = randomToken();
+      const now = Date.now();
+      const updated = await UserSession.findOneAndUpdate(
         {
           _id: session._id,
           state: "active",
-          refreshTokenHash: oldHash,
-          refreshExpiresAt: { $gt: new Date() },
+          refreshTokenHash: session.refreshTokenHash,
+          refreshExpiresAt: { $gt: new Date(now) },
         },
         {
           $set: {
             refreshTokenHash: hashToken(nextToken),
-            refreshExpiresAt: nextExpiry,
-            lastActiveAt: new Date(),
+            refreshRotatedAt: new Date(now),
+            refreshExpiresAt: daysFromNow(authConfig.refreshDays),
+            lastActiveAt: new Date(now),
             expiresAt: daysFromNow(
               Math.max(
                 authConfig.refreshDays,
-                session.isTrusted
-                  ? authConfig.trustedDays
-                  : 0
+                session.isTrusted ? authConfig.trustedDays : 0
               )
             ),
+          },
+          $push: {
+            recentRefreshHashes: {
+              $each: [{
+                hash: session.refreshTokenHash,
+                validUntil: new Date(now + authConfig.refreshGraceSeconds * 1000),
+              }],
+              $slice: -50,
+            },
           },
         },
         { new: true }
       );
 
-    if (!updated) {
-      // Lost a concurrent rotation (see above): keep the winner's cookie intact.
-      return fail(res, 401, "Refresh token used");
+      if (updated) {
+        setRefreshCookie(res, nextToken);
+        return await issue(updated);
+      }
+
+      session = await findSession();
     }
 
-    await registerSessionAuth(user, updated);
-
-    setRefreshCookie(res, nextToken);
-
-    return res.json({
-      success: true,
-      token: issueAccessToken(
-        user,
-        session.sessionId
-      ),
-      expiresIn: authConfig.accessTtl,
-    });
+    // Lost every race, or the session ended meanwhile. Never clear cookies here (see above).
+    return fail(res, 401, "Invalid refresh token");
   } catch (error) {
     console.error("Refresh error:", error);
     return fail(res, 503, "Unable to refresh session");

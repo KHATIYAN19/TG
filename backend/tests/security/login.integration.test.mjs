@@ -184,6 +184,99 @@ await t("member: correct password still signs straight in (LOGIN_OTP_ENABLED=fal
   assert.notEqual(r.body.requiresOtp, true);
 });
 
+/* ---------- refresh: page reload keeps the user signed in ---------- */
+const { refreshToken: refreshCtl } = await import(`${B}controllers/authController.js`);
+
+// Calls a controller and captures the cookies it sets, like a browser jar would.
+const run = async (ctl, { body = {}, cookieHeader = "" } = {}) => {
+  const cookies = Object.fromEntries(cookieHeader.split(";").map((p) => p.trim()).filter(Boolean).map((p) => [p.slice(0, p.indexOf("=")), p.slice(p.indexOf("=") + 1)]));
+  const req = { body, ip: "10.9.0.1", cookies, headers: { "user-agent": "Mozilla/5.0 test", cookie: cookieHeader }, get(h) { return this.headers[String(h).toLowerCase()]; } };
+  const out = { status: 200, body: null, set: {} };
+  const res = {
+    status(c) { out.status = c; return this; }, json(b) { out.body = b; return this; },
+    set() { return this; }, cookie(n, v) { out.set[n] = v; return this; }, clearCookie() { return this; },
+  };
+  await ctl(req, res);
+  return out;
+};
+
+await makeUser("reload@example.com", "normal");
+const signIn = async () => {
+  const r = await run(login, { body: { identifier: "reload@example.com", password: "Correct#Pass1" } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return r.set.tt_refresh;
+};
+
+const { default: UserSession } = await import(`${B}models/UserSession.js`);
+// Make every session's current token look older than REFRESH_ROTATE_MIN_SECONDS, so the next refresh rotates.
+const ageTokens = () => UserSession.updateMany({}, { $set: { refreshRotatedAt: new Date(Date.now() - 3600e3) } });
+
+await t("refresh: quick reloads reuse a young token (no rotation, nothing a lost response can break)", async () => {
+  const c0 = await signIn();
+  for (let i = 0; i < 25; i++) {
+    const r = await run(refreshCtl, { cookieHeader: `tt_refresh=${c0}` });
+    assert.equal(r.status, 200, `reload ${i + 1}: ${JSON.stringify(r.body)}`);
+    assert.ok(r.body.token);
+    assert.equal(r.set.tt_refresh, undefined, "young token is kept, no new cookie");
+  }
+});
+
+await t("refresh: older token rotates and the new cookie works on the next reload", async () => {
+  const c0 = await signIn();
+  await ageTokens();
+  const r1 = await run(refreshCtl, { cookieHeader: `tt_refresh=${c0}` });
+  assert.equal(r1.status, 200, JSON.stringify(r1.body));
+  assert.ok(r1.set.tt_refresh && r1.set.tt_refresh !== c0, "cookie rotated");
+  const r2 = await run(refreshCtl, { cookieHeader: `tt_refresh=${r1.set.tt_refresh}` });
+  assert.equal(r2.status, 200);
+});
+
+await t("refresh: SEVERAL responses lost in a row (browser keeps the login cookie) → still signed in", async () => {
+  const c0 = await signIn();
+  const issued = [];
+  for (let i = 0; i < 5; i++) {
+    await ageTokens(); // force a real rotation each time; its new cookie is "lost"
+    const r = await run(refreshCtl, { cookieHeader: `tt_refresh=${c0}` });
+    assert.equal(r.status, 200, `lost response ${i + 1}: ${JSON.stringify(r.body)}`);
+    issued.push(r.set.tt_refresh);
+  }
+  // Any of the cookies handed out in between also still works.
+  for (const c of issued) {
+    const r = await run(refreshCtl, { cookieHeader: `tt_refresh=${c}` });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+  }
+});
+
+await t("refresh: two refresh cookies sent (stale copy first) → the live one is used", async () => {
+  const c0 = await signIn();
+  const stale = "ab".repeat(32);
+  const r = await run(refreshCtl, { cookieHeader: `tt_refresh=${stale}; tt_refresh=${c0}` });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+});
+
+await t("refresh: a replaced cookie stops working once the grace period is over", async () => {
+  const c0 = await signIn();
+  await ageTokens();
+  const r1 = await run(refreshCtl, { cookieHeader: `tt_refresh=${c0}` });
+  assert.equal(r1.status, 200);
+  await UserSession.updateMany({}, { $set: { "recentRefreshHashes.$[].validUntil": new Date(Date.now() - 1000) } });
+  const r2 = await run(refreshCtl, { cookieHeader: `tt_refresh=${c0}` });
+  assert.equal(r2.status, 401);
+  const r3 = await run(refreshCtl, { cookieHeader: `tt_refresh=${r1.set.tt_refresh}` });
+  assert.equal(r3.status, 200, "the current cookie is unaffected");
+});
+
+await t("refresh: after logout no old cookie works, not even inside the grace period", async () => {
+  const c0 = await signIn();
+  await ageTokens();
+  const r1 = await run(refreshCtl, { cookieHeader: `tt_refresh=${c0}` });
+  await UserSession.updateMany({ state: "active" }, { $set: { state: "revoked", refreshTokenHash: null } });
+  for (const c of [c0, r1.set.tt_refresh]) {
+    const r = await run(refreshCtl, { cookieHeader: `tt_refresh=${c}` });
+    assert.equal(r.status, 401);
+  }
+});
+
 await mongoose.disconnect();
 await mongod.stop();
 redisServer.close();

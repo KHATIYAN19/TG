@@ -28,6 +28,10 @@ export const authConfig = {
   accessTtlMs,
 
   refreshDays: intEnv("REFRESH_TOKEN_TTL_DAYS", 7),
+  // How long a just-replaced refresh token still works (lost responses, parallel tabs).
+  refreshGraceSeconds: intEnv("REFRESH_REUSE_GRACE_SECONDS", 60),
+  // A refresh token younger than this is reused instead of rotated (rapid reloads).
+  refreshRotateMinSeconds: intEnv("REFRESH_ROTATE_MIN_SECONDS", 60),
   trustedDays: intEnv("TRUSTED_DEVICE_TTL_DAYS", 30),
 
   otpMinutes: intEnv("OTP_TTL_MINUTES", 10),
