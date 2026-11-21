@@ -62,8 +62,8 @@ const router = express.Router();
 ========================================== */
 
 // Login with email/mobile and password.
-// Privileged roles (admin/affiliate/Employee/partner) always need an
-// email OTP on untrusted devices; members only when LOGIN_OTP_ENABLED=true.
+// Roles listed in LOGIN_OTP_ROLES need an email OTP on untrusted devices;
+// every other role (and everyone, when it is unset) logs in with the password.
 router.post(
   "/login",
   loginLimiter,

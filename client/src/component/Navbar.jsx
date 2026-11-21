@@ -528,7 +528,9 @@ export default function Navbar() {
   const location = useLocation();
   const auth = useSelector((state) => state.auth);
   const user = auth?.user;
-  const isAuthenticated = Boolean(auth?.isAuthenticated);
+  // While a reload is swapping the refresh cookie for a token, keep showing the signed-in UI from the
+  // stored profile hint instead of flashing "Login". If the restore fails, `restoring` turns false.
+  const isAuthenticated = Boolean(auth?.isAuthenticated || (auth?.restoring && user));
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState(readTheme);

@@ -44,22 +44,52 @@ export const cookieNames = {
     : "tt_device",
 };
 
-const cookieOptions = maxAge => ({
+/*
+  The site (targettrek.in) and the API (*.run.app) are different SITES, so every API call is a cross-site
+  request. Browsers refuse to store or send SameSite=Strict/Lax cookies on cross-site requests, which made
+  the refresh cookie and the remembered-device cookie vanish: a page reload showed "Login" again and staff
+  got an OTP every time. Default is therefore SameSite=None + Partitioned (CHIPS): the cookie is only ever
+  sent when the top-level page is our own site, so other sites still cannot ride it (CSRF), and CORS plus
+  the origin check keep doing their job. COOKIE_SAMESITE overrides it (e.g. "strict" once the API is
+  served from a same-site domain like api.targettrek.in). Plain-http local dev falls back to Lax, since
+  SameSite=None requires Secure.
+*/
+const cookieSameSite = (() => {
+  const configured = String(process.env.COOKIE_SAMESITE || "").trim().toLowerCase();
+  if (["strict", "lax", "none"].includes(configured)) {
+    return configured === "none" && !authConfig.secureCookies ? "lax" : configured;
+  }
+  return authConfig.secureCookies ? "none" : "lax";
+})();
+
+const cookiePartitioned =
+  cookieSameSite === "none" && process.env.COOKIE_PARTITIONED !== "false";
+
+// Attributes shared by setting AND clearing: a cookie is only removed when these match.
+export const authCookieBase = () => ({
   httpOnly: true,
   secure: authConfig.secureCookies,
-  sameSite: "strict",
+  sameSite: cookieSameSite,
   path: "/",
+  ...(cookiePartitioned ? { partitioned: true } : {}),
+});
+
+const cookieOptions = maxAge => ({
+  ...authCookieBase(),
   maxAge,
 });
 
+export const clearAuthCookie = (res, name) => {
+  res.clearCookie(name, authCookieBase());
+  // Also drop a leftover SameSite=Strict copy written by the old setting.
+  if (cookiePartitioned) {
+    res.clearCookie(name, { httpOnly: true, secure: authConfig.secureCookies, sameSite: "strict", path: "/" });
+  }
+};
+
 export const clearAuthCookies = res => {
   for (const name of Object.values(cookieNames)) {
-    res.clearCookie(name, {
-      httpOnly: true,
-      secure: authConfig.secureCookies,
-      sameSite: "strict",
-      path: "/",
-    });
+    clearAuthCookie(res, name);
   }
 };
 

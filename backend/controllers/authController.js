@@ -22,6 +22,7 @@ import {
   verifyPassword,
   secureEqual,
   cookieNames,
+  clearAuthCookie,
   clearAuthCookies,
   setDeviceCookie,
   setRefreshCookie,
@@ -63,22 +64,28 @@ const PRIVILEGED_ROLES = new Set([
 
 /*
   LOGIN OTP
-  Only staff accounts (admin, Employee, partner) need an emailed code at login, and only on a browser that
-  is not remembered yet. After a correct code the browser is remembered for TRUSTED_DEVICE_TTL_DAYS
-  (default 30), renewed on each login from it; logout keeps it remembered, while "forget this device",
-  revoking it, logging out other devices / all devices, and a password reset make it ask again.
-  Members and affiliates sign in with their password only (LOGIN_OTP_ENABLED=true turns the code on
-  for them too). Signing UP is a separate flow: new members still confirm their email with a code.
+  LOGIN_OTP_ROLES (comma-separated, case-insensitive, e.g. "admin,partner,employee") lists the roles that
+  need an emailed code at login, and only on a browser that is not remembered yet. Every other role signs
+  straight in with the password. Unset or empty = nobody gets a code; "*" = every role.
+  After a correct code the browser is remembered for TRUSTED_DEVICE_TTL_DAYS (default 30), renewed on
+  each login from it; logout keeps it remembered, while "forget this device", revoking it, logging out
+  other devices / all devices, and a password reset make it ask again.
+  LOGIN_OTP_ENABLED=true (legacy switch) still turns the code on for every role.
+  Signing UP is a separate flow: new members still confirm their email with a code.
 */
-const LOGIN_OTP_ROLES = new Set([
-  "admin",
-  "Employee",
-  "partner",
-]);
+const loginOtpRoles = () =>
+  new Set(
+    String(process.env.LOGIN_OTP_ROLES || "")
+      .split(",")
+      .map(role => role.trim().toLowerCase())
+      .filter(Boolean)
+  );
 
-export const needsLoginOtp = user =>
-  LOGIN_OTP_ROLES.has(user?.role) ||
-  process.env.LOGIN_OTP_ENABLED === "true";
+export const needsLoginOtp = user => {
+  if (process.env.LOGIN_OTP_ENABLED === "true") return true;
+  const roles = loginOtpRoles();
+  return roles.has("*") || roles.has(String(user?.role || "").toLowerCase());
+};
 
 const lockMinutesFor = user =>
   PRIVILEGED_ROLES.has(user.role)
@@ -637,9 +644,9 @@ export const login = async (req, res) => {
       );
     }
 
-    // Members and affiliates: password only (see LOGIN_OTP above). Staff (admin / Employee / partner)
-    // need the emailed code on any browser that is not remembered, so one phished or reused password
-    // cannot open the admin console on its own.
+    // Roles not in LOGIN_OTP_ROLES: password only (see LOGIN OTP above). Listed roles need the emailed
+    // code on any browser that is not remembered, so one phished or reused password cannot open the
+    // admin console on its own.
     if (!needsLoginOtp(user)) {
       const session = await createPendingSession(user, req);
 
@@ -1106,12 +1113,7 @@ export const logout = async (req, res) => {
 
     // Clear refresh cookie, retain remembered-device
     // cookie so future password login can skip OTP.
-    res.clearCookie(cookieNames.refresh, {
-      httpOnly: true,
-      secure: authConfig.secureCookies,
-      sameSite: "strict",
-      path: "/",
-    });
+    clearAuthCookie(res, cookieNames.refresh);
 
     await logActivity({
       req,

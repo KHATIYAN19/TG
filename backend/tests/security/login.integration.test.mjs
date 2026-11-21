@@ -58,6 +58,7 @@ process.env.UPSTASH_REDIS_REST_URL = `http://127.0.0.1:${redisServer.address().p
 process.env.UPSTASH_REDIS_REST_TOKEN = "fake";
 process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.LOGIN_OTP_ENABLED = "false";
+process.env.LOGIN_OTP_ROLES = "admin,partner,employee";
 process.env.LOGIN_IP_FAIL_LIMIT = "100000";
 process.env.COOKIE_SECURE = "false";
 // Mail: Resend only, stubbed below. No real fallback provider can send anything.

@@ -12,9 +12,10 @@ import {
   logActivity,
   cookieNames,
   untrustDevices,
+  clearAuthCookie,
+  clearAuthCookies,
 } from "../utils/authUtils.js";
 
-import { authConfig } from "../config/auth.js";
 import { sweepSessions } from "../services/sessionCleanup.js";
 import { describeDevice } from "../utils/authUtils.js";
 import { locationFromIp } from "../utils/geoLocation.js";
@@ -199,14 +200,7 @@ const revokeDevice = async ({
   }
 
   if (req.sessionId === sessionId) {
-    for (const name of Object.values(cookieNames)) {
-      res.clearCookie(name, {
-        httpOnly: true,
-        secure: authConfig.secureCookies,
-        sameSite: "strict",
-        path: "/",
-      });
-    }
+    clearAuthCookies(res);
   }
 
   await logActivity({
@@ -385,12 +379,7 @@ export const forgetMyDevice = async (
     );
 
     if (session.sessionId === req.sessionId) {
-      res.clearCookie(cookieNames.device, {
-        httpOnly: true,
-        secure: authConfig.secureCookies,
-        sameSite: "strict",
-        path: "/",
-      });
+      clearAuthCookie(res, cookieNames.device);
     }
 
     await logActivity({

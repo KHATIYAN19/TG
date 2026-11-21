@@ -63,6 +63,7 @@ process.env.UPSTASH_REDIS_REST_URL = `http://127.0.0.1:${redisServer.address().p
 process.env.UPSTASH_REDIS_REST_TOKEN = "fake";
 process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.ARENA_PAYMENT_GATEWAY = "cashfree";
+process.env.LOGIN_OTP_ROLES = "admin,partner,employee";
 process.env.LOGIN_IP_FAIL_LIMIT = "100000";   // the many deliberate wrong passwords below must not trip the per-network lock (tested separately)
 process.env.RESEND_API_KEY = "";
 for (const k of ["AMAZON_ACCESS_KEY_ID", "AMAZON_SECRET_ACCESS_KEY", "AMAZON_REGION", "AMAZON_SES_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_DEFAULT_REGION", "AMAZON_SESSION_TOKEN", "AWS_SESSION_TOKEN", "AMAZON_SES_FROM_EMAIL", "AMAZON_SES_CONFIGURATION_SET"]) process.env[k] = "";   // never use real mail credentials from .env in tests               // tests must never use the real Resend key from .env (dotenv will not override a set variable)
