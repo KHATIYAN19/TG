@@ -38,6 +38,13 @@ const loadScript = (id, src, ready) =>
     s.addEventListener("error", () => resolve(false));
   });
 
+/* Only one Razorpay window may exist at a time: a second tap (or a re-render) must never stack another on top. */
+let activeRzp = null;
+const closeActiveRzp = () => {
+  try { activeRzp?.close(); } catch { /* already closed */ }
+  activeRzp = null;
+};
+
 const RUNNERS = {
   async cashfree({ checkout }) {
     if (!(await loadScript("cashfree-sdk", "https://sdk.cashfree.com/js/v3/cashfree.js", () => Boolean(window.Cashfree)))) throw new Error(CANT_LOAD);
@@ -55,7 +62,16 @@ const RUNNERS = {
     const subscriptionId = checkout.subscriptionId; // recurring billing: Razorpay charges the first period now, then every period
     if (!key || (subscriptionId ? false : !orderId || !checkout.amount)) throw new Error("Invalid payment information received from server.");
 
+    closeActiveRzp();
+
     return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        if (activeRzp === rzp) activeRzp = null;
+        fn(value);
+      };
       const rzp = new window.Razorpay({
         key,
         ...(subscriptionId ? { subscription_id: subscriptionId } : { amount: checkout.amount, currency: checkout.currency || "INR", order_id: orderId }),
@@ -66,14 +82,20 @@ const RUNNERS = {
         retry: { enabled: true },
         handler: async (response) => {
           try {
-            resolve((await onPaid?.(response)) || { status: "paid" });
+            finish(resolve, (await onPaid?.(response)) || { status: "paid" });
           } catch (e) {
-            reject(e);
+            finish(reject, e);
           }
         },
-        modal: { ondismiss: () => resolve({ status: "dismissed" }) },
+        modal: { ondismiss: () => finish(resolve, { status: "dismissed" }) },
       });
-      rzp.on("payment.failed", (r) => resolve({ status: "failed", message: r?.error?.description || "Payment failed. Please try again." }));
+      // The caller treats "failed" as final (it shows the error and re-enables its own button), so close the
+      // Razorpay window too. Leaving it open is what made it linger on screen after the app moved on.
+      rzp.on("payment.failed", (r) => {
+        finish(resolve, { status: "failed", message: r?.error?.description || "Payment failed. Please try again." });
+        try { rzp.close(); } catch { /* already closed */ }
+      });
+      activeRzp = rzp;
       rzp.open();
     });
   },
