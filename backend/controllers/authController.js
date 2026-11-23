@@ -1020,7 +1020,7 @@ export const refreshToken = async (req, res) => {
     const raws = refreshCookieValues(req);
 
     if (!raws.length) {
-      return fail(res, 401, "Refresh token missing");
+      return fail(res, 401, "Refresh token missing", "REFRESH_TOKEN_MISSING");
     }
 
     const hashes = raws.map(hashToken);
@@ -1063,7 +1063,7 @@ export const refreshToken = async (req, res) => {
       An invalid refresh cookie is useless on its own, so leaving it in place is safe.
     */
     if (!session) {
-      return fail(res, 401, "Invalid refresh token");
+      return fail(res, 401, "Invalid refresh token", "REFRESH_TOKEN_INVALID");
     }
 
     const user = await User.findById(
@@ -1152,7 +1152,7 @@ export const refreshToken = async (req, res) => {
     }
 
     // Lost every race, or the session ended meanwhile. Never clear cookies here (see above).
-    return fail(res, 401, "Invalid refresh token");
+    return fail(res, 401, "Invalid refresh token", "REFRESH_TOKEN_INVALID");
   } catch (error) {
     console.error("Refresh error:", error);
     return fail(res, 503, "Unable to refresh session");

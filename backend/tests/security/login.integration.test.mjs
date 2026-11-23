@@ -211,6 +211,16 @@ const { default: UserSession } = await import(`${B}models/UserSession.js`);
 // Make every session's current token look older than REFRESH_ROTATE_MIN_SECONDS, so the next refresh rotates.
 const ageTokens = () => UserSession.updateMany({}, { $set: { refreshRotatedAt: new Date(Date.now() - 3600e3) } });
 
+await t("refresh: distinguish a missing cookie from an invalid session", async () => {
+  const missing = await run(refreshCtl);
+  assert.equal(missing.status, 401);
+  assert.equal(missing.body.code, "REFRESH_TOKEN_MISSING");
+
+  const invalid = await run(refreshCtl, { cookieHeader: `tt_refresh=${"f".repeat(64)}` });
+  assert.equal(invalid.status, 401);
+  assert.equal(invalid.body.code, "REFRESH_TOKEN_INVALID");
+});
+
 await t("refresh: quick reloads reuse a young token (no rotation, nothing a lost response can break)", async () => {
   const c0 = await signIn();
   for (let i = 0; i < 25; i++) {

@@ -811,7 +811,10 @@ function App() {
                 // Network hiccup: keep the user signed in, fail this call only.
                 return Promise.reject(error);
               }
-              forceSignOut("SESSION_EXPIRED");
+              const refreshCookieMissing =
+                refreshError.response?.data?.code === "REFRESH_TOKEN_MISSING" ||
+                refreshError.response?.data?.message === "Refresh token missing";
+              forceSignOut(refreshCookieMissing ? "REFRESH_COOKIE_MISSING" : "SESSION_EXPIRED");
               return Promise.reject(error);
             }
           }
@@ -859,7 +862,10 @@ function App() {
         await refreshAccessToken();
       } catch (refreshError) {
         if (refreshError.authRejected) {
-          forceSignOut("TOKEN_EXPIRED");
+          const refreshCookieMissing =
+            refreshError.response?.data?.code === "REFRESH_TOKEN_MISSING" ||
+            refreshError.response?.data?.message === "Refresh token missing";
+          forceSignOut(refreshCookieMissing ? "REFRESH_COOKIE_MISSING" : "TOKEN_EXPIRED");
         }
       }
     },

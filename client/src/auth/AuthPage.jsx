@@ -165,7 +165,13 @@ export default function AuthPage() {
     let reason = null;
     try { reason = sessionStorage.getItem("authLogoutReason"); sessionStorage.removeItem("authLogoutReason"); } catch { /* ignore */ }
     if (!reason) return;
-    toast.error(reason === "SESSION_REVOKED" ? "Your session has been revoked. Please sign in again." : reason === "ACCOUNT_BLOCKED" ? "Your account has been blocked." : "Your session has expired. Please sign in again.", { id: "auth-ended" });
+    toast.error(
+      reason === "SESSION_REVOKED" ? "Your session has been revoked. Please sign in again."
+        : reason === "ACCOUNT_BLOCKED" ? "Your account has been blocked."
+          : reason === "REFRESH_COOKIE_MISSING" ? "Your browser couldn't restore your session. Please sign in again. If this keeps happening, check your cookie settings."
+            : "Your session has expired. Please sign in again.",
+      { id: "auth-ended" }
+    );
   }, []);
 
   const finish = useCallback((data) => {

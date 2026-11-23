@@ -34,6 +34,18 @@ export const getAccessToken = () => store.getState().auth?.token || "";
 
 const postRefresh = () => axios.post(`${ROOT}/api/auth/refresh`, null, { withCredentials: true, timeout: 15000 });
 
+const rememberLogoutReason = (reason) => {
+  try {
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("authLogoutReason", reason);
+  } catch {
+    // The session hint is only for the sign-in toast; auth state must still be cleared.
+  }
+};
+
+const refreshCookieMissing = (error) =>
+  error?.response?.data?.code === "REFRESH_TOKEN_MISSING" ||
+  error?.response?.data?.message === "Refresh token missing";
+
 /* Each tab holds its own in-memory token, but they all share ONE rotating refresh cookie. Two tabs
    refreshing at the same moment would both send the same cookie and the slower one would lose. A
    cross-tab Web Lock makes them take turns, so each refresh sends the newest cookie. Browsers without
@@ -48,6 +60,9 @@ const refreshOnce = async () => {
     return await postRefresh();
   } catch (error) {
     if (error?.response?.status !== 401) throw error;
+    const code = error?.response?.data?.code;
+    const message = error?.response?.data?.message;
+    if (code === "REFRESH_TOKEN_MISSING" || message === "Refresh token missing") throw error;
     await new Promise((resolve) => setTimeout(resolve, 400));
     return postRefresh(); // lost a race with another tab: retry with the cookie it received
   }
@@ -103,6 +118,7 @@ const restoreSessionOnce = async () => {
       return true;
     } catch (error) {
       if (error?.authRejected) {
+        rememberLogoutReason(refreshCookieMissing(error) ? "REFRESH_COOKIE_MISSING" : "SESSION_EXPIRED");
         store.dispatch(logout());
         return false;
       }
