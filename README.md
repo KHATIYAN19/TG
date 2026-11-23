@@ -558,8 +558,12 @@ On start-up the server connects to MongoDB, runs idempotent data migrations, and
 ## 7. Authentication and roles
 
 - **Access token**: short-lived JWT (`JWT_EXPIRES_IN`, default 15 min) sent as `Authorization: Bearer …`.
-- **Refresh**: httpOnly cookie, rotated on every `/api/auth/refresh`. `client/src/lib/authSession.js` refreshes
-  silently and shares one in-flight refresh between concurrent requests.
+- **Refresh**: httpOnly cookie with a seven-day default lifetime. `/api/auth/refresh` reuses a newly issued
+  refresh cookie briefly to avoid races between reloads, then rotates it; replaced cookies have a short grace
+  period for concurrent requests. `client/src/lib/authSession.js` refreshes access tokens silently and shares
+  one in-flight refresh between concurrent requests.
+- The client signs out only for explicit authentication/session failure codes. An endpoint-specific `401` or
+  permission-denied `403` does not clear an otherwise valid login.
 - **Sessions** are stored per device (`UserSession`); "log out all devices" bumps the user's `tokenVersion`.
 - **OTP on new device** is always required for `admin`, `partner`, `affiliate` and `Employee`; optional for members
   (`LOGIN_OTP_ENABLED`).
@@ -587,16 +591,37 @@ request, then call `createPayment()` / `verifyPayment()` / `parseWebhook()` / `r
 
 ### Webhook URLs to register in gateway dashboards
 
-| Product | URL |
-|---|---|
-| Books | `{BACKEND_URL}/payment/books/webhook/{gateway}` |
-| Memories | `{BACKEND_URL}/api/memories/payments/webhook/{gateway}` |
-| Resume Lab | `{BACKEND_URL}/api/resume/payments/webhook/{gateway}` |
-| Referrals (incl. subscriptions) | `{BACKEND_URL}/api/referral/payments/webhook/{gateway}` |
-| Mock interviews (Cashfree) | `{BACKEND_URL}/api/interviews/payment/cashfree/webhook` |
+Replace `{BACKEND_URL}` with the public HTTPS backend URL (Cloud Run by default). Register Razorpay webhooks
+in the Razorpay Dashboard; passing a `webhookUrl` while creating an order does not register one with Razorpay.
+Use the **same webhook secret** for every endpoint handled by this backend and set it as
+`RAZORPAY_WEBHOOK_SECRET` in the backend environment. Keep it server-side only.
+Use the secret for the same Razorpay mode as the active keys. This backend reads one webhook secret, so do not
+send both test-mode and live-mode webhooks with different secrets to the same deployment. If the variable is
+unset, the endpoint responds with a configuration error instead of reporting a bad signature.
 
-Razorpay webhooks are signed with `RAZORPAY_WEBHOOK_SECRET`; Cashfree with `CASHFREE_SECRET_KEY`. Cashfree sets
-its notify URL per order. Webhooks are not rate-limited (they are signature-verified).
+| Product | Razorpay webhook URL |
+|---|---|
+| Books | `{BACKEND_URL}/payment/books/webhook/razorpay` |
+| Memories | `{BACKEND_URL}/api/memories/payments/webhook/razorpay` |
+| Resume Lab | `{BACKEND_URL}/api/resume/payments/webhook/razorpay` |
+| Referrals (one-time + subscriptions) | `{BACKEND_URL}/api/referral/payments/webhook/razorpay` |
+
+For one-time orders, enable **`payment.captured`** and **`order.paid`**. The server verifies the
+`x-razorpay-signature` against the exact raw request body, then fetches the payment/order from Razorpay and checks
+the amount before fulfillment. Other order events (including `payment.failed` and refund events) are currently
+acknowledged but ignored; they do not update order state.
+
+For Referral subscriptions, add these events to the **Referral** URL as well:
+`subscription.authenticated`, `subscription.activated`, `subscription.charged`, `subscription.pending`,
+`subscription.halted`, `subscription.cancelled`, `subscription.completed`, `subscription.paused`,
+`subscription.resumed`, and `subscription.updated`.
+
+The Prep Arena currently verifies payments through its browser result and server-side status checks; it has no
+Razorpay webhook route. Mock interviews use Cashfree only at
+`{BACKEND_URL}/api/interviews/payment/cashfree/webhook`; Cashfree sets its notify URL per order.
+Webhook routes use raw bodies and are not JWT-protected or rate-limited; their signatures are verified by the
+gateway adapter. A handler returns 2xx after successful processing/ignoring an event and 5xx on processing
+errors so the gateway can retry. A missing Razorpay webhook secret returns 503; an invalid signature returns 400.
 
 **Local testing:** use sandbox keys (`CASHFREE_ENV=sandbox`, `PAYU_MODE=test`, `rzp_test_…`). Gateways must reach
 `BACKEND_URL`, so expose your local backend with a tunnel (e.g. ngrok / cloudflared) when testing returns and

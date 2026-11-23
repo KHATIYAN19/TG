@@ -666,6 +666,10 @@ export const gatewayWebhook = asyncHandler(async (req, res) => {
   if (!Buffer.isBuffer(req.body)) return res.status(404).json({ success: false });
   // subscription events (charged / failed / cancelled ...) first; anything else is an ordinary order payment
   const sp = parseSubscriptionWebhook({ product: "REFERRAL", gateway, rawBody: req.body.toString("utf8"), headers: req.headers });
+  if (sp.reason === "WEBHOOK_SECRET_MISSING") {
+    console.error("[referral] Razorpay webhook secret is not configured");
+    return res.status(503).json({ success: false, message: "Webhook configuration unavailable" });
+  }
   if (sp.valid && sp.subscription) {
     if (sp.ignore || !sp.event) return res.json({ success: true });
     try {
@@ -675,6 +679,10 @@ export const gatewayWebhook = asyncHandler(async (req, res) => {
     } catch (e) { console.error("[referral] subscription webhook error:", e.message); return res.status(500).json({ success: false }); }
   }
   const parsed = webhookOf({ gateway, rawBody: req.body.toString("utf8"), headers: req.headers });
+  if (parsed.reason === "WEBHOOK_SECRET_MISSING") {
+    console.error("[referral] Razorpay webhook secret is not configured");
+    return res.status(503).json({ success: false, message: "Webhook configuration unavailable" });
+  }
   if (!parsed.valid) return res.status(400).json({ success: false, message: "Invalid signature" });
   if (parsed.ignore) return res.json({ success: true });
   try {

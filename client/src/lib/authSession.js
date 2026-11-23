@@ -22,10 +22,9 @@ export const tokenExpiresAt = (token) => {
 export const tokenIsExpired = (token, skewMs = 0) => !token || Date.now() >= tokenExpiresAt(token) - skewMs;
 
 /* ------------------------------------------------------------ silent refresh
-   The access token lives ~15 minutes. The server keeps the device signed in with an
-   httpOnly refresh cookie, so the app swaps the token quietly instead of kicking the
-   user out. Concurrent callers share one request (the server rotates the cookie, so
-   two parallel refreshes would invalidate each other).
+   The access-token lifetime is configured by the server. The server keeps the device
+   signed in with an httpOnly refresh cookie, so the app swaps the token quietly
+   instead of kicking the user out. Concurrent callers share one request.
    Rejects with `error.authRejected = true` only when the server says the session is
    really gone; network trouble is NOT treated as a logout. */
 let inflight = null;

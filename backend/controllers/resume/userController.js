@@ -460,6 +460,10 @@ export const gatewayWebhook = asyncHandler(async (req, res) => {
   const gateway = String(req.params.gateway || "");
   if (!Buffer.isBuffer(req.body)) return res.status(404).json({ success: false });
   const parsed = webhookOf({ gateway, rawBody: req.body.toString("utf8"), headers: req.headers });
+  if (parsed.reason === "WEBHOOK_SECRET_MISSING") {
+    console.error("[resume] Razorpay webhook secret is not configured");
+    return res.status(503).json({ success: false, message: "Webhook configuration unavailable" });
+  }
   if (!parsed.valid) return res.status(400).json({ success: false, message: "Invalid signature" });
   if (parsed.ignore) return res.json({ success: true });
   try {

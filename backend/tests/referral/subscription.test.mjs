@@ -7,7 +7,7 @@ process.env.RAZORPAY_KEY_SECRET = "secret123";
 process.env.RAZORPAY_WEBHOOK_SECRET = "whsec";
 process.env.PAYMENT_GATEWAY = "cashfree";
 
-const { parseSubscriptionWebhook, verifySubscriptionPayment, pickSubscriptionGateway } = await import("../../services/payments/index.js");
+const { parseWebhook, parseSubscriptionWebhook, verifySubscriptionPayment, pickSubscriptionGateway } = await import("../../services/payments/index.js");
 const { isLive, subOut } = await import("../../services/referral/subscriptions.js");
 
 const sign = (body, key) => crypto.createHmac("sha256", key).update(body).digest("hex");
@@ -15,6 +15,51 @@ const evt = (event, extra = {}) => JSON.stringify({ event, created_at: 170000000
 
 test("subscriptions fall back to Razorpay when the .env gateway can't bill monthly", () => {
   assert.equal(pickSubscriptionGateway("REFERRAL"), "razorpay");
+});
+
+test("Razorpay order webhooks verify the raw-body signature and accept captured/paid events", () => {
+  for (const event of ["payment.captured", "order.paid"]) {
+    const body = JSON.stringify({
+      event,
+      payload: event === "payment.captured"
+        ? { payment: { entity: { order_id: "order_1" } } }
+        : { order: { entity: { id: "order_1" } } },
+    });
+    const headers = { "x-razorpay-signature": sign(body, "whsec") };
+    const parsed = parseWebhook({ product: "BOOKS", gateway: "razorpay", rawBody: body, headers });
+    assert.deepEqual(parsed, { valid: true, gatewayOrderId: "order_1" });
+    assert.equal(parseWebhook({ product: "BOOKS", gateway: "razorpay", rawBody: body, headers: { "x-razorpay-signature": "invalid" } }).valid, false);
+  }
+});
+
+test("Razorpay order webhooks acknowledge but ignore events that are not configured for fulfillment", () => {
+  const body = JSON.stringify({ event: "payment.failed", payload: { payment: { entity: { order_id: "order_1" } } } });
+  const parsed = parseWebhook({
+    product: "BOOKS",
+    gateway: "razorpay",
+    rawBody: body,
+    headers: { "x-razorpay-signature": sign(body, "whsec") },
+  });
+  assert.deepEqual(parsed, { valid: true, ignore: true });
+});
+
+test("missing Razorpay webhook secret is reported as a configuration failure", () => {
+  const previous = process.env.RAZORPAY_WEBHOOK_SECRET;
+  process.env.RAZORPAY_WEBHOOK_SECRET = "";
+  try {
+    const body = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { order_id: "order_1" } } } });
+    assert.deepEqual(parseWebhook({ product: "BOOKS", gateway: "razorpay", rawBody: body, headers: {} }), {
+      valid: false,
+      reason: "WEBHOOK_SECRET_MISSING",
+    });
+    assert.deepEqual(parseSubscriptionWebhook({ product: "REFERRAL", gateway: "razorpay", rawBody: body, headers: {} }), {
+      valid: false,
+      reason: "WEBHOOK_SECRET_MISSING",
+    });
+  } finally {
+    if (previous === undefined) delete process.env.RAZORPAY_WEBHOOK_SECRET;
+    else process.env.RAZORPAY_WEBHOOK_SECRET = previous;
+  }
 });
 
 test("a signed charged webhook is normalised; a forged one is rejected", () => {

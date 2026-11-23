@@ -519,6 +519,24 @@ const ADMIN_ROLES = [
   "admin",
   "Employee",
 ];
+const AUTHENTICATION_FAILURE_CODES = new Set([
+  "TOKEN_MISSING",
+  "INVALID_AUTH_HEADER",
+  "TOKEN_EXPIRED",
+  "INVALID_TOKEN",
+  "INVALID_TOKEN_PAYLOAD",
+  "SESSION_NOT_FOUND",
+  "TOKEN_REVOKED",
+  "SESSION_REVOKED",
+  "ACCOUNT_DELETED",
+  "ACCOUNT_DISABLED",
+  "ACCOUNT_LOCKED",
+  "PASSWORD_SETUP_REQUIRED",
+  "INVALID_ROLE",
+  "ACCOUNT_BLOCKED",
+  "ACCOUNT_SUSPENDED",
+  "ACCOUNT_INACTIVE",
+]);
 let logoutInProgress = false;
 function accessTokenExpired(token) {
   if (!token) return true;
@@ -763,15 +781,13 @@ function App() {
               url.startsWith(API_ORIGIN)
             );
           const authenticationFailure =
-            status === 401 ||
+            (
+              status === 401 &&
+              AUTHENTICATION_FAILURE_CODES.has(code)
+            ) ||
             (
               status === 403 &&
-              [
-                "ACCOUNT_BLOCKED",
-                "ACCOUNT_SUSPENDED",
-                "ACCOUNT_INACTIVE",
-                "SESSION_REVOKED",
-              ].includes(code)
+              AUTHENTICATION_FAILURE_CODES.has(code)
             );
           // Expired access token (or the server lost its cached copy of the
           // session): try ONE silent refresh with the refresh cookie and replay

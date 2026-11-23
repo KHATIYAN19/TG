@@ -69,7 +69,8 @@ export default {
   },
 
   parseWebhook({ credentials: c }, { rawBody, headers }) {
-    if (!c.webhookSecret || !rawBody) return { valid: false };
+    if (!c.webhookSecret) return { valid: false, reason: "WEBHOOK_SECRET_MISSING" };
+    if (!rawBody) return { valid: false };
     const expected = crypto.createHmac("sha256", c.webhookSecret).update(rawBody).digest("hex");
     if (!safeEqual(headers["x-razorpay-signature"], expected)) return { valid: false };
     let evt;
@@ -139,7 +140,8 @@ export default {
   },
 
   parseSubscriptionWebhook({ credentials: c }, { rawBody, headers }) {
-    if (!c.webhookSecret || !rawBody) return { valid: false };
+    if (!c.webhookSecret) return { valid: false, reason: "WEBHOOK_SECRET_MISSING" };
+    if (!rawBody) return { valid: false };
     const expected = crypto.createHmac("sha256", c.webhookSecret).update(rawBody).digest("hex");
     if (!safeEqual(headers["x-razorpay-signature"], expected)) return { valid: false };
     let evt;
