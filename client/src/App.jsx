@@ -252,6 +252,9 @@ const GenAiGoogleAdk = lazy(() =>
 const GenaiMCP = lazy(() =>
   import("./component/GenaiMCP.jsx")
 );
+const ClaudeCodeHandbook = lazy(() =>
+  import("./component/ClaudeCodeHandbook.jsx")
+);
 const GenaiRAG = lazy(() =>
   import("./component/GenaiRAG.jsx")
 );
@@ -1341,6 +1344,10 @@ function App() {
           <Route
             path="/book/genai/mcp"
             element={<GenaiMCP />}
+          />
+          <Route
+            path="/book/claude-code"
+            element={<ClaudeCodeHandbook />}
           />
           <Route
             path="/book/genai/rag"
