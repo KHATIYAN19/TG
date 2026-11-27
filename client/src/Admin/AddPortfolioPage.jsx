@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '../lib/zodResolver';
 import { z } from 'zod';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
